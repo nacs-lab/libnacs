@@ -16,18 +16,28 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "macros.h"
+#ifndef _NACS_UTILS_TIMER_H_
+#define _NACS_UTILS_TIMER_H_
 
-#ifndef __NACS_UTILS_UTILS_H__
-#define __NACS_UTILS_UTILS_H__
+#include "log.h"
+#include <inttypes.h>
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stddef.h>
-// GNU extension
-#include <stdbool.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
+NACS_BEGIN_DECLS
+
+#define PRTime PRIu64
+uint64_t nacsGetTime();
+uint64_t nacsGetElapse(uint64_t prev);
+void nacsTic();
+uint64_t nacsToc();
+
+#define nacsPrintTime(time) nacsForceLog("Time: %" PRTime "\n", time)
+#define nacsPrintElapse(prev) nacsPrintTime(nacsGetElapse(prev))
+#define nacsPrintToc() nacsPrintTime(nacsToc())
+
+#define TICKS_PER_SECOND (1000000000ll)
+#define TICKS_PER_US (1000ll)
+#define TICKS_PER_MS (1000000ll)
+
+NACS_END_DECLS
 
 #endif
