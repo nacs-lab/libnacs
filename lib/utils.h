@@ -32,4 +32,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define NACS_INLINE __attribute__((always_inline)) inline
+#define NACS_EXPORT __attribute__((visibility("default")))
+#define nacsExpect(exp, var) __builtin_expect(exp, var)
+#define nacsLikely(x) nacsExpect(!!(x), 1)
+#define nacsUnlikely(x) nacsExpect(!!(x), 0)
+
 #endif
