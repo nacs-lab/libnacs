@@ -16,8 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#ifndef __NACS_UTILS_H__
-#define __NACS_UTILS_H__
+#ifndef __NACS_UTILS_UTILS_H__
+#define __NACS_UTILS_UTILS_H__
 
 #ifndef __cplusplus
 #  include <stdbool.h>
