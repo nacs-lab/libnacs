@@ -1,7 +1,8 @@
 set(nacs_utils_HDRS
   utils.h
   macros.h
-  log.h)
+  log.h
+  number.h)
 set(nacs_utils_SRCS
   log.cpp)
 set(nacs_utils_LINKS m rt pthread)
