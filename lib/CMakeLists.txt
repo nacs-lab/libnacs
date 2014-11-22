@@ -2,9 +2,11 @@ set(nacs_utils_HDRS
   utils.h
   macros.h
   log.h
-  number.h)
+  number.h
+  fd_utils.h)
 set(nacs_utils_SRCS
-  log.cpp)
+  log.cpp
+  fd_utils.cpp)
 set(nacs_utils_LINKS m rt pthread)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")

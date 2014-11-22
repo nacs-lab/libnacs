@@ -75,7 +75,7 @@ nacsGetPadding(uintptr_t len, uintptr_t align)
     return 0;
 }
 
-NACS_INLINE static inline uintptr_t
+NACS_INLINE static uintptr_t
 nacsAlignTo(uintptr_t len, uintptr_t align)
 {
     return len + nacsGetPadding(len, align);

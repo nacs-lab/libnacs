@@ -16,16 +16,19 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "macros.h"
+#ifndef _NACS_UTILS_FD_UTILS_H_
+#define _NACS_UTILS_FD_UTILS_H_
 
-#ifndef __NACS_UTILS_UTILS_H__
-#define __NACS_UTILS_UTILS_H__
+#include "utils.h"
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stddef.h>
-// GNU extension
-#include <stdbool.h>
-#include <string.h>
+NACS_BEGIN_DECLS
+
+void *nacsMapFile(const char *name, off_t offset, size_t len);
+bool nacsSendFD(int sock, int fd);
+int nacsRecvFD(int sock);
+bool nacsFDSetCloexec(int fd, bool cloexec);
+bool nacsFDSetNonBlock(int fd, bool nonblock);
+
+NACS_END_DECLS
 
 #endif
