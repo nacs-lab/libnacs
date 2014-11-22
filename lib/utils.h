@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2014 - 2014 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2013 - 2014 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,26 +16,15 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#include "macros.h"
+
 #ifndef __NACS_UTILS_UTILS_H__
 #define __NACS_UTILS_UTILS_H__
-
-#ifndef __cplusplus
-#  include <stdbool.h>
-#  define NACS_BEGIN_DECLS
-#  define NACS_END_DECLS
-#else
-#  define NACS_BEGIN_DECLS extern "C" {
-#  define NACS_END_DECLS }
-#endif
 
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
-
-#define NACS_INLINE __attribute__((always_inline)) inline
-#define NACS_EXPORT __attribute__((visibility("default")))
-#define nacsExpect(exp, var) __builtin_expect(exp, var)
-#define nacsLikely(x) nacsExpect(!!(x), 1)
-#define nacsUnlikely(x) nacsExpect(!!(x), 0)
+// GNU extension
+#include <stdbool.h>
 
 #endif
