@@ -40,7 +40,8 @@ nacsCheckLogLevel(unsigned level)
     return nacsUnlikely(level <= NACS_LOG_FORCE && level >= nacs_log_level);
 }
 
-void setLog(FILE*);
+void nacsSetLog(FILE *logf);
+FILE *nacsGetLog();
 
 __attribute__((format(printf, 5, 6)))
 void _nacsLog(NaCsLogLevel level, const char *fname, int line,
@@ -50,7 +51,7 @@ __attribute__((format(printf, 5, 0)))
 void _nacsLogV(NaCsLogLevel level, const char *fname, int line,
                const char *func, const char *fmt, va_list ap);
 
-#define nacsLog(__level, fmt, args...)                                  \
+#define __nacsLog(__level, fmt, args...)                                \
     do {                                                                \
         unsigned level = (__level);                                     \
         if (!nacsCheckLogLevel(level)) {                                \
@@ -60,16 +61,37 @@ void _nacsLogV(NaCsLogLevel level, const char *fname, int line,
                  fmt, ##args);                                          \
     } while (0)
 
+#define __nacsLogV(__level, fmt, ap)                                    \
+    do {                                                                \
+        unsigned level = (__level);                                     \
+        if (!nacsCheckLogLevel(level)) {                                \
+            break;                                                      \
+        }                                                               \
+        _nacsLogV((NaCsLogLevel)level, __FILE__, __LINE__, __FUNCTION__, \
+                  fmt, ap);                                             \
+    } while (0)
+
 #define nacsDebug(fmt, args...)                 \
-    nacsLog(NACS_LOG_DEBUG, fmt, ##args)
+    __nacsLog(NACS_LOG_DEBUG, fmt, ##args)
 #define nacsInfo(fmt, args...)                  \
-    nacsLog(NACS_LOG_INFO, fmt, ##args)
+    __nacsLog(NACS_LOG_INFO, fmt, ##args)
 #define nacsWarn(fmt, args...)                  \
-    nacsLog(NACS_LOG_WARN, fmt, ##args)
+    __nacsLog(NACS_LOG_WARN, fmt, ##args)
 #define nacsError(fmt, args...)                 \
-    nacsLog(NACS_LOG_ERROR, fmt, ##args)
-#define nacsForceLog(fmt, args...)              \
-    nacsLog(NACS_LOG_FORCE, fmt, ##args)
+    __nacsLog(NACS_LOG_ERROR, fmt, ##args)
+#define nacsLog(fmt, args...)              \
+    __nacsLog(NACS_LOG_FORCE, fmt, ##args)
+
+#define nacsDebugV(fmt, args...)                \
+    __nacsLogV(NACS_LOG_DEBUG, fmt, ##args)
+#define nacsInfoV(fmt, args...)                 \
+    __nacsLogV(NACS_LOG_INFO, fmt, ##args)
+#define nacsWarnV(fmt, args...)                 \
+    __nacsLogV(NACS_LOG_WARN, fmt, ##args)
+#define nacsErrorV(fmt, args...)                \
+    __nacsLogV(NACS_LOG_ERROR, fmt, ##args)
+#define nacsLogV(fmt, args...)             \
+    __nacsLogV(NACS_LOG_FORCE, fmt, ##args)
 
 // void nacsBacktrace();
 

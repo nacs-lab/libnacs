@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "log.h"
+#include "number.h"
 #include <unistd.h>
 #include <stdarg.h>
 #include <mutex>
@@ -25,8 +26,14 @@
 NACS_EXPORT NaCsLogLevel nacs_log_level = NACS_LOG_ERROR;
 static FILE *logf = stderr;
 
+NACS_EXPORT FILE*
+nacsGetLog()
+{
+    return logf;
+}
+
 NACS_EXPORT void
-setLog(FILE *f)
+nacsSetLog(FILE *f)
 {
     logf = f ? f : stderr;
 }
@@ -52,6 +59,7 @@ _nacsLogV(NaCsLogLevel level, const char *fname, int line, const char *func,
     fprintf(logf, "%s%d (%s:%d) %s ", log_prefixes[(int)level], getpid(),
             fname, line, func);
     vfprintf(logf, fmt, ap);
+    fflush(logf);
 }
 
 NACS_EXPORT void
