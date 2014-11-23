@@ -41,25 +41,25 @@ namespace NaCs {
 class FLock {
     int m_fd;
 public:
-    inline
+    NACS_INLINE
     FLock(int fd) : m_fd(fd)
     {
         if (fd < 0) {
             throw std::runtime_error("Invalid FD.");
         }
     }
-    inline
+    NACS_INLINE
     FLock(const char *fname) :
         FLock(open(fname, O_RDWR | O_CREAT, 0644))
     {}
-    inline void
+    NACS_INLINE void
     lock()
     {
         if (flock(m_fd, LOCK_EX) == -1) {
             throw std::runtime_error("Failed to acquire lock.");
         }
     }
-    inline void
+    NACS_INLINE void
     unlock() noexcept
     {
         flock(m_fd, LOCK_UN);
