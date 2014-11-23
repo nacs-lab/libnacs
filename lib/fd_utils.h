@@ -31,4 +31,41 @@ bool nacsFDSetNonBlock(int fd, bool nonblock);
 
 NACS_END_DECLS
 
+#ifdef __cplusplus
+#include <sys/stat.h>
+#include <sys/file.h>
+#include <fcntl.h>
+#include <stdexcept>
+
+namespace NaCs {
+class FLock {
+    int m_fd;
+public:
+    inline
+    FLock(int fd) : m_fd(fd)
+    {
+        if (fd < 0) {
+            throw std::runtime_error("Invalid FD.");
+        }
+    }
+    inline
+    FLock(const char *fname) :
+        FLock(open(fname, O_RDWR | O_CREAT, 0644))
+    {}
+    inline void
+    lock()
+    {
+        if (flock(m_fd, LOCK_EX) == -1) {
+            throw std::runtime_error("Failed to acquire lock.");
+        }
+    }
+    inline void
+    unlock() noexcept
+    {
+        flock(m_fd, LOCK_UN);
+    }
+};
+}
+#endif
+
 #endif
