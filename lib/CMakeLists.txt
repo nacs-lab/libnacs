@@ -4,7 +4,8 @@ set(nacs_utils_HDRS
   log.h
   number.h
   fd_utils.h
-  timer.h)
+  timer.h
+  mem.h)
 set(nacs_utils_SRCS
   log.cpp
   fd_utils.cpp
