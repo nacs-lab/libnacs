@@ -48,14 +48,19 @@ _nacsLogV(NaCsLogLevel level, const char *func, const char *fmt, va_list ap)
         [NACS_LOG_INFO] = "nacsInfo-",
         [NACS_LOG_WARN] = "nacsWarn-",
         [NACS_LOG_ERROR] = "nacsError-",
-        [NACS_LOG_FORCE] = "nacsLog-",
+        // [NACS_LOG_FORCE] = "nacsLog-",
     };
 
     static std::mutex log_lock;
 
     std::lock_guard<std::mutex> lk(log_lock);
 
-    fprintf(logf, "%s%d %s ", log_prefixes[(int)level], getpid(), func);
+    int pid = getpid();
+    if (level == NACS_LOG_FORCE) {
+        fprintf(logf, "%d: ", pid);
+    } else {
+        fprintf(logf, "%s%d %s ", log_prefixes[(int)level], pid, func);
+    }
     vfprintf(logf, fmt, ap);
     fflush(logf);
 }
