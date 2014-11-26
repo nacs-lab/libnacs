@@ -43,13 +43,12 @@ nacsCheckLogLevel(unsigned level)
 void nacsSetLog(FILE *logf);
 FILE *nacsGetLog();
 
-__attribute__((format(printf, 5, 6)))
-void _nacsLog(NaCsLogLevel level, const char *fname, int line,
-              const char *func, const char *fmt, ...);
+__attribute__((format(printf, 3, 4)))
+void _nacsLog(NaCsLogLevel level, const char *func, const char *fmt, ...);
 
-__attribute__((format(printf, 5, 0)))
-void _nacsLogV(NaCsLogLevel level, const char *fname, int line,
-               const char *func, const char *fmt, va_list ap);
+__attribute__((format(printf, 3, 0)))
+void _nacsLogV(NaCsLogLevel level, const char *func,
+               const char *fmt, va_list ap);
 
 #define __nacsLog(__level, fmt, args...)                                \
     do {                                                                \
@@ -57,18 +56,16 @@ void _nacsLogV(NaCsLogLevel level, const char *fname, int line,
         if (!nacsCheckLogLevel(level)) {                                \
             break;                                                      \
         }                                                               \
-        _nacsLog((NaCsLogLevel)level, __FILE__, __LINE__, __FUNCTION__, \
-                 fmt, ##args);                                          \
+        _nacsLog((NaCsLogLevel)level, __FUNCTION__, fmt, ##args);       \
     } while (0)
 
-#define __nacsLogV(__level, fmt, ap)                                    \
-    do {                                                                \
-        unsigned level = (__level);                                     \
-        if (!nacsCheckLogLevel(level)) {                                \
-            break;                                                      \
-        }                                                               \
-        _nacsLogV((NaCsLogLevel)level, __FILE__, __LINE__, __FUNCTION__, \
-                  fmt, ap);                                             \
+#define __nacsLogV(__level, fmt, ap)                            \
+    do {                                                        \
+        unsigned level = (__level);                             \
+        if (!nacsCheckLogLevel(level)) {                        \
+            break;                                              \
+        }                                                       \
+        _nacsLogV((NaCsLogLevel)level, __FUNCTION__, fmt, ap);  \
     } while (0)
 
 #define nacsDebug(fmt, args...)                 \
@@ -79,7 +76,7 @@ void _nacsLogV(NaCsLogLevel level, const char *fname, int line,
     __nacsLog(NACS_LOG_WARN, fmt, ##args)
 #define nacsError(fmt, args...)                 \
     __nacsLog(NACS_LOG_ERROR, fmt, ##args)
-#define nacsLog(fmt, args...)              \
+#define nacsLog(fmt, args...)                   \
     __nacsLog(NACS_LOG_FORCE, fmt, ##args)
 
 #define nacsDebugV(fmt, args...)                \
@@ -90,7 +87,7 @@ void _nacsLogV(NaCsLogLevel level, const char *fname, int line,
     __nacsLogV(NACS_LOG_WARN, fmt, ##args)
 #define nacsErrorV(fmt, args...)                \
     __nacsLogV(NACS_LOG_ERROR, fmt, ##args)
-#define nacsLogV(fmt, args...)             \
+#define nacsLogV(fmt, args...)                  \
     __nacsLogV(NACS_LOG_FORCE, fmt, ##args)
 
 // void nacsBacktrace();

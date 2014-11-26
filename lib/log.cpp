@@ -39,8 +39,7 @@ nacsSetLog(FILE *f)
 }
 
 NACS_EXPORT void
-_nacsLogV(NaCsLogLevel level, const char *fname, int line, const char *func,
-          const char *fmt, va_list ap)
+_nacsLogV(NaCsLogLevel level, const char *func, const char *fmt, va_list ap)
 {
     NACS_RET_IF_FAIL(level >= nacs_log_level && ((int)level) >= 0 &&
                      level <= NACS_LOG_FORCE);
@@ -56,19 +55,17 @@ _nacsLogV(NaCsLogLevel level, const char *fname, int line, const char *func,
 
     std::lock_guard<std::mutex> lk(log_lock);
 
-    fprintf(logf, "%s%d (%s:%d) %s ", log_prefixes[(int)level], getpid(),
-            fname, line, func);
+    fprintf(logf, "%s%d %s ", log_prefixes[(int)level], getpid(), func);
     vfprintf(logf, fmt, ap);
     fflush(logf);
 }
 
 NACS_EXPORT void
-_nacsLog(NaCsLogLevel level, const char *fname, int line, const char *func,
-         const char *fmt, ...)
+_nacsLog(NaCsLogLevel level, const char *func, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    _nacsLogV(level, fname, line, func, fmt, ap);
+    _nacsLogV(level, func, fmt, ap);
     va_end(ap);
 }
 
