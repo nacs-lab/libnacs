@@ -95,8 +95,8 @@ ScopeSwap<T>::~ScopeSwap()
 #else
 #define nacsSetBit(orig, bit, val)              \
     ((val) ?                                    \
-     ((orig) | (((typeof(orig))1) << (bit))) :  \
-     ((orig) & ~(((typeof(orig))1) << (bit))))
+     ((orig) | (((typeof(orig))1) << uint8_t(bit))) :  \
+     ((orig) & ~(((typeof(orig))1) << uint8_t(bit))))
 #endif
 
 #endif

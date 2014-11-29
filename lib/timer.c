@@ -32,7 +32,8 @@ nacsGetTime()
 {
     struct timespec time_spec;
     clock_gettime(CLOCK_ID, &time_spec);
-    return ((uint64_t)time_spec.tv_sec) * 1000000000 + time_spec.tv_nsec;
+    return (((uint64_t)time_spec.tv_sec) * 1000000000ull +
+            (uint64_t)time_spec.tv_nsec);
 }
 
 NACS_EXPORT uint64_t
