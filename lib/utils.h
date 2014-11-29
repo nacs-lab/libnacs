@@ -31,6 +31,9 @@
 #include <unistd.h>
 
 #ifdef __cplusplus
+
+#include <utility>
+
 template<typename T>
 static NACS_INLINE T
 nacsSetBit(T orig, uint8_t bit, bool val)
@@ -41,6 +44,54 @@ nacsSetBit(T orig, uint8_t bit, bool val)
         return orig & ~(static_cast<T>(1) << bit);
     }
 }
+
+namespace NaCs {
+
+template<typename T>
+class ScopeSwap {
+    T m_orig_val;
+    T *m_var;
+    ScopeSwap(const ScopeSwap&) = delete;
+    void operator=(const ScopeSwap&) = delete;
+public:
+    ScopeSwap(T &var, T&&new_val);
+    ScopeSwap(ScopeSwap &&other);
+    ~ScopeSwap();
+};
+
+template<typename T, typename T2>
+static inline ScopeSwap<T>
+make_scope_swap(T &var, T2&&new_val)
+{
+    return ScopeSwap<T>(var, std::forward<T2>(new_val));
+}
+
+template<typename T>
+ScopeSwap<T>::ScopeSwap(ScopeSwap &&other)
+    : m_orig_val(std::move(other.m_orig_val)),
+      m_var(other.m_var)
+{
+    other.m_var = nullptr;
+}
+
+template<typename T>
+ScopeSwap<T>::ScopeSwap(T &var, T&&new_val)
+    : m_orig_val(new_val),
+      m_var(&var)
+{
+    std::swap(m_orig_val, *m_var);
+}
+
+template<typename T>
+ScopeSwap<T>::~ScopeSwap()
+{
+    if (m_var) {
+        std::swap(m_orig_val, *m_var);
+    }
+}
+
+}
+
 #else
 #define nacsSetBit(orig, bit, val)              \
     ((val) ?                                    \
