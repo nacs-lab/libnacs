@@ -90,7 +90,7 @@ void _nacsLogV(NaCsLogLevel level, const char *func,
 #define nacsLogV(fmt, args...)                  \
     __nacsLogV(NACS_LOG_FORCE, fmt, ##args)
 
-// void nacsBacktrace();
+void nacsBacktrace();
 
 NACS_END_DECLS
 

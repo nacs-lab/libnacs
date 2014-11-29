@@ -21,8 +21,8 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <mutex>
+#include <execinfo.h>
 
-// TODO lock
 NACS_EXPORT NaCsLogLevel nacs_log_level = NACS_LOG_ERROR;
 static FILE *logf = stderr;
 
@@ -74,12 +74,14 @@ _nacsLog(NaCsLogLevel level, const char *func, const char *fmt, ...)
     va_end(ap);
 }
 
-/* NACS_EXPORT void */
-/* nacsBacktrace() */
-/* { */
-/* #ifdef NACS_ENABLE_BACKTRACE */
-/*     void *buff[1024]; */
-/*     size_t size = backtrace(buff, 1024); */
-/*     backtrace_symbols_fd(buff, size, STDERR_FILENO); */
-/* #endif */
-/* } */
+NACS_EXPORT void
+nacsBacktrace()
+{
+    void *buff[1024];
+    size_t size = backtrace(buff, 1024);
+    int fd = fileno(logf);
+    if (fd == -1) {
+        fd = STDERR_FILENO;
+    }
+    backtrace_symbols_fd(buff, size, fd);
+}

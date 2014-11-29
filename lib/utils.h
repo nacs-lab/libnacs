@@ -30,4 +30,22 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#ifdef __cplusplus
+template<typename T>
+static NACS_INLINE T
+nacsSetBit(T orig, uint8_t bit, bool val)
+{
+    if (val) {
+        return orig | (static_cast<T>(1) << bit);
+    } else {
+        return orig & ~(static_cast<T>(1) << bit);
+    }
+}
+#else
+#define nacsSetBit(orig, bit, val)              \
+    ((val) ?                                    \
+     ((orig) | (((typeof(orig))1) << (bit))) :  \
+     ((orig) & ~(((typeof(orig))1) << (bit))))
+#endif
+
 #endif
