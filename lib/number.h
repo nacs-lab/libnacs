@@ -25,14 +25,14 @@
 
 template <typename T1, typename T2>
 NACS_INLINE static auto
-nacsMax(const T1 &a, const T2 &b) -> decltype((a > b) ? a : b)
+nacsMax(const T1 &a, const T2 &b)
 {
     return (a > b) ? a : b;
 }
 
 template <typename T1, typename T2>
 NACS_INLINE static auto
-nacsMin(const T1 &a, const T2 &b) -> decltype((a < b) ? a : b)
+nacsMin(const T1 &a, const T2 &b)
 {
     return (a < b) ? a : b;
 }

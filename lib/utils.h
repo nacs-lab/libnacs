@@ -60,7 +60,7 @@ public:
 };
 
 template<typename T, typename T2>
-static inline ScopeSwap<T>
+static inline auto
 make_scope_swap(T &var, T2&&new_val)
 {
     return ScopeSwap<T>(var, std::forward<T2>(new_val));
