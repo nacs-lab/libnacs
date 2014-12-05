@@ -24,21 +24,21 @@
 #ifdef __cplusplus
 
 template <typename T1, typename T2>
-NACS_INLINE static auto
+NACS_INLINE static constexpr auto
 nacsMax(const T1 &a, const T2 &b)
 {
     return (a > b) ? a : b;
 }
 
 template <typename T1, typename T2>
-NACS_INLINE static auto
+NACS_INLINE static constexpr auto
 nacsMin(const T1 &a, const T2 &b)
 {
     return (a < b) ? a : b;
 }
 
 template <typename T>
-NACS_INLINE static T
+NACS_INLINE static constexpr T
 nacsAbs(const T &a)
 {
     return (a > 0) ? a : -a;
