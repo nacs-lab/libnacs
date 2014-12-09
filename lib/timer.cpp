@@ -17,9 +17,8 @@
  *************************************************************************/
 
 #include "timer.h"
-#include "number.h"
+
 #include <time.h>
-#include <pthread.h>
 
 #include <vector>
 
