@@ -21,6 +21,8 @@
 #include <time.h>
 #include <pthread.h>
 
+#include <vector>
+
 #ifdef CLOCK_THREAD_CPUTIME_ID
 #  define CLOCK_ID CLOCK_THREAD_CPUTIME_ID
 #else
@@ -42,73 +44,24 @@ nacsGetElapse(uint64_t prev)
     return nacsGetTime() - prev;
 }
 
-typedef struct {
-    size_t alloc;
-    size_t num;
-    uint64_t tics[0];
-} NaCsTics;
-
-static NaCsTics*
-nacsTicsResize(NaCsTics *tics, size_t new_size)
-{
-    new_size = nacsAlignTo(new_size, 16);
-    if (!tics || new_size > tics->alloc || new_size * 2 < tics->alloc) {
-        tics = (NaCsTics*)realloc(tics, (sizeof(NaCsTics) +
-                                         sizeof(uint64_t) * new_size));
-        tics->alloc = new_size;
-    }
-    return tics;
-}
-
-static pthread_key_t nacs_tics_key;
-static pthread_once_t nacs_tics_key_once = PTHREAD_ONCE_INIT;
-
-static void
-nacsMakeTicsKey()
-{
-    pthread_key_create(&nacs_tics_key, free);
-}
-
-static NaCsTics*
-nacsGetTics()
-{
-    pthread_once(&nacs_tics_key_once, nacsMakeTicsKey);
-    return (NaCsTics*)pthread_getspecific(nacs_tics_key);
-}
-
-static void
-nacsSetTics(NaCsTics *tics)
-{
-    pthread_once(&nacs_tics_key_once, nacsMakeTicsKey);
-    pthread_setspecific(nacs_tics_key, tics);
-}
+static thread_local std::vector<uint64_t> nacs_tics;
 
 NACS_EXPORT void
 nacsTic()
 {
-    NaCsTics *old_tics = nacsGetTics();
-    size_t num = old_tics ? old_tics->num : 0;
-    NaCsTics *tics = nacsTicsResize(old_tics, num + 1);
-    tics->num = num + 1;
-    if (tics != old_tics) {
-        nacsSetTics(tics);
-    }
-    tics->tics[num] = nacsGetTime();
+    nacs_tics.push_back(0);
+    auto &back = nacs_tics.back();
+    back = nacsGetTime();
 }
 
 NACS_EXPORT uint64_t
 nacsToc()
 {
     uint64_t cur_time = nacsGetTime();
-    NaCsTics *old_tics = nacsGetTics();
-    if (!old_tics || !old_tics->num) {
+    if (!nacs_tics.size()) {
         return 0;
     }
-    old_tics->num--;
-    uint64_t old_time = old_tics->tics[old_tics->num];
-    NaCsTics *tics = nacsTicsResize(old_tics, old_tics->num);
-    if (tics != old_tics) {
-        nacsSetTics(tics);
-    }
+    uint64_t old_time = nacs_tics.back();
+    nacs_tics.pop_back();
     return cur_time - old_time;
 }
