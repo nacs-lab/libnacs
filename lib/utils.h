@@ -90,6 +90,13 @@ ScopeSwap<T>::~ScopeSwap()
     }
 }
 
+struct CDeleter {
+    template<typename T>
+    void operator()(T *p) {
+        free((void*)p);
+    }
+};
+
 }
 
 #else
