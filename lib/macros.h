@@ -75,12 +75,6 @@
  **/
 #define NACS_DEFAULT(v, def) NACS_SWITCH(v, v, def)
 
-/**
- * Evaluate to _\param f if \param v is empty and to \param f otherwise.
- * \sa NACS_SWITCH for restrictions.
- **/
-#define NACS_SWITCH_(v, f) NACS_SWITCH(v, f, _##f)
-
 /** @} */
 
 #define nacsMakeVersion(a, b, c...)                     \
@@ -133,7 +127,7 @@
  * the containing structure.
  */
 #define nacsContainerOf(ptr, type, member)              \
-    ((type*)(((void*)(ptr)) - offsetof(type, member)))
+    ((type*)(((char*)(ptr)) - offsetof(type, member)))
 
 /**
  * Tell the compiler that \param exp is likely to be \param var.
