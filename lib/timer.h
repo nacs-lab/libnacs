@@ -22,22 +22,35 @@
 #include "log.h"
 #include <inttypes.h>
 
-NACS_BEGIN_DECLS
-
 #define PRTime PRIu64
-uint64_t nacsGetTime();
-uint64_t nacsGetElapse(uint64_t prev);
-void nacsTic();
-uint64_t nacsToc();
-
-#define nacsPrintTime(time) nacsForceLog("Time: %" PRTime "\n", time)
-#define nacsPrintElapse(prev) nacsPrintTime(nacsGetElapse(prev))
-#define nacsPrintToc() nacsPrintTime(nacsToc())
 
 #define TICKS_PER_SECOND (1000000000ll)
 #define TICKS_PER_US (1000ll)
 #define TICKS_PER_MS (1000000ll)
 
-NACS_END_DECLS
+namespace NaCs {
+
+uint64_t getTime();
+uint64_t getElapse(uint64_t prev);
+void tic();
+uint64_t toc();
+
+static inline void
+printTime(uint64_t time)
+{
+    nacsLog("Time: %" PRIu64 "\n", time);
+}
+static inline void
+printToc()
+{
+    printTime(toc());
+}
+static inline void
+printElapse(uint64_t prev)
+{
+    printTime(getElapse(prev));
+}
+
+}
 
 #endif
