@@ -61,7 +61,7 @@ nacsSendFD(int sock, int fd)
     } cmsgu;
     memset(&cmsgu, 0, sizeof(cmsgu));
     struct msghdr msg = {
-        .msg_name = NULL,
+        .msg_name = nullptr,
         .msg_namelen = 0,
         .msg_iov = &iov,
         .msg_iovlen = 1,
@@ -92,7 +92,7 @@ nacsRecvFD(int sock)
     } cmsgu;
     memset(&cmsgu, 0, sizeof(cmsgu));
     struct msghdr msg = {
-        .msg_name = NULL,
+        .msg_name = nullptr,
         .msg_namelen = 0,
         .msg_iov = &iov,
         .msg_iovlen = 1,
