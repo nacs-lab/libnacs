@@ -21,23 +21,19 @@
 
 #include "utils.h"
 
-NACS_BEGIN_DECLS
-
-void *nacsMapFile(const char *name, off_t offset, size_t len);
-bool nacsSendFD(int sock, int fd);
-int nacsRecvFD(int sock);
-bool nacsFDSetCloexec(int fd, bool cloexec);
-bool nacsFDSetNonBlock(int fd, bool nonblock);
-
-NACS_END_DECLS
-
-#ifdef __cplusplus
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <fcntl.h>
 #include <stdexcept>
 
 namespace NaCs {
+
+void *mapFile(const char *name, off_t offset, size_t len);
+bool sendFD(int sock, int fd);
+int recvFD(int sock);
+bool fdSetCloexec(int fd, bool cloexec);
+bool fdSetNonBlock(int fd, bool nonblock);
+
 class FLock {
     int m_fd;
 public:
@@ -66,6 +62,5 @@ public:
     }
 };
 }
-#endif
 
 #endif

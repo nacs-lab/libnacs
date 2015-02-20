@@ -27,8 +27,10 @@
 
 static const size_t page_size = sysconf(_SC_PAGESIZE);
 
+namespace NaCs {
+
 NACS_EXPORT void*
-nacsMapFile(const char *name, off_t offset, size_t len)
+mapFile(const char *name, off_t offset, size_t len)
 {
     NACS_RET_IF_FAIL(name, nullptr);
     int fd = open(name, O_RDWR | O_SYNC);
@@ -36,7 +38,7 @@ nacsMapFile(const char *name, off_t offset, size_t len)
     nacsInfo("%s opened\n", name);
 
     off_t start = offset - offset % page_size;
-    off_t end = nacsAlignTo(offset + len, page_size);
+    off_t end = alignTo(offset + len, page_size);
 
     void *base = mmap(nullptr, end - start, PROT_READ | PROT_WRITE,
                       MAP_SHARED, fd, start);
@@ -47,7 +49,7 @@ nacsMapFile(const char *name, off_t offset, size_t len)
 }
 
 NACS_EXPORT bool
-nacsSendFD(int sock, int fd)
+sendFD(int sock, int fd)
 {
     NACS_RET_IF_FAIL(fd >= 0 && sock >= 0, false);
     char buf = 0;
@@ -78,7 +80,7 @@ nacsSendFD(int sock, int fd)
 }
 
 NACS_EXPORT int
-nacsRecvFD(int sock)
+recvFD(int sock)
 {
     NACS_RET_IF_FAIL(sock >= 0, -1);
     char buf = 0;
@@ -111,7 +113,7 @@ nacsRecvFD(int sock)
 }
 
 NACS_EXPORT bool
-nacsFDSetCloexec(int fd, bool cloexec)
+fdSetCloexec(int fd, bool cloexec)
 {
     long flags;
     flags = fcntl(fd, F_GETFD, 0);
@@ -126,8 +128,10 @@ nacsFDSetCloexec(int fd, bool cloexec)
     return fcntl(fd, F_SETFD, flags) != -1;
 }
 
+}
+
 NACS_EXPORT bool
-nacsFDSetNonBlock(int fd, bool nonblock)
+fdSetNonBlock(int fd, bool nonblock)
 {
     long flags;
     flags = fcntl(fd, F_GETFL, 0);

@@ -24,19 +24,17 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
-// GNU extension
-#include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#ifdef __cplusplus
-
 #include <utility>
+
+namespace NaCs {
 
 template<typename T>
 static NACS_INLINE T
-nacsSetBit(T orig, uint8_t bit, bool val)
+setBit(T orig, uint8_t bit, bool val)
 {
     if (val) {
         return orig | (static_cast<T>(1) << bit);
@@ -44,8 +42,6 @@ nacsSetBit(T orig, uint8_t bit, bool val)
         return orig & ~(static_cast<T>(1) << bit);
     }
 }
-
-namespace NaCs {
 
 template<typename T>
 class ScopeSwap {
@@ -98,12 +94,5 @@ struct CDeleter {
 };
 
 }
-
-#else
-#define nacsSetBit(orig, bit, val)              \
-    ((val) ?                                    \
-     ((orig) | (((typeof(orig))1) << uint8_t(bit))) :  \
-     ((orig) & ~(((typeof(orig))1) << uint8_t(bit))))
-#endif
 
 #endif

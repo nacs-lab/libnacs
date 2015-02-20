@@ -22,8 +22,6 @@
 #include "utils.h"
 #include <stdarg.h>
 
-NACS_BEGIN_DECLS
-
 typedef enum {
     NACS_LOG_DEBUG,
     NACS_LOG_INFO,
@@ -40,7 +38,7 @@ nacsCheckLogLevel(unsigned level)
     return nacsUnlikely(level <= NACS_LOG_FORCE && level >= nacs_log_level);
 }
 
-void nacsSetLog(FILE *logf);
+void nacsSetLog(FILE *log_f);
 FILE *nacsGetLog();
 
 __attribute__((format(printf, 3, 4)))
@@ -91,7 +89,5 @@ void _nacsLogV(NaCsLogLevel level, const char *func,
     __nacsLogV(NACS_LOG_FORCE, fmt, ##args)
 
 void nacsBacktrace();
-
-NACS_END_DECLS
 
 #endif

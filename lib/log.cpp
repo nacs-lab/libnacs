@@ -24,18 +24,18 @@
 #include <execinfo.h>
 
 NACS_EXPORT NaCsLogLevel nacs_log_level = NACS_LOG_ERROR;
-static FILE *logf = stderr;
+static FILE *log_f = stderr;
 
 NACS_EXPORT FILE*
 nacsGetLog()
 {
-    return logf;
+    return log_f;
 }
 
 NACS_EXPORT void
 nacsSetLog(FILE *f)
 {
-    logf = f ? f : stderr;
+    log_f = f ? f : stderr;
 }
 
 NACS_EXPORT void
@@ -57,12 +57,12 @@ _nacsLogV(NaCsLogLevel level, const char *func, const char *fmt, va_list ap)
 
     int pid = getpid();
     if (level == NACS_LOG_FORCE) {
-        fprintf(logf, "%d: ", pid);
+        fprintf(log_f, "%d: ", pid);
     } else {
-        fprintf(logf, "%s%d %s ", log_prefixes[(int)level], pid, func);
+        fprintf(log_f, "%s%d %s ", log_prefixes[(int)level], pid, func);
     }
-    vfprintf(logf, fmt, ap);
-    fflush(logf);
+    vfprintf(log_f, fmt, ap);
+    fflush(log_f);
 }
 
 NACS_EXPORT void
@@ -79,7 +79,7 @@ nacsBacktrace()
 {
     void *buff[1024];
     size_t size = backtrace(buff, 1024);
-    int fd = fileno(logf);
+    int fd = fileno(log_f);
     if (fd == -1) {
         fd = STDERR_FILENO;
     }

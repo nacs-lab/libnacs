@@ -19,66 +19,72 @@
 #ifndef _NACS_UTILS_NUMBER_H_
 #define _NACS_UTILS_NUMBER_H_
 
-#include "utils.h"
+#include <cmath>
 
-#ifdef __cplusplus
+namespace NaCs {
 
-template <typename T1, typename T2>
-NACS_INLINE static constexpr auto
-nacsMax(const T1 &a, const T2 &b)
+template<typename T1, typename T2>
+static inline constexpr auto
+max(T1 &&a, T2 &&b)
 {
     return (a > b) ? a : b;
 }
 
-template <typename T1, typename T2>
-NACS_INLINE static constexpr auto
-nacsMin(const T1 &a, const T2 &b)
+template<typename First, typename... Rest>
+static inline constexpr auto
+max(First &&first, Rest&&... rest)
+{
+    return max(std::forward<First>(first),
+               max(std::forward<Rest>(rest)...));
+}
+
+template<typename T1, typename T2>
+static inline constexpr auto
+min(T1 &&a, T2 &&b)
 {
     return (a < b) ? a : b;
 }
 
-template <typename T>
-NACS_INLINE static constexpr T
-nacsAbs(const T &a)
+template<typename First, typename... Rest>
+static inline constexpr auto
+min(First &&first, Rest&&... rest)
 {
-    return (a > 0) ? a : -a;
+    return min(std::forward<First>(first),
+               min(std::forward<Rest>(rest)...));
 }
-#else
-#define nacsMax(a, b)                           \
-    ({                                          \
-        typeof(a) _a = (a);                     \
-        typeof(b) _b = (b);                     \
-        (_a > _b) ? _a : _b;                    \
-    })
-#define nacsMin(a, b)                           \
-    ({                                          \
-        typeof(a) _a = (a);                     \
-        typeof(b) _b = (b);                     \
-        (_a < _b) ? _a : _b;                    \
-    })
-#define nacsAbs(a)                              \
-    ({                                          \
-        typeof(a) _a = (a);                     \
-        (_a > 0) ? _a : -_a;                    \
-    })
-#endif
-#define nacsBound(a, b, c) nacsMax(a, nacsMin(b, c))
-#define nacsLimit(v, l) nacsBound(0, v, l)
 
-NACS_INLINE static uintptr_t
-nacsGetPadding(uintptr_t len, uintptr_t align)
+template<typename T1, typename T2, typename T3>
+static inline constexpr auto
+bound(T1 &&v1, T2 &&v2, T3 &&v3)
 {
-    uintptr_t left;
-    if ((left = len % align)) {
+    return max(std::forward<T1>(v1), min(std::forward<T2>(v2),
+                                         std::forward<T3>(v3)));
+}
+
+template<typename T1, typename T2>
+static inline constexpr auto
+limit(T1 &&v1, T2 &&v2)
+{
+    return bound(0, std::forward<T1>(v1), std::forward<T2>(v2));
+}
+
+template<typename T1, typename T2>
+static inline auto
+getPadding(T1 len, T2 align) -> decltype(len + align)
+{
+    if (auto left = len % align) {
         return align - left;
     }
     return 0;
 }
 
-NACS_INLINE static uintptr_t
-nacsAlignTo(uintptr_t len, uintptr_t align)
+template<typename T1, typename T2>
+static inline auto
+alignTo(T1 len, T2 align)
 {
-    return len + nacsGetPadding(len, align);
+    return len + getPadding(len, align);
+}
+
 }
 
 #endif
