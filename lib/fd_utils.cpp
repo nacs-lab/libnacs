@@ -25,7 +25,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-static const size_t page_size = sysconf(_SC_PAGESIZE);
+static const auto page_size = sysconf(_SC_PAGESIZE);
 
 namespace NaCs {
 
