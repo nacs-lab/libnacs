@@ -61,6 +61,13 @@ bound(T1 &&v1, T2 &&v2, T3 &&v3)
                                          std::forward<T3>(v3)));
 }
 
+template<typename T>
+static inline auto
+square(const T &a)
+{
+    return a * a;
+}
+
 template<typename T1, typename T2>
 static inline constexpr auto
 limit(T1 &&v1, T2 &&v2)
