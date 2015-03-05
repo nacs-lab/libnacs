@@ -61,10 +61,23 @@ public:
     {}
 };
 
+template<typename Lock=std::mutex>
+struct uniqueMutex: public std::unique_lock<Lock> {
+    uniqueMutex() :
+        std::unique_lock<Lock>(),
+        m_lock()
+    {
+        std::unique_lock<Lock>::operator=(std::unique_lock<Lock>(m_lock));
+    }
+private:
+    Lock m_lock;
+};
+
+template<typename CondVar, typename Locker>
 static void
 test_cond_var()
 {
-    std::condition_variable cv;
+    CondVar cv;
     NaCs::tic();
     for (int i = 0;i < N;i++) {
         cv.notify_one();
@@ -76,8 +89,7 @@ test_cond_var()
     }
     NaCs::printToc();
     std::thread thread([&] {
-            std::mutex lock;
-            std::unique_lock<std::mutex> locker(lock);
+            Locker locker;
             for (int i = 0;i < N * 2;i++) {
                 cv.wait(locker);
                 std::this_thread::yield();
@@ -99,8 +111,16 @@ test_cond_var()
 int
 main()
 {
-    std::cout << "Condition Variable" << std::endl;
-    test_cond_var();
+    std::cout << "Condition Variable, unique_lock<mutex>" << std::endl;
+    test_cond_var<std::condition_variable, uniqueMutex<> >();
+    std::cout << "Condition Variable Any, unique_lock<mutex>" << std::endl;
+    test_cond_var<std::condition_variable_any, uniqueMutex<> >();
+    std::cout << "Condition Variable Any, mutex" << std::endl;
+    test_cond_var<std::condition_variable_any, std::mutex>();
+    std::cout << "Condition Variable Any, unique_lock<DummyLock>" << std::endl;
+    test_cond_var<std::condition_variable_any, uniqueMutex<DummyLock> >();
+    std::cout << "Condition Variable Any, DummyLock" << std::endl;
+    test_cond_var<std::condition_variable_any, DummyLock>();
 
     std::cout << "std::mutex" << std::endl;
     test_lock<std::mutex>();
@@ -112,22 +132,6 @@ main()
     test_lock<std::recursive_timed_mutex>();
     std::cout << "std::shared_timed_mutex" << std::endl;
     test_lock<std::shared_timed_mutex>();
-    std::cout << "DummyLock" << std::endl;
-    test_lock<DummyLock>();
-
-    std::cout << "function call" << std::endl;
-    NaCs::tic();
-    for (int i = 0;i < N;i++) {
-        f();
-    }
-    NaCs::printToc();
-
-    std::cout << "inlined function call" << std::endl;
-    NaCs::tic();
-    for (int i = 0;i < N;i++) {
-        f_inline();
-    }
-    NaCs::printToc();
 
     std::cout << "pthread mutex" << std::endl;
     pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -145,6 +149,23 @@ main()
         while (spin.exchange(true)) {
         }
         spin = false;
+    }
+    NaCs::printToc();
+
+    std::cout << "DummyLock" << std::endl;
+    test_lock<DummyLock>();
+
+    std::cout << "function call" << std::endl;
+    NaCs::tic();
+    for (int i = 0;i < N;i++) {
+        f();
+    }
+    NaCs::printToc();
+
+    std::cout << "inlined function call" << std::endl;
+    NaCs::tic();
+    for (int i = 0;i < N;i++) {
+        f_inline();
     }
     NaCs::printToc();
     return 0;
