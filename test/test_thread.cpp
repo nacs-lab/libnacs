@@ -8,6 +8,13 @@
 
 static constexpr int N = 1000000;
 
+static inline void
+tocPerCycle()
+{
+    std::cout << "Time: " << double(NaCs::toc()) / double(N) / 1e3
+              << " us" << std::endl;
+}
+
 template<typename Lock>
 static inline void
 test_lock()
@@ -18,17 +25,17 @@ test_lock()
         lock.lock();
         lock.unlock();
     }
-    NaCs::printToc();
+    tocPerCycle();
     NaCs::tic();
     for (int i = 0;i < N;i++) {
         std::lock_guard<Lock> locker(lock);
     }
-    NaCs::printToc();
+    tocPerCycle();
     NaCs::tic();
     for (int i = 0;i < N;i++) {
         std::unique_lock<Lock> locker(lock);
     }
-    NaCs::printToc();
+    tocPerCycle();
 
     std::unique_lock<Lock> unique_locker(lock, std::defer_lock);
     NaCs::tic();
@@ -36,7 +43,7 @@ test_lock()
         unique_locker.lock();
         unique_locker.unlock();
     }
-    NaCs::printToc();
+    tocPerCycle();
 }
 
 static void __attribute__((noinline))
@@ -82,12 +89,12 @@ test_cond_var()
     for (int i = 0;i < N;i++) {
         cv.notify_one();
     }
-    NaCs::printToc();
+    tocPerCycle();
     NaCs::tic();
     for (int i = 0;i < N;i++) {
         cv.notify_all();
     }
-    NaCs::printToc();
+    tocPerCycle();
     std::thread thread([&] {
             Locker locker;
             for (int i = 0;i < N * 2;i++) {
@@ -100,12 +107,12 @@ test_cond_var()
     for (int i = 0;i < N;i++) {
         cv.notify_one();
     }
-    NaCs::printToc();
+    tocPerCycle();
     NaCs::tic();
     for (int i = 0;i < N;i++) {
         cv.notify_all();
     }
-    NaCs::printToc();
+    tocPerCycle();
 }
 
 int
@@ -140,7 +147,7 @@ main()
         pthread_mutex_lock(&lock);
         pthread_mutex_unlock(&lock);
     }
-    NaCs::printToc();
+    tocPerCycle();
 
     std::cout << "Simple spin lock" << std::endl;
     std::atomic_bool spin(false);
@@ -150,7 +157,7 @@ main()
         }
         spin = false;
     }
-    NaCs::printToc();
+    tocPerCycle();
 
     std::cout << "DummyLock" << std::endl;
     test_lock<DummyLock>();
@@ -160,13 +167,13 @@ main()
     for (int i = 0;i < N;i++) {
         f();
     }
-    NaCs::printToc();
+    tocPerCycle();
 
     std::cout << "inlined function call" << std::endl;
     NaCs::tic();
     for (int i = 0;i < N;i++) {
         f_inline();
     }
-    NaCs::printToc();
+    tocPerCycle();
     return 0;
 }
