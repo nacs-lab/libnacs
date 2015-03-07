@@ -15,13 +15,14 @@ static constexpr int N = 10000000;
 using namespace NaCs;
 using namespace std::literals;
 
-int
-main()
+template<typename Lock, int init_size=256>
+static inline void
+test_fifo()
 {
-    FIFO<int> fifo(256);
+    FIFO<int> fifo(init_size);
     assert(fifo.size() == 0);
-    assert(fifo.capacity() == 256);
-    assert(fifo.spaceLeft() == 256);
+    assert(fifo.capacity() == init_size);
+    assert(fifo.spaceLeft() == init_size);
 
     tic();
     std::thread t1([&] {
@@ -46,7 +47,7 @@ main()
               << double(write_time) / double(N) / 1e3 << " us"
               << std::endl;
 
-    assert(fifo.capacity() == 256);
+    assert(fifo.capacity() == init_size);
 
     tic();
     std::thread t2([&] {
@@ -73,6 +74,14 @@ main()
               << double(write_time2) / double(N) / 1e3 << " us"
               << std::endl;
     std::cout << "Total size: " << fifo.capacity() << std::endl;
+}
 
+int
+main()
+{
+    test_fifo<SpinLock, 256>();
+    test_fifo<SpinLock, 8192>();
+    test_fifo<std::mutex, 256>();
+    test_fifo<std::mutex, 8192>();
     return 0;
 }

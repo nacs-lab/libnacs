@@ -110,7 +110,7 @@ getBits(T v)
 {
     static_assert(std::is_unsigned<T>(), "");
     constexpr uint8_t mid = (upper + lower) / 2;
-    constexpr T thresh = 1 << mid;
+    constexpr T thresh = static_cast<T>(1) << mid;
     if (v >= thresh) {
         return getBits<T, upper, mid + 1>(v);
     } else {
