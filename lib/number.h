@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2013 - 2014 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2013 - 2015 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -20,6 +20,8 @@
 #define _NACS_UTILS_NUMBER_H_
 
 #include <cmath>
+#include <type_traits>
+#include <utility>
 
 namespace NaCs {
 
@@ -90,6 +92,28 @@ static inline auto
 alignTo(T1 len, T2 align)
 {
     return len + getPadding(len, align);
+}
+
+template<typename T, int upper, int lower>
+static constexpr inline std::enable_if_t<(upper == lower), int>
+getBits(T)
+{
+    static_assert(std::is_unsigned<T>(), "");
+    return lower;
+}
+
+template<typename T, int upper=sizeof(T) * 8, int lower=0>
+static constexpr inline std::enable_if_t<(upper > lower), int>
+getBits(T v)
+{
+    static_assert(std::is_unsigned<T>(), "");
+    constexpr int mid = (upper + lower) / 2;
+    constexpr T thresh = 1 << mid;
+    if (v >= thresh) {
+        return getBits<T, upper, mid + 1>(v);
+    } else {
+        return getBits<T, mid, lower>(v);
+    }
 }
 
 }
