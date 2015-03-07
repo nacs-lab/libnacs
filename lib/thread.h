@@ -27,6 +27,8 @@ namespace NaCs {
 
 template<bool real, typename Lock>
 struct CondLock {
+    CondLock(Lock&)
+    {}
 };
 
 template<typename Lock>
