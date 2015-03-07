@@ -31,36 +31,18 @@ struct test_lock {
         Lock lock;
         NaCs::tic();
         for (int i = 0;i < N;i++) {
-            lock.lock();
-            lock.unlock();
-        }
-        tocPerCycle();
-        NaCs::tic();
-        for (int i = 0;i < N;i++) {
             std::lock_guard<Lock> locker(lock);
-        }
-        tocPerCycle();
-        NaCs::tic();
-        for (int i = 0;i < N;i++) {
-            std::unique_lock<Lock> locker(lock);
-        }
-        tocPerCycle();
-
-        std::unique_lock<Lock> unique_locker(lock, std::defer_lock);
-        NaCs::tic();
-        for (int i = 0;i < N;i++) {
-            unique_locker.lock();
-            unique_locker.unlock();
         }
         tocPerCycle();
     }
 };
 
 template<typename Func, typename Lock, int n>
-struct n_runner {
+class RepeatRunner {
     Func &m_func;
     Lock &m_lock;
-    n_runner(Func &func, Lock &lock)
+public:
+    RepeatRunner(Func &func, Lock &lock)
         : m_func(func),
           m_lock(lock)
     {}
@@ -81,7 +63,7 @@ struct thread_tester {
     operator()(Func &&func, Lock &lock)
     {
         NaCs::tic();
-        n_runner<Func, Lock, n> runner(func, lock);
+        RepeatRunner<Func, Lock, n> runner(func, lock);
         std::thread threads[nthread];
         for (auto &t: threads) {
             t = std::thread(runner);
@@ -100,7 +82,7 @@ struct thread_tester<DummyLock, nthread, n> {
     operator()(Func &&func, DummyLock &lock)
     {
         NaCs::tic();
-        n_runner<Func, DummyLock, n> runner(func, lock);
+        RepeatRunner<Func, DummyLock, n> runner(func, lock);
         std::thread(runner).join();
         tocPerCycle(n);
     }
@@ -193,9 +175,17 @@ public:
 class PthreadMutex {
     pthread_mutex_t m_lock;
 public:
+    inline
     PthreadMutex()
-        : m_lock(PTHREAD_MUTEX_INITIALIZER)
-    {}
+        : m_lock()
+    {
+        pthread_mutex_init(&m_lock, nullptr);
+    }
+    inline
+    ~PthreadMutex()
+    {
+        pthread_mutex_destroy(&m_lock);
+    }
     inline void
     lock()
     {
