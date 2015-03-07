@@ -1,4 +1,6 @@
 #include <nacs-utils/timer.h>
+#include <nacs-utils/thread.h>
+
 #include <mutex>
 #include <shared_mutex>
 #include <atomic>
@@ -254,7 +256,7 @@ locks_tester()
     std::cout << "SpinLock<false>" << std::endl;
     Tester<SpinLock<false> >()();
     std::cout << "SpinLock<true>" << std::endl;
-    Tester<SpinLock<true> >()();
+    Tester<NaCs::SpinLock>()();
     std::cout << "DummyLock" << std::endl;
     Tester<DummyLock>()();
 }
