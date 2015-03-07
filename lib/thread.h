@@ -21,8 +21,18 @@
 
 #include <atomic>
 #include <thread>
+#include <mutex>
 
 namespace NaCs {
+
+template<bool real, typename Lock>
+struct CondLock {
+};
+
+template<typename Lock>
+struct CondLock<true, Lock> : std::lock_guard<Lock> {
+    using std::lock_guard<Lock>::lock_guard;
+};
 
 /**
  * A straightforward implementation of a spin lock
