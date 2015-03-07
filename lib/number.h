@@ -19,6 +19,8 @@
 #ifndef _NACS_UTILS_NUMBER_H_
 #define _NACS_UTILS_NUMBER_H_
 
+#include <stdint.h>
+
 #include <cmath>
 #include <type_traits>
 #include <utility>
@@ -94,25 +96,36 @@ alignTo(T1 len, T2 align)
     return len + getPadding(len, align);
 }
 
-template<typename T, int upper, int lower>
-static constexpr inline std::enable_if_t<(upper == lower), int>
+template<typename T, uint8_t upper, uint8_t lower>
+static constexpr inline std::enable_if_t<(upper == lower), uint8_t>
 getBits(T)
 {
     static_assert(std::is_unsigned<T>(), "");
     return lower;
 }
 
-template<typename T, int upper=sizeof(T) * 8, int lower=0>
-static constexpr inline std::enable_if_t<(upper > lower), int>
+template<typename T, uint8_t upper=sizeof(T) * 8, uint8_t lower=0>
+static constexpr inline std::enable_if_t<(upper > lower), uint8_t>
 getBits(T v)
 {
     static_assert(std::is_unsigned<T>(), "");
-    constexpr int mid = (upper + lower) / 2;
+    constexpr uint8_t mid = (upper + lower) / 2;
     constexpr T thresh = 1 << mid;
     if (v >= thresh) {
         return getBits<T, upper, mid + 1>(v);
     } else {
         return getBits<T, mid, lower>(v);
+    }
+}
+
+template<typename T>
+static constexpr inline T
+setBit(T orig, uint8_t bit, bool val)
+{
+    if (val) {
+        return orig | (static_cast<T>(1) << bit);
+    } else {
+        return orig & ~(static_cast<T>(1) << bit);
     }
 }
 

@@ -33,17 +33,6 @@
 namespace NaCs {
 
 template<typename T>
-static NACS_INLINE T
-setBit(T orig, uint8_t bit, bool val)
-{
-    if (val) {
-        return orig | (static_cast<T>(1) << bit);
-    } else {
-        return orig & ~(static_cast<T>(1) << bit);
-    }
-}
-
-template<typename T>
 class ScopeSwap {
     T m_orig_val;
     T *m_var;
