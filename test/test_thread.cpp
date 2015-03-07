@@ -56,37 +56,23 @@ public:
     }
 };
 
-template<typename Lock, int nthread=2, int n=N>
-struct thread_tester {
-    template<typename Func>
-    inline void
-    operator()(Func &&func, Lock &lock)
-    {
-        NaCs::tic();
-        RepeatRunner<Func, Lock, n> runner(func, lock);
-        std::thread threads[nthread];
-        for (auto &t: threads) {
-            t = std::thread(runner);
-        }
-        for (auto &t: threads) {
-            t.join();
-        }
-        tocPerCycle(n * nthread);
+template<int n=N, int _nthread=2, typename Lock, typename Func>
+static inline void
+test_n_threads(Func &&func, Lock &lock)
+{
+    NaCs::tic();
+    RepeatRunner<Func, Lock, n> runner(func, lock);
+    constexpr static int nthread =
+        std::is_same<DummyLock, Lock>() ? 1 : _nthread;
+    std::thread threads[nthread];
+    for (auto &t: threads) {
+        t = std::thread(runner);
     }
-};
-
-template<int nthread, int n>
-struct thread_tester<DummyLock, nthread, n> {
-    template<typename Func>
-    inline void
-    operator()(Func &&func, DummyLock &lock)
-    {
-        NaCs::tic();
-        RepeatRunner<Func, DummyLock, n> runner(func, lock);
-        std::thread(runner).join();
-        tocPerCycle(n);
+    for (auto &t: threads) {
+        t.join();
     }
-};
+    tocPerCycle(n * nthread);
+}
 
 template<typename Lock>
 struct test_thread_lock {
@@ -96,17 +82,17 @@ struct test_thread_lock {
         Lock lock;
         std::atomic<int> ai;
         volatile double f = 1.2;
-        thread_tester<Lock>()([&] {
+        test_n_threads([&] {
                 ++ai;
                 f = std::cos(f);
             }, lock);
-        thread_tester<Lock>()([&] {
+        test_n_threads([&] {
                 for (int j = 0;j < 10;j++) {
                     f = std::cos(f);
                 }
             }, lock);
         volatile int *volatile ptr = nullptr;
-        thread_tester<Lock, 2, N / 100>()([&] {
+        test_n_threads<N / 100>([&] {
                 if (ptr) {
                     delete ptr;
                     ptr = nullptr;
@@ -114,10 +100,10 @@ struct test_thread_lock {
                     ptr = new int[1024 * 1024];
                 }
             }, lock);
-        thread_tester<Lock, 2, N / 100>()([&] {
+        test_n_threads<N / 100>([&] {
                 std::this_thread::sleep_for(1us);
             }, lock);
-        thread_tester<Lock, 6, N / 100>()([&] {
+        test_n_threads<N / 100, 6>([&] {
                 for (int j = 0;j < 100;j++) {
                     f = std::cos(f);
                     f = f + 1;
