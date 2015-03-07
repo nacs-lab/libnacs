@@ -264,14 +264,6 @@ main()
 {
     std::cout << "Condition Variable, unique_lock<mutex>" << std::endl;
     test_cond_var<std::condition_variable, uniqueMutex<> >();
-    std::cout << "Condition Variable Any, unique_lock<mutex>" << std::endl;
-    test_cond_var<std::condition_variable_any, uniqueMutex<> >();
-    std::cout << "Condition Variable Any, mutex" << std::endl;
-    test_cond_var<std::condition_variable_any, std::mutex>();
-    std::cout << "Condition Variable Any, unique_lock<DummyLock>" << std::endl;
-    test_cond_var<std::condition_variable_any, uniqueMutex<DummyLock> >();
-    std::cout << "Condition Variable Any, DummyLock" << std::endl;
-    test_cond_var<std::condition_variable_any, DummyLock>();
 
     locks_tester<test_lock>();
     locks_tester<test_thread_lock>();
