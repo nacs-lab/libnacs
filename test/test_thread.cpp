@@ -74,7 +74,7 @@ struct n_runner {
     }
 };
 
-template<typename Lock, int n=N>
+template<typename Lock, int nthread=2, int n=N>
 struct thread_tester {
     template<typename Func>
     inline void
@@ -82,16 +82,19 @@ struct thread_tester {
     {
         NaCs::tic();
         n_runner<Func, Lock, n> runner(func, lock);
-        std::thread t1(runner);
-        std::thread t2(runner);
-        t1.join();
-        t2.join();
-        tocPerCycle(n * 2);
+        std::thread threads[nthread];
+        for (auto &t: threads) {
+            t = std::thread(runner);
+        }
+        for (auto &t: threads) {
+            t.join();
+        }
+        tocPerCycle(n * nthread);
     }
 };
 
-template<int n>
-struct thread_tester<DummyLock, n> {
+template<int nthread, int n>
+struct thread_tester<DummyLock, nthread, n> {
     template<typename Func>
     inline void
     operator()(Func &&func, DummyLock &lock)
@@ -121,7 +124,7 @@ struct test_thread_lock {
                 }
             }, lock);
         volatile int *volatile ptr = nullptr;
-        thread_tester<Lock, N / 100>()([&] {
+        thread_tester<Lock, 2, N / 100>()([&] {
                 if (ptr) {
                     delete ptr;
                     ptr = nullptr;
@@ -129,8 +132,15 @@ struct test_thread_lock {
                     ptr = new int[1024 * 1024];
                 }
             }, lock);
-        thread_tester<Lock, N / 100>()([&] {
+        thread_tester<Lock, 2, N / 100>()([&] {
                 std::this_thread::sleep_for(1us);
+            }, lock);
+        thread_tester<Lock, 6, N / 100>()([&] {
+                for (int j = 0;j < 100;j++) {
+                    f = std::cos(f);
+                    f = f + 1;
+                    f = std::sin(f);
+                }
             }, lock);
     }
 };
