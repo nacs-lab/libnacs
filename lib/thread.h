@@ -65,7 +65,7 @@ public:
     inline bool
     try_lock()
     {
-        return m_spin.exchange(true);
+        return !m_spin.exchange(true);
     }
     inline void
     lock()

@@ -22,23 +22,55 @@
 #include "thread.h"
 #include "number.h"
 
+#include <type_traits>
+
 namespace NaCs {
 
 template<typename T, typename Lock=SpinLock>
 class FIFO {
+    // Not supported by stdc++ yet.
+    // static_assert(std::is_trivially_copyable<T>(), "");
     FIFO(const FIFO&) = delete;
     void operator=(const FIFO&) = delete;
     // m_alloc is always a power of 2
     size_t m_alloc;
     T *m_buff;
     mutable Lock m_lock;
-    size_t m_read_p;
-    size_t m_write_p;
+    size_t m_read_p; // always less than m_alloc
+    size_t m_write_p; // always less than m_alloc
     inline void
-    doPush(T &v)
+    doPush(const T *v)
     {
-        m_buff[m_write_p & (m_alloc - 1)] = v;
-        ++m_write_p;
+        // There has to be enough space in the buffer before calling this
+        // function (i.e. `spaceLeft() > 1`).
+        memcpy(m_buff + m_write_p, v, sizeof(T));
+        m_write_p = (m_write_p + 1) & (m_alloc - 1);
+    }
+    inline void
+    doPush(const T *v, size_t len)
+    {
+        // There has to be enough space in the buffer before calling this
+        // function (i.e. `spaceLeft() > len`).
+        const auto start_p = m_write_p;
+        m_write_p = (m_write_p + len) & (m_alloc - 1);
+        if (m_write_p > start_p || m_write_p == 0) {
+            memcpy(m_buff + start_p, v, len * sizeof(T));
+        } else {
+            const auto start_len = len - m_write_p;
+            memcpy(m_buff + start_p, v, start_len * sizeof(T));
+            memcpy(m_buff, v + start_len, m_write_p * sizeof(T));
+        }
+    }
+    inline void
+    doubleSize()
+    {
+        m_buff = (T*)realloc(m_buff, sizeof(T) * 2 * m_alloc);
+        if (m_read_p > m_write_p) {
+            if (m_write_p)
+                memcpy(m_buff + m_alloc, m_buff, m_write_p * sizeof(T));
+            m_write_p += m_alloc;
+        }
+        m_alloc *= 2;
     }
 public:
     inline
@@ -70,42 +102,83 @@ public:
         return capacity() - size<false>();
     }
     template<bool lock=true>
+    inline size_t
+    tryPush(const T *v, size_t len=1)
+    {
+        CondLock<lock, Lock> locker(m_lock);
+        len = min(spaceLeft<false>() - 1, len);
+        if (len > 0)
+            doPush(v, len);
+        return len;
+    }
+    template<bool lock=true>
     inline bool
-    tryPush(T &v)
+    tryPush(const T &v)
     {
         CondLock<lock, Lock> locker(m_lock);
         if (spaceLeft<false>() <= 1)
             return false;
-        doPush(v);
+        doPush(&v);
         return true;
     }
     template<bool lock=true>
     inline void
-    push(T &v)
+    push(const T *v, size_t len=1)
+    {
+        CondLock<lock, Lock> locker(m_lock);
+        while (spaceLeft<false>() <= len) {
+            doubleSize();
+        }
+        doPush(v, len);
+    }
+    template<bool lock=true>
+    inline void
+    push(const T &v)
     {
         CondLock<lock, Lock> locker(m_lock);
         if (spaceLeft<false>() <= 1) {
-            auto mask = m_alloc - 1;
-            m_read_p &= mask;
-            m_write_p &= mask;
-            m_buff = (T*)realloc(m_buff, sizeof(T) * 2 * m_alloc);
-            if (m_read_p > m_write_p) {
-                if (m_write_p)
-                    memcpy(m_buff + m_alloc, m_buff, m_write_p * sizeof(T));
-                m_write_p += m_alloc;
-            }
-            m_alloc *= 2;
+            doubleSize();
         }
-        doPush(v);
+        doPush(&v);
     }
     template<bool lock=true>
     inline T
     pop()
     {
+        // This function has no protection for overflowing
         CondLock<lock, Lock> locker(m_lock);
-        T v = m_buff[m_read_p & (m_alloc - 1)];
-        ++m_read_p;
+        T v = m_buff[m_read_p];
+        m_read_p = (m_read_p + 1) & (m_alloc - 1);
         return v;
+    }
+    template<bool lock=true>
+    inline size_t
+    pop(T *v, size_t len=1)
+    {
+        CondLock<lock, Lock> locker(m_lock);
+        len = min(size<false>(), len);
+        if (!len)
+            return 0;
+        const auto start_p = m_read_p;
+        m_read_p = (m_read_p + len) & (m_alloc - 1);
+
+        if (m_read_p > start_p || m_read_p == 0) {
+            memcpy(v, m_buff + start_p, len * sizeof(T));
+        } else {
+            const auto start_len = len - m_read_p;
+            memcpy(v, m_buff + start_p, start_len * sizeof(T));
+            memcpy(v + start_len, m_buff, m_read_p * sizeof(T));
+        }
+        return len;
+    }
+    inline size_t
+    tryPop(T *v, size_t len=1)
+    {
+        std::unique_lock<Lock> locker(m_lock, std::defer_lock);
+        if (!locker.try_lock()) {
+            return 0;
+        }
+        return pop<false>(v, len);
     }
 };
 
