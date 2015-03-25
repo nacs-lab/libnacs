@@ -66,7 +66,7 @@ bound(T1 &&v1, T2 &&v2, T3 &&v3)
 }
 
 template<typename T>
-static inline auto
+static inline constexpr auto
 square(const T &a)
 {
     return a * a;
