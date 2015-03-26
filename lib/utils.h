@@ -29,6 +29,7 @@
 #include <unistd.h>
 
 #include <utility>
+#include <type_traits>
 
 namespace NaCs {
 
@@ -81,6 +82,10 @@ struct CDeleter {
         free((void*)p);
     }
 };
+
+template<typename T1, typename T2>
+static constexpr bool isBaseOf =
+    std::is_base_of<T1, std::remove_reference_t<T2>>::value;
 
 }
 
