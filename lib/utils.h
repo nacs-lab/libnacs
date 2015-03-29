@@ -30,6 +30,7 @@
 
 #include <utility>
 #include <type_traits>
+#include <tuple>
 
 namespace NaCs {
 
@@ -88,14 +89,14 @@ static constexpr bool isBaseOf =
     std::is_base_of<T1, std::remove_reference_t<T2>>::value;
 
 // std::experimental::apply
-template <class F, class Tuple, std::size_t... I>
+template<class F, class Tuple, std::size_t... I>
 static inline constexpr decltype(auto)
 _applyTupleImpl(F &&f, Tuple &&t, std::index_sequence<I...>)
 {
     return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...);
 }
 
-template <class F, class Tuple>
+template<class F, class Tuple>
 static inline constexpr decltype(auto) applyTuple(F&& f, Tuple&& t)
 {
     return _applyTupleImpl(std::forward<F>(f), std::forward<Tuple>(t),
