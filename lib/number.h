@@ -139,34 +139,29 @@ struct _SumSingle {
     }
 };
 
-template<typename First>
-static inline constexpr auto
-sumAll(First &&first)
-{
-    return _SumSingle<std::decay_t<First> >()(std::forward<First>(first));
-}
-
-template<typename First, typename... Rest>
-static inline constexpr auto
-sumAll(First &&first, Rest &&...rest)
-{
-    return (sumAll(std::forward<First>(first)) +
-            sumAll(std::forward<Rest>(rest)...));
-}
+static constexpr struct {
+    template<typename First>
+    inline constexpr auto
+    operator()(First &&first) const
+    {
+        return _SumSingle<std::decay_t<First> >()(std::forward<First>(first));
+    }
+    template<typename First, typename... Rest>
+    inline constexpr auto
+    operator()(First &&first, Rest&&... rest) const
+    {
+        return (operator()(std::forward<First>(first)) +
+                operator()(std::forward<Rest>(rest)...));
+    }
+} sumAll{};
 
 template<typename... Args>
 struct _SumSingle<std::tuple<Args...> > {
-    template<typename... Args2>
+    template<typename Tuple>
     constexpr inline auto
-    operator()(std::tuple<Args2...> &tuple)
+    operator()(Tuple &&tuple)
     {
-        return applyTuple(sumAll<Args2...>, tuple);
-    }
-    template<typename... Args2>
-    constexpr inline auto
-    operator()(std::tuple<Args2...> &&tuple)
-    {
-        return applyTuple(sumAll<Args2...>, std::move(tuple));
+        return applyTuple(sumAll, std::forward<Tuple>(tuple));
     }
 };
 
