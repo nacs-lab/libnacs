@@ -87,6 +87,22 @@ template<typename T1, typename T2>
 static constexpr bool isBaseOf =
     std::is_base_of<T1, std::remove_reference_t<T2>>::value;
 
+// std::experimental::apply
+template <class F, class Tuple, std::size_t... I>
+static inline constexpr decltype(auto)
+_applyTupleImpl(F &&f, Tuple &&t, std::index_sequence<I...>)
+{
+    return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...);
+}
+
+template <class F, class Tuple>
+static inline constexpr decltype(auto) applyTuple(F&& f, Tuple&& t)
+{
+    return _applyTupleImpl(std::forward<F>(f), std::forward<Tuple>(t),
+                           std::make_index_sequence<
+                           std::tuple_size<std::decay_t<Tuple>>::value>{});
+}
+
 }
 
 #endif
