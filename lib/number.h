@@ -19,11 +19,11 @@
 #ifndef _NACS_UTILS_NUMBER_H_
 #define _NACS_UTILS_NUMBER_H_
 
+#include "utils.h"
+
 #include <stdint.h>
 
 #include <cmath>
-#include <type_traits>
-#include <utility>
 
 namespace NaCs {
 
@@ -128,6 +128,47 @@ setBit(T orig, uint8_t bit, bool val)
         return orig & ~(static_cast<T>(1) << bit);
     }
 }
+
+template<typename T>
+struct _SumSingle {
+    template<typename T2>
+    constexpr inline auto
+    operator()(T2 &&v)
+    {
+        return v;
+    }
+};
+
+template<typename First>
+static inline constexpr auto
+sumAll(First &&first)
+{
+    return _SumSingle<std::decay_t<First> >()(std::forward<First>(first));
+}
+
+template<typename First, typename... Rest>
+static inline constexpr auto
+sumAll(First &&first, Rest &&...rest)
+{
+    return (sumAll(std::forward<First>(first)) +
+            sumAll(std::forward<Rest>(rest)...));
+}
+
+template<typename... Args>
+struct _SumSingle<std::tuple<Args...> > {
+    template<typename... Args2>
+    constexpr inline auto
+    operator()(std::tuple<Args2...> &tuple)
+    {
+        return applyTuple(sumAll<Args2...>, tuple);
+    }
+    template<typename... Args2>
+    constexpr inline auto
+    operator()(std::tuple<Args2...> &&tuple)
+    {
+        return applyTuple(sumAll<Args2...>, std::move(tuple));
+    }
+};
 
 }
 
