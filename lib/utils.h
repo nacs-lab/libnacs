@@ -86,7 +86,7 @@ struct CDeleter {
 
 template<typename T1, typename T2>
 static constexpr bool isBaseOf =
-    std::is_base_of<T1, std::remove_reference_t<T2>>::value;
+    std::is_base_of<T1, std::decay_t<T2>>::value;
 
 // std::experimental::apply
 template<class F, class Tuple, std::size_t... I>
