@@ -25,6 +25,13 @@
 namespace NaCs {
 
 NACS_EXPORT void*
+mapPhyAddr(void *phy_addr, size_t len)
+{
+    static int fd = open("/dev/mem", O_RDWR | O_SYNC);
+    return mapFile(fd, off_t(phy_addr), len);
+}
+
+NACS_EXPORT void*
 getPhyAddr(void *virt_addr)
 {
     static int page_map = open("/proc/self/pagemap", O_RDONLY);

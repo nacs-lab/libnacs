@@ -32,7 +32,7 @@ main()
                            MAP_POPULATE, -1, 0);
     void *phy_addr = getPhyAddr(virt_addr);
 
-    void *virt_addr2 = mapFile("/dev/mem", off_t(phy_addr), page_size);
+    void *virt_addr2 = mapPhyAddr(phy_addr, page_size);
     strcpy((char*)virt_addr2, "random string");
     printf("%s\n", virt_addr);
     strcpy((char*)virt_addr2, "random string22222");
@@ -47,8 +47,8 @@ main()
     std::cout << "phy_addr : 0x" << std::hex << phy_addr << std::endl;
     std::cout << "virt_addr: 0x" << std::hex << virt_addr << std::endl;
     std::cout << "virt_addr2: 0x" << std::hex << virt_addr2 << std::endl;
-    std::cout << "phy_addr2: 0x" << std::hex
-              << getPhyAddr(virt_addr2) << std::endl;
+    std::cout << "phy_addr2: 0x"
+              << std::hex << getPhyAddr(virt_addr2) << std::endl;
 
     *(volatile uint64_t*)virt_addr = 0;
     msync(virt_addr, page_size, MS_SYNC);

@@ -29,6 +29,7 @@
 namespace NaCs {
 
 void *mapFile(const char *name, off_t offset, size_t len);
+void *mapFile(int fd, off_t offset, size_t len);
 bool sendFD(int sock, int fd);
 int recvFD(int sock);
 bool fdSetCloexec(int fd, bool cloexec);

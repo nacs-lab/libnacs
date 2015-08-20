@@ -30,22 +30,27 @@ static const auto page_size = sysconf(_SC_PAGESIZE);
 namespace NaCs {
 
 NACS_EXPORT void*
-mapFile(const char *name, off_t offset, size_t len)
+mapFile(int fd, off_t offset, size_t len)
 {
-    NACS_RET_IF_FAIL(name, nullptr);
-    int fd = open(name, O_RDWR | O_SYNC);
     NACS_RET_IF_FAIL(fd >= 0, nullptr);
-    nacsInfo("%s opened\n", name);
-
     off_t start = offset - offset % page_size;
     off_t end = alignTo(offset + len, page_size);
 
     void *base = mmap(nullptr, end - start, PROT_READ | PROT_WRITE,
                       MAP_SHARED, fd, start);
-    close(fd);
     NACS_RET_IF_FAIL(base != (void*)-1, nullptr);
 
     return (char*)base + offset - start;
+}
+
+NACS_EXPORT void*
+mapFile(const char *name, off_t offset, size_t len)
+{
+    NACS_RET_IF_FAIL(name, nullptr);
+    int fd = open(name, O_RDWR | O_SYNC);
+    auto res = mapFile(fd, offset, len);
+    close(fd);
+    return res;
 }
 
 NACS_EXPORT bool

@@ -45,6 +45,7 @@ MEMDEF_RW(uint64_t, vuint64, 64)
 
 namespace NaCs {
 
+void *mapPhyAddr(void*, size_t);
 void *getPhyAddr(void*);
 
 }
