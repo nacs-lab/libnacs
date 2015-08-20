@@ -11,7 +11,8 @@ set(nacs_utils_HDRS
 set(nacs_utils_SRCS
   log.cpp
   fd_utils.cpp
-  timer.cpp)
+  timer.cpp
+  mem.cpp)
 set(nacs_utils_LINKS m rt pthread)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")

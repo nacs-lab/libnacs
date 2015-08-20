@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2014 - 2015 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2015 - 2015 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,37 +16,28 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "utils.h"
+#include "mem.h"
+#include "fd_utils.h"
 
-#ifndef __NACS_UTILS_MEM_H__
-#define __NACS_UTILS_MEM_H__
-
-#define mem_barrier() asm volatile("" ::: "memory")
-
-#define MEMDEF_RW(type, vtype, suffix)                  \
-    typedef volatile type vtype;                        \
-    static NACS_INLINE type                             \
-    mem_read##suffix(volatile void *addr)               \
-    {                                                   \
-        return *(vtype*)addr;                           \
-    }                                                   \
-    static NACS_INLINE void                             \
-    mem_write##suffix(volatile void *addr, vtype val)   \
-    {                                                   \
-        *(vtype*)addr = val;                            \
-    }
-
-MEMDEF_RW(uint8_t, vuint8, 8)
-MEMDEF_RW(uint16_t, vuint16, 16)
-MEMDEF_RW(uint32_t, vuint32, 32)
-MEMDEF_RW(uint64_t, vuint64, 64)
-
-#undef MEMDEF_RW
+#include <sys/mman.h>
+#include <unistd.h>
 
 namespace NaCs {
 
-void *getPhyAddr(void*);
+NACS_EXPORT void*
+getPhyAddr(void *virt_addr)
+{
+    static int page_map = open("/proc/self/pagemap", O_RDONLY);
+    static uint32_t page_size = getpagesize();
+    uintptr_t virt_offset = uintptr_t(virt_addr) % page_size;
+    uintptr_t virt_pfn = uintptr_t(virt_addr) / page_size;
 
+    uint64_t page_info;
+    pread(page_map, &page_info, sizeof(page_info),
+          virt_pfn * sizeof(uint64_t));
+    auto phy_pfn = uintptr_t(page_info & ((1ll << 55) - 1));
+    auto phy_page = phy_pfn * page_size;
+    return (void*)(phy_page + virt_offset);
 }
 
-#endif
+}
