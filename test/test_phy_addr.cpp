@@ -34,14 +34,9 @@ main()
 
     void *virt_addr2 = mapPhyAddr(phy_addr, page_size);
     strcpy((char*)virt_addr2, "random string");
-    printf("%s\n", virt_addr);
+    printf("%s\n", (char*)virt_addr);
     strcpy((char*)virt_addr2, "random string22222");
-    printf("%s\n", virt_addr);
-
-    // strcpy((char*)virt_addr, "random string");
-    // printf("%s\n", virt_addr2);
-    // strcpy((char*)virt_addr, "random string22222");
-    // printf("%s\n", virt_addr2);
+    printf("%s\n", (char*)virt_addr);
 
     std::cout << "page_size: 0x" << std::hex << page_size << std::endl;
     std::cout << "phy_addr : 0x" << std::hex << phy_addr << std::endl;
