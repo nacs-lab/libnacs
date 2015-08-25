@@ -16,23 +16,15 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "devctl.h"
-#include "device_p.h"
-
-#include <nacs-utils/utils.h>
-
-#include <stropts.h>
+#ifndef __NACS_KERNEL_DEVICE_P_H__
+#define __NACS_KERNEL_DEVICE_P_H__
 
 namespace NaCs {
 namespace Kernel {
 
-NACS_EXPORT knacs_version_t
-getDriverVersion()
-{
-    knacs_version_t ver;
-    ioctl(getFD(), KNACS_GET_VERSION, &ver);
-    return ver;
-}
+int getFD();
 
 }
 }
+
+#endif

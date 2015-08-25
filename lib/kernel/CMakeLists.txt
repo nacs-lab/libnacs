@@ -1,6 +1,8 @@
 set(nacs_kernel_HDRS
+  device.h
   devctl.h)
 set(nacs_kernel_SRCS
+  device.cpp
   devctl.cpp)
 set(nacs_kernel_LINKS nacs-utils)
 

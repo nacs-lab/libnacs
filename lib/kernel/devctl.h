@@ -24,7 +24,7 @@
 namespace NaCs {
 namespace Kernel {
 
-knacs_version_t getDriverVersion(int fd);
+knacs_version_t getDriverVersion();
 
 }
 }

@@ -17,10 +17,8 @@
  *************************************************************************/
 
 #include <nacs-kernel/devctl.h>
+#include <nacs-kernel/device.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <stdio.h>
 
 using namespace NaCs;
@@ -28,12 +26,14 @@ using namespace NaCs;
 int
 main()
 {
-    int fd = open("/dev/knacs", O_RDWR);
-    if (fd == -1) {
+    // Initialization should happen automatically, explicitly check for it
+    // in this test.
+    Kernel::init();
+    if (!Kernel::initialized()) {
         fprintf(stderr, "Open KNaCs device failed\n");
         return -1;
     }
-    auto ver = Kernel::getDriverVersion(fd);
+    auto ver = Kernel::getDriverVersion();
     printf("KNaCs Version: %d.%d\n", ver.major, ver.minor);
     return 0;
 }
