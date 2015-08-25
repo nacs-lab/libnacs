@@ -20,6 +20,7 @@
 #include "device_p.h"
 
 #include <nacs-utils/utils.h>
+#include <nacs-utils/fd_utils.h>
 
 #include <stropts.h>
 
@@ -32,6 +33,12 @@ getDriverVersion()
     knacs_version_t ver;
     ioctl(getFD(), KNACS_GET_VERSION, &ver);
     return ver;
+}
+
+NACS_EXPORT void*
+mapPulseCtrl()
+{
+    return mapFile(getFD(), 0, 32 * 4);
 }
 
 }

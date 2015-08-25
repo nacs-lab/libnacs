@@ -39,7 +39,7 @@ init()
 NACS_EXPORT void
 init(const char *name)
 {
-    init(open(name, O_RDWR));
+    init(open(name, O_RDWR | O_SYNC));
 }
 
 NACS_EXPORT void

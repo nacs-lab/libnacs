@@ -25,6 +25,7 @@ namespace NaCs {
 namespace Kernel {
 
 knacs_version_t getDriverVersion();
+void *mapPulseCtrl();
 
 }
 }
