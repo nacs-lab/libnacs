@@ -57,7 +57,7 @@ initialized()
 int
 getFD()
 {
-    static int fd = knacs_fd ? knacs_fd : ([] {
+    static int fd = knacs_fd >= 0 ? knacs_fd : ([] {
             init();
             return knacs_fd;
         })();
