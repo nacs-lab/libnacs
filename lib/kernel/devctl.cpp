@@ -34,7 +34,7 @@ NACS_EXPORT knacs_version_t
 getDriverVersion()
 {
     knacs_version_t ver;
-    ioctl(getFD(), KNACS_GET_VERSION, &ver);
+    checkErrno(ioctl(getFD(), KNACS_GET_VERSION, &ver));
     return ver;
 }
 
@@ -69,7 +69,7 @@ sendDmaBuffer(void *buff, size_t len)
         (unsigned long)len,
         buff
     };
-    ioctl(getFD(), KNACS_SEND_DMA_BUFFER, &kernel_buff);
+    checkErrno(ioctl(getFD(), KNACS_SEND_DMA_BUFFER, &kernel_buff));
 }
 
 }

@@ -51,6 +51,9 @@ main()
     Kernel::DMABuffer<uint32_t> buff2;
     buff2.push_back(2);
 
+    buff.send();
+    buff2.send();
+
     buff.release();
     buff2.release();
 

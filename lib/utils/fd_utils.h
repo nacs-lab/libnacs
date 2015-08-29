@@ -25,6 +25,7 @@
 #include <sys/file.h>
 #include <fcntl.h>
 #include <stdexcept>
+#include <system_error>
 
 namespace NaCs {
 
@@ -62,6 +63,16 @@ public:
         flock(m_fd, LOCK_UN);
     }
 };
+
+template<typename T>
+static inline T
+checkErrno(T res)
+{
+    if (res == -1)
+        throw std::system_error(errno, std::system_category());
+    return res;
+}
+
 }
 
 #endif
