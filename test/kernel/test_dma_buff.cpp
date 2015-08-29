@@ -28,7 +28,7 @@ int
 main()
 {
     Kernel::DMABuffer<uint32_t> buff(1024);
-    printf("Buffer created\n");
+    printf("Buffer created %p\n", &buff[0]);
     printf("Buff[0] = %d\n", buff[0]);
     printf("Buff[1023] = %d\n", buff[1023]);
     buff[0] = 1;
@@ -38,7 +38,7 @@ main()
 
     buff.resize(2048);
 
-    printf("Buffer resized\n");
+    printf("Buffer resized, %p\n", &buff[0]);
     printf("Buff[0] = %d\n", buff[0]);
     printf("Buff[1023] = %d\n", buff[1023]);
     printf("Buff[1024] = %d\n", buff[1024]);
@@ -49,13 +49,18 @@ main()
     printf("Buff[2047] = %d\n", buff[2047]);
 
     Kernel::DMABuffer<uint32_t> buff2;
+    printf("Buffer 2 created %p\n", &buff2[0]);
     buff2.push_back(2);
 
     buff.send();
+    printf("Buffer 1 sent\n");
     buff2.send();
+    printf("Buffer 2 sent\n");
 
     buff.release();
+    printf("Buffer 1 release\n");
     buff2.release();
+    printf("Buffer 2 release\n");
 
     return 0;
 }
