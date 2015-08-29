@@ -16,44 +16,20 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include <nacs-kernel/dma_buffer.h>
+#include "devctl.h"
+#include <stddef.h>
 
-#include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
+#ifndef __NACS_KERNEL_DEVCTL_P_H__
+#define __NACS_KERNEL_DEVCTL_P_H__
 
-using namespace NaCs;
+namespace NaCs {
+namespace Kernel {
 
-int
-main()
-{
-    Kernel::DMABuffer<uint32_t> buff;
-    buff.resize(1024);
-    printf("Buffer created\n");
-    printf("Buff[0] = %d\n", buff[0]);
-    printf("Buff[1023] = %d\n", buff[1023]);
-    buff[0] = 1;
-    buff[1023] = 2;
-    printf("Buff[0] = %d\n", buff[0]);
-    printf("Buff[1023] = %d\n", buff[1023]);
+void *allocDmaBuffer(size_t);
+void *reallocDmaBuffer(void*, size_t old_size, size_t new_size);
+void freeDmaBuffer(void *, size_t old_size);
 
-    buff.resize(2048);
-
-    printf("Buffer resized\n");
-    printf("Buff[0] = %d\n", buff[0]);
-    printf("Buff[1023] = %d\n", buff[1023]);
-    printf("Buff[1024] = %d\n", buff[1024]);
-    printf("Buff[2047] = %d\n", buff[2047]);
-    buff[1024] = 3;
-    buff[2047] = 4;
-    printf("Buff[1024] = %d\n", buff[1024]);
-    printf("Buff[2047] = %d\n", buff[2047]);
-
-    Kernel::DMABuffer<uint32_t> buff2;
-    buff2.push_back(2);
-
-    buff.release();
-    buff2.release();
-
-    return 0;
 }
+}
+
+#endif

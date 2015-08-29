@@ -16,44 +16,55 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include <nacs-kernel/dma_buffer.h>
+#include "dma_buffer.h"
+#include "devctl_p.h"
 
-#include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
+#include <nacs-utils/utils.h>
+#include <nacs-utils/number.h>
+
+namespace NaCs {
 
 using namespace NaCs;
 
-int
-main()
+namespace Kernel {
+
+static const auto page_size = sysconf(_SC_PAGESIZE);
+
+NACS_EXPORT
+DMABufferBase::DMABufferBase(size_t size)
+    : m_buff(nullptr),
+      m_size(0)
 {
-    Kernel::DMABuffer<uint32_t> buff;
-    buff.resize(1024);
-    printf("Buffer created\n");
-    printf("Buff[0] = %d\n", buff[0]);
-    printf("Buff[1023] = %d\n", buff[1023]);
-    buff[0] = 1;
-    buff[1023] = 2;
-    printf("Buff[0] = %d\n", buff[0]);
-    printf("Buff[1023] = %d\n", buff[1023]);
+    resize(size);
+}
 
-    buff.resize(2048);
+NACS_EXPORT void
+DMABufferBase::resize_slow(size_t size)
+{
+    size = alignTo((off_t)size, page_size);
+    if (!m_buff) {
+        m_buff = allocDmaBuffer(size);
+    } else {
+        m_buff = reallocDmaBuffer(m_buff, m_size, size);
+    }
+    m_size = size;
+}
 
-    printf("Buffer resized\n");
-    printf("Buff[0] = %d\n", buff[0]);
-    printf("Buff[1023] = %d\n", buff[1023]);
-    printf("Buff[1024] = %d\n", buff[1024]);
-    printf("Buff[2047] = %d\n", buff[2047]);
-    buff[1024] = 3;
-    buff[2047] = 4;
-    printf("Buff[1024] = %d\n", buff[1024]);
-    printf("Buff[2047] = %d\n", buff[2047]);
+NACS_EXPORT
+DMABufferBase::~DMABufferBase()
+{
+    release();
+}
 
-    Kernel::DMABuffer<uint32_t> buff2;
-    buff2.push_back(2);
+NACS_EXPORT void
+DMABufferBase::release()
+{
+    if (m_buff) {
+        freeDmaBuffer(m_buff, m_size);
+        m_buff = nullptr;
+        m_size = 0;
+    }
+}
 
-    buff.release();
-    buff2.release();
-
-    return 0;
+}
 }

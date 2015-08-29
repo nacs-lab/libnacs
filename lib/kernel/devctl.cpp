@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "devctl.h"
+#include "devctl_p.h"
 #include "device_p.h"
 
 #include <nacs-utils/utils.h>
@@ -44,19 +44,19 @@ mapPulseCtrl()
     return mapFile(getFD(), 0, 32 * 4);
 }
 
-NACS_EXPORT void*
+void*
 allocDmaBuffer(size_t len)
 {
     return mapFile(getFD(), page_size, len);
 }
 
-NACS_EXPORT void*
-rellocDmaBuffer(void *buff, size_t old_size, size_t new_size)
+void*
+reallocDmaBuffer(void *buff, size_t old_size, size_t new_size)
 {
     return mremap(buff, old_size, new_size, MREMAP_MAYMOVE);
 }
 
-NACS_EXPORT void
+void
 freeDmaBuffer(void *buff, size_t old_size)
 {
     munmap(buff, old_size);
