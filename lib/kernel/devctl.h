@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include <knacs/knacs.h>
+#include <stddef.h>
 
 #ifndef __NACS_KERNEL_DEVCTL_H__
 #define __NACS_KERNEL_DEVCTL_H__
@@ -26,6 +27,9 @@ namespace Kernel {
 
 knacs_version_t getDriverVersion();
 void *mapPulseCtrl();
+void *allocDmaBuffer(size_t);
+void *rellocDmaBuffer(void*, size_t old_size, size_t new_size);
+void freeDmaBuffer(void *, size_t old_size);
 
 }
 }

@@ -23,9 +23,12 @@
 #include <nacs-utils/fd_utils.h>
 
 #include <stropts.h>
+#include <sys/mman.h>
 
 namespace NaCs {
 namespace Kernel {
+
+static const auto page_size = sysconf(_SC_PAGESIZE);
 
 NACS_EXPORT knacs_version_t
 getDriverVersion()
@@ -39,6 +42,24 @@ NACS_EXPORT void*
 mapPulseCtrl()
 {
     return mapFile(getFD(), 0, 32 * 4);
+}
+
+NACS_EXPORT void*
+allocDmaBuffer(size_t len)
+{
+    return mapFile(getFD(), page_size, len);
+}
+
+NACS_EXPORT void*
+rellocDmaBuffer(void *buff, size_t old_size, size_t new_size)
+{
+    return mremap(buff, old_size, new_size, MREMAP_MAYMOVE);
+}
+
+NACS_EXPORT void
+freeDmaBuffer(void *buff, size_t old_size)
+{
+    munmap(buff, old_size);
 }
 
 }
