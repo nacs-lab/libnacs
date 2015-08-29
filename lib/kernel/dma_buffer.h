@@ -35,6 +35,7 @@ public:
     DMABufferBase(size_t=4096);
     void resize(size_t);
     void release();
+    void send(size_t);
     ~DMABufferBase();
 };
 
@@ -73,6 +74,12 @@ public:
     {
         m_len = 0;
         DMABufferBase::release();
+    }
+    void
+    send()
+    {
+        DMABufferBase::send(m_len);
+        m_len = 0;
     }
     size_t
     length() const

@@ -62,5 +62,15 @@ freeDmaBuffer(void *buff, size_t old_size)
     munmap(buff, old_size);
 }
 
+void
+sendDmaBuffer(void *buff, size_t len)
+{
+    knacs_dma_buffer_t kernel_buff = {
+        (unsigned long)len,
+        buff
+    };
+    ioctl(getFD(), KNACS_SEND_DMA_BUFFER, &kernel_buff);
+}
+
 }
 }

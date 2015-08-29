@@ -27,7 +27,8 @@ namespace Kernel {
 
 void *allocDmaBuffer(size_t);
 void *reallocDmaBuffer(void*, size_t old_size, size_t new_size);
-void freeDmaBuffer(void *, size_t old_size);
+void freeDmaBuffer(void*, size_t old_size);
+void sendDmaBuffer(void*, size_t);
 
 }
 }

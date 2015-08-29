@@ -66,5 +66,13 @@ DMABufferBase::release()
     }
 }
 
+NACS_EXPORT void
+DMABufferBase::send(size_t len)
+{
+    sendDmaBuffer(m_buff, len);
+    m_buff = nullptr;
+    m_size = 0;
+}
+
 }
 }
