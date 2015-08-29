@@ -27,8 +27,7 @@ using namespace NaCs;
 int
 main()
 {
-    Kernel::DMABuffer<uint32_t> buff;
-    buff.resize(1024);
+    Kernel::DMABuffer<uint32_t> buff(1024);
     printf("Buffer created\n");
     printf("Buff[0] = %d\n", buff[0]);
     printf("Buff[1023] = %d\n", buff[1023]);

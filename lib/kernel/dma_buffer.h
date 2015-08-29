@@ -50,11 +50,12 @@ template<typename T>
 class DMABuffer : private DMABufferBase {
     size_t m_len;
 public:
-    DMABuffer(size_t len=4096 / sizeof(T))
-        : DMABufferBase(len * sizeof(T)),
+    DMABuffer(size_t len=0, size_t reserve_size=4096 / sizeof(T))
+        : DMABufferBase(reserve_size * sizeof(T)),
           m_len(0)
     {
         static_assert(std::is_pod<T>()(), "");
+        resize(len);
     }
     void
     size_hint(size_t len)
