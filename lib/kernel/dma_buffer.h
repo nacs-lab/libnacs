@@ -78,7 +78,7 @@ public:
     void
     send()
     {
-        DMABufferBase::send(m_len);
+        DMABufferBase::send(m_len * sizeof(T));
         m_len = 0;
     }
     size_t
