@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2014 - 2016 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2016 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,30 +16,46 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "utils.h"
-
-#ifndef __NACS_UTILS_MEM_H__
-#define __NACS_UTILS_MEM_H__
-
-namespace NaCs {
-
-namespace Mem {
-template<typename T> static inline T
-read(volatile void *addr)
-{
-    return *(volatile T*)addr;
-}
-
-template<typename T, typename T2> static inline void
-write(volatile void *addr, T2 val)
-{
-    *(volatile T*)addr = val;
-}
-}
-
-void *mapPhyAddr(void*, size_t);
-void *getPhyAddr(void*);
-
-}
-
+#ifdef NDEBUG
+#  undef NDEBUG
 #endif
+
+#include <nacs-utils/ir.h>
+#include <assert.h>
+
+using namespace NaCs;
+
+int
+main()
+{
+    assert(IR::validate(IR::Type::Bool));
+    assert(IR::validate(IR::Type::Int32));
+    assert(IR::validate(IR::Type::Float64));
+    assert(!IR::validate(IR::Type(4)));
+
+    {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(0);
+        builder.get().dump();
+    }
+
+    {
+        IR::Builder builder(IR::Type::Bool, {});
+        builder.createRet(IR::Consts::False);
+        builder.get().dump();
+    }
+
+    {
+        IR::Builder builder(IR::Type::Float64, {});
+        builder.createRet(builder.getConstFloat(1.1));
+        builder.get().dump();
+    }
+
+    {
+        IR::Builder builder(IR::Type::Int32, {});
+        builder.createRet(builder.getConstInt(42));
+        builder.get().dump();
+    }
+
+    return 0;
+}

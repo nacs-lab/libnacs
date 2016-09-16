@@ -13,3 +13,7 @@ target_link_libraries(test-fifo nacs-utils)
 set(test_phy_addr_SOURCES test_phy_addr.cpp)
 add_executable(test-phy_addr ${test_phy_addr_SOURCES})
 target_link_libraries(test-phy_addr nacs-utils)
+
+set(test_ir_SOURCES test_ir.cpp)
+add_executable(test-ir ${test_ir_SOURCES})
+target_link_libraries(test-ir nacs-utils)
