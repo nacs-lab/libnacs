@@ -280,7 +280,7 @@ static inline void writeBuff(uint8_t *ptr, T2 _val)
 }
 
 template<typename T>
-static inline T readBuff(uint8_t *ptr)
+static inline T readBuff(const uint8_t *ptr)
 {
     T val;
     unsigned char *dest = (unsigned char*)&val;
@@ -335,7 +335,7 @@ static inline const char *opName(Opcode op)
     }
 }
 
-void Function::dumpValName(int32_t id)
+void Function::dumpValName(int32_t id) const
 {
     if (id >= 0) {
         std::cout << "%" << id;
@@ -359,7 +359,7 @@ void Function::dumpValName(int32_t id)
     }
 }
 
-NACS_EXPORT Type Function::valType(int32_t id)
+NACS_EXPORT Type Function::valType(int32_t id) const
 {
     if (id >= 0) {
         return vals[id];
@@ -370,16 +370,16 @@ NACS_EXPORT Type Function::valType(int32_t id)
     }
 }
 
-void Function::dumpVal(int32_t id)
+void Function::dumpVal(int32_t id) const
 {
     std::cout << typeName(valType(id)) << " ";
     dumpValName(id);
 }
 
-void Function::dumpBB(BB &bb)
+void Function::dumpBB(const BB &bb) const
 {
-    uint8_t *pc = bb.data();
-    uint8_t *end = pc + bb.size();
+    const uint8_t *pc = bb.data();
+    const uint8_t *end = pc + bb.size();
     while (end > pc) {
         auto op = Opcode(*pc);
         pc++;
@@ -432,7 +432,7 @@ void Function::dumpBB(BB &bb)
     }
 }
 
-NACS_EXPORT void Function::dump(void)
+NACS_EXPORT void Function::dump(void) const
 {
     std::cout << typeName(ret) << " (";
     for (int i = 0;i < nargs;i++) {

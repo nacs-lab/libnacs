@@ -147,8 +147,8 @@ struct Function {
           const_ints{},
           const_floats{}
     {}
-    void dump(void);
-    Type valType(int32_t id);
+    void dump(void) const;
+    Type valType(int32_t id) const;
     const Type ret;
     const int nargs;
     std::vector<Type> vals;
@@ -157,9 +157,9 @@ struct Function {
     std::map<int32_t, int> const_ints;
     std::map<double, int> const_floats;
 private:
-    void dumpValName(int32_t id);
-    void dumpVal(int32_t id);
-    void dumpBB(BB&);
+    void dumpValName(int32_t id) const;
+    void dumpVal(int32_t id) const;
+    void dumpBB(const BB&) const;
 };
 
 class NACS_EXPORT Builder {
