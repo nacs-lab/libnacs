@@ -358,6 +358,23 @@ void Function::dumpBB(BB &bb)
             std::cout << std::endl;
             pc += 4;
             break;
+        case Opcode::Br: {
+            auto cond = readBuff<int32_t>(pc);
+            pc += 4;
+            auto bb1 = readBuff<int32_t>(pc);
+            pc += 4;
+            if (cond == Consts::True) {
+                std::cout << "  br L" << bb1;
+            } else {
+                auto bb2 = readBuff<int32_t>(pc);
+                pc += 4;
+                std::cout << "  br ";
+                dumpVal(cond);
+                std::cout << ", L" << bb1 << ", L" << bb2;
+            }
+            std::cout << std::endl;
+            break;
+        }
         default:
             std::cout << "  unknown op: " << op << std::endl;
             break;
@@ -376,7 +393,7 @@ NACS_EXPORT void Function::dump(void)
     }
     std::cout << ") {" << std::endl;
     for (size_t i = 0;i < code.size();i++) {
-        std::cout << i << ":" << std::endl;
+        std::cout << "L" << i << ":" << std::endl;
         dumpBB(code[i]);
     }
     std::cout << "}" << std::endl;
@@ -426,6 +443,38 @@ int32_t Builder::getConstFloat(double val)
     return id;
 }
 
+
+int32_t Builder::newBB(void)
+{
+    int32_t id = m_f.code.size();
+    m_f.code.push_back({});
+    return id;
 }
 
+int32_t &Builder::curBB()
+{
+    return m_cur_bb;
+}
+
+void Builder::createBr(int32_t br)
+{
+    createBr(Consts::True, br, 0);
+}
+
+void Builder::createBr(int32_t cond, int32_t bb1, int32_t bb2)
+{
+    if (cond == Consts::True) {
+        uint8_t *ptr = addInst(Opcode::Br, 8);
+        writeBuff<uint32_t>(ptr, Consts::True);
+        writeBuff<uint32_t>(ptr + 4, bb1);
+    }
+    else {
+        uint8_t *ptr = addInst(Opcode::Br, 12);
+        writeBuff<uint32_t>(ptr, cond);
+        writeBuff<uint32_t>(ptr + 4, bb1);
+        writeBuff<uint32_t>(ptr + 8, bb2);
+    }
+}
+
+}
 }

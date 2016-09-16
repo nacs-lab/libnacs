@@ -172,10 +172,15 @@ public:
     {
         return m_f;
     }
-    void createRet(int32_t val);
     int32_t getConstInt(int32_t val);
     int32_t getConstFloat(double val);
-    // Br,
+
+    int32_t newBB(void);
+    int32_t &curBB(void);
+
+    void createRet(int32_t val);
+    void createBr(int32_t br);
+    void createBr(int32_t cond, int32_t bb1, int32_t bb2);
     // Add,
     // Sub,
     // Mul,
@@ -189,7 +194,7 @@ public:
 private:
     uint8_t *addInst(Opcode op, size_t nbytes);
     Function m_f;
-    int m_cur_bb;
+    int32_t m_cur_bb;
 };
 
 }

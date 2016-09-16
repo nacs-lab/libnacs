@@ -57,5 +57,18 @@ main()
         builder.get().dump();
     }
 
+    {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Bool,
+                    IR::Type::Float64});
+        auto pass_bb = builder.newBB();
+        auto fail_bb = builder.newBB();
+        builder.createBr(0, pass_bb, fail_bb);
+        builder.curBB() = pass_bb;
+        builder.createRet(1);
+        builder.curBB() = fail_bb;
+        builder.createRet(builder.getConstFloat(3.4));
+        builder.get().dump();
+    }
+
     return 0;
 }
