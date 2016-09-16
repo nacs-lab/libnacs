@@ -194,6 +194,7 @@ public:
 private:
     uint8_t *addInst(Opcode op, size_t nbytes);
     int32_t newSSA(Type typ);
+    int32_t createPromoteOP(Opcode op, int32_t val1, int32_t val2);
     Function m_f;
     int32_t m_cur_bb;
 };

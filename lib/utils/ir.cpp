@@ -532,46 +532,33 @@ void Builder::createBr(int32_t cond, int32_t bb1, int32_t bb2)
     }
 }
 
-int32_t Builder::createAdd(int32_t val1, int32_t val2)
+int32_t Builder::createPromoteOP(Opcode op, int32_t val1, int32_t val2)
 {
     // TODO optimize for constants
-    uint8_t *ptr = addInst(Opcode::Add, 12);
+    uint8_t *ptr = addInst(op, 12);
     auto ty1 = m_f.valType(val1);
     auto ty2 = m_f.valType(val2);
-    auto resty = std::max(ty1, ty2);
+    auto resty = std::max(std::max(ty1, ty2), Type::Int32);
     auto res = newSSA(resty);
     writeBuff<uint32_t>(ptr, res);
     writeBuff<uint32_t>(ptr + 4, val1);
     writeBuff<uint32_t>(ptr + 8, val2);
     return res;
+}
+
+int32_t Builder::createAdd(int32_t val1, int32_t val2)
+{
+    return createPromoteOP(Opcode::Add, val1, val2);
 }
 
 int32_t Builder::createSub(int32_t val1, int32_t val2)
 {
-    // TODO optimize for constants
-    uint8_t *ptr = addInst(Opcode::Sub, 12);
-    auto ty1 = m_f.valType(val1);
-    auto ty2 = m_f.valType(val2);
-    auto resty = std::max(ty1, ty2);
-    auto res = newSSA(resty);
-    writeBuff<uint32_t>(ptr, res);
-    writeBuff<uint32_t>(ptr + 4, val1);
-    writeBuff<uint32_t>(ptr + 8, val2);
-    return res;
+    return createPromoteOP(Opcode::Sub, val1, val2);
 }
 
 int32_t Builder::createMul(int32_t val1, int32_t val2)
 {
-    // TODO optimize for constants
-    uint8_t *ptr = addInst(Opcode::Mul, 12);
-    auto ty1 = m_f.valType(val1);
-    auto ty2 = m_f.valType(val2);
-    auto resty = std::max(ty1, ty2);
-    auto res = newSSA(resty);
-    writeBuff<uint32_t>(ptr, res);
-    writeBuff<uint32_t>(ptr + 4, val1);
-    writeBuff<uint32_t>(ptr + 8, val2);
-    return res;
+    return createPromoteOP(Opcode::Mul, val1, val2);
 }
 
 }
