@@ -21,29 +21,21 @@
 #ifndef __NACS_UTILS_MEM_H__
 #define __NACS_UTILS_MEM_H__
 
-#define mem_barrier() asm volatile("" ::: "memory")
-
-#define MEMDEF_RW(type, vtype, suffix)                  \
-    typedef volatile type vtype;                        \
-    static NACS_INLINE type                             \
-    mem_read##suffix(volatile void *addr)               \
-    {                                                   \
-        return *(vtype*)addr;                           \
-    }                                                   \
-    static NACS_INLINE void                             \
-    mem_write##suffix(volatile void *addr, vtype val)   \
-    {                                                   \
-        *(vtype*)addr = val;                            \
-    }
-
-MEMDEF_RW(uint8_t, vuint8, 8)
-MEMDEF_RW(uint16_t, vuint16, 16)
-MEMDEF_RW(uint32_t, vuint32, 32)
-MEMDEF_RW(uint64_t, vuint64, 64)
-
-#undef MEMDEF_RW
-
 namespace NaCs {
+
+namespace Mem {
+template<typename T> static inline T
+read(volatile void *addr)
+{
+    return *(volatile T*)addr;
+}
+
+template<typename T, typename T2> static inline void
+write(volatile void *addr, T2 val)
+{
+    *(volatile T*)addr = val;
+}
+}
 
 void *mapPhyAddr(void*, size_t);
 void *getPhyAddr(void*);

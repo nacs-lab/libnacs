@@ -14,7 +14,7 @@ test_write(volatile void *ptr, uint32_t nrun)
 {
     tic();
     for (uint32_t i = 0;i < nrun;i++) {
-        mem_write64(ptr, i);
+        Mem::write<uint64_t>(ptr, i);
     }
     auto time = toc();
     std::cout << "Time per write: " << std::setprecision(4)
