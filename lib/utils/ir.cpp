@@ -303,6 +303,38 @@ static inline const char *typeName(Type typ)
     }
 }
 
+static inline const char *opName(Opcode op)
+{
+    switch (op) {
+    case Opcode::Ret:
+        return "ret";
+    case Opcode::Br:
+        return "br";
+    case Opcode::Add:
+        return "add";
+    case Opcode::Sub:
+        return "sub";
+    case Opcode::Mul:
+        return "mul";
+    case Opcode::IDiv:
+        return "idiv";
+    case Opcode::FDiv:
+        return "fdiv";
+    case Opcode::Rem:
+        return "rem";
+    case Opcode::Cast:
+        return "cast";
+    case Opcode::Cmp:
+        return "cmp";
+    case Opcode::Phi:
+        return "phi";
+    case Opcode::Call:
+        return "call";
+    default:
+        return "unknown";
+    }
+}
+
 void Function::dumpValName(int32_t id)
 {
     if (id >= 0) {
@@ -349,9 +381,9 @@ void Function::dumpBB(BB &bb)
     uint8_t *pc = bb.data();
     uint8_t *end = pc + bb.size();
     while (end > pc) {
-        uint8_t op = *pc;
+        auto op = Opcode(*pc);
         pc++;
-        switch (Opcode(op)) {
+        switch (op) {
         case Opcode::Ret:
             std::cout << "  ret ";
             dumpVal(readBuff<int32_t>(pc));
@@ -375,8 +407,26 @@ void Function::dumpBB(BB &bb)
             std::cout << std::endl;
             break;
         }
+        case Opcode::Add:
+        case Opcode::Sub:
+        case Opcode::Mul: {
+            auto res = readBuff<int32_t>(pc);
+            pc += 4;
+            auto val1 = readBuff<int32_t>(pc);
+            pc += 4;
+            auto val2 = readBuff<int32_t>(pc);
+            pc += 4;
+            std::cout << "  ";
+            dumpVal(res);
+            std::cout << " = " << opName(op) << " ";
+            dumpVal(val1);
+            std::cout << ", ";
+            dumpVal(val2);
+            std::cout << std::endl;
+            break;
+        }
         default:
-            std::cout << "  unknown op: " << op << std::endl;
+            std::cout << "  unknown op: " << uint8_t(op) << std::endl;
             break;
         }
     }
@@ -443,6 +493,12 @@ int32_t Builder::getConstFloat(double val)
     return id;
 }
 
+int32_t Builder::newSSA(Type typ)
+{
+    int32_t id = m_f.vals.size();
+    m_f.vals.push_back(typ);
+    return id;
+}
 
 int32_t Builder::newBB(void)
 {
@@ -474,6 +530,48 @@ void Builder::createBr(int32_t cond, int32_t bb1, int32_t bb2)
         writeBuff<uint32_t>(ptr + 4, bb1);
         writeBuff<uint32_t>(ptr + 8, bb2);
     }
+}
+
+int32_t Builder::createAdd(int32_t val1, int32_t val2)
+{
+    // TODO optimize for constants
+    uint8_t *ptr = addInst(Opcode::Add, 12);
+    auto ty1 = m_f.valType(val1);
+    auto ty2 = m_f.valType(val2);
+    auto resty = std::max(ty1, ty2);
+    auto res = newSSA(resty);
+    writeBuff<uint32_t>(ptr, res);
+    writeBuff<uint32_t>(ptr + 4, val1);
+    writeBuff<uint32_t>(ptr + 8, val2);
+    return res;
+}
+
+int32_t Builder::createSub(int32_t val1, int32_t val2)
+{
+    // TODO optimize for constants
+    uint8_t *ptr = addInst(Opcode::Sub, 12);
+    auto ty1 = m_f.valType(val1);
+    auto ty2 = m_f.valType(val2);
+    auto resty = std::max(ty1, ty2);
+    auto res = newSSA(resty);
+    writeBuff<uint32_t>(ptr, res);
+    writeBuff<uint32_t>(ptr + 4, val1);
+    writeBuff<uint32_t>(ptr + 8, val2);
+    return res;
+}
+
+int32_t Builder::createMul(int32_t val1, int32_t val2)
+{
+    // TODO optimize for constants
+    uint8_t *ptr = addInst(Opcode::Mul, 12);
+    auto ty1 = m_f.valType(val1);
+    auto ty2 = m_f.valType(val2);
+    auto resty = std::max(ty1, ty2);
+    auto res = newSSA(resty);
+    writeBuff<uint32_t>(ptr, res);
+    writeBuff<uint32_t>(ptr + 4, val1);
+    writeBuff<uint32_t>(ptr + 8, val2);
+    return res;
 }
 
 }

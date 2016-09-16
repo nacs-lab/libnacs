@@ -70,5 +70,15 @@ main()
         builder.get().dump();
     }
 
+    {
+        IR::Builder builder(IR::Type::Float64,
+                            {IR::Type::Float64, IR::Type::Float64});
+        auto val1 = builder.createAdd(builder.getConstFloat(3.4), 0);
+        auto val2 = builder.createMul(val1, 1);
+        auto val3 = builder.createSub(val1, val2);
+        builder.createRet(val3);
+        builder.get().dump();
+    }
+
     return 0;
 }

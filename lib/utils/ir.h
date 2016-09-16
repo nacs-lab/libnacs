@@ -181,9 +181,9 @@ public:
     void createRet(int32_t val);
     void createBr(int32_t br);
     void createBr(int32_t cond, int32_t bb1, int32_t bb2);
-    // Add,
-    // Sub,
-    // Mul,
+    int32_t createAdd(int32_t val1, int32_t val2);
+    int32_t createSub(int32_t val1, int32_t val2);
+    int32_t createMul(int32_t val1, int32_t val2);
     // IDiv,
     // FDiv,
     // Rem,
@@ -193,6 +193,7 @@ public:
     // Call,
 private:
     uint8_t *addInst(Opcode op, size_t nbytes);
+    int32_t newSSA(Type typ);
     Function m_f;
     int32_t m_cur_bb;
 };
