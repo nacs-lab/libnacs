@@ -298,10 +298,6 @@ static inline const char *opName(Opcode op)
         return "mul";
     case Opcode::FDiv:
         return "fdiv";
-    case Opcode::Rem:
-        return "rem";
-    case Opcode::Cast:
-        return "cast";
     case Opcode::Cmp:
         return "cmp";
     case Opcode::Phi:
