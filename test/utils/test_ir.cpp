@@ -22,6 +22,7 @@
 
 #include <nacs-utils/ir.h>
 #include <assert.h>
+#include <iostream>
 
 using namespace NaCs;
 
@@ -37,25 +38,43 @@ main()
         IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
         builder.createRet(0);
         builder.get().dump();
+        IR::EvalContext ctx(builder.get());
+        ctx.reset({1.2});
+        ctx.eval().dump();
+        ctx.reset({4.2});
+        ctx.eval().dump();
     }
+    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Bool, {});
         builder.createRet(IR::Consts::False);
         builder.get().dump();
+        IR::EvalContext ctx(builder.get());
+        ctx.reset({});
+        ctx.eval().dump();
     }
+    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Float64, {});
         builder.createRet(builder.getConstFloat(1.1));
         builder.get().dump();
+        IR::EvalContext ctx(builder.get());
+        ctx.reset({});
+        ctx.eval().dump();
     }
+    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Int32, {});
         builder.createRet(builder.getConstInt(42));
         builder.get().dump();
+        IR::EvalContext ctx(builder.get());
+        ctx.reset({});
+        ctx.eval().dump();
     }
+    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Bool,
@@ -68,7 +87,13 @@ main()
         builder.curBB() = fail_bb;
         builder.createRet(builder.getConstFloat(3.4));
         builder.get().dump();
+        IR::EvalContext ctx(builder.get());
+        ctx.reset({true, 1.3});
+        ctx.eval().dump();
+        ctx.reset({false, 1.3});
+        ctx.eval().dump();
     }
+    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Float64,
@@ -78,6 +103,9 @@ main()
         auto val3 = builder.createSub(val1, val2);
         builder.createRet(val3);
         builder.get().dump();
+        IR::EvalContext ctx(builder.get());
+        ctx.reset({2.3, 1.3});
+        ctx.eval().dump();
     }
 
     return 0;

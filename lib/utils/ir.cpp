@@ -335,6 +335,25 @@ static inline const char *opName(Opcode op)
     }
 }
 
+NACS_EXPORT void TagVal::dump(void) const
+{
+    std::cout << typeName(typ) << " ";
+    switch (typ) {
+    case Type::Bool:
+        std::cout << (val.b ? "true" : "false");
+        break;
+    case Type::Int32:
+        std::cout << val.i32;
+        break;
+    case Type::Float64:
+        std::cout << val.f64;
+        break;
+    default:
+        std::cout << "undef";
+    }
+    std::cout << std::endl;
+}
+
 void Function::dumpValName(int32_t id) const
 {
     if (id >= 0) {
@@ -345,8 +364,8 @@ void Function::dumpValName(int32_t id) const
         std::cout << "true";
     } else {
         auto &constval = consts[Consts::_Offset - id];
-        auto val = constval.second;
-        switch (constval.first) {
+        auto val = constval.val;
+        switch (constval.typ) {
         case Type::Int32:
             std::cout << val.i32;
             break;
@@ -366,7 +385,7 @@ NACS_EXPORT Type Function::valType(int32_t id) const
     } else if (id == Consts::False || id == Consts::True) {
         return Type::Bool;
     } else {
-        return consts[Consts::_Offset - id].first;
+        return consts[Consts::_Offset - id].typ;
     }
 }
 
@@ -470,9 +489,7 @@ int32_t Builder::getConstInt(int32_t val)
     if (it != map.end())
         return it->second;
     int32_t oldlen = m_f.consts.size();
-    Function::ConstVal constval;
-    constval.i32 = val;
-    m_f.consts.push_back(std::make_pair(Type::Int32, constval));
+    m_f.consts.emplace_back(val);
     int32_t id = Consts::_Offset - oldlen;
     map[val] = id;
     return id;
@@ -485,12 +502,24 @@ int32_t Builder::getConstFloat(double val)
     if (it != map.end())
         return it->second;
     int32_t oldlen = m_f.consts.size();
-    Function::ConstVal constval;
-    constval.f64 = val;
-    m_f.consts.push_back(std::make_pair(Type::Float64, constval));
+    m_f.consts.emplace_back(val);
     int32_t id = Consts::_Offset - oldlen;
     map[val] = id;
     return id;
+}
+
+int32_t Builder::getConst(TagVal val)
+{
+    switch (val.typ) {
+    case Type::Bool:
+        return val.val.b ? Consts::True : Consts::False;
+    case Type::Int32:
+        return getConstInt(val.val.i32);
+    case Type::Float64:
+        return getConstFloat(val.val.f64);
+    default:
+        return Consts::False;
+    }
 }
 
 int32_t Builder::newSSA(Type typ)
@@ -532,6 +561,42 @@ void Builder::createBr(int32_t cond, int32_t bb1, int32_t bb2)
     }
 }
 
+static TagVal evalAdd(Type typ, TagVal val1, TagVal val2)
+{
+    switch (typ) {
+    case Type::Int32:
+        return val1.get<int32_t>() + val2.get<int32_t>();
+    case Type::Float64:
+        return val1.get<double>() + val2.get<double>();
+    default:
+        return TagVal(typ);
+    }
+}
+
+static TagVal evalSub(Type typ, TagVal val1, TagVal val2)
+{
+    switch (typ) {
+    case Type::Int32:
+        return val1.get<int32_t>() - val2.get<int32_t>();
+    case Type::Float64:
+        return val1.get<double>() - val2.get<double>();
+    default:
+        return TagVal(typ);
+    }
+}
+
+static TagVal evalMul(Type typ, TagVal val1, TagVal val2)
+{
+    switch (typ) {
+    case Type::Int32:
+        return val1.get<int32_t>() * val2.get<int32_t>();
+    case Type::Float64:
+        return val1.get<double>() * val2.get<double>();
+    default:
+        return TagVal(typ);
+    }
+}
+
 int32_t Builder::createPromoteOP(Opcode op, int32_t val1, int32_t val2)
 {
     // TODO optimize for constants
@@ -539,6 +604,21 @@ int32_t Builder::createPromoteOP(Opcode op, int32_t val1, int32_t val2)
     auto ty1 = m_f.valType(val1);
     auto ty2 = m_f.valType(val2);
     auto resty = std::max(std::max(ty1, ty2), Type::Int32);
+    if (val1 < 0 && val2 < 0) {
+        switch (op) {
+        case Opcode::Add:
+            return getConst(evalAdd(resty, m_f.evalConst(val1),
+                                    m_f.evalConst(val2)));
+        case Opcode::Sub:
+            return getConst(evalSub(resty, m_f.evalConst(val1),
+                                    m_f.evalConst(val2)));
+        case Opcode::Mul:
+            return getConst(evalMul(resty, m_f.evalConst(val1),
+                                    m_f.evalConst(val2)));
+        default:
+            break;
+        }
+    }
     auto res = newSSA(resty);
     writeBuff<uint32_t>(ptr, res);
     writeBuff<uint32_t>(ptr + 4, val1);
@@ -559,6 +639,71 @@ int32_t Builder::createSub(int32_t val1, int32_t val2)
 int32_t Builder::createMul(int32_t val1, int32_t val2)
 {
     return createPromoteOP(Opcode::Mul, val1, val2);
+}
+
+TagVal EvalContext::evalVal(int32_t id) const
+{
+    if (id >= 0) {
+        return TagVal(m_f.vals[id], m_vals[id]);
+    } else {
+        return m_f.evalConst(id);
+    }
+}
+
+TagVal EvalContext::eval(void)
+{
+    const Function::BB *cur_bb;
+    const uint8_t *pc;
+    const uint8_t *end;
+    auto enter_bb = [&] (int32_t i) {
+        cur_bb = &m_f.code[i];
+        pc = cur_bb->data();
+        end = pc + cur_bb->size();
+    };
+    enter_bb(0);
+
+    while (end > pc) {
+        auto op = Opcode(*pc);
+        pc++;
+        switch (op) {
+        case Opcode::Ret:
+            return evalVal(readBuff<int32_t>(pc)).convert(m_f.ret);
+        case Opcode::Br:
+            if (evalVal(readBuff<int32_t>(pc)).get<bool>()) {
+                enter_bb(readBuff<int32_t>(pc + 4));
+            } else {
+                enter_bb(readBuff<int32_t>(pc + 8));
+            }
+            continue;
+        case Opcode::Add:
+        case Opcode::Sub:
+        case Opcode::Mul: {
+            auto res = readBuff<int32_t>(pc);
+            pc += 4;
+            auto val1 = evalVal(readBuff<int32_t>(pc));
+            pc += 4;
+            auto val2 = evalVal(readBuff<int32_t>(pc));
+            pc += 4;
+            switch (op) {
+            case Opcode::Add:
+                m_vals[res] = evalAdd(m_f.vals[res], val1, val2).val;
+                break;
+            case Opcode::Sub:
+                m_vals[res] = evalSub(m_f.vals[res], val1, val2).val;
+                break;
+            case Opcode::Mul:
+                m_vals[res] = evalMul(m_f.vals[res], val1, val2).val;
+                break;
+            default:
+                break;
+            }
+            break;
+        }
+        default:
+            break;
+        }
+    }
+    return TagVal(m_f.ret);
 }
 
 }
