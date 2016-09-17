@@ -107,6 +107,18 @@ main()
         ctx.reset({2.3, 1.3});
         ctx.eval().dump();
     }
+    std::cout << std::endl;
+
+    {
+        IR::Builder builder(IR::Type::Float64,
+                            {IR::Type::Int32, IR::Type::Int32});
+        auto val1 = builder.createFDiv(0, 1);
+        builder.createRet(val1);
+        builder.get().dump();
+        IR::EvalContext ctx(builder.get());
+        ctx.reset({3, 2});
+        ctx.eval().dump();
+    }
 
     return 0;
 }

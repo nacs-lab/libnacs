@@ -296,8 +296,6 @@ static inline const char *opName(Opcode op)
         return "sub";
     case Opcode::Mul:
         return "mul";
-    case Opcode::IDiv:
-        return "idiv";
     case Opcode::FDiv:
         return "fdiv";
     case Opcode::Rem:
@@ -408,7 +406,8 @@ void Function::dumpBB(const BB &bb) const
         }
         case Opcode::Add:
         case Opcode::Sub:
-        case Opcode::Mul: {
+        case Opcode::Mul:
+        case Opcode::FDiv: {
             auto res = *pc;
             pc++;
             auto val1 = *pc;
@@ -577,6 +576,11 @@ static TagVal evalMul(Type typ, TagVal val1, TagVal val2)
     }
 }
 
+static TagVal evalFDiv(TagVal val1, TagVal val2)
+{
+    return val1.get<double>() / val2.get<double>();
+}
+
 int32_t Builder::createPromoteOP(Opcode op, int32_t val1, int32_t val2)
 {
     int32_t *ptr = addInst(op, 3);
@@ -620,6 +624,18 @@ int32_t Builder::createMul(int32_t val1, int32_t val2)
     return createPromoteOP(Opcode::Mul, val1, val2);
 }
 
+int32_t Builder::createFDiv(int32_t val1, int32_t val2)
+{
+    int32_t *ptr = addInst(Opcode::FDiv, 3);
+    if (val1 < 0 && val2 < 0)
+        return getConst(evalFDiv(m_f.evalConst(val1), m_f.evalConst(val2)));
+    auto res = newSSA(Type::Float64);
+    ptr[0] = res;
+    ptr[1] = val1;
+    ptr[2] = val2;
+    return res;
+}
+
 TagVal EvalContext::evalVal(int32_t id) const
 {
     if (id >= 0) {
@@ -631,13 +647,16 @@ TagVal EvalContext::evalVal(int32_t id) const
 
 TagVal EvalContext::eval(void)
 {
-    const Function::BB *cur_bb;
+    int32_t bb_num = -1;
+    int32_t prev_bb_num;
     const int32_t *pc;
     const int32_t *end;
     auto enter_bb = [&] (int32_t i) {
-        cur_bb = &m_f.code[i];
-        pc = cur_bb->data();
-        end = pc + cur_bb->size();
+        prev_bb_num = bb_num;
+        bb_num = i;
+        auto &bb = m_f.code[i];
+        pc = bb.data();
+        end = pc + bb.size();
     };
     enter_bb(0);
 
@@ -656,7 +675,8 @@ TagVal EvalContext::eval(void)
             continue;
         case Opcode::Add:
         case Opcode::Sub:
-        case Opcode::Mul: {
+        case Opcode::Mul:
+        case Opcode::FDiv: {
             auto res = *pc;
             pc++;
             auto val1 = evalVal(*pc);
@@ -672,6 +692,9 @@ TagVal EvalContext::eval(void)
                 break;
             case Opcode::Mul:
                 m_vals[res] = evalMul(m_f.vals[res], val1, val2).val;
+                break;
+            case Opcode::FDiv:
+                m_vals[res] = evalFDiv(val1, val2).val;
                 break;
             default:
                 break;

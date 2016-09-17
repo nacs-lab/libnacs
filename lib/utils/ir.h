@@ -48,7 +48,6 @@ enum class Opcode : uint8_t {
     Add,
     Sub,
     Mul,
-    IDiv,
     FDiv,
     Rem,
     Cast,
@@ -253,8 +252,7 @@ public:
     int32_t createAdd(int32_t val1, int32_t val2);
     int32_t createSub(int32_t val1, int32_t val2);
     int32_t createMul(int32_t val1, int32_t val2);
-    // IDiv,
-    // FDiv,
+    int32_t createFDiv(int32_t val1, int32_t val2);
     // Rem,
     // Cast,
     // Cmp,
