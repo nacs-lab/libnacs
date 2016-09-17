@@ -119,6 +119,27 @@ main()
         ctx.reset({3, 2});
         ctx.eval().dump();
     }
+    std::cout << std::endl;
+
+    {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Int32,
+                    IR::Type::Float64});
+        auto pass_bb = builder.newBB();
+        auto fail_bb = builder.newBB();
+        builder.createBr(builder.createCmp(IR::CmpType::ge, 0, 1),
+                         pass_bb, fail_bb);
+        builder.curBB() = pass_bb;
+        builder.createRet(1);
+        builder.curBB() = fail_bb;
+        builder.createRet(0);
+        builder.get().dump();
+        IR::EvalContext ctx(builder.get());
+        ctx.reset({20, 1.3});
+        ctx.eval().dump();
+        ctx.reset({-10, 1.3});
+        ctx.eval().dump();
+    }
+    std::cout << std::endl;
 
     return 0;
 }

@@ -60,6 +60,15 @@ constexpr static inline bool validate(Opcode op)
     return op < Opcode::_Max && op > Opcode::_Min;
 }
 
+enum class CmpType : uint8_t {
+    eq,
+    gt,
+    ge,
+    lt,
+    le,
+    ne,
+    };
+
 enum class Builtins : uint16_t {
     // f(f)
     acos,
@@ -251,6 +260,7 @@ public:
     int32_t createSub(int32_t val1, int32_t val2);
     int32_t createMul(int32_t val1, int32_t val2);
     int32_t createFDiv(int32_t val1, int32_t val2);
+    int32_t createCmp(CmpType cmptyp, int32_t val1, int32_t val2);
     // Cmp,
     // Phi,
     // Call,

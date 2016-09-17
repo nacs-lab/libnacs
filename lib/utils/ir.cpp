@@ -309,6 +309,26 @@ static inline const char *opName(Opcode op)
     }
 }
 
+static inline const char *cmpName(CmpType cmp)
+{
+    switch (cmp) {
+    case CmpType::eq:
+        return "eq";
+    case CmpType::gt:
+        return "gt";
+    case CmpType::ge:
+        return "ge";
+    case CmpType::lt:
+        return "lt";
+    case CmpType::le:
+        return "le";
+    case CmpType::ne:
+        return "ne";
+    default:
+        return "unknown";
+    }
+}
+
 NACS_EXPORT void TagVal::dump(void) const
 {
     std::cout << typeName(typ) << " ";
@@ -413,6 +433,24 @@ void Function::dumpBB(const BB &bb) const
             std::cout << "  ";
             dumpVal(res);
             std::cout << " = " << opName(op) << " ";
+            dumpVal(val1);
+            std::cout << ", ";
+            dumpVal(val2);
+            std::cout << std::endl;
+            break;
+        }
+        case Opcode::Cmp: {
+            auto res = *pc;
+            pc++;
+            auto cmptyp = CmpType(*pc);
+            pc++;
+            auto val1 = *pc;
+            pc++;
+            auto val2 = *pc;
+            pc++;
+            std::cout << "  ";
+            dumpVal(res);
+            std::cout << " = " << opName(op) << " " << cmpName(cmptyp) << " ";
             dumpVal(val1);
             std::cout << ", ";
             dumpVal(val2);
@@ -577,9 +615,30 @@ static TagVal evalFDiv(TagVal val1, TagVal val2)
     return val1.get<double>() / val2.get<double>();
 }
 
+static TagVal evalCmp(CmpType cmptyp, TagVal val1, TagVal val2)
+{
+    double v1 = val1.get<double>();
+    double v2 = val2.get<double>();
+    switch (cmptyp) {
+    case CmpType::eq:
+        return v1 == v2;
+    case CmpType::gt:
+        return v1 > v2;
+    case CmpType::ge:
+        return v1 >= v2;
+    case CmpType::lt:
+        return v1 < v2;
+    case CmpType::le:
+        return v1 <= v2;
+    case CmpType::ne:
+        return v1 != v2;
+    default:
+        return false;
+    }
+}
+
 int32_t Builder::createPromoteOP(Opcode op, int32_t val1, int32_t val2)
 {
-    int32_t *ptr = addInst(op, 3);
     auto ty1 = m_f.valType(val1);
     auto ty2 = m_f.valType(val2);
     auto resty = std::max(std::max(ty1, ty2), Type::Int32);
@@ -598,6 +657,7 @@ int32_t Builder::createPromoteOP(Opcode op, int32_t val1, int32_t val2)
             break;
         }
     }
+    int32_t *ptr = addInst(op, 3);
     auto res = newSSA(resty);
     ptr[0] = res;
     ptr[1] = val1;
@@ -622,13 +682,27 @@ int32_t Builder::createMul(int32_t val1, int32_t val2)
 
 int32_t Builder::createFDiv(int32_t val1, int32_t val2)
 {
-    int32_t *ptr = addInst(Opcode::FDiv, 3);
     if (val1 < 0 && val2 < 0)
         return getConst(evalFDiv(m_f.evalConst(val1), m_f.evalConst(val2)));
+    int32_t *ptr = addInst(Opcode::FDiv, 3);
     auto res = newSSA(Type::Float64);
     ptr[0] = res;
     ptr[1] = val1;
     ptr[2] = val2;
+    return res;
+}
+
+int32_t Builder::createCmp(CmpType cmptyp, int32_t val1, int32_t val2)
+{
+    if (val1 < 0 && val2 < 0)
+        return getConst(evalCmp(cmptyp, m_f.evalConst(val1),
+                                m_f.evalConst(val2)));
+    int32_t *ptr = addInst(Opcode::Cmp, 4);
+    auto res = newSSA(Type::Bool);
+    ptr[0] = res;
+    ptr[1] = uint32_t(cmptyp);
+    ptr[2] = val1;
+    ptr[3] = val2;
     return res;
 }
 
@@ -695,6 +769,18 @@ TagVal EvalContext::eval(void)
             default:
                 break;
             }
+            break;
+        }
+        case Opcode::Cmp: {
+            auto res = *pc;
+            pc++;
+            auto cmptyp = CmpType(*pc);
+            pc++;
+            auto val1 = evalVal(*pc);
+            pc++;
+            auto val2 = evalVal(*pc);
+            pc++;
+            m_vals[res] = evalCmp(cmptyp, val1, val2).val;
             break;
         }
         default:
