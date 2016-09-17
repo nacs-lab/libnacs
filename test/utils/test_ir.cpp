@@ -141,5 +141,33 @@ main()
     }
     std::cout << std::endl;
 
+    {
+        IR::Builder builder(IR::Type::Int32,
+                            {IR::Type::Int32, IR::Type::Int32});
+        auto loop_bb = builder.newBB();
+        auto ret_bb = builder.newBB();
+        builder.createBr(loop_bb);
+        builder.curBB() = loop_bb;
+        auto i = builder.createPhi(IR::Type::Int32, 2);
+        auto s = builder.createPhi(IR::Type::Int32, 2);
+        builder.addPhiInput(i.second, 0, 0);
+        builder.addPhiInput(s.second, 0, builder.getConstInt(0));
+        auto i2 = builder.createAdd(i.first, builder.getConstInt(1));
+        auto s2 = builder.createAdd(s.first, i.first);
+        auto cond = builder.createCmp(IR::CmpType::gt, i2, 1);
+        builder.createBr(cond, ret_bb, loop_bb);
+        builder.addPhiInput(i.second, loop_bb, i2);
+        builder.addPhiInput(s.second, loop_bb, s2);
+        builder.curBB() = ret_bb;
+        builder.createRet(s2);
+        builder.get().dump();
+        IR::EvalContext ctx(builder.get());
+        ctx.reset({1, 3});
+        ctx.eval().dump();
+        ctx.reset({2, 1000});
+        ctx.eval().dump();
+    }
+    std::cout << std::endl;
+
     return 0;
 }

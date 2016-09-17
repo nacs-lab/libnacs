@@ -457,6 +457,28 @@ void Function::dumpBB(const BB &bb) const
             std::cout << std::endl;
             break;
         }
+        case Opcode::Phi: {
+            auto res = *pc;
+            pc++;
+            auto nargs = *pc;
+            pc++;
+            std::cout << "  ";
+            dumpVal(res);
+            std::cout << " = " << opName(op) << " ";
+            for (int i = 0;i < nargs;i++) {
+                if (i != 0) {
+                    std::cout << ", [ L";
+                } else {
+                    std::cout << "[ L";
+                }
+                std::cout << pc[2 * i] << ": ";
+                dumpVal(pc[2 * i + 1]);
+                std::cout << " ]";
+            }
+            pc += 2 * nargs;
+            std::cout << std::endl;
+            break;
+        }
         default:
             std::cout << "  unknown op: " << uint8_t(op) << std::endl;
             break;
@@ -483,8 +505,16 @@ NACS_EXPORT void Function::dump(void) const
 
 int32_t *Builder::addInst(Opcode op, size_t nop)
 {
+    Function::InstRef inst;
+    return addInst(op, nop, inst);
+}
+
+int32_t *Builder::addInst(Opcode op, size_t nop, Function::InstRef &inst)
+{
     auto &bb = m_f.code[m_cur_bb];
     auto oldlen = bb.size();
+    inst.first = m_cur_bb;
+    inst.second = oldlen + 1;
     bb.resize(oldlen + nop + 1);
     bb[oldlen] = uint32_t(op);
     return &bb[oldlen + 1];
@@ -706,6 +736,30 @@ int32_t Builder::createCmp(CmpType cmptyp, int32_t val1, int32_t val2)
     return res;
 }
 
+std::pair<int32_t, Function::InstRef> Builder::createPhi(Type typ, int ninputs)
+{
+    Function::InstRef inst;
+    int32_t *ptr = addInst(Opcode::Phi, ninputs * 2 + 2, inst);
+    auto res = newSSA(typ);
+    ptr[0] = res;
+    ptr[1] = ninputs;
+    memset(&ptr[2], 0xff, ninputs * 2 * 4);
+    return std::make_pair(res, inst);
+}
+
+void Builder::addPhiInput(Function::InstRef phi, int32_t bb, int32_t val)
+{
+    int32_t *inst = &m_f.code[phi.first][phi.second];
+    int32_t nargs = inst[1];
+    for (int32_t i = 0;i < nargs;i++) {
+        if (inst[2 + 2 * i] == bb || inst[2 + 2 * i] == -1) {
+            inst[2 + 2 * i] = bb;
+            inst[2 + 2 * i + 1] = val;
+            break;
+        }
+    }
+}
+
 TagVal EvalContext::evalVal(int32_t id) const
 {
     if (id >= 0) {
@@ -781,6 +835,22 @@ TagVal EvalContext::eval(void)
             auto val2 = evalVal(*pc);
             pc++;
             m_vals[res] = evalCmp(cmptyp, val1, val2).val;
+            break;
+        }
+        case Opcode::Phi: {
+            auto res = *pc;
+            pc++;
+            auto nargs = *pc;
+            pc++;
+            auto args = pc;
+            pc += 2 * nargs;
+            for (int i = 0;i < nargs;i++) {
+                if (args[2 * i] == prev_bb_num) {
+                    auto val = evalVal(args[2 * i + 1]);
+                    m_vals[res] = val.convert(m_f.vals[res]).val;
+                    break;
+                }
+            }
             break;
         }
         default:

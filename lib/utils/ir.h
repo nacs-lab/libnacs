@@ -201,6 +201,7 @@ struct TagVal {
 
 struct Function {
     typedef std::vector<int32_t> BB;
+    typedef std::pair<int32_t, int32_t> InstRef;
     Function(Type _ret, const std::vector<Type> &args)
         : ret(_ret),
           nargs(args.size()),
@@ -261,11 +262,12 @@ public:
     int32_t createMul(int32_t val1, int32_t val2);
     int32_t createFDiv(int32_t val1, int32_t val2);
     int32_t createCmp(CmpType cmptyp, int32_t val1, int32_t val2);
-    // Cmp,
-    // Phi,
+    std::pair<int32_t, Function::InstRef> createPhi(Type typ, int ninputs);
+    void addPhiInput(Function::InstRef phi, int32_t bb, int32_t val);
     // Call,
 private:
-    int32_t *addInst(Opcode op, size_t nbytes);
+    int32_t *addInst(Opcode op, size_t nop);
+    int32_t *addInst(Opcode op, size_t nop, Function::InstRef &inst);
     int32_t newSSA(Type typ);
     int32_t createPromoteOP(Opcode op, int32_t val1, int32_t val2);
     Function m_f;
