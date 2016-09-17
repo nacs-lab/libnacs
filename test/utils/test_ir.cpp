@@ -169,5 +169,22 @@ main()
     }
     std::cout << std::endl;
 
+    {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Int32});
+        builder.createRet(
+            builder.createAdd(builder.createCall(IR::Builtins::sin, {0}),
+                              builder.createCall(IR::Builtins::sin, {
+                                      builder.createMul(0,
+                                                        builder.getConstInt(2))
+                                  })));
+        builder.get().dump();
+        IR::EvalContext ctx(builder.get());
+        ctx.reset({1});
+        ctx.eval().dump();
+        ctx.reset({2});
+        ctx.eval().dump();
+    }
+    std::cout << std::endl;
+
     return 0;
 }

@@ -145,6 +145,7 @@ typedef union {
 struct TagVal {
     Type typ;
     GenVal val;
+    TagVal() = default;
     TagVal(Type _typ, GenVal _val=GenVal{})
         : typ(_typ),
           val(_val)
@@ -264,7 +265,11 @@ public:
     int32_t createCmp(CmpType cmptyp, int32_t val1, int32_t val2);
     std::pair<int32_t, Function::InstRef> createPhi(Type typ, int ninputs);
     void addPhiInput(Function::InstRef phi, int32_t bb, int32_t val);
-    // Call,
+    int32_t createCall(Builtins id, int32_t nargs, const int32_t *args);
+    int32_t createCall(Builtins id, const std::vector<int32_t> &args)
+    {
+        return createCall(id, args.size(), args.data());
+    }
 private:
     int32_t *addInst(Opcode op, size_t nop);
     int32_t *addInst(Opcode op, size_t nop, Function::InstRef &inst);
