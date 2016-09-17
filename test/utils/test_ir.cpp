@@ -183,6 +183,13 @@ main()
         ctx.eval().dump();
         ctx.reset({2});
         ctx.eval().dump();
+
+        auto data = builder.get().serialize();
+        IR::Function newfunc(data);
+        newfunc.dump();
+        IR::EvalContext ctx2(newfunc);
+        ctx2.reset({1});
+        ctx2.eval().dump();
     }
     std::cout << std::endl;
 

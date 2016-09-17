@@ -637,6 +637,53 @@ NACS_EXPORT void Function::dump(void) const
     std::cout << "}" << std::endl;
 }
 
+NACS_EXPORT std::vector<uint32_t> Function::serialize(void) const
+{
+    // [ret][nargs][nvals][vals x nvals]
+    // [nconsts][consts x nconsts]
+    // [nbb][[nword][code x nword] x nbb]
+    std::vector<uint32_t> res{uint32_t(ret), uint32_t(nargs)};
+    auto copy_vector = [&res] (auto vec) {
+        res.push_back(uint32_t(vec.size()));
+        uint32_t idx = res.size();
+        size_t elsz = sizeof(typename decltype(vec)::value_type);
+        res.resize(idx + (vec.size() * elsz + 3) / 4);
+        memcpy(&res[idx], vec.data(), vec.size() * elsz);
+    };
+    copy_vector(vals);
+    copy_vector(consts);
+    res.push_back(uint32_t(code.size()));
+    for (size_t i = 0;i < code.size();i++)
+        copy_vector(code[i]);
+    return res;
+}
+
+NACS_EXPORT Function::Function(const std::vector<uint32_t> &data)
+    : ret(Type(data[0])),
+      nargs(data[1]),
+      vals{},
+      code{},
+      consts{}
+{
+    uint32_t cursor = 2;
+    auto read_vector = [&data, &cursor] (auto &vec) {
+        uint32_t size = data[cursor];
+        cursor++;
+        vec.resize(size);
+        size_t elsz = sizeof(typename std::remove_reference_t<
+                             decltype(vec)>::value_type);
+        memcpy(vec.data(), &data[cursor], size * elsz);
+        cursor += (size * elsz + 3) / 4;
+    };
+    read_vector(vals);
+    read_vector(consts);
+    code.resize(data[cursor]);
+    cursor++;
+    for (size_t i = 0;i < code.size();i++) {
+        read_vector(code[i]);
+    }
+}
+
 int32_t *Builder::addInst(Opcode op, size_t nop)
 {
     Function::InstRef inst;
@@ -661,7 +708,7 @@ void Builder::createRet(int32_t val)
 
 int32_t Builder::getConstInt(int32_t val)
 {
-    auto map = m_f.const_ints;
+    auto map = const_ints;
     auto it = map.find(val);
     if (it != map.end())
         return it->second;
@@ -674,7 +721,7 @@ int32_t Builder::getConstInt(int32_t val)
 
 int32_t Builder::getConstFloat(double val)
 {
-    auto map = m_f.const_floats;
+    auto map = const_floats;
     auto it = map.find(val);
     if (it != map.end())
         return it->second;

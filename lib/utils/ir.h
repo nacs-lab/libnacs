@@ -208,10 +208,9 @@ struct Function {
           nargs(args.size()),
           vals(args),
           code{BB{}},
-          consts{},
-          const_ints{},
-          const_floats{}
+          consts{}
     {}
+    Function(const std::vector<uint32_t> &data);
     void dump(void) const;
     Type valType(int32_t id) const;
     TagVal evalConst(int32_t id) const
@@ -225,13 +224,12 @@ struct Function {
             return consts[Consts::_Offset - id];
         }
     }
+    std::vector<uint32_t> serialize(void) const;
     const Type ret;
     const int nargs;
     std::vector<Type> vals;
     std::vector<BB> code;
     std::vector<TagVal> consts;
-    std::map<int32_t, int> const_ints;
-    std::map<double, int> const_floats;
 private:
     void dumpValName(int32_t id) const;
     void dumpVal(int32_t id) const;
@@ -242,7 +240,9 @@ class NACS_EXPORT Builder {
 public:
     Builder(Type ret, std::vector<Type> args)
         : m_f(ret, args),
-          m_cur_bb(0)
+          m_cur_bb(0),
+          const_ints{},
+          const_floats{}
     {}
     Function &get(void)
     {
@@ -277,6 +277,8 @@ private:
     int32_t createPromoteOP(Opcode op, int32_t val1, int32_t val2);
     Function m_f;
     int32_t m_cur_bb;
+    std::map<int32_t, int> const_ints;
+    std::map<double, int> const_floats;
 };
 
 struct NACS_EXPORT EvalContext {
