@@ -269,26 +269,6 @@ NACS_EXPORT double evalBuiltin(Builtins id, uint64_t *args)
     }
 }
 
-template<typename T, typename T2>
-static inline void writeBuff(uint8_t *ptr, T2 _val)
-{
-    T val(_val);
-    unsigned char *src = (unsigned char*)&val;
-    for (int i = 0;i < sizeof(T);i++) {
-        ptr[i] = src[i];
-    }
-}
-
-template<typename T>
-static inline T readBuff(const uint8_t *ptr)
-{
-    T val;
-    unsigned char *dest = (unsigned char*)&val;
-    for (int i = 0;i < sizeof(T);i++)
-        dest[i] = ptr[i];
-    return val;
-}
-
 static inline const char *typeName(Type typ)
 {
     switch (typ) {
@@ -397,28 +377,28 @@ void Function::dumpVal(int32_t id) const
 
 void Function::dumpBB(const BB &bb) const
 {
-    const uint8_t *pc = bb.data();
-    const uint8_t *end = pc + bb.size();
+    const int32_t *pc = bb.data();
+    const int32_t *end = pc + bb.size();
     while (end > pc) {
         auto op = Opcode(*pc);
         pc++;
         switch (op) {
         case Opcode::Ret:
             std::cout << "  ret ";
-            dumpVal(readBuff<int32_t>(pc));
+            dumpVal(*pc);
             std::cout << std::endl;
-            pc += 4;
+            pc++;
             break;
         case Opcode::Br: {
-            auto cond = readBuff<int32_t>(pc);
-            pc += 4;
-            auto bb1 = readBuff<int32_t>(pc);
-            pc += 4;
+            auto cond = *pc;
+            pc++;
+            auto bb1 = *pc;
+            pc++;
             if (cond == Consts::True) {
                 std::cout << "  br L" << bb1;
             } else {
-                auto bb2 = readBuff<int32_t>(pc);
-                pc += 4;
+                auto bb2 = *pc;
+                pc++;
                 std::cout << "  br ";
                 dumpVal(cond);
                 std::cout << ", L" << bb1 << ", L" << bb2;
@@ -429,12 +409,12 @@ void Function::dumpBB(const BB &bb) const
         case Opcode::Add:
         case Opcode::Sub:
         case Opcode::Mul: {
-            auto res = readBuff<int32_t>(pc);
-            pc += 4;
-            auto val1 = readBuff<int32_t>(pc);
-            pc += 4;
-            auto val2 = readBuff<int32_t>(pc);
-            pc += 4;
+            auto res = *pc;
+            pc++;
+            auto val1 = *pc;
+            pc++;
+            auto val2 = *pc;
+            pc++;
             std::cout << "  ";
             dumpVal(res);
             std::cout << " = " << opName(op) << " ";
@@ -468,18 +448,18 @@ NACS_EXPORT void Function::dump(void) const
     std::cout << "}" << std::endl;
 }
 
-uint8_t *Builder::addInst(Opcode op, size_t nbytes)
+int32_t *Builder::addInst(Opcode op, size_t nop)
 {
     auto &bb = m_f.code[m_cur_bb];
     auto oldlen = bb.size();
-    bb.resize(oldlen + nbytes + 1);
-    bb[oldlen] = uint8_t(op);
+    bb.resize(oldlen + nop + 1);
+    bb[oldlen] = uint32_t(op);
     return &bb[oldlen + 1];
 }
 
 void Builder::createRet(int32_t val)
 {
-    writeBuff<uint32_t>(addInst(Opcode::Ret, 4), val);
+    *addInst(Opcode::Ret, 1) = val;
 }
 
 int32_t Builder::getConstInt(int32_t val)
@@ -549,15 +529,15 @@ void Builder::createBr(int32_t br)
 void Builder::createBr(int32_t cond, int32_t bb1, int32_t bb2)
 {
     if (cond == Consts::True) {
-        uint8_t *ptr = addInst(Opcode::Br, 8);
-        writeBuff<uint32_t>(ptr, Consts::True);
-        writeBuff<uint32_t>(ptr + 4, bb1);
+        int32_t *ptr = addInst(Opcode::Br, 2);
+        ptr[0] = Consts::True;
+        ptr[1] = bb1;
     }
     else {
-        uint8_t *ptr = addInst(Opcode::Br, 12);
-        writeBuff<uint32_t>(ptr, cond);
-        writeBuff<uint32_t>(ptr + 4, bb1);
-        writeBuff<uint32_t>(ptr + 8, bb2);
+        int32_t *ptr = addInst(Opcode::Br, 3);
+        ptr[0] = cond;
+        ptr[1] = bb1;
+        ptr[2] = bb2;
     }
 }
 
@@ -599,8 +579,7 @@ static TagVal evalMul(Type typ, TagVal val1, TagVal val2)
 
 int32_t Builder::createPromoteOP(Opcode op, int32_t val1, int32_t val2)
 {
-    // TODO optimize for constants
-    uint8_t *ptr = addInst(op, 12);
+    int32_t *ptr = addInst(op, 3);
     auto ty1 = m_f.valType(val1);
     auto ty2 = m_f.valType(val2);
     auto resty = std::max(std::max(ty1, ty2), Type::Int32);
@@ -620,9 +599,9 @@ int32_t Builder::createPromoteOP(Opcode op, int32_t val1, int32_t val2)
         }
     }
     auto res = newSSA(resty);
-    writeBuff<uint32_t>(ptr, res);
-    writeBuff<uint32_t>(ptr + 4, val1);
-    writeBuff<uint32_t>(ptr + 8, val2);
+    ptr[0] = res;
+    ptr[1] = val1;
+    ptr[2] = val2;
     return res;
 }
 
@@ -653,8 +632,8 @@ TagVal EvalContext::evalVal(int32_t id) const
 TagVal EvalContext::eval(void)
 {
     const Function::BB *cur_bb;
-    const uint8_t *pc;
-    const uint8_t *end;
+    const int32_t *pc;
+    const int32_t *end;
     auto enter_bb = [&] (int32_t i) {
         cur_bb = &m_f.code[i];
         pc = cur_bb->data();
@@ -667,23 +646,23 @@ TagVal EvalContext::eval(void)
         pc++;
         switch (op) {
         case Opcode::Ret:
-            return evalVal(readBuff<int32_t>(pc)).convert(m_f.ret);
+            return evalVal(*pc).convert(m_f.ret);
         case Opcode::Br:
-            if (evalVal(readBuff<int32_t>(pc)).get<bool>()) {
-                enter_bb(readBuff<int32_t>(pc + 4));
+            if (evalVal(*pc).get<bool>()) {
+                enter_bb(pc[1]);
             } else {
-                enter_bb(readBuff<int32_t>(pc + 8));
+                enter_bb(pc[2]);
             }
             continue;
         case Opcode::Add:
         case Opcode::Sub:
         case Opcode::Mul: {
-            auto res = readBuff<int32_t>(pc);
-            pc += 4;
-            auto val1 = evalVal(readBuff<int32_t>(pc));
-            pc += 4;
-            auto val2 = evalVal(readBuff<int32_t>(pc));
-            pc += 4;
+            auto res = *pc;
+            pc++;
+            auto val1 = evalVal(*pc);
+            pc++;
+            auto val2 = evalVal(*pc);
+            pc++;
             switch (op) {
             case Opcode::Add:
                 m_vals[res] = evalAdd(m_f.vals[res], val1, val2).val;

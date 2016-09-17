@@ -194,8 +194,7 @@ struct TagVal {
 };
 
 struct Function {
-    // TODO const pool
-    typedef std::vector<uint8_t> BB;
+    typedef std::vector<int32_t> BB;
     Function(Type _ret, const std::vector<Type> &args)
         : ret(_ret),
           nargs(args.size()),
@@ -262,7 +261,7 @@ public:
     // Phi,
     // Call,
 private:
-    uint8_t *addInst(Opcode op, size_t nbytes);
+    int32_t *addInst(Opcode op, size_t nbytes);
     int32_t newSSA(Type typ);
     int32_t createPromoteOP(Opcode op, int32_t val1, int32_t val2);
     Function m_f;
