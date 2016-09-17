@@ -130,9 +130,6 @@ enum class Builtins : uint16_t {
     yn,
     };
 
-NACS_EXPORT bool checkBuiltinType(Builtins id, Type *args, size_t narg);
-NACS_EXPORT double evalBuiltin(Builtins id, uint64_t *args);
-
 enum Consts : int32_t {
     False = -1,
     True = -2,
@@ -198,6 +195,9 @@ struct TagVal {
     }
     void dump(void) const;
 };
+
+NACS_EXPORT bool checkBuiltinType(Builtins id, Type *args, size_t narg);
+NACS_EXPORT double evalBuiltin(Builtins id, TagVal *args);
 
 struct Function {
     typedef std::vector<int32_t> BB;

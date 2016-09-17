@@ -240,29 +240,28 @@ NACS_EXPORT bool checkBuiltinType(Builtins id, Type *args, size_t narg)
     }
 }
 
-NACS_EXPORT double evalBuiltin(Builtins id, uint64_t *args)
+NACS_EXPORT double evalBuiltin(Builtins id, TagVal *args)
 {
     auto _fptr = getBuiltinPtr(id);
     switch (getBuiltinType(id)) {
     case BuiltinType::F64_F64:
-        return _fptr(*(double*)args);
+        return _fptr(args[0].get<double>());
     case BuiltinType::F64_F64F64: {
         auto fptr = (double(*)(double, double))_fptr;
-        auto fargs = (double*)args;
-        return fptr(fargs[0], fargs[1]);
+        return fptr(args[0].get<double>(), args[1].get<double>());
     }
     case BuiltinType::F64_F64F64F64: {
         auto fptr = (double(*)(double, double, double))_fptr;
-        auto fargs = (double*)args;
-        return fptr(fargs[0], fargs[1], fargs[2]);
+        return fptr(args[0].get<double>(), args[1].get<double>(),
+                    args[2].get<double>());
     }
     case BuiltinType::F64_F64I32: {
         auto fptr = (double(*)(double, int))_fptr;
-        return fptr(*(double*)args, *(uint32_t*)(args + 1));
+        return fptr(args[0].get<double>(), args[1].get<int32_t>());
     }
     case BuiltinType::F64_I32F64: {
         auto fptr = (double(*)(int, double))_fptr;
-        return fptr(*(uint32_t*)args, *(double*)(args + 1));
+        return fptr(args[0].get<int32_t>(), args[1].get<double>());
     }
     default:
         return 0.0;
