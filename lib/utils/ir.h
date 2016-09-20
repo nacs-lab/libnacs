@@ -205,7 +205,7 @@ struct Function {
     typedef std::pair<int32_t, int32_t> InstRef;
     Function(Type _ret, const std::vector<Type> &args)
         : ret(_ret),
-          nargs(args.size()),
+          nargs((int)args.size()),
           vals(args),
           code{BB{}},
           consts{}
@@ -268,7 +268,7 @@ public:
     int32_t createCall(Builtins id, int32_t nargs, const int32_t *args);
     int32_t createCall(Builtins id, const std::vector<int32_t> &args)
     {
-        return createCall(id, args.size(), args.data());
+        return createCall(id, (int32_t)args.size(), args.data());
     }
 private:
     int32_t *addInst(Opcode op, size_t nop);

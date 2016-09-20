@@ -77,7 +77,7 @@ NACS_EXPORT void
 nacsBacktrace()
 {
     void *buff[1024];
-    size_t size = backtrace(buff, 1024);
+    int size = backtrace(buff, 1024);
     int fd = fileno(log_f);
     if (fd == -1) {
         fd = STDERR_FILENO;

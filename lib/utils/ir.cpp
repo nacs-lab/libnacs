@@ -645,7 +645,7 @@ NACS_EXPORT std::vector<uint32_t> Function::serialize(void) const
     std::vector<uint32_t> res{uint32_t(ret), uint32_t(nargs)};
     auto copy_vector = [&res] (auto vec) {
         res.push_back(uint32_t(vec.size()));
-        uint32_t idx = res.size();
+        uint32_t idx = (uint32_t)res.size();
         size_t elsz = sizeof(typename decltype(vec)::value_type);
         res.resize(idx + (vec.size() * elsz + 3) / 4);
         memcpy(&res[idx], vec.data(), vec.size() * elsz);
@@ -670,8 +670,8 @@ NACS_EXPORT Function::Function(const std::vector<uint32_t> &data)
         uint32_t size = data[cursor];
         cursor++;
         vec.resize(size);
-        size_t elsz = sizeof(typename std::remove_reference_t<
-                             decltype(vec)>::value_type);
+        int32_t elsz = sizeof(typename std::remove_reference_t<
+                              decltype(vec)>::value_type);
         memcpy(vec.data(), &data[cursor], size * elsz);
         cursor += (size * elsz + 3) / 4;
     };
@@ -693,7 +693,7 @@ int32_t *Builder::addInst(Opcode op, size_t nop)
 int32_t *Builder::addInst(Opcode op, size_t nop, Function::InstRef &inst)
 {
     auto &bb = m_f.code[m_cur_bb];
-    auto oldlen = bb.size();
+    auto oldlen = (int32_t)bb.size();
     inst.first = m_cur_bb;
     inst.second = oldlen + 1;
     bb.resize(oldlen + nop + 1);
@@ -712,7 +712,7 @@ int32_t Builder::getConstInt(int32_t val)
     auto it = map.find(val);
     if (it != map.end())
         return it->second;
-    int32_t oldlen = m_f.consts.size();
+    int32_t oldlen = (int32_t)m_f.consts.size();
     m_f.consts.emplace_back(val);
     int32_t id = Consts::_Offset - oldlen;
     map[val] = id;
@@ -725,7 +725,7 @@ int32_t Builder::getConstFloat(double val)
     auto it = map.find(val);
     if (it != map.end())
         return it->second;
-    int32_t oldlen = m_f.consts.size();
+    int32_t oldlen = (int32_t)m_f.consts.size();
     m_f.consts.emplace_back(val);
     int32_t id = Consts::_Offset - oldlen;
     map[val] = id;
@@ -748,14 +748,14 @@ int32_t Builder::getConst(TagVal val)
 
 int32_t Builder::newSSA(Type typ)
 {
-    int32_t id = m_f.vals.size();
+    int32_t id = (int32_t)m_f.vals.size();
     m_f.vals.push_back(typ);
     return id;
 }
 
 int32_t Builder::newBB(void)
 {
-    int32_t id = m_f.code.size();
+    int32_t id = (int32_t)m_f.code.size();
     m_f.code.push_back({});
     return id;
 }
