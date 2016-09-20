@@ -163,14 +163,14 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
     auto finalize_chn = [&] (Cid cid) {
         auto it = cur_pulses.find(cid);
         if (it == cur_pulses.end())
-            return false;
+            return it;
         size_t pid = it->second;
         auto &pulse = seq[pid];
         auto fin_val = calc_pulse(pid, pulse.t + pulse.len);
         start_vals[cid] = fin_val;
-        cur_pulses.erase(cid);
+        it = cur_pulses.erase(it);
         finalized.insert(pid);
-        return true;
+        return it;
     };
 
     // Check if any channel has overdue changes.
@@ -187,9 +187,8 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
                 ++it;
                 continue;
             }
-            finalize_chn(pulse.chn);
             to_flush.insert(it->first);
-            it = cur_pulses.erase(it);
+            it = finalize_chn(pulse.chn);
         }
 
         // Now see if there's any new pulses that needs handling.
@@ -241,8 +240,7 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
                     continue;
                 }
                 has_finalize = true;
-                finalize_chn(cid);
-                it = cur_pulses.erase(it);
+                it = finalize_chn(cid);
                 output_pulse(cid, start_vals[cid], next_t);
             }
         } while (has_finalize);
@@ -270,7 +268,6 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
             auto &pulse = seq[pid];
             if (pulse.t + pulse.len <= next_seq_t) {
                 finalize_chn(cid);
-                cur_pulses.erase(cur_pulses.find(cid));
                 output_pulse(cid, start_vals[cid], next_seq_t);
             } else {
                 output_pulse(cid, calc_pulse(pid, next_seq_t), next_seq_t);
@@ -284,7 +281,6 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
             auto &pulse = seq[pid];
             if (pulse.t + pulse.len <= next_seq_t) {
                 finalize_chn(cid);
-                cur_pulses.erase(cur_pulses.find(cid));
                 output_pulse(cid, start_vals[cid], next_seq_t);
             } else {
                 output_pulse(cid, calc_pulse(pid, next_seq_t), next_seq_t);
