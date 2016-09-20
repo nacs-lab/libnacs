@@ -293,7 +293,7 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
     };
 
     bool prev_overdue = false;
-    while (cursor < npulse) {
+    while (cursor < npulse || !cur_pulses.empty()) {
         // 1. Check and handle any overdue changes.
         //
         //     If there's output in this step restart the loop, unless the
