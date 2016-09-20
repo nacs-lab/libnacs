@@ -55,6 +55,7 @@ struct filter_t {
 };
 
 static const auto seq_cb = [&] (auto &accum, uint64_t cur_t, Seq::Event evt) {
+    nacsLog("Start time: %" PRIu64 "\n", cur_t);
     return cur_t;
 };
 
@@ -62,11 +63,20 @@ int main()
 {
     accum_t accum;
     std::vector<pulse_t> seq{
-        pulse_t{0, 1000, 0, [] (auto t, auto start, auto len) {
+        pulse_t{0, 10000, 0, [] (auto t, auto start, auto len) {
                 return val_t(start.v + (double)t);
             }},
-        pulse_t{0, 1000, 1, [] (auto t, auto start, auto len) {
+        pulse_t{0, 10000, 1, [] (auto t, auto start, auto len) {
                 return val_t(start.v - (double)t);
+            }},
+        pulse_t{5000, 0, 2, [] (auto t, auto start, auto len) {
+                return val_t(20);
+            }},
+        pulse_t{5002, 0, 2, [] (auto t, auto start, auto len) {
+                return val_t(10);
+            }},
+        pulse_t{5202, 0, 2, [] (auto t, auto start, auto len) {
+                return val_t(10);
             }}
     };
     Seq::Time::Constraints t_cons{80, 40, 4096};
