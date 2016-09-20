@@ -106,6 +106,7 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
     auto output_pulse = [&] (Cid cid, ValT val, uint64_t t) {
         if (!filter(cid, cur_vals[cid], val))
             return;
+        cur_vals[cid] = val;
         uint64_t dt = t - prev_t;
         keeper.addPulse(dt);
         prev_t = t;
