@@ -40,10 +40,11 @@ NACS_EXPORT void Keeper::addPulse(uint64_t dt)
 
 NACS_EXPORT uint64_t Keeper::minDt(uint64_t min_dt) const
 {
+    auto window_sz = m_cons.avg_dt * m_cons.avg_window;
     min_dt = std::max<uint64_t>(min_dt, 1);
-    if (m_npulses < m_cons.avg_window - 1 || m_total_len >= m_cons.avg_dt)
+    if (m_npulses < m_cons.avg_window - 1 || m_total_len >= window_sz)
         return min_dt;
-    return std::max(m_cons.avg_dt - m_total_len, min_dt);
+    return std::max(window_sz - m_total_len, min_dt);
 }
 
 NACS_EXPORT void Keeper::reset(void)
