@@ -250,6 +250,10 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
         while (next_t <= deadline && !cur_copy.empty() && cursor < npulse) {
             uint64_t next_seq_t = get_next_time(t_cons.prefer_dt);
             auto &new_pulse = seq[cursor];
+            if (!filter(new_pulse.chn)) {
+                cursor++;
+                continue;
+            }
             if (new_pulse.t <= next_seq_t) {
                 uint64_t dt = (new_pulse.t > prev_t ? new_pulse.t - prev_t : 0);
                 uint64_t t = get_next_time(dt);
