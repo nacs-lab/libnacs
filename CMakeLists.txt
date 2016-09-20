@@ -21,6 +21,7 @@ endif()
 
 cmake_c_fix_include_path(lib/utils nacs-utils)
 cmake_c_fix_include_path(lib/kernel nacs-kernel)
+cmake_c_fix_include_path(lib/seq nacs-seq)
 
 set(LINKER_FLAGS -Wl,--as-needed -Wl,--no-undefined -Wl,--gc-sections
   -pthread -O2 -fno-math-errno)

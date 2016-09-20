@@ -1,4 +1,5 @@
 set(nacs_seq_HDRS
+  seq.h
   timing.h)
 set(nacs_seq_SRCS
   timing.cpp)
