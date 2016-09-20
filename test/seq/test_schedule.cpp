@@ -19,6 +19,8 @@
 #include <nacs-seq/seq.h>
 #include <nacs-utils/log.h>
 #include <functional>
+
+#include <math.h>
 #include <inttypes.h>
 
 using namespace NaCs;
@@ -35,7 +37,7 @@ struct val_t {
 struct accum_t {
     uint64_t operator()(cid_t chn, val_t val, uint64_t t)
     {
-        nacsLog("t = %" PRIu64 ", chn = %d, v = %f\n", t, chn, val.v);
+        // nacsLog("t = %" PRIu64 ", chn = %d, v = %f\n", t, chn, val.v);
         return 1;
     }
 };
@@ -55,7 +57,7 @@ struct filter_t {
 };
 
 static const auto seq_cb = [&] (auto &accum, uint64_t cur_t, Seq::Event evt) {
-    nacsLog("Start time: %" PRIu64 "\n", cur_t);
+    // nacsLog("Start time: %" PRIu64 "\n", cur_t);
     return cur_t;
 };
 
@@ -63,11 +65,14 @@ int main()
 {
     accum_t accum;
     std::vector<pulse_t> seq{
-        pulse_t{0, 10000, 0, [] (auto t, auto start, auto len) {
+        pulse_t{0, 10000000, 0, [] (auto t, auto start, auto len) {
                 return val_t(start.v + (double)t);
             }},
-        pulse_t{0, 10000, 1, [] (auto t, auto start, auto len) {
+        pulse_t{0, 10000000, 1, [] (auto t, auto start, auto len) {
                 return val_t(start.v - (double)t);
+            }},
+        pulse_t{0, 10000000, 3, [] (auto t, auto start, auto len) {
+                return val_t(start.v + sin((double)t / 1000.0));
             }},
         pulse_t{5000, 0, 2, [] (auto t, auto start, auto len) {
                 return val_t(20);
@@ -79,7 +84,7 @@ int main()
                 return val_t(10);
             }}
     };
-    Seq::Time::Constraints t_cons{80, 40, 4096};
+    Seq::Time::Constraints t_cons{100, 40, 4096};
     std::map<cid_t,val_t> defaults;
     filter_t filter;
     sort(seq);

@@ -21,6 +21,7 @@
 #endif
 
 #include <nacs-utils/ir.h>
+#include <nacs-utils/timer.h>
 #include <assert.h>
 #include <iostream>
 
@@ -190,6 +191,13 @@ main()
         IR::EvalContext ctx2(newfunc);
         ctx2.reset({1});
         ctx2.eval().dump();
+
+        tic();
+        for (int i = 0;i < 1000000;i++) {
+            ctx2.reset({1});
+            ctx2.eval();
+        }
+        printToc();
     }
     std::cout << std::endl;
 
