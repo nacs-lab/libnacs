@@ -17,30 +17,40 @@
  *************************************************************************/
 
 #include <nacs-seq/seq.h>
+#include <nacs-utils/log.h>
 #include <functional>
+#include <inttypes.h>
 
 using namespace NaCs;
 
 typedef uint32_t cid_t;
 
+struct val_t {
+    double v;
+    val_t(double _v=0)
+        : v(_v)
+    {}
+};
+
 struct accum_t {
-    uint64_t operator()(cid_t, double, uint64_t)
+    uint64_t operator()(cid_t chn, val_t val, uint64_t t)
     {
+        nacsLog("t = %" PRIu64 ", chn = %d, v = %f\n", t, chn, val.v);
         return 1;
     }
 };
 
 typedef Seq::Pulse<cid_t,std::function<
-                             double(uint64_t,double,uint64_t)>> pulse_t;
+                             val_t(uint64_t,val_t,uint64_t)>> pulse_t;
 
 struct filter_t {
     bool operator()(cid_t cid)
     {
         return true;
     }
-    bool operator()(cid_t cid, double val1, double val2)
+    bool operator()(cid_t cid, val_t val1, val_t val2)
     {
-        return true;
+        return val1.v != val2.v;
     }
 };
 
@@ -48,20 +58,21 @@ static const auto seq_cb = [&] (auto &accum, uint64_t cur_t, Seq::Event evt) {
     return cur_t;
 };
 
-// template<typename Accum, typename Cid, typename Cb, typename Filter,
-//          typename SeqCB, typename ValT>
-// static void schedule(Accum &accum, std::vector<Pulse<Cid,Cb>> &seq,
-//                      const Time::Constraints &t_cons,
-//                      const std::map<Cid,ValT> &defaults,
-//                      Filter &&filter, SeqCB &&seq_cb)
-
 int main()
 {
     accum_t accum;
-    std::vector<pulse_t> seq;
-    Seq::Time::Constraints t_cons{1, 1, 1};
-    std::map<cid_t,double> defaults;
+    std::vector<pulse_t> seq{
+        pulse_t{0, 1000, 0, [] (auto t, auto start, auto len) {
+                return val_t(start.v + (double)t);
+            }},
+        pulse_t{0, 1000, 1, [] (auto t, auto start, auto len) {
+                return val_t(start.v - (double)t);
+            }}
+    };
+    Seq::Time::Constraints t_cons{80, 40, 4096};
+    std::map<cid_t,val_t> defaults;
     filter_t filter;
+    sort(seq);
     schedule(accum, seq, t_cons, defaults, filter, seq_cb);
     return 0;
 }
