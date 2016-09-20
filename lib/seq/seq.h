@@ -177,10 +177,11 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
     // Check if any channel has overdue changes.
     // This includes new pulses or finishing of pulses that should happen
     // before the next preferred time point.
+    std::set<Cid> to_flush;
+    std::vector<size_t> pending;
     auto handle_overdue = [&] () {
         uint64_t tlim = next_t;
         // First collect and finalize pulses that should be finished.
-        std::set<Cid> to_flush;
         for (auto it = cur_pulses.begin();it != cur_pulses.end();) {
             auto pid = it->second;
             auto &pulse = seq[pid];
@@ -194,7 +195,6 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
 
         // Now see if there's any new pulses that needs handling.
         // Remove the corresponding pulse from `to_flush` as we encounter it.
-        std::vector<size_t> pending;
         for (;cursor < npulse;cursor++) {
             auto &pulse = seq[cursor];
             if (pulse.t > tlim)
@@ -210,15 +210,21 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
         if (pending.empty() && to_flush.empty())
             return false;
         // Flush the ones to finish.
-        for (auto cid: to_flush)
-            output_pulse(cid, start_vals[cid], next_t);
+        if (!to_flush.empty()) {
+            for (auto cid: to_flush)
+                output_pulse(cid, start_vals[cid], next_t);
+            to_flush.clear();
+        }
         // Output queued pulses in the queued order, after the finishing ones.
-        for (auto pid: pending) {
-            if (finalized.find(pid) != finalized.end())
-                continue;
-            auto val = calc_pulse(pid, next_t);
-            record_pulse(pid, next_t);
-            output_pulse(seq[pid].chn, val, next_t);
+        if (!pending.empty()) {
+            for (auto pid: pending) {
+                if (finalized.find(pid) != finalized.end())
+                    continue;
+                auto val = calc_pulse(pid, next_t);
+                record_pulse(pid, next_t);
+                output_pulse(seq[pid].chn, val, next_t);
+            }
+            pending.clear();
         }
         return true;
     };
