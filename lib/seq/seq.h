@@ -147,9 +147,9 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
     size_t cursor = 0;
     size_t npulse = seq.size();
 
-    auto record_pulse = [&] (size_t id) {
+    auto record_pulse = [&] (size_t id, uint64_t t) {
         auto &pulse = seq[id];
-        if (pulse.t + pulse.len <= next_t)
+        if (pulse.t + pulse.len <= t)
             return;
         cur_pulses[pulse.chn] = id;
     };
@@ -217,7 +217,7 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
             if (finalized.find(pid) != finalized.end())
                 continue;
             auto val = calc_pulse(pid, next_t);
-            record_pulse(pid);
+            record_pulse(pid, next_t);
             output_pulse(seq[pid].chn, val, next_t);
         }
         return true;
@@ -257,7 +257,7 @@ static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
                 uint64_t dt = (new_pulse.t > prev_t ? new_pulse.t - prev_t : 0);
                 uint64_t t = get_next_time(dt);
                 auto val = calc_pulse(cursor, t);
-                record_pulse(cursor);
+                record_pulse(cursor, t);
                 output_pulse(new_pulse.chn, val, t);
                 cursor++;
                 continue;
