@@ -1,3 +1,5 @@
 add_subdirectory(utils)
 add_subdirectory(seq)
-add_subdirectory(kernel)
+if(ENABLE_KNACS)
+  add_subdirectory(kernel)
+endif()

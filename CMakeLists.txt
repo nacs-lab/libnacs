@@ -12,6 +12,8 @@ include(GNUInstallDirs)
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
 
+option(ENABLE_KNACS "Enable kernel driver" Off)
+
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden
   -O2 -fno-math-errno -Wconversion -Wno-sign-conversion)
 
