@@ -126,6 +126,19 @@ private:
 
 typedef BasePulse<Channel, PulseData> Pulse;
 
+struct Filter {
+    bool operator()(Seq::Channel cid)
+    {
+        return true;
+    }
+    bool operator()(Seq::Channel cid, Seq::Val val1, Seq::Val val2)
+    {
+        if (cid.typ == Seq::Channel::TTL)
+            return val1.val.i32 != val2.val.i32;
+        return val1.val.f64 != val2.val.f64;
+    }
+};
+
 }
 }
 

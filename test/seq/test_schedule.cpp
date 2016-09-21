@@ -25,17 +25,6 @@
 
 using namespace NaCs;
 
-struct filter_t {
-    bool operator()(Seq::Channel cid)
-    {
-        return true;
-    }
-    bool operator()(Seq::Channel cid, Seq::Val val1, Seq::Val val2)
-    {
-        return val1.val.f64 != val2.val.f64;
-    }
-};
-
 static const auto seq_cb = [&] (auto &accum, uint64_t cur_t, Seq::Event evt) {
     nacsLog("Start time: %" PRIu64 "\n", cur_t);
     return cur_t;
@@ -72,7 +61,7 @@ int main()
                 Seq::Val::get<double>(10)});
     Seq::Time::Constraints t_cons{100, 40, 4096};
     std::map<Seq::Channel,Seq::Val> defaults;
-    filter_t filter;
+    Seq::Filter filter;
     sort(seq);
     schedule(builder, seq, t_cons, defaults, filter, seq_cb);
     return 0;
