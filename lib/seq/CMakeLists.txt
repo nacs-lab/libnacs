@@ -1,8 +1,10 @@
 set(nacs_seq_HDRS
   seq.h
-  timing.h)
+  timing.h
+  pulser.h)
 set(nacs_seq_SRCS
-  timing.cpp)
+  timing.cpp
+  pulser.cpp)
 set(nacs_seq_LINKS nacs-utils)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")

@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include <nacs-utils/ir.h>
+#include <nacs-seq/seq.h>
 
 #include <type_traits>
 #include <functional>
@@ -82,20 +83,6 @@ private:
     }
 };
 
-struct PulsesBuilder {
-    typedef std::function<uint64_t(Seq::Channel,Seq::Val,uint64_t)> cb_t;
-    template<typename T>
-    PulsesBuilder(T &&_cb)
-        : cb(std::forward<T>(_cb))
-    {}
-    uint64_t operator()(Seq::Channel chn, Seq::Val val, uint64_t t)
-    {
-        return cb(chn, val, t);
-    }
-private:
-    cb_t cb;
-};
-
 struct PulseData {
     typedef std::function<Val(uint64_t,Val,uint64_t)> func_t;
     PulseData(PulseData&&) = default;
@@ -127,16 +114,35 @@ private:
 typedef BasePulse<Channel, PulseData> Pulse;
 
 struct Filter {
-    bool operator()(Seq::Channel cid)
+    bool operator()(Channel cid)
     {
         return true;
     }
-    bool operator()(Seq::Channel cid, Seq::Val val1, Seq::Val val2)
+    bool operator()(Channel cid, Val val1, Val val2)
     {
-        if (cid.typ == Seq::Channel::TTL)
+        if (cid.typ == Channel::TTL)
             return val1.val.i32 != val2.val.i32;
         return val1.val.f64 != val2.val.f64;
     }
+};
+
+struct PulsesBuilder {
+    typedef std::function<uint64_t(Channel,Val,uint64_t)> cb_t;
+    typedef std::function<uint64_t(PulsesBuilder&,uint64_t,Event)> seq_cb_t;
+    template<typename T>
+    PulsesBuilder(T &&_cb)
+        : cb(std::forward<T>(_cb))
+    {}
+    uint64_t operator()(Channel chn, Val val, uint64_t t)
+    {
+        return cb(chn, val, t);
+    }
+    void schedule(std::vector<Pulse> &seq,
+                  const std::map<Channel,Val> &defaults,
+                  seq_cb_t seq_cb,
+                  Time::Constraints t_cons={100, 40, 4096});
+private:
+    cb_t cb;
 };
 
 }

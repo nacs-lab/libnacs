@@ -36,8 +36,8 @@ static const auto seq_cb = [&] (auto &accum, uint64_t cur_t, Seq::Event evt) {
 
 int main()
 {
-    // uint64_t tlen = 10000000;
-    uint64_t tlen = 10000;
+    uint64_t tlen = 10000000;
+    // uint64_t tlen = 10000;
     Seq::PulsesBuilder builder =
         [] (Seq::Channel chn, Seq::Val val, uint64_t t) -> uint64_t {
         // nacsLog("t = %" PRIu64 ", chn = %d, v = %f\n", t, chn.id, val.val.f64);
@@ -63,10 +63,7 @@ int main()
                 Seq::Val::get<double>(10)});
     seq.push_back(Seq::Pulse{5202, 0, {Seq::Channel::DAC, 2},
                 Seq::Val::get<double>(10)});
-    Seq::Time::Constraints t_cons{100, 40, 4096};
     std::map<Seq::Channel,Seq::Val> defaults;
-    Seq::Filter filter;
-    sort(seq);
-    schedule(builder, seq, t_cons, defaults, filter, seq_cb);
+    builder.schedule(seq, defaults, seq_cb);
     return 0;
 }
