@@ -20,6 +20,7 @@
 
 #include <type_traits>
 #include <functional>
+#include <memory>
 
 #ifndef __NACS_SEQ_PULSER_H__
 #define __NACS_SEQ_PULSER_H__
@@ -94,6 +95,36 @@ struct PulsesBuilder {
 private:
     cb_t cb;
 };
+
+struct PulseData {
+    typedef std::function<Val(uint64_t,Val,uint64_t)> func_t;
+    PulseData(PulseData&&) = default;
+    PulseData &operator=(PulseData&&) = default;
+    PulseData(const Val &val)
+        : m_val(val),
+          m_cb()
+    {}
+    PulseData(Val &&val)
+        : m_val(val),
+          m_cb()
+    {}
+    template<typename T>
+    PulseData(T &&v)
+        : m_val(),
+          m_cb(new func_t(std::forward<T>(v)))
+    {}
+    Val operator()(uint64_t t, Val start, uint64_t len) const
+    {
+        if (m_cb)
+            return (*m_cb)(t, start, len);
+        return m_val;
+    }
+private:
+    Val m_val;
+    mutable std::unique_ptr<func_t> m_cb;
+};
+
+typedef BasePulse<Channel, PulseData> Pulse;
 
 }
 }

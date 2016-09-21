@@ -46,7 +46,7 @@ template<typename Cid, typename Cb>
 static void sort(std::vector<BasePulse<Cid,Cb>> &seq)
 {
     std::stable_sort(seq.begin(), seq.end(),
-                     [] (auto p1, auto p2) { return p1.t < p2.t; });
+                     [] (auto &p1, auto &p2) { return p1.t < p2.t; });
 }
 
 enum class Event {
