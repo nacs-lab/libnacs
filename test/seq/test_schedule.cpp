@@ -25,7 +25,13 @@
 
 using namespace NaCs;
 
-typedef uint32_t cid_t;
+struct cid_t {
+    uint32_t id;
+};
+bool operator<(cid_t id1, cid_t id2)
+{
+    return id1.id < id2.id;
+}
 
 struct val_t {
     double v;
@@ -37,7 +43,7 @@ struct val_t {
 struct accum_t {
     uint64_t operator()(cid_t chn, val_t val, uint64_t t)
     {
-        // nacsLog("t = %" PRIu64 ", chn = %d, v = %f\n", t, chn, val.v);
+        // nacsLog("t = %" PRIu64 ", chn = %d, v = %f\n", t, chn.id, val.v);
         return 1;
     }
 };
