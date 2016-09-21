@@ -26,8 +26,8 @@
 
 using namespace NaCs;
 
-typedef Seq::Pulse<Seq::Channel,std::function<
-                                    Seq::Val(uint64_t,Seq::Val,uint64_t)>> pulse_t;
+typedef Seq::BasePulse<Seq::Channel,std::function<
+                                        Seq::Val(uint64_t,Seq::Val,uint64_t)>> pulse_t;
 
 struct filter_t {
     bool operator()(Seq::Channel cid)

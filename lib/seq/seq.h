@@ -31,7 +31,7 @@ namespace NaCs {
 namespace Seq {
 
 template<typename Cid, typename Cb>
-struct Pulse {
+struct BasePulse {
     uint64_t t;
     uint64_t len;
     Cid chn;
@@ -43,7 +43,7 @@ struct Pulse {
 };
 
 template<typename Cid, typename Cb>
-static void sort(std::vector<Pulse<Cid,Cb>> &seq)
+static void sort(std::vector<BasePulse<Cid,Cb>> &seq)
 {
     std::stable_sort(seq.begin(), seq.end(),
                      [] (auto p1, auto p2) { return p1.t < p2.t; });
@@ -57,7 +57,7 @@ enum class Event {
 // TTL pulses should be folded first.
 template<typename Accum, typename Cid, typename Cb, typename Filter,
          typename SeqCB, typename ValT>
-static void schedule(Accum &accum, const std::vector<Pulse<Cid,Cb>> &seq,
+static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
                      const Time::Constraints &t_cons,
                      const std::map<Cid,ValT> &defaults,
                      Filter &&filter, SeqCB &&seq_cb)
