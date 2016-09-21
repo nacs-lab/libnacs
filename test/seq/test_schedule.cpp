@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include <nacs-seq/seq.h>
+#include <nacs-seq/pulser.h>
 #include <nacs-utils/log.h>
 #include <functional>
 
@@ -41,57 +42,59 @@ struct val_t {
 };
 
 struct accum_t {
-    uint64_t operator()(cid_t chn, val_t val, uint64_t t)
+    uint64_t operator()(Seq::Channel chn, val_t val, uint64_t t)
     {
         // nacsLog("t = %" PRIu64 ", chn = %d, v = %f\n", t, chn.id, val.v);
         return 1;
     }
 };
 
-typedef Seq::Pulse<cid_t,std::function<
-                             val_t(uint64_t,val_t,uint64_t)>> pulse_t;
+typedef Seq::Pulse<Seq::Channel,std::function<
+                                    val_t(uint64_t,val_t,uint64_t)>> pulse_t;
 
 struct filter_t {
-    bool operator()(cid_t cid)
+    bool operator()(Seq::Channel cid)
     {
         return true;
     }
-    bool operator()(cid_t cid, val_t val1, val_t val2)
+    bool operator()(Seq::Channel cid, val_t val1, val_t val2)
     {
         return val1.v != val2.v;
     }
 };
 
 static const auto seq_cb = [&] (auto &accum, uint64_t cur_t, Seq::Event evt) {
-    // nacsLog("Start time: %" PRIu64 "\n", cur_t);
+    nacsLog("Start time: %" PRIu64 "\n", cur_t);
     return cur_t;
 };
 
 int main()
 {
+    // uint64_t tlen = 10000000;
+    uint64_t tlen = 10000;
     accum_t accum;
-    std::vector<pulse_t> seq{
-        pulse_t{0, 10000000, 0, [] (auto t, auto start, auto len) {
-                return val_t(start.v + (double)t);
-            }},
-        pulse_t{0, 10000000, 1, [] (auto t, auto start, auto len) {
-                return val_t(start.v - (double)t);
-            }},
-        pulse_t{0, 10000000, 3, [] (auto t, auto start, auto len) {
-                return val_t(start.v + sin((double)t / 1000.0));
-            }},
-        pulse_t{5000, 0, 2, [] (auto t, auto start, auto len) {
-                return val_t(20);
-            }},
-        pulse_t{5002, 0, 2, [] (auto t, auto start, auto len) {
-                return val_t(10);
-            }},
-        pulse_t{5202, 0, 2, [] (auto t, auto start, auto len) {
-                return val_t(10);
-            }}
+    std::vector<pulse_t> seq = {
+        {0, tlen, {Seq::Channel::DAC, 0}, [] (auto t, auto start, auto len) {
+             return val_t(start.v + (double)t);
+         }},
+        {0, tlen, {Seq::Channel::DAC, 1}, [] (auto t, auto start, auto len) {
+             return val_t(start.v - (double)t);
+         }},
+        {0, tlen, {Seq::Channel::DAC, 3}, [] (auto t, auto start, auto len) {
+             return val_t(start.v + sin((double)t / 1000.0));
+         }},
+        {5000, 0, {Seq::Channel::DAC, 2}, [] (auto t, auto start, auto len) {
+             return val_t(20);
+         }},
+        {5002, 0, {Seq::Channel::DAC, 2}, [] (auto t, auto start, auto len) {
+             return val_t(10);
+         }},
+        {5202, 0, {Seq::Channel::DAC, 2}, [] (auto t, auto start, auto len) {
+             return val_t(10);
+         }}
     };
     Seq::Time::Constraints t_cons{100, 40, 4096};
-    std::map<cid_t,val_t> defaults;
+    std::map<Seq::Channel,val_t> defaults;
     filter_t filter;
     sort(seq);
     schedule(accum, seq, t_cons, defaults, filter, seq_cb);
