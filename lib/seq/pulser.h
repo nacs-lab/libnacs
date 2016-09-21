@@ -16,6 +16,10 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#include <nacs-utils/ir.h>
+
+#include <type_traits>
+
 #ifndef __NACS_SEQ_PULSER_H__
 #define __NACS_SEQ_PULSER_H__
 
@@ -42,6 +46,39 @@ bool operator<(const Channel &id1, const Channel id2)
     }
     return id1.id < id2.id;
 }
+
+struct Val {
+    IR::GenVal val;
+    Val() : val(getGenVal<double>(9))
+    {}
+    template<typename T, typename T2> static inline Val get(T2 val=0)
+    {
+        Val v;
+        v.val = getGenVal<T>(val);
+        return v;
+    }
+    template<typename T> static inline Val get()
+    {
+        return get<T>(0);
+    }
+private:
+    template<typename T, typename T2>
+    static inline std::enable_if_t<std::is_same<T,double>::value, IR::GenVal>
+    getGenVal(T2 val)
+    {
+        IR::GenVal gv;
+        gv.f64 = val;
+        return gv;
+    }
+    template<typename T, typename T2>
+    static inline std::enable_if_t<std::is_same<T,uint32_t>::value, IR::GenVal>
+    getGenVal(T2 val)
+    {
+        IR::GenVal gv;
+        gv.i32 = val;
+        return gv;
+    }
+};
 
 }
 }

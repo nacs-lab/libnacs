@@ -26,32 +26,25 @@
 
 using namespace NaCs;
 
-struct val_t {
-    double v;
-    val_t(double _v=0)
-        : v(_v)
-    {}
-};
-
 struct accum_t {
-    uint64_t operator()(Seq::Channel chn, val_t val, uint64_t t)
+    uint64_t operator()(Seq::Channel chn, Seq::Val val, uint64_t t)
     {
-        // nacsLog("t = %" PRIu64 ", chn = %d, v = %f\n", t, chn.id, val.v);
+        // nacsLog("t = %" PRIu64 ", chn = %d, v = %f\n", t, chn.id, val.val.f64);
         return 1;
     }
 };
 
 typedef Seq::Pulse<Seq::Channel,std::function<
-                                    val_t(uint64_t,val_t,uint64_t)>> pulse_t;
+                                    Seq::Val(uint64_t,Seq::Val,uint64_t)>> pulse_t;
 
 struct filter_t {
     bool operator()(Seq::Channel cid)
     {
         return true;
     }
-    bool operator()(Seq::Channel cid, val_t val1, val_t val2)
+    bool operator()(Seq::Channel cid, Seq::Val val1, Seq::Val val2)
     {
-        return val1.v != val2.v;
+        return val1.val.f64 != val2.val.f64;
     }
 };
 
@@ -67,26 +60,27 @@ int main()
     accum_t accum;
     std::vector<pulse_t> seq = {
         {0, tlen, {Seq::Channel::DAC, 0}, [] (auto t, auto start, auto len) {
-             return val_t(start.v + (double)t);
-         }},
+                return Seq::Val::get<double>(start.val.f64 + (double)t);
+            }},
         {0, tlen, {Seq::Channel::DAC, 1}, [] (auto t, auto start, auto len) {
-             return val_t(start.v - (double)t);
-         }},
+                return Seq::Val::get<double>(start.val.f64 - (double)t);
+            }},
         {0, tlen, {Seq::Channel::DAC, 3}, [] (auto t, auto start, auto len) {
-             return val_t(start.v + sin((double)t / 1000.0));
-         }},
+                return Seq::Val::get<double>(start.val.f64 +
+                                             sin((double)t / 1000.0));
+            }},
         {5000, 0, {Seq::Channel::DAC, 2}, [] (auto t, auto start, auto len) {
-             return val_t(20);
-         }},
+                return Seq::Val::get<double>(20);
+            }},
         {5002, 0, {Seq::Channel::DAC, 2}, [] (auto t, auto start, auto len) {
-             return val_t(10);
-         }},
+                return Seq::Val::get<double>(10);
+            }},
         {5202, 0, {Seq::Channel::DAC, 2}, [] (auto t, auto start, auto len) {
-             return val_t(10);
-         }}
+                return Seq::Val::get<double>(10);
+            }}
     };
     Seq::Time::Constraints t_cons{100, 40, 4096};
-    std::map<Seq::Channel,val_t> defaults;
+    std::map<Seq::Channel,Seq::Val> defaults;
     filter_t filter;
     sort(seq);
     schedule(accum, seq, t_cons, defaults, filter, seq_cb);
