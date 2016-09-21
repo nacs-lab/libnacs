@@ -696,8 +696,6 @@ int32_t *Builder::addInst(Opcode op, size_t nop, Function::InstRef &inst)
     auto oldlen = (int32_t)bb.size();
     inst.first = m_cur_bb;
     inst.second = oldlen + 1;
-    if (nop < 3)
-        bb.reserve(oldlen + 4);
     bb.resize(oldlen + nop + 1);
     bb[oldlen] = uint32_t(op);
     return &bb[oldlen + 1];
@@ -1019,26 +1017,26 @@ TagVal EvalContext::eval(void)
     while (end > pc) {
         auto op = Opcode(pc[0]);
         auto res = pc[1];
-        auto arg1 = pc[2];
-        auto arg2 = pc[3];
-        pc += 4;
+        pc += 2;
         auto &res_slot = m_vals[res];
         switch (op) {
         case Opcode::Ret:
             return evalVal(res).convert(m_f.ret);
         case Opcode::Br:
             if (evalVal(res).get<bool>()) {
-                enter_bb(arg1);
+                enter_bb(pc[0]);
             } else {
-                enter_bb(arg2);
+                enter_bb(pc[1]);
             }
             continue;
         case Opcode::Add:
         case Opcode::Sub:
         case Opcode::Mul:
         case Opcode::FDiv: {
-            auto val1 = evalVal(arg1);
-            auto val2 = evalVal(arg2);
+            auto val1 = evalVal(*pc);
+            pc++;
+            auto val2 = evalVal(*pc);
+            pc++;
             switch (op) {
             case Opcode::Add:
                 res_slot = evalAdd(m_f.vals[res], val1, val2).val;
@@ -1058,17 +1056,20 @@ TagVal EvalContext::eval(void)
             break;
         }
         case Opcode::Cmp: {
-            auto cmptyp = CmpType(arg1);
-            auto val1 = evalVal(arg2);
+            auto cmptyp = CmpType(*pc);
+            pc++;
+            auto val1 = evalVal(*pc);
+            pc++;
             auto val2 = evalVal(*pc);
             pc++;
             res_slot = evalCmp(cmptyp, val1, val2).val;
             break;
         }
         case Opcode::Phi: {
-            auto nargs = arg1;
-            auto args = pc - 1;
-            pc = args + 2 * nargs;
+            auto nargs = *pc;
+            pc++;
+            auto args = pc;
+            pc += 2 * nargs;
             for (int i = 0;i < nargs;i++) {
                 if (args[2 * i] == prev_bb_num) {
                     auto val = evalVal(args[2 * i + 1]);
@@ -1079,8 +1080,10 @@ TagVal EvalContext::eval(void)
             break;
         }
         case Opcode::Call: {
-            auto id = Builtins(arg1);
-            auto nargs = arg2;
+            auto id = Builtins(*pc);
+            pc++;
+            auto nargs = *pc;
+            pc++;
             TagVal argvals[3];
             assert(nargs <= 3);
             for (int i = 0;i < nargs;i++)
