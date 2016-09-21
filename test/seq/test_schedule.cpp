@@ -26,14 +26,6 @@
 
 using namespace NaCs;
 
-struct accum_t {
-    uint64_t operator()(Seq::Channel chn, Seq::Val val, uint64_t t)
-    {
-        // nacsLog("t = %" PRIu64 ", chn = %d, v = %f\n", t, chn.id, val.val.f64);
-        return 1;
-    }
-};
-
 typedef Seq::Pulse<Seq::Channel,std::function<
                                     Seq::Val(uint64_t,Seq::Val,uint64_t)>> pulse_t;
 
@@ -57,7 +49,11 @@ int main()
 {
     // uint64_t tlen = 10000000;
     uint64_t tlen = 10000;
-    accum_t accum;
+    Seq::PulsesBuilder builder =
+        [] (Seq::Channel chn, Seq::Val val, uint64_t t) -> uint64_t {
+        // nacsLog("t = %" PRIu64 ", chn = %d, v = %f\n", t, chn.id, val.val.f64);
+        return 1;
+    };
     std::vector<pulse_t> seq = {
         {0, tlen, {Seq::Channel::DAC, 0}, [] (auto t, auto start, auto len) {
                 return Seq::Val::get<double>(start.val.f64 + (double)t);
@@ -83,6 +79,6 @@ int main()
     std::map<Seq::Channel,Seq::Val> defaults;
     filter_t filter;
     sort(seq);
-    schedule(accum, seq, t_cons, defaults, filter, seq_cb);
+    schedule(builder, seq, t_cons, defaults, filter, seq_cb);
     return 0;
 }

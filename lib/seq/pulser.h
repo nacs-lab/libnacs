@@ -19,6 +19,7 @@
 #include <nacs-utils/ir.h>
 
 #include <type_traits>
+#include <functional>
 
 #ifndef __NACS_SEQ_PULSER_H__
 #define __NACS_SEQ_PULSER_H__
@@ -78,6 +79,20 @@ private:
         gv.i32 = val;
         return gv;
     }
+};
+
+struct PulsesBuilder {
+    typedef std::function<uint64_t(Seq::Channel,Seq::Val,uint64_t)> cb_t;
+    template<typename T>
+    PulsesBuilder(T &&_cb)
+        : cb(std::forward<T>(_cb))
+    {}
+    uint64_t operator()(Seq::Channel chn, Seq::Val val, uint64_t t)
+    {
+        return cb(chn, val, t);
+    }
+private:
+    cb_t cb;
 };
 
 }
