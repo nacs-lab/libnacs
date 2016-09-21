@@ -651,7 +651,15 @@ NACS_EXPORT std::vector<uint32_t> Function::serialize(void) const
         memcpy(&res[idx], vec.data(), vec.size() * elsz);
     };
     copy_vector(vals);
-    copy_vector(consts);
+    {
+        res.push_back(uint32_t(consts.size()));
+        uint32_t idx = (uint32_t)res.size();
+        res.resize(idx + consts.size() * 3);
+        for (size_t i = 0;i < consts.size();i++) {
+            res[idx + i * 3] = uint32_t(consts[i].typ);
+            memcpy(&res[idx + i * 3 + 1], &(consts[i].val), sizeof(GenVal));
+        }
+    }
     res.push_back(uint32_t(code.size()));
     for (size_t i = 0;i < code.size();i++)
         copy_vector(code[i]);
@@ -676,7 +684,16 @@ NACS_EXPORT Function::Function(const uint32_t *data, size_t)
         cursor += (size * elsz + 3) / 4;
     };
     read_vector(vals);
-    read_vector(consts);
+    {
+        uint32_t size = data[cursor];
+        cursor++;
+        consts.resize(size);
+        for (size_t i = 0;i < size;i++) {
+            consts[i].typ = Type(data[cursor + i * 3]);
+            memcpy(&(consts[i].val), &data[cursor + i * 3 + 1], 8);
+        }
+        cursor += size * 3;
+    }
     code.resize(data[cursor]);
     cursor++;
     for (size_t i = 0;i < code.size();i++) {
