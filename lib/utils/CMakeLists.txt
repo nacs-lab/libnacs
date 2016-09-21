@@ -8,13 +8,15 @@ set(nacs_utils_HDRS
   mem.h
   thread.h
   container.h
-  ir.h)
+  ir.h
+  base64.h)
 set(nacs_utils_SRCS
   log.cpp
   fd_utils.cpp
   timer.cpp
   mem.cpp
-  ir.cpp)
+  ir.cpp
+  base64.cpp)
 set(nacs_utils_LINKS m rt pthread)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
