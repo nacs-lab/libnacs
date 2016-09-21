@@ -1015,10 +1015,9 @@ TagVal EvalContext::eval(void)
     enter_bb(0);
 
     while (end > pc) {
-        auto op = Opcode(*pc);
-        pc++;
-        auto res = *pc;
-        pc++;
+        auto op = Opcode(pc[0]);
+        auto res = pc[1];
+        pc += 2;
         auto &res_slot = m_vals[res];
         switch (op) {
         case Opcode::Ret:
