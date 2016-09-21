@@ -26,14 +26,6 @@
 
 using namespace NaCs;
 
-struct cid_t {
-    uint32_t id;
-};
-bool operator<(cid_t id1, cid_t id2)
-{
-    return id1.id < id2.id;
-}
-
 struct val_t {
     double v;
     val_t(double _v=0)
