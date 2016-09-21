@@ -26,7 +26,11 @@
 using namespace NaCs;
 
 static const auto seq_cb = [&] (auto &accum, uint64_t cur_t, Seq::Event evt) {
-    nacsLog("Start time: %" PRIu64 "\n", cur_t);
+    if (evt == Seq::Event::start) {
+        nacsLog("Start time: %" PRIu64 "\n", cur_t);
+    } else {
+        nacsLog("End time: %" PRIu64 "\n", cur_t);
+    }
     return cur_t;
 };
 

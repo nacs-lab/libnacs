@@ -311,6 +311,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
         // 2. Output pulses
         handle_update();
     }
+    seq_cb(accum, next_t + start_t, Event::end);
 }
 
 }
