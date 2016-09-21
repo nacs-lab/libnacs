@@ -1017,38 +1017,39 @@ TagVal EvalContext::eval(void)
     while (end > pc) {
         auto op = Opcode(*pc);
         pc++;
+        auto res = *pc;
+        pc++;
+        auto &res_slot = m_vals[res];
         switch (op) {
         case Opcode::Ret:
-            return evalVal(*pc).convert(m_f.ret);
+            return evalVal(res).convert(m_f.ret);
         case Opcode::Br:
-            if (evalVal(*pc).get<bool>()) {
-                enter_bb(pc[1]);
+            if (evalVal(res).get<bool>()) {
+                enter_bb(pc[0]);
             } else {
-                enter_bb(pc[2]);
+                enter_bb(pc[1]);
             }
             continue;
         case Opcode::Add:
         case Opcode::Sub:
         case Opcode::Mul:
         case Opcode::FDiv: {
-            auto res = *pc;
-            pc++;
             auto val1 = evalVal(*pc);
             pc++;
             auto val2 = evalVal(*pc);
             pc++;
             switch (op) {
             case Opcode::Add:
-                m_vals[res] = evalAdd(m_f.vals[res], val1, val2).val;
+                res_slot = evalAdd(m_f.vals[res], val1, val2).val;
                 break;
             case Opcode::Sub:
-                m_vals[res] = evalSub(m_f.vals[res], val1, val2).val;
+                res_slot = evalSub(m_f.vals[res], val1, val2).val;
                 break;
             case Opcode::Mul:
-                m_vals[res] = evalMul(m_f.vals[res], val1, val2).val;
+                res_slot = evalMul(m_f.vals[res], val1, val2).val;
                 break;
             case Opcode::FDiv:
-                m_vals[res] = evalFDiv(val1, val2).val;
+                res_slot = evalFDiv(val1, val2).val;
                 break;
             default:
                 break;
@@ -1056,20 +1057,16 @@ TagVal EvalContext::eval(void)
             break;
         }
         case Opcode::Cmp: {
-            auto res = *pc;
-            pc++;
             auto cmptyp = CmpType(*pc);
             pc++;
             auto val1 = evalVal(*pc);
             pc++;
             auto val2 = evalVal(*pc);
             pc++;
-            m_vals[res] = evalCmp(cmptyp, val1, val2).val;
+            res_slot = evalCmp(cmptyp, val1, val2).val;
             break;
         }
         case Opcode::Phi: {
-            auto res = *pc;
-            pc++;
             auto nargs = *pc;
             pc++;
             auto args = pc;
@@ -1077,15 +1074,13 @@ TagVal EvalContext::eval(void)
             for (int i = 0;i < nargs;i++) {
                 if (args[2 * i] == prev_bb_num) {
                     auto val = evalVal(args[2 * i + 1]);
-                    m_vals[res] = val.convert(m_f.vals[res]).val;
+                    res_slot = val.convert(m_f.vals[res]).val;
                     break;
                 }
             }
             break;
         }
         case Opcode::Call: {
-            auto res = *pc;
-            pc++;
             auto id = Builtins(*pc);
             pc++;
             auto nargs = *pc;
@@ -1095,7 +1090,7 @@ TagVal EvalContext::eval(void)
             for (int i = 0;i < nargs;i++)
                 argvals[i] = evalVal(pc[i]);
             pc += nargs;
-            m_vals[res] = TagVal(evalBuiltin(id, argvals)).val;
+            res_slot = TagVal(evalBuiltin(id, argvals)).val;
             break;
         }
         default:
