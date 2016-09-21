@@ -297,6 +297,10 @@ struct NACS_EXPORT EvalContext {
             args[i] = tagvals[i].convert(m_f.vals[i]).val;
         reset(args.data());
     }
+    void reset(int idx, const GenVal &arg)
+    {
+        m_vals[idx] = arg;
+    }
     TagVal evalVal(int32_t id) const;
     TagVal eval(void);
 

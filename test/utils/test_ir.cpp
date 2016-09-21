@@ -194,7 +194,7 @@ main()
 
         tic();
         for (int i = 0;i < 1000000;i++) {
-            ctx2.reset({1});
+            ctx2.reset(0, IR::TagVal(1).val);
             ctx2.eval();
         }
         printToc();
