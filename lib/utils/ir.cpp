@@ -658,7 +658,7 @@ NACS_EXPORT std::vector<uint32_t> Function::serialize(void) const
     return res;
 }
 
-NACS_EXPORT Function::Function(const std::vector<uint32_t> &data)
+NACS_EXPORT Function::Function(const uint32_t *data, size_t)
     : ret(Type(data[0])),
       nargs(data[1]),
       vals{},
@@ -666,7 +666,7 @@ NACS_EXPORT Function::Function(const std::vector<uint32_t> &data)
       consts{}
 {
     uint32_t cursor = 2;
-    auto read_vector = [&data, &cursor] (auto &vec) {
+    auto read_vector = [data, &cursor] (auto &vec) {
         uint32_t size = data[cursor];
         cursor++;
         vec.resize(size);

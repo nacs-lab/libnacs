@@ -210,7 +210,10 @@ struct Function {
           code{BB{}},
           consts{}
     {}
-    Function(const std::vector<uint32_t> &data);
+    Function(const uint32_t*, size_t);
+    Function(const std::vector<uint32_t> &data)
+        : Function(data.data(), data.size())
+    {}
     void dump(void) const;
     Type valType(int32_t id) const;
     TagVal evalConst(int32_t id) const
