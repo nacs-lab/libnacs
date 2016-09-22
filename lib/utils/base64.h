@@ -31,9 +31,11 @@ void encode(uint8_t *dest, const uint8_t *data, size_t len);
 
 size_t decode_len(const uint8_t *data, size_t len);
 void decode(uint8_t *dest, const uint8_t *data, size_t len);
+bool validate(const uint8_t *data, size_t len);
 
 std::vector<uint8_t> encode(const std::vector<uint8_t> &data);
 std::vector<uint8_t> decode(const std::vector<uint8_t> &data);
+bool validate(const std::vector<uint8_t> &data);
 
 }
 }

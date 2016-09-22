@@ -75,7 +75,7 @@ NACS_EXPORT void encode(uint8_t *dest, const uint8_t *data, size_t len)
     }
 }
 
-static const uint8_t decode_table[256] = {
+static constexpr uint8_t decode_table[256] = {
     64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
     64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
     64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 62, 64, 64, 64, 63,
@@ -159,6 +159,36 @@ NACS_EXPORT std::vector<uint8_t> decode(const std::vector<uint8_t> &data)
     std::vector<uint8_t> res(decode_len(data.data(), data.size()));
     decode(res.data(), data.data(), data.size());
     return res;
+}
+
+NACS_EXPORT bool validate(const uint8_t *data, size_t len)
+{
+    if (len % 4 != 0)
+        return false;
+    if (len == 0)
+        return true;
+    for (size_t i = 0;i + 2 < len;i++) {
+        uint8_t d = data[i];
+        if (decode_table[d] == 64) {
+            return false;
+        }
+    }
+    // This doesn't catch if the final bits are not 0
+    const uint8_t *end = data + len;
+    if (end[-2] == '=') {
+        return end[-1] == '=';
+    } else if (decode_table[end[-2]] == 64) {
+        return false;
+    } else if (end[-1] == '=') {
+        return true;
+    } else {
+        return decode_table[end[-1]] != 64;
+    }
+}
+
+NACS_EXPORT bool validate(const std::vector<uint8_t> &data)
+{
+    return validate(data.data(), data.size());
 }
 
 }

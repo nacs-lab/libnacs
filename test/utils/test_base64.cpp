@@ -44,6 +44,10 @@ int main()
     show_vector_u8(encode2);
     show_vector_u8(encode3);
     show_vector_u8(encode4);
+    Base64::validate(encode1);
+    Base64::validate(encode2);
+    Base64::validate(encode3);
+    Base64::validate(encode4);
     auto decode1 = Base64::decode(encode1);
     auto decode2 = Base64::decode(encode2);
     auto decode3 = Base64::decode(encode3);
