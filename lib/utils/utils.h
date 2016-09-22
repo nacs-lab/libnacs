@@ -135,11 +135,11 @@ struct StrCache {
             return;
         }
         for (auto it2 = it;it2 != m_cache.end();++it2) {
-            if (it2->second.age < it.second.age) {
+            if (it2->second.age < it->second.age) {
                 it = it2;
             }
         }
-        m_totalsz -= it.second.sz;
+        m_totalsz -= it->second.sz;
         m_cache.erase(it);
     }
     const T *set(const std::string &key, T &&v)
