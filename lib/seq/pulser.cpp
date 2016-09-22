@@ -158,7 +158,6 @@ PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
             continue;
         }
         cursor += 7;
-        assert(chn_type != Channel::Type::TTL);
         IR::Function func(&bin[cursor], code_len);
         seq[i] = Pulse{t_start, t_len, chn,
                        PulseData(IRPulse(std::move(func)))};
