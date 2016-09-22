@@ -297,6 +297,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
 
     bool prev_overdue = false;
     while (cursor < npulse || !cur_pulses.empty()) {
+        uint64_t old_next_t = next_t;
         // 1. Check and handle any overdue changes.
         //
         //     If there's output in this step restart the loop, unless the
@@ -310,6 +311,26 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
 
         // 2. Output pulses
         handle_update();
+
+        // 3. Forward time if there's no on-going pulses.
+        if (cur_pulses.empty() && cursor < npulse) {
+            auto &pulse = seq[cursor];
+            if (!filter(pulse.chn)) {
+                cursor++;
+                continue;
+            }
+            // These should be no-op but just to be safe
+            uint64_t dt = (pulse.t > prev_t ? pulse.t - prev_t : 0);
+            uint64_t t = get_next_time(dt);
+            auto val = calc_pulse(cursor, t);
+            record_pulse(cursor, t);
+            output_pulse(pulse.chn, val, t);
+            cursor++;
+            continue;
+        }
+        if (next_t == old_next_t) {
+            next_t = next_t + t_cons.prefer_dt;
+        }
     }
     seq_cb(accum, next_t + start_t, Event::end);
 }

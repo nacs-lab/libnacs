@@ -39,6 +39,16 @@ struct IRPulse {
         : m_func(std::move(func)),
           m_ctx(m_func)
     {}
+    IRPulse(const IR::Function &func)
+        : m_func(func),
+          m_ctx(m_func)
+    {}
+    IRPulse(IRPulse &&other)
+        : IRPulse(std::move(other.m_func))
+    {}
+    IRPulse(const IRPulse &other)
+        : IRPulse(other.m_func)
+    {}
     Val operator()(uint64_t t, Val start, uint64_t)
     {
         double t_start = double(t) * 10e-9;

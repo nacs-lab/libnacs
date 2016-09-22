@@ -31,10 +31,10 @@ namespace Seq {
 
 struct Channel {
     enum Type {
-        TTL,
-        DDS_FREQ,
-        DDS_AMP,
-        DAC
+        TTL = 1,
+        DDS_FREQ = 2,
+        DDS_AMP = 3,
+        DAC = 4
     };
     Type typ;
     int id;
