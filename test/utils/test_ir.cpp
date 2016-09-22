@@ -211,5 +211,16 @@ main()
         newfunc.dump();
     }
 
+    {
+        std::cout << sizeof(IR::TagVal) << std::endl;
+        const int32_t data[] = {
+            3, 2, 7, 50529027, 50529027, 2, 3, 0, 1072693248, 3, 0, 1073741824,
+            1, 22, 4, 5, -3, 0, 5, 4, -3, 5, 5, 6, -4, 0, 3, 3, 4, 6, 6, 2, 3,
+            -3, 1, 2
+        };
+        IR::Function newfunc((const uint32_t*)data, sizeof(data) / 4);
+        newfunc.dump();
+    }
+
     return 0;
 }
