@@ -52,7 +52,7 @@ bool operator<(const Channel &id1, const Channel id2)
 
 struct Val {
     IR::GenVal val;
-    Val() : val(getGenVal<double>(9))
+    Val(IR::GenVal v=getGenVal<double>(0)) : val(v)
     {}
     template<typename T, typename T2> static inline Val get(T2 val=0)
     {
@@ -87,6 +87,10 @@ struct PulseData {
     typedef std::function<Val(uint64_t,Val,uint64_t)> func_t;
     PulseData(PulseData&&) = default;
     PulseData &operator=(PulseData&&) = default;
+    PulseData()
+        : m_val(),
+          m_cb()
+    {}
     PulseData(const Val &val)
         : m_val(val),
           m_cb()
@@ -137,6 +141,8 @@ struct PulsesBuilder {
     {
         return cb(chn, val, t);
     }
+    static std::pair<std::vector<Pulse>,std::map<Channel,Val>>
+    fromBase64(const uint8_t *data, size_t len);
     void schedule(std::vector<Pulse> &seq,
                   const std::map<Channel,Val> &defaults,
                   seq_cb_t seq_cb,
