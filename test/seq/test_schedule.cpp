@@ -26,7 +26,7 @@
 
 using namespace NaCs;
 
-static const auto seq_cb = [&] (auto &accum, uint64_t cur_t, Seq::Event evt) {
+static const auto seq_cb = [&] (auto &, uint64_t cur_t, Seq::Event evt) {
     if (evt == Seq::Event::start) {
         nacsLog("Start time: %" PRIu64 "\n", cur_t);
     } else {
@@ -41,21 +41,24 @@ int main()
     // uint64_t tlen = 10000;
     Seq::PulsesBuilder builder =
         [] (Seq::Channel chn, Seq::Val val, uint64_t t) -> uint64_t {
+        (void)chn;
+        (void)val;
+        (void)t;
         // nacsLog("t = %" PRIu64 ", chn = (%d, %d), v = %f\n",
         //         t, int(chn.typ), chn.id, val.val.f64);
         return 1;
     };
     std::vector<Seq::Pulse> seq;
     seq.push_back(Seq::Pulse{0, tlen, {Seq::Channel::DAC, 0},
-                [] (auto t, auto start, auto len) {
+                [] (auto t, auto start, auto) {
                     return Seq::Val::get<double>(start.val.f64 + (double)t);
                 }});
     seq.push_back(Seq::Pulse{0, tlen, {Seq::Channel::DAC, 1},
-                [] (auto t, auto start, auto len) {
+                [] (auto t, auto start, auto) {
                     return Seq::Val::get<double>(start.val.f64 - (double)t);
                 }});
     seq.push_back(Seq::Pulse{0, tlen, {Seq::Channel::DAC, 3},
-                [] (auto t, auto start, auto len) {
+                [] (auto t, auto start, auto) {
                     return Seq::Val::get<double>(start.val.f64 +
                                                  sin((double)t / 1000.0));
                 }});

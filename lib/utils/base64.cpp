@@ -22,7 +22,7 @@
 namespace NaCs {
 namespace Base64 {
 
-NACS_EXPORT size_t encode_len(const uint8_t *data, size_t len)
+NACS_EXPORT size_t encode_len(const uint8_t*, size_t len)
 {
     size_t nbits2 = len * 4;
     size_t nbytes = nbits2 / 3;

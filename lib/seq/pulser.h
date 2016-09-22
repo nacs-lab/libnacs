@@ -118,7 +118,7 @@ private:
 typedef BasePulse<Channel, PulseData> Pulse;
 
 struct Filter {
-    bool operator()(Channel cid)
+    bool operator()(Channel)
     {
         return true;
     }
