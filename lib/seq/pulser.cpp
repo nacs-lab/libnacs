@@ -31,6 +31,48 @@ PulsesBuilder::schedule(std::vector<Pulse> &seq,
 {
     Filter filter;
     sort(seq);
+    uint32_t ttl_val = 0;
+    auto ttl_it = defaults.find({Channel::TTL, 0});
+    if (ttl_it != defaults.end())
+        ttl_val = ttl_it->second.val.i32;
+    uint64_t prev_ttl_t = 0;
+    ssize_t prev_ttl_idx = -1;
+    size_t to = 0, from = 0;
+    for (;from < seq.size();from++, to++) {
+        auto &pulse = seq[from];
+        if (pulse.chn.typ != Channel::TTL) {
+            if (from != to)
+                seq[to] = std::move(pulse);
+            continue;
+        }
+        assert(pulse.len == 0);
+        assert(pulse.chn.id < 32);
+        bool val = pulse.cb(pulse.t, Val(), pulse.len).val.f64 != 0;
+        uint32_t new_ttl_val;
+        if (val) {
+            new_ttl_val = ttl_val | (1 << pulse.chn.id);
+        } else {
+            new_ttl_val = ttl_val & ~(1 << pulse.chn.id);
+        }
+        if (new_ttl_val == ttl_val) {
+            to--;
+            continue;
+        }
+        ttl_val = new_ttl_val;
+        if (prev_ttl_idx != -1 && prev_ttl_t == pulse.t) {
+            seq[prev_ttl_idx].cb = PulseData(Val::get<uint32_t>(new_ttl_val));
+            to--;
+        } else {
+            prev_ttl_idx = to;
+            prev_ttl_t = pulse.t;
+            pulse.chn = {Channel::Type::TTL, 0};
+            pulse.cb = PulseData(Val::get<uint32_t>(new_ttl_val));
+            if (from != to) {
+                seq[to] = std::move(pulse);
+            }
+        }
+    }
+    seq.resize(to);
     Seq::schedule(*this, seq, t_cons, defaults, filter, std::move(seq_cb));
 }
 
