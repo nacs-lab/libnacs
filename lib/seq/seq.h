@@ -139,7 +139,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
         if (rel_t > pulse.len)
             rel_t = pulse.len;
         auto start = start_vals[pulse.chn];
-        return pulse.cb(t, start, pulse.len);
+        return pulse.cb(rel_t, start, pulse.len);
     };
 
     std::map<Cid,size_t> cur_pulses;
