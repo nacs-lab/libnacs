@@ -26,6 +26,8 @@
 #include <inttypes.h>
 #include <iostream>
 #include <fstream>
+#include <ostream>
+#include <iomanip>
 
 using namespace NaCs;
 
@@ -75,9 +77,46 @@ int main(int argn, char **argv)
     std::map<Seq::Channel,Seq::Val> defaults;
     builder.schedule(seq, defaults, seq_cb);
 
+    std::ofstream ostm;
+    Seq::PulsesBuilder file_builder =
+        [&] (Seq::Channel chn, Seq::Val val, uint64_t t) -> uint64_t {
+        uint64_t min_time = 50;
+        const char *channel_name;
+        switch (chn.typ) {
+        case Seq::Channel::TTL:
+            assert(chn.id == 0);
+            channel_name = "TTL";
+            min_time = 3;
+            break;
+        case Seq::Channel::DDS_FREQ:
+            channel_name = "FREQ";
+            break;
+        case Seq::Channel::DDS_AMP:
+            channel_name = "AMP";
+            break;
+        case Seq::Channel::DAC:
+            channel_name = "DAC";
+            break;
+        default:
+            assert(0 && "Unknown channel type.");
+        }
+        if (!ostm.is_open())
+            return min_time;
+        ostm << t << ", " << channel_name;
+        if (chn.typ == Seq::Channel::TTL) {
+            ostm << "(all) = 0x" << std::hex << val.val.i32 << std::dec
+                 << std::endl;
+        } else {
+            ostm << "(" << chn.id << ") = "
+            << std::setprecision(13) << val.val.f64 << std::endl;
+        }
+        return min_time;
+    };
+
     {
         nacsLog("NaSingleAtom\n");
         std::ifstream istm(std::string(argv[1]) + "/na_single_atom.seq");
+        ostm.open("na_single_atom.txt");
         std::string data(std::istreambuf_iterator<char>(istm), {});
         assert(Base64::validate((const uint8_t*)data.data(), data.size()));
         std::vector<Seq::Pulse> seq;
@@ -88,13 +127,15 @@ int main(int argn, char **argv)
                                            data.size());
         printToc();
         tic();
-        builder.schedule(seq, defaults, seq_cb);
+        file_builder.schedule(seq, defaults, seq_cb);
         printToc();
+        ostm.close();
     }
 
     {
         nacsLog("CsSingleAtom\n");
         std::ifstream istm(std::string(argv[1]) + "/cs_single_atom.seq");
+        ostm.open("cs_single_atom.txt");
         std::string data(std::istreambuf_iterator<char>(istm), {});
         assert(Base64::validate((const uint8_t*)data.data(), data.size()));
         std::vector<Seq::Pulse> seq;
@@ -105,8 +146,9 @@ int main(int argn, char **argv)
                                            data.size());
         printToc();
         tic();
-        builder.schedule(seq, defaults, seq_cb);
+        file_builder.schedule(seq, defaults, seq_cb);
         printToc();
+        ostm.close();
     }
     return 0;
 }
