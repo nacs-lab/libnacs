@@ -108,7 +108,7 @@ int main(int argn, char **argv)
                  << std::endl;
         } else {
             ostm << "(" << chn.id << ") = "
-            << std::setprecision(13) << val.val.f64 << std::endl;
+            << std::setprecision(18) << val.val.f64 << std::endl;
         }
         return min_time;
     };

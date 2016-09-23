@@ -23,6 +23,8 @@
 #include <functional>
 #include <memory>
 
+#include <math.h>
+
 #ifndef __NACS_SEQ_PULSER_H__
 #define __NACS_SEQ_PULSER_H__
 
@@ -124,9 +126,18 @@ struct Filter {
     }
     bool operator()(Channel cid, Val val1, Val val2)
     {
-        if (cid.typ == Channel::TTL)
+        switch (cid.typ) {
+        case Channel::TTL:
             return val1.val.i32 != val2.val.i32;
-        return val1.val.f64 != val2.val.f64;
+        case Channel::DDS_FREQ:
+            return fabs(val1.val.f64 - val2.val.f64) > 0.2;
+        case Channel::DDS_AMP:
+            return fabs(val1.val.f64 - val2.val.f64) > 0.00005;
+        case Channel::DAC:
+            return fabs(val1.val.f64 - val2.val.f64) > 0.0002;
+        default:
+            return val1.val.f64 != val2.val.f64;
+        }
     }
 };
 
