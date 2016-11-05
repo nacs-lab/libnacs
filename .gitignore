@@ -33,3 +33,8 @@ __pycache__/
 *.db
 *.bak
 *.o
+
+*.gz
+*.lz4
+*.b64
+*.bin
