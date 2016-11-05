@@ -15,7 +15,7 @@ set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
 option(ENABLE_KNACS "Enable kernel driver" Off)
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden
-  -O3 -fno-math-errno -Wconversion -Wno-sign-conversion -fno-plt)
+  -O3 -fno-math-errno -Wconversion -Wno-sign-conversion)
 
 if(NOT CMAKE_C_COMPILER MATCHES clang)
   add_definitions(-flto)
@@ -26,7 +26,7 @@ cmake_c_fix_include_path(lib/kernel nacs-kernel)
 cmake_c_fix_include_path(lib/seq nacs-seq)
 
 set(LINKER_FLAGS -Wl,--as-needed -Wl,--no-undefined -Wl,--gc-sections
-  -pthread -O3 -fno-math-errno -fno-plt)
+  -pthread -O3 -fno-math-errno)
 
 if(NOT CMAKE_C_COMPILER MATCHES clang)
   set(LINKER_FLAGS ${LINKER_FLAGS} -flto)
