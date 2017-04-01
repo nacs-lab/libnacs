@@ -140,8 +140,10 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
 
     // Start the sequence and restart timer.
     start_t = seq_cb(accum, next_t, Event::start);
-    accum(clock_chn, convert_clock(default_clock_div), start_t, UINT64_MAX);
-    start_t += default_clock_div;
+    if (clocks.empty()) {
+        accum(clock_chn, convert_clock(default_clock_div), start_t, UINT64_MAX);
+        start_t += default_clock_div;
+    }
     keeper.reset();
     prev_t = next_t = 0;
 
