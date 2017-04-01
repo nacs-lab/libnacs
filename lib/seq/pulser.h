@@ -142,12 +142,6 @@ struct Filter {
     }
 };
 
-struct Clock {
-    uint64_t t;
-    uint64_t len;
-    uint32_t freq;
-};
-
 struct Sequence {
     std::vector<Pulse> pulses;
     std::map<Channel,Val> defaults;

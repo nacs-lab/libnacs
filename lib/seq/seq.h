@@ -54,6 +54,12 @@ enum class Event {
     end
 };
 
+struct Clock {
+    uint64_t t;
+    uint64_t len;
+    uint32_t freq;
+};
+
 static constexpr int default_clock_div = 100;
 
 // TTL pulses should be folded first.
@@ -62,6 +68,7 @@ template<typename Accum, typename Cid, typename Cb, typename Filter,
 static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
                      const Time::Constraints &t_cons,
                      const std::map<Cid,ValT> &defaults,
+                     const std::vector<Clock> &clocks,
                      Filter &&filter, SeqCB &&seq_cb, ConvertClock &&convert_clock, Cid clock_chn)
 {
     // Complexity O(nchannel * npulse)

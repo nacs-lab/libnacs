@@ -76,7 +76,7 @@ PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t
     }
     seq.resize(to);
     Channel clock_chn{Channel::Type::CLOCK, 0};
-    Seq::schedule(*this, seq, t_cons, defaults, filter, std::move(seq_cb),
+    Seq::schedule(*this, seq, t_cons, defaults, sequence.clocks, filter, std::move(seq_cb),
                   [] (auto clock_div) { return Val::get<uint32_t>(clock_div); }, clock_chn);
 }
 
