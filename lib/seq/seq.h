@@ -166,6 +166,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
             keeper.addPulse(dt);
             prev_t = t;
             next_t = t + keeper.minDt(min_dt);
+            return;
         }
     };
 
