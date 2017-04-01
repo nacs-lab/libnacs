@@ -36,7 +36,8 @@ struct Channel {
         TTL = 1,
         DDS_FREQ = 2,
         DDS_AMP = 3,
-        DAC = 4
+        DAC = 4,
+        CLOCK = 5
     };
     Type typ;
     int id;
@@ -141,26 +142,41 @@ struct Filter {
     }
 };
 
+struct Clock {
+    uint64_t t;
+    uint64_t len;
+    uint32_t freq;
+};
+
 struct Sequence {
     std::vector<Pulse> pulses;
     std::map<Channel,Val> defaults;
+    std::vector<Clock> clocks;
     Sequence(std::vector<Pulse> &&_pulses, std::map<Channel,Val> &&_defaults)
         : pulses(std::move(_pulses)),
-          defaults(std::move(_defaults))
+          defaults(std::move(_defaults)),
+          clocks{}
+    {
+    }
+    Sequence(std::vector<Pulse> &&_pulses, std::map<Channel,Val> &&_defaults,
+             std::vector<Clock> &&_clocks)
+        : pulses(std::move(_pulses)),
+          defaults(std::move(_defaults)),
+          clocks(std::move(_clocks))
     {
     }
 };
 
 struct PulsesBuilder {
-    typedef std::function<uint64_t(Channel,Val,uint64_t)> cb_t;
+    typedef std::function<uint64_t(Channel,Val,uint64_t,uint64_t)> cb_t;
     typedef std::function<uint64_t(PulsesBuilder&,uint64_t,Event)> seq_cb_t;
     template<typename T>
     PulsesBuilder(T &&_cb)
         : cb(std::forward<T>(_cb))
     {}
-    uint64_t operator()(Channel chn, Val val, uint64_t t)
+    uint64_t operator()(Channel chn, Val val, uint64_t t, uint64_t tlim)
     {
-        return cb(chn, val, t);
+        return cb(chn, val, t, tlim);
     }
     static Sequence fromBase64(const uint8_t *data, size_t len);
     void schedule(Sequence &, seq_cb_t seq_cb,

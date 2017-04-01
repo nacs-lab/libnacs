@@ -66,9 +66,10 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
     // Assume pulses are sorted according to start time.
 
     // `accum` is called with
-    // * `accum(Cid cid, ValT val, uint64_t t)`
+    // * `accum(Cid cid, ValT val, uint64_t t, uint64_t tlim)`
     //     Add a pulse at `t` to output `val` on channel `cid`.
-    //     Returns the minimum time the pulse will take.
+    //     The pulse should finish before `tlim`. Otherwise, no pulse should be added.
+    //     Returns the minimum time the pulse will take, `0` if no pulse was added.
 
     // `filter` is called with
     // * `filter(Cid cid) -> bool`:
@@ -110,7 +111,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
         uint64_t dt = t - prev_t;
         keeper.addPulse(dt);
         prev_t = t;
-        uint64_t min_dt = accum(cid, val, t + start_t);
+        uint64_t min_dt = accum(cid, val, t + start_t, UINT64_MAX);
         next_t = t + keeper.minDt(min_dt);
     };
 
@@ -123,7 +124,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
             start_vals[cid] = def_val;
             cur_vals[cid] = def_val;
             prev_t = get_next_time(t_cons.prefer_dt * 2);
-            uint64_t min_dt = accum(cid, def_val, prev_t);
+            uint64_t min_dt = accum(cid, def_val, prev_t, UINT64_MAX);
             next_t = prev_t + std::max(t_cons.prefer_dt, min_dt);
         }
     }

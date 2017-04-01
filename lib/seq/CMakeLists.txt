@@ -15,8 +15,8 @@ add_library(nacs-seq SHARED
 target_link_libraries(nacs-seq ${nacs_seq_LINKS})
 
 set_target_properties(nacs-seq PROPERTIES
-  VERSION 1.1
-  SOVERSION 1
+  VERSION 2.0
+  SOVERSION 2
   COMPILE_FLAGS "-fvisibility=hidden"
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 

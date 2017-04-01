@@ -46,10 +46,11 @@ int main(int argn, char **argv)
     uint64_t tlen = 10000000;
     // uint64_t tlen = 10000;
     Seq::PulsesBuilder builder =
-        [] (Seq::Channel chn, Seq::Val val, uint64_t t) -> uint64_t {
+        [] (Seq::Channel chn, Seq::Val val, uint64_t t, uint64_t tlim) -> uint64_t {
         (void)chn;
         (void)val;
         (void)t;
+        (void)tlim;
         // nacsLog("t = %" PRIu64 ", chn = (%d, %d), v = %f\n",
         //         t, int(chn.typ), chn.id, val.val.f64);
         return 1;
@@ -79,7 +80,7 @@ int main(int argn, char **argv)
 
     std::ofstream ostm;
     Seq::PulsesBuilder file_builder =
-        [&] (Seq::Channel chn, Seq::Val val, uint64_t t) -> uint64_t {
+        [&] (Seq::Channel chn, Seq::Val val, uint64_t t, uint64_t tlim) -> uint64_t {
         uint64_t min_time = 50;
         const char *channel_name;
         switch (chn.typ) {
@@ -102,6 +103,8 @@ int main(int argn, char **argv)
         }
         if (!ostm.is_open())
             return min_time;
+        if (min_time + t > tlim)
+            return 0;
         ostm << t << ", " << channel_name;
         if (chn.typ == Seq::Channel::TTL) {
             ostm << "(all) = 0x" << std::hex << val.val.i32 << std::dec
