@@ -121,6 +121,8 @@ PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
     // [n_pulses: 4B]
     // [[[chn_type: 4B][chn_id: 4B][t_start: 8B][t_len: 8B]
     //  [[0: 4B][val: 8B] / [code_len: 4B][code: code_len x 4B]]] x n_pulses]
+    // Optional:
+    // [[n_clocks: 4B][[[t_start_ns: 8B][t_len_ns: 8B][clock_div: 4B]] x n_clocks]]
 
     std::map<Channel,Val> defaults;
 
@@ -165,8 +167,24 @@ PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
                        PulseData(IRPulse(std::move(func)))};
         cursor += code_len;
     }
-
-    return Sequence(std::move(seq), std::move(defaults));
+    if (cursor >= bin.size())
+        return Sequence(std::move(seq), std::move(defaults));
+    uint32_t n_clocks = bin[cursor];
+    cursor++;
+    std::vector<Clock> clocks(n_clocks);
+    for (uint32_t i = 0;i < n_clocks;i++) {
+        auto &clock = clocks[i];
+        uint64_t t_start_ns;
+        uint64_t t_len_ns;
+        memcpy(&t_start_ns, &bin[cursor], 8);
+        memcpy(&t_len_ns, &bin[cursor + 2], 8);
+        uint32_t clock_div = bin[cursor + 4];
+        cursor += 5;
+        clock.t = t_start_ns / 10;
+        clock.len = t_len_ns / 10;
+        clock.div = clock_div;
+    }
+    return Sequence(std::move(seq), std::move(defaults), std::move(clocks));
 }
 
 }
