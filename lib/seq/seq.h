@@ -412,7 +412,9 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
         }
     }
     while (next_clock_time != UINT64_MAX) {
-        accum(clock_chn, convert_clock(next_clock_div), next_clock_time + start_t, UINT64_MAX);
+        uint64_t mindt = accum(clock_chn, convert_clock(next_clock_div),
+                               next_clock_time + start_t, UINT64_MAX);
+        next_t = next_clock_time + mindt;
         forward_clock();
     }
     seq_cb(accum, next_t + start_t, Event::end);
