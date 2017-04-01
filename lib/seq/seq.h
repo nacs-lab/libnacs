@@ -54,13 +54,15 @@ enum class Event {
     end
 };
 
+static constexpr int default_clock_div = 100;
+
 // TTL pulses should be folded first.
 template<typename Accum, typename Cid, typename Cb, typename Filter,
-         typename SeqCB, typename ValT>
+         typename SeqCB, typename ValT, typename ConvertClock>
 static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
                      const Time::Constraints &t_cons,
                      const std::map<Cid,ValT> &defaults,
-                     Filter &&filter, SeqCB &&seq_cb)
+                     Filter &&filter, SeqCB &&seq_cb, ConvertClock &&convert_clock, Cid clock_chn)
 {
     // Complexity O(nchannel * npulse)
     // Assume pulses are sorted according to start time.
@@ -131,6 +133,8 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
 
     // Start the sequence and restart timer.
     start_t = seq_cb(accum, next_t, Event::start);
+    accum(clock_chn, convert_clock(default_clock_div), start_t, UINT64_MAX);
+    start_t += default_clock_div;
     keeper.reset();
     prev_t = next_t = 0;
 
