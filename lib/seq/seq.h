@@ -197,7 +197,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
         next_clock_idx = 1;
         auto first_clock = clocks[0];
         if (first_clock.t <= first_clock.div) {
-            clock_neg_offset = first_clock.div - first_clock.t;
+            clock_neg_offset = int(first_clock.div - first_clock.t);
             accum(clock_chn, convert_clock(first_clock.div), start_t, UINT64_MAX);
             next_clock_time = first_clock.len - clock_neg_offset;
             start_t += clock_neg_offset;
