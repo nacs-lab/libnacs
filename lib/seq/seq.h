@@ -121,6 +121,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
     size_t next_clock_idx = 0;
     // `next_clock_div` == 256 means we are finishing a clock period.
     int next_clock_div = 256;
+    int clock_neg_offset = 0;
 
     // Helper functions
     auto forward_clock = [&] () {
@@ -136,7 +137,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
         auto next_clock = clocks[next_clock_idx];
         next_clock_idx++;
         next_clock_div = next_clock.div;
-        next_clock_time = next_clock.t - next_clock.div;
+        next_clock_time = next_clock.t - next_clock.div - clock_neg_offset;
     };
     // Get the time to output the next pulse at least `dt` after the previous
     // pulse.
@@ -196,10 +197,10 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
         next_clock_idx = 1;
         auto first_clock = clocks[0];
         if (first_clock.t <= first_clock.div) {
-            auto neg_offset = first_clock.div - first_clock.t;
+            clock_neg_offset = first_clock.div - first_clock.t;
             accum(clock_chn, convert_clock(first_clock.div), start_t, UINT64_MAX);
-            next_clock_time = first_clock.len;
-            start_t += neg_offset;
+            next_clock_time = first_clock.len - clock_neg_offset;
+            start_t += clock_neg_offset;
             next_clock_div = 256;
         }
         else {
