@@ -137,7 +137,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
         auto next_clock = clocks[next_clock_idx];
         next_clock_idx++;
         next_clock_div = next_clock.div;
-        next_clock_time = next_clock.t - next_clock.div - clock_neg_offset;
+        next_clock_time = next_clock.t - clock_neg_offset;
     };
     // Get the time to output the next pulse at least `dt` after the previous
     // pulse.
@@ -204,6 +204,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
             next_clock_div = 256;
         }
         else {
+            clock_neg_offset = first_clock.div;
             next_clock_time = first_clock.t - first_clock.div;
             next_clock_div = first_clock.div;
         }
