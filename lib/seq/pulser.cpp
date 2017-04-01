@@ -25,10 +25,10 @@ namespace NaCs {
 namespace Seq {
 
 NACS_EXPORT void
-PulsesBuilder::schedule(std::vector<Pulse> &seq,
-                        const std::map<Channel,Val> &defaults,
-                        seq_cb_t seq_cb, Time::Constraints t_cons)
+PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t_cons)
 {
+    auto &seq = sequence.pulses;
+    auto &defaults = sequence.defaults;
     Filter filter;
     sort(seq);
     uint32_t ttl_val = 0;
@@ -105,7 +105,7 @@ private:
     IR::EvalContext m_ctx;
 };
 
-NACS_EXPORT std::pair<std::vector<Pulse>,std::map<Channel,Val>>
+NACS_EXPORT Sequence
 PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
 {
     size_t bin_len = Base64::decode_len(data, len);
@@ -164,7 +164,7 @@ PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
         cursor += code_len;
     }
 
-    return std::make_pair(std::move(seq), std::move(defaults));
+    return Sequence(std::move(seq), std::move(defaults));
 }
 
 }

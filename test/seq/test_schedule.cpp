@@ -75,7 +75,7 @@ int main(int argn, char **argv)
     seq.push_back(Seq::Pulse{5202, 0, {Seq::Channel::DAC, 2},
                 Seq::Val::get<double>(10)});
     std::map<Seq::Channel,Seq::Val> defaults;
-    builder.schedule(seq, defaults, seq_cb);
+    builder.schedule(Seq::Sequence(std::move(seq), std::move(defaults)), seq_cb);
 
     std::ofstream ostm;
     Seq::PulsesBuilder file_builder =
@@ -119,15 +119,11 @@ int main(int argn, char **argv)
         ostm.open("na_single_atom.txt");
         std::string data(std::istreambuf_iterator<char>(istm), {});
         assert(Base64::validate((const uint8_t*)data.data(), data.size()));
-        std::vector<Seq::Pulse> seq;
-        std::map<Seq::Channel,Seq::Val> defaults;
         tic();
-        std::tie(seq, defaults) =
-            Seq::PulsesBuilder::fromBase64((const uint8_t*)data.data(),
-                                           data.size());
+        auto seq = Seq::PulsesBuilder::fromBase64((const uint8_t*)data.data(), data.size());
         printToc();
         tic();
-        file_builder.schedule(seq, defaults, seq_cb);
+        file_builder.schedule(seq, seq_cb);
         printToc();
         ostm.close();
     }
@@ -138,15 +134,11 @@ int main(int argn, char **argv)
         ostm.open("cs_single_atom.txt");
         std::string data(std::istreambuf_iterator<char>(istm), {});
         assert(Base64::validate((const uint8_t*)data.data(), data.size()));
-        std::vector<Seq::Pulse> seq;
-        std::map<Seq::Channel,Seq::Val> defaults;
         tic();
-        std::tie(seq, defaults) =
-            Seq::PulsesBuilder::fromBase64((const uint8_t*)data.data(),
-                                           data.size());
+        auto seq = Seq::PulsesBuilder::fromBase64((const uint8_t*)data.data(), data.size());
         printToc();
         tic();
-        file_builder.schedule(seq, defaults, seq_cb);
+        file_builder.schedule(seq, seq_cb);
         printToc();
         ostm.close();
     }

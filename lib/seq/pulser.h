@@ -141,6 +141,16 @@ struct Filter {
     }
 };
 
+struct Sequence {
+    std::vector<Pulse> pulses;
+    std::map<Channel,Val> defaults;
+    Sequence(std::vector<Pulse> &&_pulses, std::map<Channel,Val> &&_defaults)
+        : pulses(std::move(_pulses)),
+          defaults(std::move(_defaults))
+    {
+    }
+};
+
 struct PulsesBuilder {
     typedef std::function<uint64_t(Channel,Val,uint64_t)> cb_t;
     typedef std::function<uint64_t(PulsesBuilder&,uint64_t,Event)> seq_cb_t;
@@ -152,12 +162,14 @@ struct PulsesBuilder {
     {
         return cb(chn, val, t);
     }
-    static std::pair<std::vector<Pulse>,std::map<Channel,Val>>
-    fromBase64(const uint8_t *data, size_t len);
-    void schedule(std::vector<Pulse> &seq,
-                  const std::map<Channel,Val> &defaults,
-                  seq_cb_t seq_cb,
+    static Sequence fromBase64(const uint8_t *data, size_t len);
+    void schedule(Sequence &, seq_cb_t seq_cb,
                   Time::Constraints t_cons={100, 40, 4096});
+    void schedule(Sequence &&seq, seq_cb_t seq_cb,
+                  Time::Constraints t_cons={100, 40, 4096})
+    {
+        schedule(seq, seq_cb, t_cons);
+    }
 private:
     cb_t cb;
 };
