@@ -55,9 +55,15 @@ enum class Event {
 };
 
 struct Clock {
+    // Time index of the first clock edge. The clock pulse should happen `div` time points
+    // before this time.
     uint64_t t;
+    // Length of the pulse in time index. The clock end pulse should be `len` time points after
+    // the start pulse.
     uint64_t len;
-    uint32_t freq;
+    // Clock division. Each clock cycle consists of `div` number of time points at high
+    // and `div` number of time points at low.
+    uint32_t div;
 };
 
 static constexpr int default_clock_div = 100;
@@ -104,8 +110,34 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
     uint64_t prev_t = 0;
     // Time offset of start, only the output should care about this.
     uint64_t start_t = 0;
+    // The time when we should output the next clock pulse.
+    // Set to `UINT64_MAX` when there isn't any left.
+    // The time is shifted by `-clock_div` such that it is the time to output the pulse
+    // and not the time the clock edge should be delivered.
+    uint64_t next_clock_time = UINT64_MAX;
+    // The index of the next clock pulse in `clocks` after the current clock period is finished.
+    // If one is currently running (started and haven't end) this is the index to the next one
+    // that is not running.
+    size_t next_clock_idx = 0;
+    // `next_clock_div` == 256 means we are finishing a clock period.
+    int next_clock_div = 256;
 
     // Helper functions
+    auto forward_clock = [&] () {
+        if (next_clock_div != 256) {
+            next_clock_div = 256;
+            next_clock_time = next_clock_time + clocks[next_clock_idx - 1].len;
+            return;
+        }
+        if (next_clock_idx >= clocks.size()) {
+            next_clock_time = UINT64_MAX;
+            return;
+        }
+        auto next_clock = clocks[next_clock_idx];
+        next_clock_idx++;
+        next_clock_div = next_clock.div;
+        next_clock_time = next_clock.t - next_clock.div;
+    };
     // Get the time to output the next pulse at least `dt` after the previous
     // pulse.
     auto get_next_time = [&] (uint64_t dt) {
@@ -116,12 +148,25 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
     auto output_pulse = [&] (Cid cid, ValT val, uint64_t t) {
         if (!filter(cid, cur_vals[cid], val))
             return;
-        cur_vals[cid] = val;
-        uint64_t dt = t - prev_t;
-        keeper.addPulse(dt);
-        prev_t = t;
-        uint64_t min_dt = accum(cid, val, t + start_t, UINT64_MAX);
-        next_t = t + keeper.minDt(min_dt);
+        while (true) {
+            uint64_t min_dt = accum(cid, val, t + start_t, next_clock_time);
+            if (min_dt == 0) {
+                keeper.addPulse(next_clock_time - prev_t);
+                uint64_t min_dt = accum(clock_chn, convert_clock(next_clock_div),
+                                        next_clock_time + start_t, UINT64_MAX);
+                prev_t = next_clock_time;
+                next_t = prev_t + min_dt;
+                forward_clock();
+                if (t < next_t)
+                    t = next_t;
+                continue;
+            }
+            cur_vals[cid] = val;
+            uint64_t dt = t - prev_t;
+            keeper.addPulse(dt);
+            prev_t = t;
+            next_t = t + keeper.minDt(min_dt);
+        }
     };
 
     // Initialize channels
@@ -141,8 +186,25 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
     // Start the sequence and restart timer.
     start_t = seq_cb(accum, next_t, Event::start);
     if (clocks.empty()) {
+        // Start continuous clock with default divider
         accum(clock_chn, convert_clock(default_clock_div), start_t, UINT64_MAX);
         start_t += default_clock_div;
+    }
+    else {
+        // Check if the first clock period needs to be started and setup book keeping vars.
+        next_clock_idx = 1;
+        auto first_clock = clocks[0];
+        if (first_clock.t <= first_clock.div) {
+            auto neg_offset = first_clock.div - first_clock.t;
+            accum(clock_chn, convert_clock(first_clock.div), start_t, UINT64_MAX);
+            next_clock_time = first_clock.len;
+            start_t += neg_offset;
+            next_clock_div = 256;
+        }
+        else {
+            next_clock_time = first_clock.t - first_clock.div;
+            next_clock_div = first_clock.div;
+        }
     }
     keeper.reset();
     prev_t = next_t = 0;
@@ -345,6 +407,10 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
         if (next_t == old_next_t) {
             next_t = next_t + t_cons.prefer_dt;
         }
+    }
+    while (next_clock_time != UINT64_MAX) {
+        accum(clock_chn, convert_clock(next_clock_div), next_clock_time + start_t, UINT64_MAX);
+        forward_clock();
     }
     seq_cb(accum, next_t + start_t, Event::end);
 }
