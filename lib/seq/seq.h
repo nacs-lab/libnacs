@@ -150,7 +150,10 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
         if (!filter(cid, cur_vals[cid], val))
             return;
         while (true) {
-            uint64_t min_dt = accum(cid, val, t + start_t, next_clock_time);
+            uint64_t tlim = next_clock_time;
+            if (tlim != UINT64_MAX)
+                tlim += start_t;
+            uint64_t min_dt = accum(cid, val, t + start_t, tlim);
             if (min_dt == 0) {
                 keeper.addPulse(next_clock_time - prev_t);
                 uint64_t min_dt = accum(clock_chn, convert_clock(next_clock_div),
