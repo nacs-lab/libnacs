@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2016 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2017 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "ir.h"
+#include "number.h"
 
 #include <math.h>
 #include <iostream>
@@ -418,6 +419,8 @@ static inline const char *opName(Opcode op)
         return "phi";
     case Opcode::Call:
         return "call";
+    case Opcode::Interp:
+        return "interp";
     default:
         return "unknown";
     }
@@ -613,6 +616,34 @@ void Function::dumpBB(const BB &bb) const
             std::cout << ")" << std::endl;
             break;
         }
+        case Opcode::Interp: {
+            auto res = *pc;
+            pc++;
+            auto input = *pc;
+            pc++;
+            auto x0 = evalConst(*pc).get<double>();
+            pc++;
+            auto dx = evalConst(*pc).get<double>();
+            pc++;
+            auto data = *pc;
+            pc++;
+            auto ndata = *pc;
+            pc++;
+            std::cout << "  ";
+            dumpVal(res);
+            std::cout << " = " << opName(op)
+                      << " [" << x0 << ", (" << ndata << ") +" << dx << "] (";
+            dumpVal(input);
+            std::cout << ") {";
+            auto datap = &float_table[data];
+            for (int32_t i = 0; i < ndata; i++) {
+                if (i != 0)
+                    std::cout << ", ";
+                std::cout << datap[i];
+            }
+            std::cout << "}" << std::endl;
+            break;
+        }
         default:
             std::cout << "  unknown op: " << uint8_t(op) << std::endl;
             break;
@@ -642,6 +673,7 @@ NACS_EXPORT std::vector<uint32_t> Function::serialize(void) const
     // [ret][nargs][nvals][vals x nvals]
     // [nconsts][consts x nconsts]
     // [nbb][[nword][code x nword] x nbb]
+    // <optional>[nfloat][double_data x nfloat]
     std::vector<uint32_t> res{uint32_t(ret), uint32_t(nargs)};
     auto copy_vector = [&res] (auto vec) {
         res.push_back(uint32_t(vec.size()));
@@ -663,15 +695,17 @@ NACS_EXPORT std::vector<uint32_t> Function::serialize(void) const
     res.push_back(uint32_t(code.size()));
     for (size_t i = 0;i < code.size();i++)
         copy_vector(code[i]);
+    copy_vector(float_table);
     return res;
 }
 
-NACS_EXPORT Function::Function(const uint32_t *data, size_t)
+NACS_EXPORT Function::Function(const uint32_t *data, size_t sz)
     : ret(Type(data[0])),
       nargs(data[1]),
       vals{},
       code{},
-      consts{}
+      consts{},
+      float_table{}
 {
     uint32_t cursor = 2;
     auto read_vector = [data, &cursor] (auto &vec) {
@@ -696,9 +730,11 @@ NACS_EXPORT Function::Function(const uint32_t *data, size_t)
     }
     code.resize(data[cursor]);
     cursor++;
-    for (size_t i = 0;i < code.size();i++) {
+    for (size_t i = 0;i < code.size();i++)
         read_vector(code[i]);
-    }
+    if (cursor < sz)
+        read_vector(float_table);
+    return;
 }
 
 int32_t *Builder::addInst(Opcode op, size_t nop)
@@ -994,6 +1030,31 @@ int32_t Builder::createCall(Builtins id, int32_t nargs, const int32_t *args)
     return res;
 }
 
+int32_t Builder::createInterp(int32_t v, double x0, double dx, uint32_t npoints,
+                              const double *points)
+{
+    auto x0id = getConstFloat(x0);
+    auto dxid = getConstFloat(dx);
+    auto data_id = addFloatData(points, npoints);
+    auto *ptr = addInst(Opcode::Interp, 6);
+    auto res = newSSA(Type::Float64);
+    ptr[0] = res;
+    ptr[1] = v;
+    ptr[2] = x0id;
+    ptr[3] = dxid;
+    ptr[4] = data_id;
+    ptr[5] = (int32_t)npoints;
+    return res;
+}
+
+int32_t Builder::addFloatData(const double *data, uint32_t ndata)
+{
+    auto &float_table = m_f.float_table;
+    auto res = (int32_t)float_table.size();
+    float_table.insert(float_table.end(), data, data + ndata);
+    return res;
+}
+
 void Builder::addPhiInput(Function::InstRef phi, int32_t bb, int32_t val)
 {
     int32_t *inst = &m_f.code[phi.first][phi.second];
@@ -1108,6 +1169,20 @@ TagVal EvalContext::eval(void)
                 argvals[i] = evalVal(pc[i]);
             pc += nargs;
             res_slot = TagVal(evalBuiltin(id, argvals)).val;
+            break;
+        }
+        case Opcode::Interp: {
+            auto input = evalVal(*pc).get<double>();
+            pc++;
+            auto x0 = evalVal(*pc).get<double>();
+            pc++;
+            auto dx = evalVal(*pc).get<double>();
+            pc++;
+            auto datap = &m_f.float_table[*pc];
+            pc++;
+            auto ndata = *pc;
+            pc++;
+            res_slot = TagVal(linearInterpolate(input, x0, dx, ndata, datap)).val;
             break;
         }
         default:

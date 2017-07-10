@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2016 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2017 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -52,6 +52,7 @@ enum class Opcode : uint8_t {
     Cmp,
     Phi,
     Call,
+    Interp,
     _Max,
     };
 
@@ -208,7 +209,8 @@ struct Function {
           nargs((int)args.size()),
           vals(args),
           code{BB{}},
-          consts{}
+          consts{},
+          float_table{}
     {}
     Function(const uint32_t*, size_t);
     Function(const std::vector<uint32_t> &data)
@@ -233,6 +235,7 @@ struct Function {
     std::vector<Type> vals;
     std::vector<BB> code;
     std::vector<TagVal> consts;
+    std::vector<double> float_table;
 private:
     void dumpValName(int32_t id) const;
     void dumpVal(int32_t id) const;
@@ -273,7 +276,10 @@ public:
     {
         return createCall(id, (int32_t)args.size(), args.data());
     }
+    int32_t createInterp(int32_t v, double x0, double dx, uint32_t npoints,
+                         const double *points);
 private:
+    int32_t addFloatData(const double *data, uint32_t ndata);
     int32_t *addInst(Opcode op, size_t nop);
     int32_t *addInst(Opcode op, size_t nop, Function::InstRef &inst);
     int32_t newSSA(Type typ);

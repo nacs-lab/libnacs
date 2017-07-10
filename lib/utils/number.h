@@ -178,7 +178,9 @@ static inline double linearInterpolate(double x, double x0, double dx,
         return points[npoints - 1];
     }
     x = x * (npoints - 1) / dx;
-    uint32_t lo = (uint32_t)modf(x, &x);
+    double lof = 0.0;
+    x = modf(x, &lof);
+    uint32_t lo = (uint32_t)lof;
     double vlo = points[lo];
     if (x == 0)
         return vlo;

@@ -222,5 +222,21 @@ main()
         newfunc.dump();
     }
 
+    {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        const double data[] = {0.0, 0.1, 0.2, 0.6};
+        auto val1 = builder.createInterp(0, 2, 3, sizeof(data) / sizeof(double), data);
+        builder.createRet(val1);
+        builder.get().dump();
+        IR::EvalContext ctx(builder.get());
+        ctx.reset({2.3});
+        ctx.eval().dump();
+        ctx.reset({3.5});
+        ctx.eval().dump();
+        ctx.reset({4.4});
+        ctx.eval().dump();
+    }
+    std::cout << std::endl;
+
     return 0;
 }
