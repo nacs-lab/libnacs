@@ -165,6 +165,27 @@ struct _SumSingle<std::tuple<Args...> > {
     }
 };
 
+static inline double linearInterpolate(double x, double x0, double dx,
+                                       uint32_t npoints, const double *points)
+{
+    // Offset
+    x -= x0;
+    // Scale
+    if (nacsUnlikely(x <= 0)) {
+        return points[0];
+    }
+    else if (nacsUnlikely(x >= dx)) {
+        return points[npoints - 1];
+    }
+    x = x * (npoints - 1) / dx;
+    uint32_t lo = (uint32_t)modf(x, &x);
+    double vlo = points[lo];
+    if (x == 0)
+        return vlo;
+    double vhi = points[lo + 1];
+    return x * vhi + (1 - x) * vlo;
+}
+
 }
 
 #endif
