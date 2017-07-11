@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2016 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2017 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -236,6 +236,16 @@ main()
         ctx.reset({4.4});
         ctx.eval().dump();
     }
+
+    {
+        const int32_t data[] = {
+            3, 2, 4, 50529027, 1, 3, 0, 1072693248, 1, 13, 10, 3, 0, -3, -3, 0, 4, 3, 2, 3, 1,
+            1, 2, 4, 0, 1072693248, 0, 1073741824, 0, 1074003968, 0, 1072693248
+        };
+        IR::Function newfunc((const uint32_t*)data, sizeof(data) / 4);
+        newfunc.dump();
+    }
+
     std::cout << std::endl;
 
     return 0;
