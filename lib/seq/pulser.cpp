@@ -56,7 +56,7 @@ PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t
         } else {
             new_ttl_val = ttl_val & ~mask;
         }
-        if (new_ttl_val == ttl_val) {
+        if (new_ttl_val == ttl_val && prev_ttl_idx != -1) {
             to--;
             continue;
         }
