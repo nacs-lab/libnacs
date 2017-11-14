@@ -40,8 +40,9 @@ getPhyAddr(void *virt_addr)
     uintptr_t virt_pfn = uintptr_t(virt_addr) / page_size;
 
     uint64_t page_info;
-    pread(page_map, &page_info, sizeof(page_info),
-          virt_pfn * sizeof(uint64_t));
+    auto res = pread(page_map, &page_info, sizeof(page_info),
+                     virt_pfn * sizeof(uint64_t));
+    (void)res;
     auto phy_pfn = uintptr_t(page_info & ((1ll << 55) - 1));
     auto phy_page = phy_pfn * page_size;
     return (void*)(phy_page + virt_offset);
