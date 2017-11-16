@@ -27,8 +27,8 @@ add_library(nacs-utils SHARED
 target_link_libraries(nacs-utils ${nacs_utils_LINKS})
 
 set_target_properties(nacs-utils PROPERTIES
-  VERSION 0.1
-  SOVERSION 0
+  VERSION "${MAJOR_VERSION}.${MINOR_VERSION}"
+  SOVERSION "${MAJOR_VERSION}"
   COMPILE_FLAGS "-fvisibility=hidden"
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
