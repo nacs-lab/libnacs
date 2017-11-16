@@ -1,0 +1,12 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=@CMAKE_INSTALL_PREFIX@
+libdir=@CMAKE_INSTALL_FULL_LIBDIR@
+includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
+
+Name: nacs-kernel
+Description: Kernel support library for NaCs lab
+Version: @MAJOR_VERSION@.@MINOR_VERSION@.@PATCH_VERSION@
+
+Requires:
+Libs: -L${libdir} -lnacs-kernel
+Cflags: -I${includedir}

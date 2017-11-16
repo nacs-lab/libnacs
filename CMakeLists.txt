@@ -12,6 +12,9 @@ set(PATCH_VERSION 0)
 include(CMakeCMacros)
 include(GNUInstallDirs)
 
+set(INSTALL_PKGCONFIG_DIR "${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig"
+  CACHE PATH "Installation directory for pkgconfig (.pc) files")
+
 # Remove rdynamic
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)

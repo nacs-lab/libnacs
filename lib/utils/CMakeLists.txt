@@ -32,6 +32,10 @@ set_target_properties(nacs-utils PROPERTIES
   COMPILE_FLAGS "-fvisibility=hidden"
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
+configure_file(nacs-utils.pc.in nacs-utils.pc @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/nacs-utils.pc
+  DESTINATION ${INSTALL_PKGCONFIG_DIR})
+
 install(TARGETS nacs-utils LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(FILES ${nacs_utils_HDRS}
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-utils")
