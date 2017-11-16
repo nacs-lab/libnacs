@@ -16,6 +16,10 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#ifdef NDEBUG
+#  undef NDEBUG
+#endif
+
 #include <nacs-seq/seq.h>
 #include <nacs-seq/pulser.h>
 #include <nacs-utils/timer.h>
