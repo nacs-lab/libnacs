@@ -26,6 +26,10 @@
 #include <chrono>
 #include <vector>
 
+#ifdef NDEBUG
+#  undef NDEBUG
+#endif
+
 #include <assert.h>
 
 static constexpr size_t N = 1000000;

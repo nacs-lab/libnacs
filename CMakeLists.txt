@@ -1,9 +1,13 @@
-project(LibNaCs)
+project(libnacs)
 
 ## Setup
 cmake_minimum_required(VERSION 2.8)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+set(MAJOR_VERSION 0)
+set(MINOR_VERSION 1)
+set(PATCH_VERSION 0)
 
 include(CMakeCMacros)
 include(GNUInstallDirs)
@@ -34,3 +38,32 @@ cmake_c_include_fix_path()
 
 add_subdirectory(lib)
 add_subdirectory(test)
+
+if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
+  include(InstallRequiredSystemLibraries)
+
+  set(CPACK_SET_DESTDIR "on")
+  set(CPACK_PACKAGING_INSTALL_PREFIX "/tmp")
+  set(CPACK_GENERATOR "DEB")
+
+  set(CPACK_PACKAGE_DESCRIPTION "Libraries for NaCs lab control")
+  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Libraries for NaCs lab control")
+  set(CPACK_PACKAGE_VENDOR "Harvard")
+  set(CPACK_PACKAGE_CONTACT "Yichao Yu")
+  set(CPACK_PACKAGE_VERSION_MAJOR "${MAJOR_VERSION}")
+  set(CPACK_PACKAGE_VERSION_MINOR "${MINOR_VERSION}")
+  set(CPACK_PACKAGE_VERSION_PATCH "${PATCH_VERSION}")
+  set(CPACK_PACKAGE_FILE_NAME
+    "${CMAKE_PROJECT_NAME}_${MAJOR_VERSION}.${MINOR_VERSION}.${CPACK_PACKAGE_VERSION_PATCH}")
+  set(CPACK_SOURCE_PACKAGE_FILE_NAME
+    "${CMAKE_PROJECT_NAME}_${MAJOR_VERSION}.${MINOR_VERSION}.${CPACK_PACKAGE_VERSION_PATCH}")
+
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "libstdc++6 (>= 4.2.1)")
+
+  set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+  set(CPACK_DEBIAN_PACKAGE_SECTION "")
+  set(CPACK_DEBIAN_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
+
+  set(CPACK_COMPONENTS_ALL Libraries ApplicationData)
+  include(CPack)
+endif()
