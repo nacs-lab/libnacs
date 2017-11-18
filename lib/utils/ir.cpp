@@ -18,6 +18,7 @@
 
 #include "ir.h"
 #include "number.h"
+#include "mem.h"
 
 #include <math.h>
 #include <iostream>
@@ -729,6 +730,45 @@ NACS_EXPORT Function::Function(const uint32_t *data, size_t sz)
         cursor += size * 3;
     }
     code.resize(data[cursor]);
+    cursor++;
+    for (size_t i = 0;i < code.size();i++)
+        read_vector(code[i]);
+    if (cursor < sz)
+        read_vector(float_table);
+    return;
+}
+
+NACS_EXPORT Function::Function(const uint8_t *data, size_t sz)
+    : ret(Type(Mem::load_unalign<uint32_t>(data, 0))),
+      nargs(Mem::load_unalign<uint32_t>(data, 1)),
+      vals{},
+      code{},
+      consts{},
+      float_table{}
+{
+    sz = sz / sizeof(uint32_t);
+    uint32_t cursor = 2;
+    auto read_vector = [data, &cursor] (auto &vec) {
+        uint32_t size = Mem::load_unalign<uint32_t>(data, cursor);
+        cursor++;
+        vec.resize(size);
+        int32_t elsz = sizeof(typename std::remove_reference_t<
+                              decltype(vec)>::value_type);
+        memcpy(vec.data(), data + cursor * sizeof(uint32_t), size * elsz);
+        cursor += (size * elsz + 3) / 4;
+    };
+    read_vector(vals);
+    {
+        uint32_t size = Mem::load_unalign<uint32_t>(data, cursor);
+        cursor++;
+        consts.resize(size);
+        for (size_t i = 0;i < size;i++) {
+            consts[i].typ = Type(Mem::load_unalign<uint32_t>(data, cursor + i * 3));
+            memcpy(&(consts[i].val), data + (cursor + i * 3 + 1) * sizeof(uint32_t), 8);
+        }
+        cursor += size * 3;
+    }
+    code.resize(Mem::load_unalign<uint32_t>(data, cursor));
     cursor++;
     for (size_t i = 0;i < code.size();i++)
         read_vector(code[i]);

@@ -213,6 +213,7 @@ struct Function {
           float_table{}
     {}
     Function(const uint32_t*, size_t);
+    Function(const uint8_t*, size_t);
     Function(const std::vector<uint32_t> &data)
         : Function(data.data(), data.size())
     {}

@@ -18,12 +18,29 @@
 
 #include "utils.h"
 
+#include <cstring>
+
 #ifndef __NACS_UTILS_MEM_H__
 #define __NACS_UTILS_MEM_H__
 
 namespace NaCs {
 
 namespace Mem {
+
+template<typename T> static inline T
+load_unalign(const void *p, size_t idx=0)
+{
+    T v;
+    std::memcpy(&v, (const char*)p + sizeof(T) * idx, sizeof(T));
+    return v;
+}
+
+template<typename T> static inline void
+store_unalign(void *p, T v, size_t idx=0)
+{
+    std::memcpy((const char*)p + sizeof(T) * idx, &v, sizeof(T));
+}
+
 template<typename T> static inline T
 read(volatile void *addr)
 {
