@@ -20,11 +20,18 @@ set(nacs_utils_SRCS
 set(nacs_utils_LINKS m rt pthread)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
+if(ENABLE_LLVM)
+  include_directories(${LLVM_INCLUDE_DIRS})
+  add_definitions(${LLVM_DEFINITIONS})
+endif()
 
 add_library(nacs-utils SHARED
   ${nacs_utils_SRCS})
 
-target_link_libraries(nacs-utils ${nacs_utils_LINKS})
+if(ENABLE_LLVM)
+  llvm_config(nacs-utils USE_SHARED all)
+endif()
+target_link_libraries(nacs-utils PUBLIC ${nacs_utils_LINKS})
 
 set_target_properties(nacs-utils PROPERTIES
   VERSION "${MAJOR_VERSION}.${MINOR_VERSION}"

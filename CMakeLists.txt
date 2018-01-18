@@ -1,7 +1,7 @@
 project(libnacs)
 
 ## Setup
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -20,6 +20,14 @@ set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
 
 option(ENABLE_KNACS "Enable kernel driver" Off)
+option(ENABLE_LLVM "Enable LLVM JIT" Off)
+
+if(ENABLE_LLVM)
+  find_package(LLVM REQUIRED CONFIG)
+
+  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+  message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+endif()
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden
   -fno-math-errno -Wconversion -Wno-sign-conversion)
