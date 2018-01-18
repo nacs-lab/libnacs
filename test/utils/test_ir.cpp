@@ -52,7 +52,6 @@ main()
         builder.createRet(IR::Consts::False);
         builder.get().dump();
         IR::EvalContext ctx(builder.get());
-        ctx.reset({});
         ctx.eval().dump();
     }
     std::cout << std::endl;
@@ -62,7 +61,6 @@ main()
         builder.createRet(builder.getConstFloat(1.1));
         builder.get().dump();
         IR::EvalContext ctx(builder.get());
-        ctx.reset({});
         ctx.eval().dump();
     }
     std::cout << std::endl;
@@ -72,7 +70,6 @@ main()
         builder.createRet(builder.getConstInt(42));
         builder.get().dump();
         IR::EvalContext ctx(builder.get());
-        ctx.reset({});
         ctx.eval().dump();
     }
     std::cout << std::endl;

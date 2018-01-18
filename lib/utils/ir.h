@@ -296,7 +296,7 @@ struct NACS_EXPORT EvalContext {
         : m_f(f),
           m_vals(f.vals.size())
     {}
-    void reset(GenVal *args)
+    void reset(const GenVal *args)
     {
         memcpy(m_vals.data(), args, m_f.nargs * sizeof(GenVal));
     }
