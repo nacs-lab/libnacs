@@ -319,6 +319,34 @@ private:
     std::vector<GenVal> m_vals;
 };
 
+class ExeFunc {
+    template<typename FT> struct FuncType;
+    template<typename R, typename... Args> struct FuncType<R(Args...)> {
+        using ret = R;
+        using fptr = R(*)(void*, Args...);
+    };
+public:
+    ExeFunc(ExeFunc&&) = default;
+    ExeFunc(const ExeFunc&) = delete;
+    ExeFunc& operator=(ExeFunc&&) = default;
+    ExeFunc& operator=(const ExeFunc&) = delete;
+    ~ExeFunc()
+    {
+        if (m_free) {
+            m_free(this);
+        }
+    }
+    template<typename FT, typename... Args> typename FuncType<FT>::ret operator()(Args&&... args)
+    {
+        return typename FuncType<FT>::fptr(m_cb)(m_data, std::forward<Args>(args)...);
+    }
+
+private:
+    void (*m_cb)(void);
+    void *m_data;
+    void (*m_free)(ExeFunc*);
+};
+
 }
 }
 
