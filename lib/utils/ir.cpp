@@ -1288,8 +1288,22 @@ static inline ExeFunc get_interp_func(Function f)
                 continue;
             }
         }
-        ptr[2 + i] = 12 - 16 + nstack * 8;
+        ptr[2 + i] = 12 + 16 + nstack * 8;
         nstack += 1;
+    }
+#elif defined(__i386) || defined(__i386__)
+    // 4bytes data pointer, 4 bytes return address and 4 bytes base pointer spill
+    uint32_t stack_offset = 12;
+    for (uint32_t i = 0; i < nargs; i++) {
+        auto ty = f.vals[i];
+        if (ty == Type::Float64) {
+            ptr[2 + i] = stack_offset | 0x80000000;
+            stack_offset += 8;
+        }
+        else {
+            ptr[2 + i] = stack_offset;
+            stack_offset += 4;
+        }
     }
 #else
     // TODO

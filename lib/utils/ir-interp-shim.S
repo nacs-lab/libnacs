@@ -113,7 +113,7 @@ nacs_exefunc_cb: // sp: 12/16
         .cfi_offset 6, -8
         movl    %esp, %ebp
         .cfi_def_cfa_register 6
-        movl    8(%esp), %eax  ; arg1 (data)
+        movl    8(%esp), %eax  // arg1 (data)
         // slot sizes (aligned to 16 bytes)
         subl    (%eax), %esp // sp: 8/16
         // Load nargs
@@ -129,7 +129,7 @@ nacs_exefunc_cb: // sp: 12/16
         jmp     .Lloop_end
 
 .Lfloat:
-        andl    $0x80000000, %edx
+        andl    $0x7fffffff, %edx
         movsd   (%ebp,%edx), %xmm0
         movsd   %xmm0, -8(%esp,%ecx,8)
 
