@@ -75,7 +75,7 @@ nacs_exefunc_cb:
         cmpq    $11, %rax
         movsd   %xmm6, %xmm8
         je      .Lfloat_end
-        subq    $12, %rax
+        cmpq    $12, %rax
         movsd   %xmm7, %xmm8
         je      .Lfloat_end
 
@@ -156,7 +156,103 @@ nacs_exefunc_cb: // sp: 12/16
 
         .size   nacs_exefunc_cb, . - nacs_exefunc_cb
 #elif defined(__aarch64__)
-#define _CPU_AARCH64_
+        .text
+        .hidden nacs_exefunc_cb
+        .globl  nacs_exefunc_cb
+        .type   nacs_exefunc_cb, #function
+nacs_exefunc_cb:
+        .cfi_startproc
+        stp     x29, x30, [sp, #-16]!
+        .cfi_def_cfa_offset 16
+        .cfi_offset 29, -16
+        .cfi_offset 30, -8
+        mov     x29, sp
+        .cfi_def_cfa_register 29
+        ldp     x9, x10, [x0]
+        // slot sizes (aligned to 16 bytes)
+        sub     sp, sp, x9
+        cmp     x10, #1
+        b.lt    .Lskip
+.Lloop:
+        add     x9, x0, x10, lsl #2
+        ldur    x9, [x9, #-8] // Load arguments specifiers
+        cmp     x9, $0
+        mov     x1, x11
+        b.eq    .Lint_end
+        cmp     x9, $1
+        mov     x2, x11
+        b.eq    .Lint_end
+        cmp     x9, $2
+        mov     x3, x11
+        b.eq    .Lint_end
+        cmp     x9, $3
+        mov     x4, x11
+        b.eq    .Lint_end
+        cmp     x9, $4
+        mov     x5, x11
+        b.eq    .Lint_end
+        cmp     x9, $5
+        mov     x6, x11
+        b.eq    .Lint_end
+        cmp     x9, $6
+        mov     x7, x11
+        b.eq    .Lint_end
+
+        cmp     x9, $7
+        mov     v0.16b, v16.16b
+        b.eq    .Lfloat_end
+        cmp     x9, $8
+        mov     v1.16b, v16.16b
+        b.eq    .Lfloat_end
+        cmp     x9, $9
+        mov     v2.16b, v16.16b
+        b.eq    .Lfloat_end
+        cmp     x9, $10
+        mov     v3.16b, v16.16b
+        b.eq    .Lfloat_end
+        cmp     x9, $11
+        mov     v4.16b, v16.16b
+        b.eq    .Lfloat_end
+        cmp     x9, $12
+        mov     v5.16b, v16.16b
+        b.eq    .Lfloat_end
+        cmp     x9, $13
+        mov     v6.16b, v16.16b
+        b.eq    .Lfloat_end
+        cmp     x9, $14
+        mov     v7.16b, v16.16b
+        b.eq    .Lfloat_end
+
+        add     x9, x29, x9
+        ldur    x11, [x9]
+.Lint_end:
+        add     x9, sp, x10, lsl #3
+        stur    x11, [x9, #-8]
+        b       .Lloop_end
+.Lfloat_end:
+        add     x9, sp, x10, lsl #3
+        str     d16, [x9, #-8]
+.Lloop_end:
+        subs    x10, x10, #1
+        b.ne    .Lloop
+.Lskip:
+        mov     x1, sp
+        subs    sp, sp, #16
+        mov     x8, sp
+        bl      nacs_exefunc_real
+        // No need to be conditional here...
+        ldur    x0, [sp, #8]
+        ldr     d0, [sp, #8]
+        mov     sp, x29
+        ldp     x29, x30, [sp], #16
+        .cfi_def_cfa 31, 0
+        ret
+        .cfi_endproc
+
+        .size   nacs_exefunc_cb, . - nacs_exefunc_cb
+
 #elif defined(__arm__)
-#define _CPU_ARM_
+
+#else
+#  error "Unsupported architecture"
 #endif

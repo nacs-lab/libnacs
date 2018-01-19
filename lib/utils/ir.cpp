@@ -1288,7 +1288,7 @@ static inline ExeFunc get_interp_func(Function f)
                 continue;
             }
         }
-        ptr[2 + i] = 12 + 16 + nstack * 8;
+        ptr[2 + i] = 16 + nstack * 8;
         nstack += 1;
     }
 #elif defined(__i386) || defined(__i386__)
@@ -1304,6 +1304,29 @@ static inline ExeFunc get_interp_func(Function f)
             ptr[2 + i] = stack_offset;
             stack_offset += 4;
         }
+    }
+#elif defined(__aarch64__)
+    uint32_t nintarg = 0;
+    uint32_t nfloatarg = 0;
+    uint32_t nstack = 0;
+    for (uint32_t i = 0; i < nargs; i++) {
+        auto ty = f.vals[i];
+        if (ty == Type::Float64) {
+            if (nfloatarg < 8) {
+                ptr[2 + i] = 8 + nfloatarg;
+                nfloatarg += 1;
+                continue;
+            }
+        }
+        else {
+            if (nintarg < 7) {
+                ptr[2 + i] = nintarg;
+                nintarg += 1;
+                continue;
+            }
+        }
+        ptr[2 + i] = 16 + nstack * 8;
+        nstack += 1;
     }
 #else
     // TODO
