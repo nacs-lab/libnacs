@@ -176,50 +176,50 @@ nacs_exefunc_cb:
 .Lloop:
         add     x9, x0, x10, lsl #2
         ldur    x9, [x9, #-8] // Load arguments specifiers
-        cmp     x9, $0
+        cmp     x9, #0
         mov     x1, x11
         b.eq    .Lint_end
-        cmp     x9, $1
+        cmp     x9, #1
         mov     x2, x11
         b.eq    .Lint_end
-        cmp     x9, $2
+        cmp     x9, #2
         mov     x3, x11
         b.eq    .Lint_end
-        cmp     x9, $3
+        cmp     x9, #3
         mov     x4, x11
         b.eq    .Lint_end
-        cmp     x9, $4
+        cmp     x9, #4
         mov     x5, x11
         b.eq    .Lint_end
-        cmp     x9, $5
+        cmp     x9, #5
         mov     x6, x11
         b.eq    .Lint_end
-        cmp     x9, $6
+        cmp     x9, #6
         mov     x7, x11
         b.eq    .Lint_end
 
-        cmp     x9, $7
+        cmp     x9, #7
         mov     v0.16b, v16.16b
         b.eq    .Lfloat_end
-        cmp     x9, $8
+        cmp     x9, #8
         mov     v1.16b, v16.16b
         b.eq    .Lfloat_end
-        cmp     x9, $9
+        cmp     x9, #9
         mov     v2.16b, v16.16b
         b.eq    .Lfloat_end
-        cmp     x9, $10
+        cmp     x9, #10
         mov     v3.16b, v16.16b
         b.eq    .Lfloat_end
-        cmp     x9, $11
+        cmp     x9, #11
         mov     v4.16b, v16.16b
         b.eq    .Lfloat_end
-        cmp     x9, $12
+        cmp     x9, #12
         mov     v5.16b, v16.16b
         b.eq    .Lfloat_end
-        cmp     x9, $13
+        cmp     x9, #13
         mov     v6.16b, v16.16b
         b.eq    .Lfloat_end
-        cmp     x9, $14
+        cmp     x9, #14
         mov     v7.16b, v16.16b
         b.eq    .Lfloat_end
 
@@ -237,7 +237,7 @@ nacs_exefunc_cb:
         b.ne    .Lloop
 .Lskip:
         mov     x1, sp
-        subs    sp, sp, #16
+        sub     sp, sp, #16
         mov     x8, sp
         bl      nacs_exefunc_real
         // No need to be conditional here...
