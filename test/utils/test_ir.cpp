@@ -35,6 +35,8 @@ main()
     assert(IR::validate(IR::Type::Float64));
     assert(!IR::validate(IR::Type(4)));
 
+    auto exectx = IR::ExeContext::get();
+
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
         builder.createRet(0);
@@ -195,6 +197,12 @@ main()
             ctx2.eval();
         }
         printToc();
+
+        auto f = exectx->getFunc(newfunc);
+        tic();
+        for (int i = 0;i < 1000000;i++)
+            f.call<double(int)>(1);
+        printToc();
     }
     std::cout << std::endl;
 
@@ -232,6 +240,11 @@ main()
         ctx.eval().dump();
         ctx.reset({4.4});
         ctx.eval().dump();
+
+        auto f = exectx->getFunc(builder.get());
+        std::cout << "XXXXX: " << f.call<double(double)>(2.3) << std::endl;
+        std::cout << "XXXXX: " << f.call<double(double)>(3.5) << std::endl;
+        std::cout << "XXXXX: " << f.call<double(double)>(4.4) << std::endl;
     }
 
     {

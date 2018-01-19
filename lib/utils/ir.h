@@ -356,7 +356,7 @@ public:
             m_free(m_data);
         }
     }
-    template<typename FT, typename... Args> typename FuncType<FT>::ret operator()(Args&&... args)
+    template<typename FT, typename... Args> typename FuncType<FT>::ret call(Args&&... args)
     {
         return typename FuncType<FT>::fptr(m_cb)(m_data, std::forward<Args>(args)...);
     }
@@ -369,7 +369,7 @@ private:
 
 class ExeContext {
 public:
-    static std::unique_ptr<ExeContext> getContext();
+    static std::unique_ptr<ExeContext> get();
     virtual ExeFunc getFunc(const Function &) = 0;
     virtual ExeFunc getFunc(Function&&) = 0;
 };

@@ -24,76 +24,80 @@
         .type   nacs_exefunc_cb, @function
 nacs_exefunc_cb:
         .cfi_startproc
-        push    %rbp
-        mov     %rsp, %rbp
+        pushq   %rbp
+        .cfi_def_cfa_offset 16
+        .cfi_offset 6, -16
+        movq    %rsp, %rbp
+        .cfi_def_cfa_register 6
         // slot sizes (aligned to 16 bytes)
-        mov     (%rdi), %r11d
-        sub     %r11, %rsp
+        movl    (%rdi), %r11d
+        subq    %r11, %rsp
         // Load nargs
-        mov     4(%rdi), %r11d
-        test    %r11, %r11
+        movl    4(%rdi), %r11d
+        testq   %r11, %r11
         jle     .Lskip
 .Lloop:
-        mov     4(%rdi,%r11,4), %eax // Load arguments specifiers
-        cmp     $0, %rax
-        cmove   %rsi, %rax
+        movsbq  4(%rdi,%r11,4), %rax // Load arguments specifiers
+        cmpq    $0, %rax
+        cmoveq  %rsi, %rax
         je      .Lint_end
-        cmp     $1, %rax
-        cmove   %rcx, %rax
+        cmpq    $1, %rax
+        cmoveq  %rcx, %rax
         je      .Lint_end
-        cmp     $2, %rax
-        cmove   %rdx, %rax
+        cmpq    $2, %rax
+        cmoveq  %rdx, %rax
         je      .Lint_end
-        cmp     $3, %rax
-        cmove   %r8, %rax
+        cmpq    $3, %rax
+        cmoveq  %r8, %rax
         je      .Lint_end
-        cmp     $4, %rax
-        cmove   %r9, %rax
+        cmpq    $4, %rax
+        cmoveq  %r9, %rax
         je      .Lint_end
 
-        cmp     $5, %rax
+        cmpq    $5, %rax
         movsd   %xmm0, %xmm8
         je      .Lfloat_end
-        cmp     $6, %rax
+        cmpq    $6, %rax
         movsd   %xmm1, %xmm8
         je      .Lfloat_end
-        cmp     $7, %rax
+        cmpq    $7, %rax
         movsd   %xmm2, %xmm8
         je      .Lfloat_end
-        cmp     $8, %rax
+        cmpq    $8, %rax
         movsd   %xmm3, %xmm8
         je      .Lfloat_end
-        cmp     $9, %rax
+        cmpq    $9, %rax
         movsd   %xmm4, %xmm8
         je      .Lfloat_end
-        cmp     $10, %rax
+        cmpq    $10, %rax
         movsd   %xmm5, %xmm8
         je      .Lfloat_end
-        cmp     $11, %rax
+        cmpq    $11, %rax
         movsd   %xmm6, %xmm8
         je      .Lfloat_end
-        sub     $12, %rax
+        subq    $12, %rax
         movsd   %xmm7, %xmm8
         je      .Lfloat_end
 
-        mov     (%rbp,%rax), %rax
+        movq    (%rbp,%rax), %rax
 .Lint_end:
-        mov     %rax, -8(%rsp,%r11,8)
+        movq    %rax, -8(%rsp,%r11,8)
         jmp     .Lloop_end
 .Lfloat_end:
         movsd   %xmm8, -8(%rsp,%r11,8)
 .Lloop_end:
-        sub     $1, %r11
+        subq    $1, %r11
         jne     .Lloop
 .Lskip:
-        mov     %rsp, %rsi
+        movq    %rsp, %rsi
         call    nacs_exefunc_real
         // No need to be conditional here...
         movq    %rdx, %xmm0
-        mov     %rdx, %rax
-        mov     %rbp, %rsp
-        pop     %rbp
-        ret
+        movq    %rdx, %rax
+        movq    %rbp, %rsp
+        popq    %rbp
+        .cfi_def_cfa 7, 8
+        retq
         .cfi_endproc
 
         .size   nacs_exefunc_cb, . - nacs_exefunc_cb

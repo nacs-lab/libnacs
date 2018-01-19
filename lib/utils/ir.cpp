@@ -1285,6 +1285,7 @@ static inline ExeFunc get_interp_func(Function f)
             if (nintarg < 5) {
                 ptr[2 + i] = nintarg;
                 nintarg += 1;
+                continue;
             }
         }
         ptr[2 + i] = 12 - 16 + nstack * 8;
@@ -1308,7 +1309,7 @@ class InterpExeContext : public ExeContext {
     }
 };
 
-std::unique_ptr<ExeContext> ExeContext::getContext()
+NACS_EXPORT std::unique_ptr<ExeContext> ExeContext::get()
 {
     return std::unique_ptr<ExeContext>(new InterpExeContext());
 }
