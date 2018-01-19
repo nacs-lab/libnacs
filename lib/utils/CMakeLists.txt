@@ -16,6 +16,7 @@ set(nacs_utils_SRCS
   timer.cpp
   mem.cpp
   ir.cpp
+  ir-interp-shim.S
   base64.cpp)
 set(nacs_utils_LINKS m rt pthread)
 

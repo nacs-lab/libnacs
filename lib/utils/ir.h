@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2017 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2018 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -217,6 +217,8 @@ struct Function {
     Function(const std::vector<uint32_t> &data)
         : Function(data.data(), data.size())
     {}
+    Function(Function&&) = default;
+    Function(const Function&) = default;
     void dump(void) const;
     Type valType(int32_t id) const;
     TagVal evalConst(int32_t id) const
@@ -326,14 +328,31 @@ class ExeFunc {
         using fptr = R(*)(void*, Args...);
     };
 public:
-    ExeFunc(ExeFunc&&) = default;
+    ExeFunc(void (*cb)(void), void *data, void (*free)(void*))
+        : m_cb(cb), m_data(data), m_free(free)
+    {}
+    ExeFunc(ExeFunc &&other)
+        : m_cb(other.m_cb),
+          m_data(other.m_data),
+          m_free(other.m_free)
+    {
+        other.m_cb = nullptr;
+        other.m_data = nullptr;
+        other.m_free = nullptr;
+    }
     ExeFunc(const ExeFunc&) = delete;
-    ExeFunc& operator=(ExeFunc&&) = default;
-    ExeFunc& operator=(const ExeFunc&) = delete;
+    ExeFunc &operator=(ExeFunc &&other)
+    {
+        std::swap(other.m_cb, m_cb);
+        std::swap(other.m_data, m_data);
+        std::swap(other.m_free, m_free);
+        return *this;
+    }
+    ExeFunc &operator=(const ExeFunc&) = delete;
     ~ExeFunc()
     {
         if (m_free) {
-            m_free(this);
+            m_free(m_data);
         }
     }
     template<typename FT, typename... Args> typename FuncType<FT>::ret operator()(Args&&... args)
@@ -344,7 +363,7 @@ public:
 private:
     void (*m_cb)(void);
     void *m_data;
-    void (*m_free)(ExeFunc*);
+    void (*m_free)(void*);
 };
 
 }

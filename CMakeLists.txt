@@ -1,4 +1,4 @@
-project(libnacs)
+project(libnacs C CXX ASM)
 
 ## Setup
 cmake_minimum_required(VERSION 3.0)

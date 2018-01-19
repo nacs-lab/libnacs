@@ -23,6 +23,8 @@
 #include <math.h>
 #include <iostream>
 
+extern "C" void nacs_exefunc_cb(void);
+
 namespace NaCs {
 namespace IR {
 
@@ -1108,16 +1110,16 @@ void Builder::addPhiInput(Function::InstRef phi, int32_t bb, int32_t val)
     }
 }
 
-TagVal EvalContext::evalVal(int32_t id) const
+static inline TagVal eval_val(const Function &f, const GenVal *vals, int32_t id)
 {
     if (id >= 0) {
-        return TagVal(m_f.vals[id], m_vals[id]);
+        return TagVal(f.vals[id], vals[id]);
     } else {
-        return m_f.evalConst(id);
+        return f.evalConst(id);
     }
 }
 
-TagVal EvalContext::eval(void)
+static inline TagVal eval_func(const Function &f, GenVal *vals)
 {
     int32_t bb_num = -1;
     int32_t prev_bb_num;
@@ -1126,7 +1128,7 @@ TagVal EvalContext::eval(void)
     auto enter_bb = [&] (int32_t i) {
         prev_bb_num = bb_num;
         bb_num = i;
-        auto &bb = m_f.code[i];
+        auto &bb = f.code[i];
         pc = bb.data();
         end = pc + bb.size();
     };
@@ -1137,12 +1139,12 @@ TagVal EvalContext::eval(void)
         pc++;
         auto res = *pc;
         pc++;
-        auto &res_slot = m_vals[res];
+        auto &res_slot = vals[res];
         switch (op) {
         case Opcode::Ret:
-            return evalVal(res).convert(m_f.ret);
+            return eval_val(f, vals, res).convert(f.ret);
         case Opcode::Br:
-            if (evalVal(res).get<bool>()) {
+            if (eval_val(f, vals, res).get<bool>()) {
                 enter_bb(pc[0]);
             } else {
                 enter_bb(pc[1]);
@@ -1152,19 +1154,19 @@ TagVal EvalContext::eval(void)
         case Opcode::Sub:
         case Opcode::Mul:
         case Opcode::FDiv: {
-            auto val1 = evalVal(*pc);
+            auto val1 = eval_val(f, vals, *pc);
             pc++;
-            auto val2 = evalVal(*pc);
+            auto val2 = eval_val(f, vals, *pc);
             pc++;
             switch (op) {
             case Opcode::Add:
-                res_slot = evalAdd(m_f.vals[res], val1, val2).val;
+                res_slot = evalAdd(f.vals[res], val1, val2).val;
                 break;
             case Opcode::Sub:
-                res_slot = evalSub(m_f.vals[res], val1, val2).val;
+                res_slot = evalSub(f.vals[res], val1, val2).val;
                 break;
             case Opcode::Mul:
-                res_slot = evalMul(m_f.vals[res], val1, val2).val;
+                res_slot = evalMul(f.vals[res], val1, val2).val;
                 break;
             case Opcode::FDiv:
                 res_slot = evalFDiv(val1, val2).val;
@@ -1177,9 +1179,9 @@ TagVal EvalContext::eval(void)
         case Opcode::Cmp: {
             auto cmptyp = CmpType(*pc);
             pc++;
-            auto val1 = evalVal(*pc);
+            auto val1 = eval_val(f, vals, *pc);
             pc++;
-            auto val2 = evalVal(*pc);
+            auto val2 = eval_val(f, vals, *pc);
             pc++;
             res_slot = evalCmp(cmptyp, val1, val2).val;
             break;
@@ -1191,8 +1193,8 @@ TagVal EvalContext::eval(void)
             pc += 2 * nargs;
             for (int i = 0;i < nargs;i++) {
                 if (args[2 * i] == prev_bb_num) {
-                    auto val = evalVal(args[2 * i + 1]);
-                    res_slot = val.convert(m_f.vals[res]).val;
+                    auto val = eval_val(f, vals, args[2 * i + 1]);
+                    res_slot = val.convert(f.vals[res]).val;
                     break;
                 }
             }
@@ -1206,19 +1208,19 @@ TagVal EvalContext::eval(void)
             TagVal argvals[3];
             assert(nargs <= 3);
             for (int i = 0;i < nargs;i++)
-                argvals[i] = evalVal(pc[i]);
+                argvals[i] = eval_val(f, vals, pc[i]);
             pc += nargs;
             res_slot = TagVal(evalBuiltin(id, argvals)).val;
             break;
         }
         case Opcode::Interp: {
-            auto input = evalVal(*pc).get<double>();
+            auto input = eval_val(f, vals, *pc).get<double>();
             pc++;
-            auto x0 = evalVal(*pc).get<double>();
+            auto x0 = eval_val(f, vals, *pc).get<double>();
             pc++;
-            auto dx = evalVal(*pc).get<double>();
+            auto dx = eval_val(f, vals, *pc).get<double>();
             pc++;
-            auto datap = &m_f.float_table[*pc];
+            auto datap = &f.float_table[*pc];
             pc++;
             auto ndata = *pc;
             pc++;
@@ -1229,8 +1231,78 @@ TagVal EvalContext::eval(void)
             break;
         }
     }
-    return TagVal(m_f.ret);
+    return TagVal(f.ret);
+}
+
+TagVal EvalContext::evalVal(int32_t id) const
+{
+    return eval_val(m_f, &m_vals[0], id);
+}
+
+TagVal EvalContext::eval(void)
+{
+    return eval_func(m_f, &m_vals[0]);
+}
+
+static inline Function *get_interp_func(uint32_t *data)
+{
+    auto nargs = data[1];
+    uint32_t offset = nargs + 2;
+    offset = (offset + 3) & ~(uint32_t)3; // align to 16bytes
+    return (Function*)&data[offset];
+}
+
+void exefunc_interp_free(void *data)
+{
+    auto func = get_interp_func((uint32_t*)data);
+    func->~Function();
+    ::free(data);
+}
+
+ExeFunc get_interp_func(Function f)
+{
+    uint32_t nargs = f.nargs;
+    uint32_t offset = nargs + 2;
+    offset = (offset + 3) & ~(uint32_t)3; // align to 16bytes
+    size_t sz = offset * 4 + sizeof(f);
+    auto ptr = (uint32_t*)malloc(sz);
+    ptr[0] = (f.vals.size() * 8 + 8) & ~(uint32_t)15;
+    ptr[1] = nargs;
+#if defined(__x86_64__) || defined(__x86_64)
+    uint32_t nintarg = 0;
+    uint32_t nfloatarg = 0;
+    uint32_t nstack = 0;
+    for (uint32_t i = 0; i < nargs; i++) {
+        auto ty = f.vals[i];
+        if (ty == Type::Float64) {
+            if (nfloatarg < 6) {
+                ptr[2 + i] = 5 + nfloatarg;
+                nfloatarg += 1;
+                continue;
+            }
+        }
+        else {
+            if (nintarg < 5) {
+                ptr[2 + i] = nintarg;
+                nintarg += 1;
+            }
+        }
+        ptr[2 + i] = 12 - 16 + nstack * 8;
+        nstack += 1;
+    }
+#else
+    // TODO
+#endif
+    new (get_interp_func(ptr)) Function(std::move(f));
+    return ExeFunc(nacs_exefunc_cb, ptr, exefunc_interp_free);
 }
 
 }
+}
+
+using namespace NaCs::IR;
+
+extern "C" TagVal nacs_exefunc_real(uint32_t *data, GenVal *vals)
+{
+    return eval_func(*get_interp_func(data), vals);
 }
