@@ -101,9 +101,60 @@ nacs_exefunc_cb:
         .cfi_endproc
 
         .size   nacs_exefunc_cb, . - nacs_exefunc_cb
-
 #elif defined(__i386) || defined(__i386__)
-#define _CPU_X86_
+        .text
+        .hidden nacs_exefunc_cb
+        .globl  nacs_exefunc_cb
+        .type   nacs_exefunc_cb, @function
+nacs_exefunc_cb: // sp: 12/16
+        .cfi_startproc
+        pushl   %ebp // sp: 8/16
+        .cfi_def_cfa_offset 8
+        .cfi_offset 6, -8
+        movl    %esp, %ebp
+        .cfi_def_cfa_register 6
+        movl    8(%esp), %eax  ; arg1 (data)
+        // slot sizes (aligned to 16 bytes)
+        subl    (%eax), %esp // sp: 8/16
+        // Load nargs
+        movl    4(%eax), %ecx
+        testl   %ecx, %ecx
+        jle     .Lskip
+.Lloop:
+        movl    4(%eax,%ecx,4), %edx // Load arguments specifiers
+        cmpl    $0, %edx
+        js      .Lfloat
+        movl    (%ebp,%edx), %edx
+        movl    %edx, -8(%esp,%ecx,8)
+        jmp     .Lloop_end
+
+.Lfloat:
+        andl    $0x80000000, %edx
+        movsd   (%ebp,%edx), %xmm0
+        movsd   %xmm0, -8(%esp,%ecx,8)
+
+.Lloop_end:
+        subl    $1, %ecx
+        jne     .Lloop
+
+.Lskip:
+        movl    %esp, %ecx
+        subl    $12, %esp // sp: 12/16
+        movl    %esp, %edx
+        pushl   %ecx // sp: 8/16
+        pushl   %eax // sp: 4/16
+        pushl   %edx
+        call    nacs_exefunc_real
+        // No need to be conditional here...
+        movl    12(%esp), %eax
+        fldl    12(%esp)
+        movl    %ebp, %esp
+        popl    %ebp
+        .cfi_def_cfa 7, 8
+        retl
+        .cfi_endproc
+
+        .size   nacs_exefunc_cb, . - nacs_exefunc_cb
 #elif defined(__aarch64__)
 #define _CPU_AARCH64_
 #elif defined(__arm__)
