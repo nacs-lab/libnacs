@@ -1252,14 +1252,14 @@ static inline Function *get_interp_func(uint32_t *data)
     return (Function*)&data[offset];
 }
 
-void exefunc_interp_free(void *data)
+static void exefunc_interp_free(void *data)
 {
     auto func = get_interp_func((uint32_t*)data);
     func->~Function();
     ::free(data);
 }
 
-ExeFunc get_interp_func(Function f)
+static inline ExeFunc get_interp_func(Function f)
 {
     uint32_t nargs = f.nargs;
     uint32_t offset = nargs + 2;
@@ -1295,6 +1295,22 @@ ExeFunc get_interp_func(Function f)
 #endif
     new (get_interp_func(ptr)) Function(std::move(f));
     return ExeFunc(nacs_exefunc_cb, ptr, exefunc_interp_free);
+}
+
+class InterpExeContext : public ExeContext {
+    ExeFunc getFunc(const Function &f) override
+    {
+        return get_interp_func(f);
+    }
+    ExeFunc getFunc(Function &&f) override
+    {
+        return get_interp_func(std::move(f));
+    }
+};
+
+std::unique_ptr<ExeContext> ExeContext::getContext()
+{
+    return std::unique_ptr<ExeContext>(new InterpExeContext());
 }
 
 }

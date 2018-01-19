@@ -21,6 +21,7 @@
 #include <assert.h>
 #include <vector>
 #include <map>
+#include <memory>
 
 #ifndef __NACS_UTILS_IR_H__
 #define __NACS_UTILS_IR_H__
@@ -364,6 +365,13 @@ private:
     void (*m_cb)(void);
     void *m_data;
     void (*m_free)(void*);
+};
+
+class ExeContext {
+public:
+    static std::unique_ptr<ExeContext> getContext();
+    virtual ExeFunc getFunc(const Function &) = 0;
+    virtual ExeFunc getFunc(Function&&) = 0;
 };
 
 }
