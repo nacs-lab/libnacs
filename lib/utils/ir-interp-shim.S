@@ -175,52 +175,52 @@ nacs_exefunc_cb:
         b.lt    .Lskip
 .Lloop:
         add     x9, x0, x10, lsl #2
-        ldur    w9, [x9, #-8] // Load arguments specifiers
+        ldur    w9, [x9, #4] // Load arguments specifiers
         cmp     x9, #0
-        mov     x1, x11
+        mov     x11, x1
         b.eq    .Lint_end
         cmp     x9, #1
-        mov     x2, x11
+        mov     x11, x2
         b.eq    .Lint_end
         cmp     x9, #2
-        mov     x3, x11
+        mov     x11, x3
         b.eq    .Lint_end
         cmp     x9, #3
-        mov     x4, x11
+        mov     x11, x4
         b.eq    .Lint_end
         cmp     x9, #4
-        mov     x5, x11
+        mov     x11, x5
         b.eq    .Lint_end
         cmp     x9, #5
-        mov     x6, x11
+        mov     x11, x6
         b.eq    .Lint_end
         cmp     x9, #6
-        mov     x7, x11
+        mov     x11, x7
         b.eq    .Lint_end
 
         cmp     x9, #7
-        mov     v0.16b, v16.16b
+        mov     v16.16b, v0.16b
         b.eq    .Lfloat_end
         cmp     x9, #8
-        mov     v1.16b, v16.16b
+        mov     v16.16b, v1.16b
         b.eq    .Lfloat_end
         cmp     x9, #9
-        mov     v2.16b, v16.16b
+        mov     v16.16b, v2.16b
         b.eq    .Lfloat_end
         cmp     x9, #10
-        mov     v3.16b, v16.16b
+        mov     v16.16b, v3.16b
         b.eq    .Lfloat_end
         cmp     x9, #11
-        mov     v4.16b, v16.16b
+        mov     v16.16b, v4.16b
         b.eq    .Lfloat_end
         cmp     x9, #12
-        mov     v5.16b, v16.16b
+        mov     v16.16b, v5.16b
         b.eq    .Lfloat_end
         cmp     x9, #13
-        mov     v6.16b, v16.16b
+        mov     v16.16b, v6.16b
         b.eq    .Lfloat_end
         cmp     x9, #14
-        mov     v7.16b, v16.16b
+        mov     v16.16b, v7.16b
         b.eq    .Lfloat_end
 
         add     x9, x29, x9
@@ -237,12 +237,10 @@ nacs_exefunc_cb:
         b.ne    .Lloop
 .Lskip:
         mov     x1, sp
-        sub     sp, sp, #16
-        mov     x8, sp
         bl      nacs_exefunc_real
         // No need to be conditional here...
-        ldur    x0, [sp, #8]
-        ldr     d0, [sp, #8]
+        mov     x0, x1
+        fmov    d0, x1
         mov     sp, x29
         ldp     x29, x30, [sp], #16
         .cfi_def_cfa 31, 0
@@ -250,7 +248,6 @@ nacs_exefunc_cb:
         .cfi_endproc
 
         .size   nacs_exefunc_cb, . - nacs_exefunc_cb
-
 #elif defined(__arm__)
 
 #else

@@ -1313,7 +1313,7 @@ static inline ExeFunc get_interp_func(Function f)
         auto ty = f.vals[i];
         if (ty == Type::Float64) {
             if (nfloatarg < 8) {
-                ptr[2 + i] = 8 + nfloatarg;
+                ptr[2 + i] = 7 + nfloatarg;
                 nfloatarg += 1;
                 continue;
             }
@@ -1329,7 +1329,7 @@ static inline ExeFunc get_interp_func(Function f)
         nstack += 1;
     }
 #else
-    // TODO
+#  error "Unsupported architecture"
 #endif
     new (get_interp_func(ptr)) Function(std::move(f));
     return ExeFunc(nacs_exefunc_cb, ptr, exefunc_interp_free);
