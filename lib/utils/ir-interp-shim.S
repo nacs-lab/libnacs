@@ -168,14 +168,14 @@ nacs_exefunc_cb:
         .cfi_offset 30, -8
         mov     x29, sp
         .cfi_def_cfa_register 29
-        ldp     x9, x10, [x0]
+        ldp     w9, w10, [x0]
         // slot sizes (aligned to 16 bytes)
         sub     sp, sp, x9
         cmp     x10, #1
         b.lt    .Lskip
 .Lloop:
         add     x9, x0, x10, lsl #2
-        ldur    x9, [x9, #-8] // Load arguments specifiers
+        ldur    w9, [x9, #-8] // Load arguments specifiers
         cmp     x9, #0
         mov     x1, x11
         b.eq    .Lint_end
