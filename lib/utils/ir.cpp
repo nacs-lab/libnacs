@@ -1386,5 +1386,14 @@ using namespace NaCs::IR;
 
 extern "C" TagVal nacs_exefunc_real(uint32_t *data, GenVal *vals)
 {
-    return eval_func(*get_interp_func(data), vals);
+    auto v = eval_func(*get_interp_func(data), vals);
+    if (v.typ == Type::Float64)
+        return v;
+    if (v.typ == Type::Int32) {
+        memset((char*)&v.val + 4, 0, 4);
+    }
+    else {
+        memset((char*)&v.val + 1, 0, 7);
+    }
+    return v;
 }

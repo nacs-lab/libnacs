@@ -334,7 +334,7 @@ nacs_exefunc_cb:
         vldr.64 d0, [sp, #8]
         mov     sp, fp
         vpop.64 {d8}
-        pop     {r8, r10, fp, lr}
+        pop     {r8, r10, fp, pc}
         .fnend
 
         .size   nacs_exefunc_cb, . - nacs_exefunc_cb
