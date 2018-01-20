@@ -199,8 +199,10 @@ struct TagVal {
     void dump(void) const;
 } __attribute__((aligned(8)));
 
-NACS_EXPORT bool checkBuiltinType(Builtins id, Type *args, size_t narg);
-NACS_EXPORT double evalBuiltin(Builtins id, TagVal *args);
+std::ostream &operator<<(std::ostream &stm, const TagVal &val);
+
+bool checkBuiltinType(Builtins id, Type *args, size_t narg);
+double evalBuiltin(Builtins id, TagVal *args);
 
 struct Function {
     typedef std::vector<int32_t> BB;

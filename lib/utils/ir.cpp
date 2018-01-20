@@ -449,23 +449,28 @@ static inline const char *cmpName(CmpType cmp)
     }
 }
 
-NACS_EXPORT void TagVal::dump(void) const
+NACS_EXPORT std::ostream &operator<<(std::ostream &stm, const TagVal &val)
 {
-    std::cout << typeName(typ) << " ";
-    switch (typ) {
+    stm << typeName(val.typ) << " ";
+    switch (val.typ) {
     case Type::Bool:
-        std::cout << (val.b ? "true" : "false");
+        stm << (val.val.b ? "true" : "false");
         break;
     case Type::Int32:
-        std::cout << val.i32;
+        stm << val.val.i32;
         break;
     case Type::Float64:
-        std::cout << val.f64;
+        stm << val.val.f64;
         break;
     default:
-        std::cout << "undef";
+        stm << "undef";
     }
-    std::cout << std::endl;
+    return stm;
+}
+
+NACS_EXPORT void TagVal::dump(void) const
+{
+    std::cerr << *this << std::endl;
 }
 
 void Function::dumpValName(int32_t id) const
