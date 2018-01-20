@@ -265,47 +265,47 @@ nacs_exefunc_cb:
         // slot sizes (aligned to 16 bytes)
         sub     sp, sp, r10
         cmp     r12, #1
-        b.lt    .Lskip
+        blt     .Lskip
 .Lloop:
         add     r10, r0, r12, lsl #2
         add     r8, sp, r12, lsl #3
         ldr     r10, [r10, #4] // Load arguments specifiers
         cmp     r10, #0
-        mov.eq  r10, r1
-        b.eq    .Lint_end
+        moveq   r10, r1
+        beq     .Lint_end
         cmp     r10, #1
-        mov.eq  r10, r2
-        b.eq    .Lint_end
+        moveq   r10, r2
+        beq     .Lint_end
         cmp     r10, #2
-        mov.eq  r10, r3
-        b.eq    .Lint_end
+        moveq   r10, r3
+        beq     .Lint_end
 
         cmp     r10, #3
-        b.eq    .Lfloat_end
+        beq     .Lfloat_end
         cmp     r10, #4
-        vmov.eq d0, d1
-        b.eq    .Lfloat_end
+        vmoveq.f64 d0, d1
+        beq     .Lfloat_end
         cmp     r10, #5
-        vmov.eq d0, d2
-        b.eq    .Lfloat_end
+        vmoveq.f64 d0, d2
+        beq     .Lfloat_end
         cmp     r10, #6
-        vmov.eq d0, d3
-        b.eq    .Lfloat_end
+        vmoveq.f64 d0, d3
+        beq     .Lfloat_end
         cmp     r10, #7
-        vmov.eq d0, d4
-        b.eq    .Lfloat_end
+        vmoveq.f64 d0, d4
+        beq     .Lfloat_end
         cmp     r10, #8
-        vmov.eq d0, d5
-        b.eq    .Lfloat_end
+        vmoveq.f64 d0, d5
+        beq     .Lfloat_end
         cmp     r10, #9
-        vmov.eq d0, d6
-        b.eq    .Lfloat_end
+        vmoveq.f64 d0, d6
+        beq     .Lfloat_end
         cmp     r10, #10
-        vmov.eq d0, d7
-        b.eq    .Lfloat_end
+        vmoveq.f64 d0, d7
+        beq     .Lfloat_end
 
         cmp     r10, #0
-        b.lt    .Lfloat_spill
+        blt     .Lfloat_spill
         add     r10, fp, r10
         ldr     r10, [r10]
 .Lint_end:
@@ -314,12 +314,12 @@ nacs_exefunc_cb:
 .Lfloat_spill:
         bic     r10, r10, #0x80000000
         add     r10, fp, r10
-        ldr     d0, [r10]
+        vldr    d0, [r10]
 .Lfloat_end:
-        str     d0, [r8, #-8]
+        vstr    d0, [r8, #-8]
 .Lloop_end:
-        subs    r12, x12, #1
-        b.ne    .Lloop
+        subs    r12, r12, #1
+        bne    .Lloop
 .Lskip:
         mov     r2, sp
         mov     r1, r0

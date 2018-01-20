@@ -1331,7 +1331,7 @@ static inline ExeFunc get_interp_func(Function f)
 #elif defined(__arm__)
     uint32_t nintarg = 0;
     uint32_t nfloatarg = 0;
-    uint32_t stackoffset = 16;
+    uint32_t stack_offset = 16;
     for (uint32_t i = 0; i < nargs; i++) {
         auto ty = f.vals[i];
         if (ty == Type::Float64) {
