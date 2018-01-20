@@ -22,6 +22,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <iostream>
 
 #ifndef __NACS_UTILS_IR_H__
 #define __NACS_UTILS_IR_H__
@@ -201,6 +202,11 @@ struct TagVal {
 
 std::ostream &operator<<(std::ostream &stm, const TagVal &val);
 
+inline void TagVal::dump(void) const
+{
+    std::cerr << *this << std::endl;
+}
+
 bool checkBuiltinType(Builtins id, Type *args, size_t narg);
 double evalBuiltin(Builtins id, TagVal *args);
 
@@ -243,10 +249,18 @@ struct Function {
     std::vector<TagVal> consts;
     std::vector<double> float_table;
 private:
-    void dumpValName(int32_t id) const;
-    void dumpVal(int32_t id) const;
-    void dumpBB(const BB&) const;
+    void printValName(std::ostream &stm, int32_t id) const;
+    void printVal(std::ostream &stm, int32_t id) const;
+    void printBB(std::ostream &stm, const BB&) const;
+    friend std::ostream &operator<<(std::ostream &stm, const Function &f);
 };
+
+std::ostream &operator<<(std::ostream &stm, const Function &f);
+
+inline void Function::dump(void) const
+{
+    std::cerr << *this << std::endl;
+}
 
 class NACS_EXPORT Builder {
 public:

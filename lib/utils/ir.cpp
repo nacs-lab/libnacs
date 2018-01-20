@@ -468,31 +468,26 @@ NACS_EXPORT std::ostream &operator<<(std::ostream &stm, const TagVal &val)
     return stm;
 }
 
-NACS_EXPORT void TagVal::dump(void) const
-{
-    std::cerr << *this << std::endl;
-}
-
-void Function::dumpValName(int32_t id) const
+void Function::printValName(std::ostream &stm, int32_t id) const
 {
     if (id >= 0) {
-        std::cout << "%" << id;
+        stm << "%" << id;
     } else if (id == Consts::False) {
-        std::cout << "false";
+        stm << "false";
     } else if (id == Consts::True) {
-        std::cout << "true";
+        stm << "true";
     } else {
         auto &constval = consts[Consts::_Offset - id];
         auto val = constval.val;
         switch (constval.typ) {
         case Type::Int32:
-            std::cout << val.i32;
+            stm << val.i32;
             break;
         case Type::Float64:
-            std::cout << val.f64;
+            stm << val.f64;
             break;
         default:
-            std::cout << "undef";
+            stm << "undef";
         }
     }
 }
@@ -508,13 +503,13 @@ NACS_EXPORT Type Function::valType(int32_t id) const
     }
 }
 
-void Function::dumpVal(int32_t id) const
+void Function::printVal(std::ostream &stm, int32_t id) const
 {
-    std::cout << typeName(valType(id)) << " ";
-    dumpValName(id);
+    stm << typeName(valType(id)) << " ";
+    printValName(stm, id);
 }
 
-void Function::dumpBB(const BB &bb) const
+void Function::printBB(std::ostream &stm, const BB &bb) const
 {
     const int32_t *pc = bb.data();
     const int32_t *end = pc + bb.size();
@@ -523,9 +518,9 @@ void Function::dumpBB(const BB &bb) const
         pc++;
         switch (op) {
         case Opcode::Ret:
-            std::cout << "  ret ";
-            dumpVal(*pc);
-            std::cout << std::endl;
+            stm << "  ret ";
+            printVal(stm, *pc);
+            stm << std::endl;
             pc++;
             break;
         case Opcode::Br: {
@@ -534,15 +529,15 @@ void Function::dumpBB(const BB &bb) const
             auto bb1 = *pc;
             pc++;
             if (cond == Consts::True) {
-                std::cout << "  br L" << bb1;
+                stm << "  br L" << bb1;
             } else {
                 auto bb2 = *pc;
                 pc++;
-                std::cout << "  br ";
-                dumpVal(cond);
-                std::cout << ", L" << bb1 << ", L" << bb2;
+                stm << "  br ";
+                printVal(stm, cond);
+                stm << ", L" << bb1 << ", L" << bb2;
             }
-            std::cout << std::endl;
+            stm << std::endl;
             break;
         }
         case Opcode::Add:
@@ -555,13 +550,13 @@ void Function::dumpBB(const BB &bb) const
             pc++;
             auto val2 = *pc;
             pc++;
-            std::cout << "  ";
-            dumpVal(res);
-            std::cout << " = " << opName(op) << " ";
-            dumpVal(val1);
-            std::cout << ", ";
-            dumpVal(val2);
-            std::cout << std::endl;
+            stm << "  ";
+            printVal(stm, res);
+            stm << " = " << opName(op) << " ";
+            printVal(stm, val1);
+            stm << ", ";
+            printVal(stm, val2);
+            stm << std::endl;
             break;
         }
         case Opcode::Cmp: {
@@ -573,13 +568,13 @@ void Function::dumpBB(const BB &bb) const
             pc++;
             auto val2 = *pc;
             pc++;
-            std::cout << "  ";
-            dumpVal(res);
-            std::cout << " = " << opName(op) << " " << cmpName(cmptyp) << " ";
-            dumpVal(val1);
-            std::cout << ", ";
-            dumpVal(val2);
-            std::cout << std::endl;
+            stm << "  ";
+            printVal(stm, res);
+            stm << " = " << opName(op) << " " << cmpName(cmptyp) << " ";
+            printVal(stm, val1);
+            stm << ", ";
+            printVal(stm, val2);
+            stm << std::endl;
             break;
         }
         case Opcode::Phi: {
@@ -587,21 +582,21 @@ void Function::dumpBB(const BB &bb) const
             pc++;
             auto nargs = *pc;
             pc++;
-            std::cout << "  ";
-            dumpVal(res);
-            std::cout << " = " << opName(op) << " ";
+            stm << "  ";
+            printVal(stm, res);
+            stm << " = " << opName(op) << " ";
             for (int i = 0;i < nargs;i++) {
                 if (i != 0) {
-                    std::cout << ", [ L";
+                    stm << ", [ L";
                 } else {
-                    std::cout << "[ L";
+                    stm << "[ L";
                 }
-                std::cout << pc[2 * i] << ": ";
-                dumpVal(pc[2 * i + 1]);
-                std::cout << " ]";
+                stm << pc[2 * i] << ": ";
+                printVal(stm, pc[2 * i + 1]);
+                stm << " ]";
             }
             pc += 2 * nargs;
-            std::cout << std::endl;
+            stm << std::endl;
             break;
         }
         case Opcode::Call: {
@@ -611,17 +606,17 @@ void Function::dumpBB(const BB &bb) const
             pc++;
             auto nargs = *pc;
             pc++;
-            std::cout << "  ";
-            dumpVal(res);
-            std::cout << " = " << opName(op) << " " << builtinName(id) << "(";
+            stm << "  ";
+            printVal(stm, res);
+            stm << " = " << opName(op) << " " << builtinName(id) << "(";
             for (int i = 0;i < nargs;i++) {
                 if (i != 0) {
-                    std::cout << ", ";
+                    stm << ", ";
                 }
-                dumpVal(pc[i]);
+                printVal(stm, pc[i]);
             }
             pc += nargs;
-            std::cout << ")" << std::endl;
+            stm << ")" << std::endl;
             break;
         }
         case Opcode::Interp: {
@@ -637,43 +632,44 @@ void Function::dumpBB(const BB &bb) const
             pc++;
             auto ndata = *pc;
             pc++;
-            std::cout << "  ";
-            dumpVal(res);
-            std::cout << " = " << opName(op)
+            stm << "  ";
+            printVal(stm, res);
+            stm << " = " << opName(op)
                       << " [" << x0 << ", (" << ndata << ") +" << dx << "] (";
-            dumpVal(input);
-            std::cout << ") {";
+            printVal(stm, input);
+            stm << ") {";
             auto datap = &float_table[data];
             for (int32_t i = 0; i < ndata; i++) {
                 if (i != 0)
-                    std::cout << ", ";
-                std::cout << datap[i];
+                    stm << ", ";
+                stm << datap[i];
             }
-            std::cout << "}" << std::endl;
+            stm << "}" << std::endl;
             break;
         }
         default:
-            std::cout << "  unknown op: " << uint8_t(op) << std::endl;
+            stm << "  unknown op: " << uint8_t(op) << std::endl;
             break;
         }
     }
 }
 
-NACS_EXPORT void Function::dump(void) const
+NACS_EXPORT std::ostream &operator<<(std::ostream &stm, const Function &f)
 {
-    std::cout << typeName(ret) << " (";
-    for (int i = 0;i < nargs;i++) {
+    stm << typeName(f.ret) << " (";
+    for (int i = 0;i < f.nargs;i++) {
         if (i != 0)
-            std::cout << ", ";
-        std::cout << typeName(valType(i)) << " ";
-        dumpValName(i);
+            stm << ", ";
+        stm << typeName(f.valType(i)) << " ";
+        f.printValName(stm, i);
     }
-    std::cout << ") {" << std::endl;
-    for (size_t i = 0;i < code.size();i++) {
-        std::cout << "L" << i << ":" << std::endl;
-        dumpBB(code[i]);
+    stm << ") {" << std::endl;
+    for (size_t i = 0;i < f.code.size();i++) {
+        stm << "L" << i << ":" << std::endl;
+        f.printBB(stm, f.code[i]);
     }
-    std::cout << "}" << std::endl;
+    stm << "}";
+    return stm;
 }
 
 NACS_EXPORT std::vector<uint32_t> Function::serialize(void) const
