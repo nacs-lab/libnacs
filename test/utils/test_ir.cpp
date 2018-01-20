@@ -363,9 +363,9 @@ main()
 
         const double points[] = {0, 0.1, 0.2, 0.6};
         auto f = exectx->getFunc<double(double)>(builder.get());
-        assert(f(2.3) == linearInterpolate(2.3, 2, 3, 4, points));
-        assert(f(3.5) == linearInterpolate(3.5, 2, 3, 4, points));
-        assert(f(4.4) == linearInterpolate(4.4, 2, 3, 4, points));
+        assert(fabs(f(2.3) - linearInterpolate(2.3, 2, 3, 4, points)) < 1e-10);
+        assert(fabs(f(3.5) - linearInterpolate(3.5, 2, 3, 4, points)) < 1e-10);
+        assert(fabs(f(4.4) - linearInterpolate(4.4, 2, 3, 4, points)) < 1e-10);
     }
 
     {
