@@ -266,12 +266,10 @@ main()
 
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Int32});
-        builder.createRet(
-            builder.createAdd(builder.createCall(IR::Builtins::sin, {0}),
-                              builder.createCall(IR::Builtins::sin, {
-                                      builder.createMul(0,
-                                                        builder.getConstInt(2))
-                                          })));
+        auto v2 = builder.createMul(0, builder.getConstInt(2));
+        auto s1 = builder.createCall(IR::Builtins::sin, {v2});
+        auto s2 = builder.createCall(IR::Builtins::sin, {0});
+        builder.createRet(builder.createAdd(s2, s1));
         test_str_eq(builder.get(), "Float64 (Int32 %0) {\n"
                     "L0:\n"
                     "  Int32 %1 = mul Int32 %0, Int32 2\n"
