@@ -249,7 +249,91 @@ nacs_exefunc_cb:
 
         .size   nacs_exefunc_cb, . - nacs_exefunc_cb
 #elif defined(__arm__)
+        .text
+        .hidden nacs_exefunc_cb
+        .globl  nacs_exefunc_cb
+        .type   nacs_exefunc_cb, #function
+        .arm
+        .fpu vfp
+nacs_exefunc_cb:
+        .fnstart
+        push    {r8, r10, fp, lr}
+        .save   {r8, r10, fp, lr}
+        mov     fp, sp
+        .setfp  fp, sp
+        ldm     r0, {r10, r12}
+        // slot sizes (aligned to 16 bytes)
+        sub     sp, sp, r10
+        cmp     r12, #1
+        b.lt    .Lskip
+.Lloop:
+        add     r10, r0, r12, lsl #2
+        add     r8, sp, r12, lsl #3
+        ldr     r10, [r10, #4] // Load arguments specifiers
+        cmp     r10, #0
+        mov.eq  r10, r1
+        b.eq    .Lint_end
+        cmp     r10, #1
+        mov.eq  r10, r2
+        b.eq    .Lint_end
+        cmp     r10, #2
+        mov.eq  r10, r3
+        b.eq    .Lint_end
 
+        cmp     r10, #3
+        b.eq    .Lfloat_end
+        cmp     r10, #4
+        vmov.eq d0, d1
+        b.eq    .Lfloat_end
+        cmp     r10, #5
+        vmov.eq d0, d2
+        b.eq    .Lfloat_end
+        cmp     r10, #6
+        vmov.eq d0, d3
+        b.eq    .Lfloat_end
+        cmp     r10, #7
+        vmov.eq d0, d4
+        b.eq    .Lfloat_end
+        cmp     r10, #8
+        vmov.eq d0, d5
+        b.eq    .Lfloat_end
+        cmp     r10, #9
+        vmov.eq d0, d6
+        b.eq    .Lfloat_end
+        cmp     r10, #10
+        vmov.eq d0, d7
+        b.eq    .Lfloat_end
+
+        cmp     r10, #0
+        b.lt    .Lfloat_spill
+        add     r10, fp, r10
+        ldr     r10, [r10]
+.Lint_end:
+        str     r10, [r8, #-8]
+        b       .Lloop_end
+.Lfloat_spill:
+        bic     r10, r10, #0x80000000
+        add     r10, fp, r10
+        ldr     d0, [r10]
+.Lfloat_end:
+        str     d0, [r8, #-8]
+.Lloop_end:
+        subs    r12, x12, #1
+        b.ne    .Lloop
+.Lskip:
+        mov     r2, sp
+        mov     r1, r0
+        sub     sp, sp, #16
+        mov     r0, sp
+        bl      nacs_exefunc_real
+        // No need to be conditional here...
+        ldr     r0, [sp, #8]
+        vldr.64 d0, [sp, #8]
+        mov     sp, fp
+        pop     {r8, r10, fp, lr}
+        .fnend
+
+        .size   nacs_exefunc_cb, . - nacs_exefunc_cb
 #else
 #  error "Unsupported architecture"
 #endif

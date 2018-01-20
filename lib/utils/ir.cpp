@@ -1328,6 +1328,33 @@ static inline ExeFunc get_interp_func(Function f)
         ptr[2 + i] = 16 + nstack * 8;
         nstack += 1;
     }
+#elif defined(__arm__)
+    uint32_t nintarg = 0;
+    uint32_t nfloatarg = 0;
+    uint32_t stackoffset = 16;
+    for (uint32_t i = 0; i < nargs; i++) {
+        auto ty = f.vals[i];
+        if (ty == Type::Float64) {
+            if (nfloatarg < 8) {
+                ptr[2 + i] = 3 + nfloatarg;
+                nfloatarg += 1;
+            }
+            else {
+                ptr[2 + i] = stack_offset | 0x80000000;
+                stack_offset += 8;
+            }
+        }
+        else {
+            if (nintarg < 3) {
+                ptr[2 + i] = nintarg;
+                nintarg += 1;
+            }
+            else {
+                ptr[2 + i] = stack_offset;
+                stack_offset += 4;
+            }
+        }
+    }
 #else
 #  error "Unsupported architecture"
 #endif
