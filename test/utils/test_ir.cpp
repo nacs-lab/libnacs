@@ -21,11 +21,34 @@
 #endif
 
 #include <nacs-utils/ir.h>
+#include <nacs-utils/number.h>
 #include <nacs-utils/timer.h>
 #include <assert.h>
 #include <iostream>
+#include <sstream>
+#include <math.h>
 
 using namespace NaCs;
+
+template<typename T>
+static std::string sprint(T &&v)
+{
+    std::stringstream stm;
+    stm << std::forward<T>(v);
+    return stm.str();
+}
+
+template<typename T>
+static void test_str_eq(T &&v, std::string val)
+{
+    auto str = sprint(std::forward<T>(v));
+    if (val == str)
+        return;
+    std::cerr << "Test failed:" << std::endl;
+    std::cerr << "  Expect: \"" << val << "\"" << std::endl;
+    std::cerr << "  Got: \"" << str << "\"" << std::endl;
+    abort();
+}
 
 int
 main()
@@ -40,41 +63,63 @@ main()
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
         builder.createRet(0);
-        builder.get().dump();
+        test_str_eq(builder.get(),
+                    "Float64 (Float64 %0) {\n"
+                    "L0:\n"
+                    "  ret Float64 %0\n"
+                    "}");
         IR::EvalContext ctx(builder.get());
         ctx.reset({1.2});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 1.2");
         ctx.reset({4.2});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 4.2");
+
+        auto f = exectx->getFunc(builder.get());
+        assert(f.call<double(double)>(1.2) == 1.2);
+        assert(f.call<double(double)>(4.2) == 4.2);
     }
-    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Bool, {});
         builder.createRet(IR::Consts::False);
-        builder.get().dump();
+        test_str_eq(builder.get(), "Bool () {\n"
+                    "L0:\n"
+                    "  ret Bool false\n"
+                    "}");
         IR::EvalContext ctx(builder.get());
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Bool false");
+
+        auto f = exectx->getFunc(builder.get());
+        assert(f.call<bool()>() == false);
     }
-    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Float64, {});
         builder.createRet(builder.getConstFloat(1.1));
-        builder.get().dump();
+        test_str_eq(builder.get(), "Float64 () {\n"
+                    "L0:\n"
+                    "  ret Float64 1.1\n"
+                    "}");
         IR::EvalContext ctx(builder.get());
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 1.1");
+
+        auto f = exectx->getFunc(builder.get());
+        assert(f.call<double()>() == 1.1);
     }
-    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Int32, {});
         builder.createRet(builder.getConstInt(42));
-        builder.get().dump();
+        test_str_eq(builder.get(), "Int32 () {\n"
+                    "L0:\n"
+                    "  ret Int32 42\n"
+                    "}");
         IR::EvalContext ctx(builder.get());
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Int32 42");
+
+        auto f = exectx->getFunc(builder.get());
+        assert(f.call<int()>() == 42);
     }
-    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Bool,
@@ -86,14 +131,24 @@ main()
         builder.createRet(1);
         builder.curBB() = fail_bb;
         builder.createRet(builder.getConstFloat(3.4));
-        builder.get().dump();
+        test_str_eq(builder.get(), "Float64 (Bool %0, Float64 %1) {\n"
+                    "L0:\n"
+                    "  br Bool %0, L1, L2\n"
+                    "L1:\n"
+                    "  ret Float64 %1\n"
+                    "L2:\n"
+                    "  ret Float64 3.4\n"
+                    "}");
         IR::EvalContext ctx(builder.get());
         ctx.reset({true, 1.3});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 1.3");
         ctx.reset({false, 1.3});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 3.4");
+
+        auto f = exectx->getFunc(builder.get());
+        assert(f.call<double(bool, double)>(true, 1.3) == 1.3);
+        assert(f.call<double(bool, double)>(false, 1.3) == 3.4);
     }
-    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Float64,
@@ -102,24 +157,38 @@ main()
         auto val2 = builder.createMul(val1, 1);
         auto val3 = builder.createSub(val1, val2);
         builder.createRet(val3);
-        builder.get().dump();
+        test_str_eq(builder.get(), "Float64 (Float64 %0, Float64 %1) {\n"
+                    "L0:\n"
+                    "  Float64 %2 = add Float64 3.4, Float64 %0\n"
+                    "  Float64 %3 = mul Float64 %2, Float64 %1\n"
+                    "  Float64 %4 = sub Float64 %2, Float64 %3\n"
+                    "  ret Float64 %4\n"
+                    "}");
         IR::EvalContext ctx(builder.get());
         ctx.reset({2.3, 1.3});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 -1.71");
+
+        auto f = exectx->getFunc(builder.get());
+        assert(f.call<double(double, double)>(2.3, 1.3) == -1.71);
     }
-    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Float64,
                             {IR::Type::Int32, IR::Type::Int32});
         auto val1 = builder.createFDiv(0, 1);
         builder.createRet(val1);
-        builder.get().dump();
+        test_str_eq(builder.get(), "Float64 (Int32 %0, Int32 %1) {\n"
+                    "L0:\n"
+                    "  Float64 %2 = fdiv Int32 %0, Int32 %1\n"
+                    "  ret Float64 %2\n"
+                    "}");
         IR::EvalContext ctx(builder.get());
         ctx.reset({3, 2});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 1.5");
+
+        auto f = exectx->getFunc(builder.get());
+        assert(f.call<double(int, int)>(3, 2) == 1.5);
     }
-    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Int32,
@@ -132,14 +201,25 @@ main()
         builder.createRet(1);
         builder.curBB() = fail_bb;
         builder.createRet(0);
-        builder.get().dump();
+        test_str_eq(builder.get(), "Float64 (Int32 %0, Float64 %1) {\n"
+                    "L0:\n"
+                    "  Bool %2 = cmp ge Int32 %0, Float64 %1\n"
+                    "  br Bool %2, L1, L2\n"
+                    "L1:\n"
+                    "  ret Float64 %1\n"
+                    "L2:\n"
+                    "  ret Int32 %0\n"
+                    "}");
         IR::EvalContext ctx(builder.get());
         ctx.reset({20, 1.3});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 1.3");
         ctx.reset({-10, 1.3});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 -10");
+
+        auto f = exectx->getFunc(builder.get());
+        assert(f.call<double(int, double)>(20, 1.3) == 1.3);
+        assert(f.call<double(int, double)>(-10, 1.3) == -10);
     }
-    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Int32,
@@ -160,14 +240,29 @@ main()
         builder.addPhiInput(s.second, loop_bb, s2);
         builder.curBB() = ret_bb;
         builder.createRet(s2);
-        builder.get().dump();
+        test_str_eq(builder.get(), "Int32 (Int32 %0, Int32 %1) {\n"
+                    "L0:\n"
+                    "  br L1\n"
+                    "L1:\n"
+                    "  Int32 %2 = phi [ L0: Int32 %0 ], [ L1: Int32 %4 ]\n"
+                    "  Int32 %3 = phi [ L0: Int32 0 ], [ L1: Int32 %5 ]\n"
+                    "  Int32 %4 = add Int32 %2, Int32 1\n"
+                    "  Int32 %5 = add Int32 %3, Int32 %2\n"
+                    "  Bool %6 = cmp gt Int32 %4, Int32 %1\n"
+                    "  br Bool %6, L2, L1\n"
+                    "L2:\n"
+                    "  ret Int32 %5\n"
+                    "}");
         IR::EvalContext ctx(builder.get());
         ctx.reset({1, 3});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Int32 6");
         ctx.reset({2, 1000});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Int32 500499");
+
+        auto f = exectx->getFunc(builder.get());
+        assert(f.call<int(int, int)>(1, 3) == 6);
+        assert(f.call<int(int, int)>(2, 1000) == 500499);
     }
-    std::cout << std::endl;
 
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Int32});
@@ -176,20 +271,31 @@ main()
                               builder.createCall(IR::Builtins::sin, {
                                       builder.createMul(0,
                                                         builder.getConstInt(2))
-                                  })));
-        builder.get().dump();
+                                          })));
+        test_str_eq(builder.get(), "Float64 (Int32 %0) {\n"
+                    "L0:\n"
+                    "  Int32 %1 = mul Int32 %0, Int32 2\n"
+                    "  Float64 %2 = call sin(Int32 %1)\n"
+                    "  Float64 %3 = call sin(Int32 %0)\n"
+                    "  Float64 %4 = add Float64 %3, Float64 %2\n"
+                    "  ret Float64 %4\n"
+                    "}");
         IR::EvalContext ctx(builder.get());
         ctx.reset({1});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 1.75077");
         ctx.reset({2});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 0.152495");
+
+        auto f1 = exectx->getFunc(builder.get());
+        assert(f1.call<double(int)>(1) == sin(1) + sin(2));
+        assert(f1.call<double(int)>(2) == sin(4) + sin(2));
 
         auto data = builder.get().serialize();
         IR::Function newfunc(data);
-        newfunc.dump();
+        test_str_eq(newfunc, sprint(builder.get()));
         IR::EvalContext ctx2(newfunc);
         ctx2.reset({1});
-        ctx2.eval().dump();
+        test_str_eq(ctx2.eval(), "Float64 1.75077");
 
         tic();
         for (int i = 0;i < 1000000;i++) {
@@ -204,27 +310,39 @@ main()
             f.call<double(int)>(1);
         printToc();
     }
-    std::cout << std::endl;
 
     {
-        std::cout << sizeof(IR::TagVal) << std::endl;
+        static_assert(sizeof(IR::TagVal) == 16);
         const int32_t data[] = {
             3, 2, 6, 50529027, 771, 1, 3, 0, 1073741824, 1, 14, 5,
             5, 0, -3, 3, 4, 5, -3, 3, 2, 3, 1, 1, 2
         };
         IR::Function newfunc((const uint32_t*)data, sizeof(data) / 4);
-        newfunc.dump();
+        test_str_eq(newfunc, "Float64 (Float64 %0, Float64 %1) {\n"
+                    "L0:\n"
+                    "  Float64 %5 = mul Float64 %0, Float64 2\n"
+                    "  Float64 %4 = add Float64 %5, Float64 2\n"
+                    "  Float64 %2 = add Float64 %3, Float64 %1\n"
+                    "  ret Float64 %2\n"
+                    "}");
     }
 
     {
-        std::cout << sizeof(IR::TagVal) << std::endl;
         const int32_t data[] = {
             3, 2, 7, 50529027, 197379, 2, 3, 0, 1072693248, 3, 0, 1073741824,
             1, 22, 4, 5, -3, 0, 5, 4, -3, 5, 5, 6, -4, 0, 3, 3, 4, 6, 6, 2, 3,
             -3, 1, 2
         };
         IR::Function newfunc((const uint32_t*)data, sizeof(data) / 4);
-        newfunc.dump();
+        test_str_eq(newfunc, "Float64 (Float64 %0, Float64 %1) {\n"
+                    "L0:\n"
+                    "  Float64 %5 = sub Float64 1, Float64 %0\n"
+                    "  Float64 %4 = mul Float64 1, Float64 %5\n"
+                    "  Float64 %6 = mul Float64 2, Float64 %0\n"
+                    "  Float64 %3 = add Float64 %4, Float64 %6\n"
+                    "  Float64 %2 = fdiv Float64 %3, Float64 1\n"
+                    "  ret Float64 %2\n"
+                    "}");
     }
 
     {
@@ -232,19 +350,24 @@ main()
         const double data[] = {0.0, 0.1, 0.2, 0.6};
         auto val1 = builder.createInterp(0, 2, 3, sizeof(data) / sizeof(double), data);
         builder.createRet(val1);
-        builder.get().dump();
+        test_str_eq(builder.get(), "Float64 (Float64 %0) {\n"
+                    "L0:\n"
+                    "  Float64 %1 = interp [2, (4) +3] (Float64 %0) {0, 0.1, 0.2, 0.6}\n"
+                    "  ret Float64 %1\n"
+                    "}");
         IR::EvalContext ctx(builder.get());
         ctx.reset({2.3});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 0.03");
         ctx.reset({3.5});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 0.15");
         ctx.reset({4.4});
-        ctx.eval().dump();
+        test_str_eq(ctx.eval(), "Float64 0.36");
 
+        const double points[] = {0, 0.1, 0.2, 0.6};
         auto f = exectx->getFunc(builder.get());
-        std::cout << "XXXXX: " << f.call<double(double)>(2.3) << std::endl;
-        std::cout << "XXXXX: " << f.call<double(double)>(3.5) << std::endl;
-        std::cout << "XXXXX: " << f.call<double(double)>(4.4) << std::endl;
+        assert(f.call<double(double)>(2.3) == linearInterpolate(2.3, 2, 3, 4, points));
+        assert(f.call<double(double)>(3.5) == linearInterpolate(3.5, 2, 3, 4, points));
+        assert(f.call<double(double)>(4.4) == linearInterpolate(4.4, 2, 3, 4, points));
     }
 
     {
@@ -253,10 +376,13 @@ main()
             1, 2, 4, 0, 1072693248, 0, 1073741824, 0, 1074003968, 0, 1072693248
         };
         IR::Function newfunc((const uint32_t*)data, sizeof(data) / 4);
-        newfunc.dump();
+        test_str_eq(newfunc, "Float64 (Float64 %0, Float64 %1) {\n"
+                    "L0:\n"
+                    "  Float64 %3 = interp [1, (4) +1] (Float64 %0) {1, 2, 2.5, 1}\n"
+                    "  Float64 %2 = add Float64 %3, Float64 %1\n"
+                    "  ret Float64 %2\n"
+                    "}");
     }
-
-    std::cout << std::endl;
 
     return 0;
 }

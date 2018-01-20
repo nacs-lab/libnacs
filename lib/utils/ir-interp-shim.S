@@ -42,10 +42,10 @@ nacs_exefunc_cb:
         cmoveq  %rsi, %rax
         je      .Lint_end
         cmpq    $1, %rax
-        cmoveq  %rcx, %rax
+        cmoveq  %rdx, %rax
         je      .Lint_end
         cmpq    $2, %rax
-        cmoveq  %rdx, %rax
+        cmoveq  %rcx, %rax
         je      .Lint_end
         cmpq    $3, %rax
         cmoveq  %r8, %rax
