@@ -338,56 +338,86 @@ private:
     std::vector<GenVal> m_vals;
 };
 
-class ExeFunc {
+class ExeContext {
     template<typename FT> struct FuncType;
     template<typename R, typename... Args> struct FuncType<R(Args...)> {
         using ret = R;
         using fptr = R(*)(void*, Args...);
     };
 public:
-    ExeFunc(void (*cb)(void), void *data, void (*free)(void*))
-        : m_cb(cb), m_data(data), m_free(free)
-    {}
-    ExeFunc(ExeFunc &&other)
-        : m_cb(other.m_cb),
-          m_data(other.m_data),
-          m_free(other.m_free)
-    {
-        other.m_cb = nullptr;
-        other.m_data = nullptr;
-        other.m_free = nullptr;
-    }
-    ExeFunc(const ExeFunc&) = delete;
-    ExeFunc &operator=(ExeFunc &&other)
-    {
-        std::swap(other.m_cb, m_cb);
-        std::swap(other.m_data, m_data);
-        std::swap(other.m_free, m_free);
-        return *this;
-    }
-    ExeFunc &operator=(const ExeFunc&) = delete;
-    ~ExeFunc()
-    {
-        if (m_free) {
-            m_free(m_data);
+    class ExeFuncBase {
+    public:
+        ExeFuncBase(void (*cb)(void), void *data, void (*free)(void*))
+            : m_cb(cb), m_data(data), m_free(free)
+        {}
+        ExeFuncBase(ExeFuncBase &&other)
+            : m_cb(other.m_cb),
+              m_data(other.m_data),
+              m_free(other.m_free)
+        {
+            other.m_cb = nullptr;
+            other.m_data = nullptr;
+            other.m_free = nullptr;
         }
-    }
-    template<typename FT, typename... Args> typename FuncType<FT>::ret call(Args&&... args)
-    {
-        return typename FuncType<FT>::fptr(m_cb)(m_data, std::forward<Args>(args)...);
-    }
+        ExeFuncBase(const ExeFuncBase&) = delete;
+        ExeFuncBase &operator=(ExeFuncBase &&other)
+        {
+            std::swap(other.m_cb, m_cb);
+            std::swap(other.m_data, m_data);
+            std::swap(other.m_free, m_free);
+            return *this;
+        }
+        ExeFuncBase &operator=(const ExeFuncBase&) = delete;
+        ~ExeFuncBase()
+        {
+            if (m_free) {
+                m_free(m_data);
+            }
+        }
+        template<typename FT, typename... Args> typename FuncType<FT>::ret call(Args&&... args)
+        {
+            return typename FuncType<FT>::fptr(m_cb)(m_data, std::forward<Args>(args)...);
+        }
 
-private:
-    void (*m_cb)(void);
-    void *m_data;
-    void (*m_free)(void*);
-};
+    private:
+        void (*m_cb)(void);
+        void *m_data;
+        void (*m_free)(void*);
+    };
+    template<typename FT>
+    class ExeFunc {
+    public:
+        ExeFunc(ExeFuncBase &&base)
+            : m_base(std::move(base))
+        {}
+        ExeFunc(ExeFunc &&other)
+            : m_base(std::move(other.m_base))
+        {}
+        ExeFunc(const ExeFunc&) = delete;
+        ExeFunc &operator=(ExeFunc &&other)
+        {
+            m_base = std::move(other.m_base);
+            return *this;
+        }
+        ExeFuncBase &operator=(const ExeFuncBase&) = delete;
+        template<typename... Args>
+        typename FuncType<FT>::ret operator()(Args&&... args)
+        {
+            return this->m_base.call<FT>(std::forward<Args>(args)...);
+        }
 
-class ExeContext {
-public:
+    private:
+        ExeFuncBase m_base;
+        friend class ExeContext;
+    };
     static std::unique_ptr<ExeContext> get();
-    virtual ExeFunc getFunc(const Function &) = 0;
-    virtual ExeFunc getFunc(Function&&) = 0;
+    virtual ExeFuncBase getFuncBase(const Function &) = 0;
+    virtual ExeFuncBase getFuncBase(Function&&) = 0;
+    template<typename FT, typename F>
+    ExeFunc<FT> getFunc(F &&f)
+    {
+        return ExeFunc<FT>(getFuncBase(std::forward<F>(f)));
+    }
 };
 
 }

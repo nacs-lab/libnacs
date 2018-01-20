@@ -33,7 +33,7 @@ typedef double (*fptr_t)(double);
 static fptr_t getBuiltinPtr(Builtins id)
 {
     switch (id) {
-    // f(f)
+        // f(f)
     case Builtins::acos:
         return ::acos;
     case Builtins::acosh:
@@ -107,7 +107,7 @@ static fptr_t getBuiltinPtr(Builtins id)
     case Builtins::y1:
         return ::y1;
 
-    // f(f, f)
+        // f(f, f)
     case Builtins::atan2:
         return fptr_t(static_cast<double(*)(double, double)>(::atan2));
     case Builtins::copysign:
@@ -127,15 +127,15 @@ static fptr_t getBuiltinPtr(Builtins id)
     case Builtins::remainder:
         return fptr_t(static_cast<double(*)(double, double)>(::remainder));
 
-    // f(f, f, f)
+        // f(f, f, f)
     case Builtins::fma:
         return fptr_t(static_cast<double(*)(double, double, double)>(::fma));
 
-    // f(f, i)
+        // f(f, i)
     case Builtins::ldexp:
         return fptr_t(static_cast<double(*)(double, int)>(::ldexp));
 
-    // f(i, f)
+        // f(i, f)
     case Builtins::jn:
         return fptr_t(static_cast<double(*)(int, double)>(::jn));
     case Builtins::yn:
@@ -148,7 +148,7 @@ static fptr_t getBuiltinPtr(Builtins id)
 static const char *builtinName(Builtins id)
 {
     switch (id) {
-    // f(f)
+        // f(f)
     case Builtins::acos:
         return "acos";
     case Builtins::acosh:
@@ -222,7 +222,7 @@ static const char *builtinName(Builtins id)
     case Builtins::y1:
         return "y1";
 
-    // f(f, f)
+        // f(f, f)
     case Builtins::atan2:
         return "atan2";
     case Builtins::copysign:
@@ -242,15 +242,15 @@ static const char *builtinName(Builtins id)
     case Builtins::remainder:
         return "remainder";
 
-    // f(f, f, f)
+        // f(f, f, f)
     case Builtins::fma:
         return "fma";
 
-    // f(f, i)
+        // f(f, i)
     case Builtins::ldexp:
         return "ldexp";
 
-    // f(i, f)
+        // f(i, f)
     case Builtins::jn:
         return "jn";
     case Builtins::yn:
@@ -267,12 +267,12 @@ enum class BuiltinType : uint8_t {
     F64_F64F64F64,
     F64_F64I32,
     F64_I32F64,
-    };
+};
 
 static BuiltinType getBuiltinType(Builtins id)
 {
     switch (id) {
-    // f(f)
+        // f(f)
     case Builtins::acos:
     case Builtins::acosh:
     case Builtins::asin:
@@ -311,7 +311,7 @@ static BuiltinType getBuiltinType(Builtins id)
     case Builtins::y1:
         return BuiltinType::F64_F64;
 
-    // f(f, f)
+        // f(f, f)
     case Builtins::atan2:
     case Builtins::copysign:
     case Builtins::fdim:
@@ -323,15 +323,15 @@ static BuiltinType getBuiltinType(Builtins id)
     case Builtins::remainder:
         return BuiltinType::F64_F64F64;
 
-    // f(f, f, f)
+        // f(f, f, f)
     case Builtins::fma:
         return BuiltinType::F64_F64F64F64;
 
-    // f(f, i)
+        // f(f, i)
     case Builtins::ldexp:
         return BuiltinType::F64_F64I32;
 
-    // f(i, f)
+        // f(i, f)
     case Builtins::jn:
     case Builtins::yn:
         return BuiltinType::F64_I32F64;
@@ -635,7 +635,7 @@ void Function::printBB(std::ostream &stm, const BB &bb) const
             stm << "  ";
             printVal(stm, res);
             stm << " = " << opName(op)
-                      << " [" << x0 << ", (" << ndata << ") +" << dx << "] (";
+                << " [" << x0 << ", (" << ndata << ") +" << dx << "] (";
             printVal(stm, input);
             stm << ") {";
             auto datap = &float_table[data];
@@ -1253,124 +1253,124 @@ static inline Function *get_interp_func(uint32_t *data)
     return (Function*)&data[offset];
 }
 
-static void exefunc_interp_free(void *data)
-{
-    auto func = get_interp_func((uint32_t*)data);
-    func->~Function();
-    ::free(data);
-}
+struct InterpExeContext : public ExeContext {
+    static void exefunc_free(void *data)
+    {
+        auto func = get_interp_func((uint32_t*)data);
+        func->~Function();
+        ::free(data);
+    }
 
-static inline ExeFunc get_interp_func(Function f)
-{
-    uint32_t nargs = f.nargs;
-    uint32_t offset = nargs + 2;
-    offset = (offset + 3) & ~(uint32_t)3; // align to 16bytes
-    size_t sz = offset * 4 + sizeof(f);
-    auto ptr = (uint32_t*)malloc(sz);
-    ptr[0] = (f.vals.size() * 8 + 8) & ~(uint32_t)15;
-    ptr[1] = nargs;
+    static inline ExeFuncBase getFuncIntern(Function f)
+    {
+        uint32_t nargs = f.nargs;
+        uint32_t offset = nargs + 2;
+        offset = (offset + 3) & ~(uint32_t)3; // align to 16bytes
+        size_t sz = offset * 4 + sizeof(f);
+        auto ptr = (uint32_t*)malloc(sz);
+        ptr[0] = (f.vals.size() * 8 + 8) & ~(uint32_t)15;
+        ptr[1] = nargs;
 #if defined(__x86_64__) || defined(__x86_64)
-    uint32_t nintarg = 0;
-    uint32_t nfloatarg = 0;
-    uint32_t nstack = 0;
-    for (uint32_t i = 0; i < nargs; i++) {
-        auto ty = f.vals[i];
-        if (ty == Type::Float64) {
-            if (nfloatarg < 6) {
-                ptr[2 + i] = 5 + nfloatarg;
-                nfloatarg += 1;
-                continue;
-            }
-        }
-        else {
-            if (nintarg < 5) {
-                ptr[2 + i] = nintarg;
-                nintarg += 1;
-                continue;
-            }
-        }
-        ptr[2 + i] = 16 + nstack * 8;
-        nstack += 1;
-    }
-#elif defined(__i386) || defined(__i386__)
-    // 4bytes data pointer, 4 bytes return address and 4 bytes base pointer spill
-    uint32_t stack_offset = 12;
-    for (uint32_t i = 0; i < nargs; i++) {
-        auto ty = f.vals[i];
-        if (ty == Type::Float64) {
-            ptr[2 + i] = stack_offset | 0x80000000;
-            stack_offset += 8;
-        }
-        else {
-            ptr[2 + i] = stack_offset;
-            stack_offset += 4;
-        }
-    }
-#elif defined(__aarch64__)
-    uint32_t nintarg = 0;
-    uint32_t nfloatarg = 0;
-    uint32_t nstack = 0;
-    for (uint32_t i = 0; i < nargs; i++) {
-        auto ty = f.vals[i];
-        if (ty == Type::Float64) {
-            if (nfloatarg < 8) {
-                ptr[2 + i] = 7 + nfloatarg;
-                nfloatarg += 1;
-                continue;
-            }
-        }
-        else {
-            if (nintarg < 7) {
-                ptr[2 + i] = nintarg;
-                nintarg += 1;
-                continue;
-            }
-        }
-        ptr[2 + i] = 16 + nstack * 8;
-        nstack += 1;
-    }
-#elif defined(__arm__)
-    uint32_t nintarg = 0;
-    uint32_t nfloatarg = 0;
-    uint32_t stack_offset = 16;
-    for (uint32_t i = 0; i < nargs; i++) {
-        auto ty = f.vals[i];
-        if (ty == Type::Float64) {
-            if (nfloatarg < 8) {
-                ptr[2 + i] = 3 + nfloatarg;
-                nfloatarg += 1;
+        uint32_t nintarg = 0;
+        uint32_t nfloatarg = 0;
+        uint32_t nstack = 0;
+        for (uint32_t i = 0; i < nargs; i++) {
+            auto ty = f.vals[i];
+            if (ty == Type::Float64) {
+                if (nfloatarg < 6) {
+                    ptr[2 + i] = 5 + nfloatarg;
+                    nfloatarg += 1;
+                    continue;
+                }
             }
             else {
+                if (nintarg < 5) {
+                    ptr[2 + i] = nintarg;
+                    nintarg += 1;
+                    continue;
+                }
+            }
+            ptr[2 + i] = 16 + nstack * 8;
+            nstack += 1;
+        }
+#elif defined(__i386) || defined(__i386__)
+        // 4bytes data pointer, 4 bytes return address and 4 bytes base pointer spill
+        uint32_t stack_offset = 12;
+        for (uint32_t i = 0; i < nargs; i++) {
+            auto ty = f.vals[i];
+            if (ty == Type::Float64) {
                 ptr[2 + i] = stack_offset | 0x80000000;
                 stack_offset += 8;
-            }
-        }
-        else {
-            if (nintarg < 3) {
-                ptr[2 + i] = nintarg;
-                nintarg += 1;
             }
             else {
                 ptr[2 + i] = stack_offset;
                 stack_offset += 4;
             }
         }
-    }
+#elif defined(__aarch64__)
+        uint32_t nintarg = 0;
+        uint32_t nfloatarg = 0;
+        uint32_t nstack = 0;
+        for (uint32_t i = 0; i < nargs; i++) {
+            auto ty = f.vals[i];
+            if (ty == Type::Float64) {
+                if (nfloatarg < 8) {
+                    ptr[2 + i] = 7 + nfloatarg;
+                    nfloatarg += 1;
+                    continue;
+                }
+            }
+            else {
+                if (nintarg < 7) {
+                    ptr[2 + i] = nintarg;
+                    nintarg += 1;
+                    continue;
+                }
+            }
+            ptr[2 + i] = 16 + nstack * 8;
+            nstack += 1;
+        }
+#elif defined(__arm__)
+        uint32_t nintarg = 0;
+        uint32_t nfloatarg = 0;
+        uint32_t stack_offset = 16;
+        for (uint32_t i = 0; i < nargs; i++) {
+            auto ty = f.vals[i];
+            if (ty == Type::Float64) {
+                if (nfloatarg < 8) {
+                    ptr[2 + i] = 3 + nfloatarg;
+                    nfloatarg += 1;
+                }
+                else {
+                    ptr[2 + i] = stack_offset | 0x80000000;
+                    stack_offset += 8;
+                }
+            }
+            else {
+                if (nintarg < 3) {
+                    ptr[2 + i] = nintarg;
+                    nintarg += 1;
+                }
+                else {
+                    ptr[2 + i] = stack_offset;
+                    stack_offset += 4;
+                }
+            }
+        }
 #else
 #  error "Unsupported architecture"
 #endif
-    new (get_interp_func(ptr)) Function(std::move(f));
-    return ExeFunc(nacs_exefunc_cb, ptr, exefunc_interp_free);
-}
-
-class InterpExeContext : public ExeContext {
-    ExeFunc getFunc(const Function &f) override
-    {
-        return get_interp_func(f);
+        new (get_interp_func(ptr)) Function(std::move(f));
+        return ExeFuncBase(nacs_exefunc_cb, ptr, exefunc_free);
     }
-    ExeFunc getFunc(Function &&f) override
+
+    ExeFuncBase getFuncBase(const Function &f) override
     {
-        return get_interp_func(std::move(f));
+        return getFuncIntern(f);
+    }
+    ExeFuncBase getFuncBase(Function &&f) override
+    {
+        return getFuncIntern(std::move(f));
     }
 };
 
