@@ -16,8 +16,10 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-// Linux only for now
+#include "macros.h"
+
 #if defined(__x86_64__) || defined(__x86_64)
+#  ifndef NACS_OS_WINDOWS_
         .text
         .hidden nacs_exefunc_cb
         .globl  nacs_exefunc_cb
@@ -101,7 +103,85 @@ nacs_exefunc_cb:
         .cfi_endproc
 
         .size   nacs_exefunc_cb, . - nacs_exefunc_cb
+#  else
+        .text
+        .p2align        4,0x90
+        .globl          nacs_exefunc_cb
+        .section        .drectve
+        .ascii  " -export:"
+        .ascii  "nacs_exefunc_cb"
+        .section        .text
+        .def    nacs_exefunc_cb
+        .scl    2
+        .type   32
+        .endef
+nacs_exefunc_cb:
+        .cfi_startproc
+        pushq   %rbp
+        .cfi_def_cfa_offset 16
+        .cfi_offset 6, -16
+        movq    %rsp, %rbp
+        .cfi_def_cfa_register 6
+        // slot sizes (aligned to 16 bytes)
+        movl    (%rcx), %r11d
+        subq    %r11, %rsp
+        // Load nargs
+        movl    4(%rcx), %r11d
+        testq   %r11, %r11
+        jle     .Lskip
+.Lloop:
+        movsbq  4(%RCX,%r11,4), %rax // Load arguments specifiers
+        cmpq    $0, %rax
+        cmoveq  %rdx, %rax
+        je      .Lint_end
+        cmpq    $1, %rax
+        cmoveq  %r8, %rax
+        je      .Lint_end
+        cmpq    $2, %rax
+        cmoveq  %r9, %rax
+        je      .Lint_end
+
+        cmpq    $3, %rax
+        movsd   %xmm0, %xmm8
+        je      .Lfloat_end
+        cmpq    $4, %rax
+        movsd   %xmm1, %xmm8
+        je      .Lfloat_end
+        cmpq    $5, %rax
+        movsd   %xmm2, %xmm8
+        je      .Lfloat_end
+        cmpq    $6, %rax
+        movsd   %xmm3, %xmm8
+        je      .Lfloat_end
+
+        movq    (%rbp,%rax), %rax
+.Lint_end:
+        movq    %rax, -8(%rsp,%r11,8)
+        jmp     .Lloop_end
+.Lfloat_end:
+        movsd   %xmm8, -8(%rsp,%r11,8)
+.Lloop_end:
+        subq    $1, %r11
+        jne     .Lloop
+.Lskip:
+        movq    %rsp, %rdx
+        subq    $32, %rsp
+        call    nacs_exefunc_real
+        addq    $32, %rsp
+        // No need to be conditional here...
+        // TODO: check calling convention...
+        movq    %rdx, %xmm0
+        movq    %rdx, %rax
+        movq    %rbp, %rsp
+        popq    %rbp
+        .cfi_def_cfa 7, 8
+        retq
+        .cfi_endproc
+
+        .end
+#  endif
 #elif defined(__i386) || defined(__i386__)
+        // Linux only for now
         .text
         .hidden nacs_exefunc_cb
         .globl  nacs_exefunc_cb
