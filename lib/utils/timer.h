@@ -25,7 +25,7 @@
 #include <inttypes.h>
 
 #ifndef PRIu64
-#  ifdef NACS_OS_WINDOWS_
+#  ifdef NACS_OS_WINDOWS
 #    define PRIu64 "I64u"
 #  else
 #    define PRIu64 "llu"

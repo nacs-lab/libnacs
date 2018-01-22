@@ -37,7 +37,7 @@ int recvFD(int sock);
 bool fdSetCloexec(int fd, bool cloexec);
 bool fdSetNonBlock(int fd, bool nonblock);
 
-#ifndef NACS_OS_WINDOWS_
+#ifndef NACS_OS_WINDOWS
 class FLock {
     int m_fd;
 public:

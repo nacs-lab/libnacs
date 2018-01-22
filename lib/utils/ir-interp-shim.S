@@ -19,7 +19,7 @@
 #include "macros.h"
 
 #if defined(__x86_64__) || defined(__x86_64)
-#  ifndef NACS_OS_WINDOWS_
+#  ifndef NACS_OS_WINDOWS
         .text
         .hidden nacs_exefunc_cb
         .globl  nacs_exefunc_cb

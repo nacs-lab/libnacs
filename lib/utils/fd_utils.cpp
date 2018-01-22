@@ -21,7 +21,7 @@
 #include "number.h"
 #include "macros.h"
 
-#ifndef NACS_OS_WINDOWS_
+#ifndef NACS_OS_WINDOWS
 #  include <sys/socket.h>
 #  include <unistd.h>
 #  include <sys/mman.h>
@@ -33,7 +33,7 @@ namespace NaCs {
 NACS_EXPORT void*
 mapFile(int fd, off_t offset, size_t len)
 {
-#ifndef NACS_OS_WINDOWS_
+#ifndef NACS_OS_WINDOWS
     static const auto page_size = sysconf(_SC_PAGESIZE);
     NACS_RET_IF_FAIL(fd >= 0, nullptr);
     off_t start = offset - offset % page_size;
@@ -55,7 +55,7 @@ mapFile(int fd, off_t offset, size_t len)
 NACS_EXPORT void*
 mapFile(const char *name, off_t offset, size_t len)
 {
-#ifndef NACS_OS_WINDOWS_
+#ifndef NACS_OS_WINDOWS
     NACS_RET_IF_FAIL(name, nullptr);
     int fd = open(name, O_RDWR | O_SYNC);
     auto res = mapFile(fd, offset, len);
@@ -72,7 +72,7 @@ mapFile(const char *name, off_t offset, size_t len)
 NACS_EXPORT bool
 sendFD(int sock, int fd)
 {
-#ifndef NACS_OS_WINDOWS_
+#ifndef NACS_OS_WINDOWS
     NACS_RET_IF_FAIL(fd >= 0 && sock >= 0, false);
     char buf = 0;
     struct iovec iov = {
@@ -109,7 +109,7 @@ sendFD(int sock, int fd)
 NACS_EXPORT int
 recvFD(int sock)
 {
-#ifndef NACS_OS_WINDOWS_
+#ifndef NACS_OS_WINDOWS
     NACS_RET_IF_FAIL(sock >= 0, -1);
     char buf = 0;
     struct iovec iov = {
@@ -147,7 +147,7 @@ recvFD(int sock)
 NACS_EXPORT bool
 fdSetCloexec(int fd, bool cloexec)
 {
-#ifndef NACS_OS_WINDOWS_
+#ifndef NACS_OS_WINDOWS
     long flags;
     flags = fcntl(fd, F_GETFD, 0);
     if (flags == -1) {
@@ -171,7 +171,7 @@ fdSetCloexec(int fd, bool cloexec)
 NACS_EXPORT bool
 fdSetNonBlock(int fd, bool nonblock)
 {
-#ifndef NACS_OS_WINDOWS_
+#ifndef NACS_OS_WINDOWS
     long flags;
     flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1) {

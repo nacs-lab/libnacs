@@ -26,13 +26,13 @@
  */
 
 #if defined(__FreeBSD__)
-#  define NACS_OS_FREEBSD_
+#  define NACS_OS_FREEBSD
 #elif defined(__linux__)
-#  define NACS_OS_LINUX_
+#  define NACS_OS_LINUX
 #elif defined(_WIN32) || defined(_WIN64)
-#  define NACS_OS_WINDOWS_
+#  define NACS_OS_WINDOWS
 #elif defined(__APPLE__) && defined(__MACH__)
-#  define NACS_OS_DARWIN_
+#  define NACS_OS_DARWIN
 #endif
 
 /** \defgroup nacs_switch Macros for detecting empty arguments

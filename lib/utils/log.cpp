@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <mutex>
-#ifndef NACS_OS_WINDOWS_
+#ifndef NACS_OS_WINDOWS
 #  include <execinfo.h>
 #endif
 
@@ -78,7 +78,7 @@ _nacsLog(NaCsLogLevel level, const char *func, const char *fmt, ...)
 NACS_EXPORT void
 nacsBacktrace()
 {
-#ifndef NACS_OS_WINDOWS_
+#ifndef NACS_OS_WINDOWS
     void *buff[1024];
     int size = backtrace(buff, 1024);
     int fd = fileno(log_f);

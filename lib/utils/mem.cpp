@@ -26,7 +26,7 @@ namespace NaCs {
 NACS_EXPORT void*
 mapPhyAddr(void *phy_addr, size_t len)
 {
-#ifdef NACS_OS_LINUX_
+#ifdef NACS_OS_LINUX
     static int fd = open("/dev/mem", O_RDWR | O_SYNC);
     return mapFile(fd, off_t(phy_addr), len);
 #else
@@ -39,7 +39,7 @@ mapPhyAddr(void *phy_addr, size_t len)
 NACS_EXPORT void*
 getPhyAddr(void *virt_addr)
 {
-#ifdef NACS_OS_LINUX_
+#ifdef NACS_OS_LINUX
     static int page_map = open("/proc/self/pagemap", O_RDONLY);
     static uint32_t page_size = getpagesize();
     uintptr_t virt_offset = uintptr_t(virt_addr) % page_size;
