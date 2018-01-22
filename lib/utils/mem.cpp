@@ -19,7 +19,6 @@
 #include "mem.h"
 #include "fd_utils.h"
 
-#include <sys/mman.h>
 #include <unistd.h>
 
 namespace NaCs {
@@ -27,13 +26,20 @@ namespace NaCs {
 NACS_EXPORT void*
 mapPhyAddr(void *phy_addr, size_t len)
 {
+#ifdef NACS_OS_LINUX_
     static int fd = open("/dev/mem", O_RDWR | O_SYNC);
     return mapFile(fd, off_t(phy_addr), len);
+#else
+    (void)phy_addr;
+    (void)len;
+    return nullptr;
+#endif
 }
 
 NACS_EXPORT void*
 getPhyAddr(void *virt_addr)
 {
+#ifdef NACS_OS_LINUX_
     static int page_map = open("/proc/self/pagemap", O_RDONLY);
     static uint32_t page_size = getpagesize();
     uintptr_t virt_offset = uintptr_t(virt_addr) % page_size;
@@ -46,6 +52,10 @@ getPhyAddr(void *virt_addr)
     auto phy_pfn = uintptr_t(page_info & ((1ll << 55) - 1));
     auto phy_page = phy_pfn * page_size;
     return (void*)(phy_page + virt_offset);
+#else
+    (void)virt_addr;
+    return nullptr;
+#endif
 }
 
 }
