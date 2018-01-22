@@ -12,6 +12,7 @@ set(PATCH_VERSION 0)
 
 include(CMakeCMacros)
 include(GNUInstallDirs)
+include(CheckCXXSourceCompiles)
 
 set(INSTALL_PKGCONFIG_DIR "${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig"
   CACHE PATH "Installation directory for pkgconfig (.pc) files")
@@ -22,6 +23,17 @@ set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
 
 option(ENABLE_KNACS "Enable kernel driver" Off)
 option(ENABLE_LLVM "Enable LLVM JIT" Off)
+
+set(CMAKE_REQUIRED_FLAGS "-std=gnu++14")
+check_cxx_source_compiles("
+      #include <math.h>
+      int main()
+      {
+          ::exp10;
+      }" HAS_EXP10)
+if(HAS_EXP10)
+  add_definitions(-DNACS_HAS_EXP10)
+endif()
 
 if(ENABLE_LLVM)
   find_package(LLVM REQUIRED CONFIG)

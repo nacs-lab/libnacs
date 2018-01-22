@@ -30,6 +30,13 @@ namespace IR {
 
 typedef double (*fptr_t)(double);
 
+#ifndef NACS_HAS_EXP10
+double exp10(double x)
+{
+    return pow(10, x);
+}
+#endif
+
 static fptr_t getBuiltinPtr(Builtins id)
 {
     switch (id) {
@@ -61,7 +68,11 @@ static fptr_t getBuiltinPtr(Builtins id)
     case Builtins::exp:
         return ::exp;
     case Builtins::exp10:
+#ifdef NACS_HAS_EXP10
         return ::exp10;
+#else
+        return exp10;
+#endif
     case Builtins::exp2:
         return ::exp2;
     case Builtins::expm1:
@@ -87,7 +98,11 @@ static fptr_t getBuiltinPtr(Builtins id)
     case Builtins::log2:
         return ::log2;
     case Builtins::pow10:
-        return ::pow10;
+#ifdef NACS_HAS_EXP10
+        return ::exp10;
+#else
+        return exp10;
+#endif
     case Builtins::rint:
         return ::rint;
     case Builtins::round:
@@ -202,7 +217,7 @@ static const char *builtinName(Builtins id)
     case Builtins::log2:
         return "log2";
     case Builtins::pow10:
-        return "pow10";
+        return "exp10";
     case Builtins::rint:
         return "rint";
     case Builtins::round:
