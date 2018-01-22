@@ -19,11 +19,14 @@
 #include "fd_utils.h"
 #include "log.h"
 #include "number.h"
+#include "macros.h"
 
-#include <sys/socket.h>
+#ifndef NACS_OS_WINDOWS_
+#  include <sys/socket.h>
+#  include <unistd.h>
+#  include <sys/mman.h>
+#endif
 #include <fcntl.h>
-#include <unistd.h>
-#include <sys/mman.h>
 
 static const auto page_size = sysconf(_SC_PAGESIZE);
 
@@ -32,6 +35,7 @@ namespace NaCs {
 NACS_EXPORT void*
 mapFile(int fd, off_t offset, size_t len)
 {
+#ifndef NACS_OS_WINDOWS_
     NACS_RET_IF_FAIL(fd >= 0, nullptr);
     off_t start = offset - offset % page_size;
     off_t end = alignTo(offset + len, page_size);
@@ -41,6 +45,12 @@ mapFile(int fd, off_t offset, size_t len)
     NACS_RET_IF_FAIL(base != (void*)-1, nullptr);
 
     return (char*)base + offset - start;
+#else
+    (void)fd;
+    (void)offset;
+    (void)len;
+    return nullptr;
+#endif
 }
 
 NACS_EXPORT void*
@@ -56,6 +66,7 @@ mapFile(const char *name, off_t offset, size_t len)
 NACS_EXPORT bool
 sendFD(int sock, int fd)
 {
+#ifndef NACS_OS_WINDOWS_
     NACS_RET_IF_FAIL(fd >= 0 && sock >= 0, false);
     char buf = 0;
     struct iovec iov = {
@@ -82,11 +93,17 @@ sendFD(int sock, int fd)
     cmsg->cmsg_type = SCM_RIGHTS;
     memcpy(CMSG_DATA(cmsg), &fd, sizeof(int));
     return sendmsg(sock, &msg, 0) >= 0;
+#else
+    (void)sock;
+    (void)fd;
+    return false;
+#endif
 }
 
 NACS_EXPORT int
 recvFD(int sock)
 {
+#ifndef NACS_OS_WINDOWS_
     NACS_RET_IF_FAIL(sock >= 0, -1);
     char buf = 0;
     struct iovec iov = {
@@ -115,6 +132,10 @@ recvFD(int sock)
     int fd;
     memcpy(&fd, CMSG_DATA(cmsg), sizeof(int));
     return fd;
+#else
+    (void)sock;
+    return false;
+#endif
 }
 
 NACS_EXPORT bool
