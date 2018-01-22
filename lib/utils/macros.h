@@ -25,6 +25,16 @@
  * \brief Definitions of some useful macros.
  */
 
+#if defined(__FreeBSD__)
+#  define NACS_OS_FREEBSD_
+#elif defined(__linux__)
+#  define NACS_OS_LINUX_
+#elif defined(_WIN32) || defined(_WIN64)
+#  define NACS_OS_WINDOWS_
+#elif defined(__APPLE__) && defined(__MACH__)
+#  define NACS_OS_DARWIN_
+#endif
+
 /** \defgroup nacs_switch Macros for detecting empty arguments
  * \brief Used to implement function overloading and default arguments in c.
  *
@@ -153,15 +163,5 @@
             return (NACS_DEFAULT(val, (void)0));        \
         }                                               \
     } while (0)
-
-#if defined(__FreeBSD__)
-#  define NACS_OS_FREEBSD_
-#elif defined(__linux__)
-#  define NACS_OS_LINUX_
-#elif defined(_WIN32) || defined(_WIN64)
-#  define NACS_OS_WINDOWS_
-#elif defined(__APPLE__) && defined(__MACH__)
-#  define NACS_OS_DARWIN_
-#endif
 
 #endif
