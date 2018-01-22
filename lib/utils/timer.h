@@ -26,9 +26,9 @@
 
 #ifndef PRIu64
 #  ifdef NACS_OS_WINDOWS_
-#    define PRIu64 "%I64u"
+#    define PRIu64 "I64u"
 #  else
-#    define PRIu64 "%llu"
+#    define PRIu64 "llu"
 #  endif
 #endif
 #define PRTime PRIu64
