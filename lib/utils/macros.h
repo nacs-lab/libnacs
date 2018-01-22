@@ -154,4 +154,14 @@
         }                                               \
     } while (0)
 
+#if defined(__FreeBSD__)
+#  define NACS_OS_FREEBSD_
+#elif defined(__linux__)
+#  define NACS_OS_LINUX_
+#elif defined(_WIN32) || defined(_WIN64)
+#  define NACS_OS_WINDOWS_
+#elif defined(__APPLE__) && defined(__MACH__)
+#  define NACS_OS_DARWIN_
+#endif
+
 #endif
