@@ -30,7 +30,7 @@ namespace Kernel {
 
 static const auto page_size = sysconf(_SC_PAGESIZE);
 
-NACS_EXPORT knacs_version_t
+NACS_EXPORT(kernel) knacs_version_t
 getDriverVersion()
 {
     knacs_version_t ver;
@@ -38,7 +38,7 @@ getDriverVersion()
     return ver;
 }
 
-NACS_EXPORT void*
+NACS_EXPORT(kernel) void*
 mapPulseCtrl()
 {
     return mapFile(getFD(), 0, 32 * 4);

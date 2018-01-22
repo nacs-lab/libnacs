@@ -262,7 +262,7 @@ inline void Function::dump(void) const
     std::cerr << *this << std::endl;
 }
 
-class NACS_EXPORT Builder {
+class NACS_EXPORT(utils) Builder {
 public:
     Builder(Type ret, std::vector<Type> args)
         : m_f(ret, args),
@@ -310,7 +310,7 @@ private:
     std::map<double, int> const_floats;
 };
 
-struct NACS_EXPORT EvalContext {
+struct NACS_EXPORT(utils) EvalContext {
     EvalContext(const Function &f)
         : m_f(f),
           m_vals(f.vals.size())

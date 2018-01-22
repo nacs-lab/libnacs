@@ -30,7 +30,7 @@ namespace Kernel {
 
 static const auto page_size = sysconf(_SC_PAGESIZE);
 
-NACS_EXPORT
+NACS_EXPORT(kernel)
 DMABufferBase::DMABufferBase(size_t size)
     : m_buff(nullptr),
       m_size(0)
@@ -38,7 +38,7 @@ DMABufferBase::DMABufferBase(size_t size)
     resize(size);
 }
 
-NACS_EXPORT void
+NACS_EXPORT(kernel) void
 DMABufferBase::resize_slow(size_t size)
 {
     size = alignTo((off_t)size, page_size);
@@ -50,13 +50,13 @@ DMABufferBase::resize_slow(size_t size)
     m_size = size;
 }
 
-NACS_EXPORT
+NACS_EXPORT(kernel)
 DMABufferBase::~DMABufferBase()
 {
     release();
 }
 
-NACS_EXPORT void
+NACS_EXPORT(kernel) void
 DMABufferBase::release()
 {
     if (m_buff) {
@@ -66,7 +66,7 @@ DMABufferBase::release()
     }
 }
 
-NACS_EXPORT void
+NACS_EXPORT(kernel) void
 DMABufferBase::send(size_t len)
 {
     sendDmaBuffer(m_buff, len);

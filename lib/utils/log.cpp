@@ -25,22 +25,22 @@
 #  include <execinfo.h>
 #endif
 
-NACS_EXPORT NaCsLogLevel nacs_log_level = NACS_LOG_ERROR;
+NACS_EXPORT(utils) NaCsLogLevel nacs_log_level = NACS_LOG_ERROR;
 static FILE *log_f = stderr;
 
-NACS_EXPORT FILE*
+NACS_EXPORT(utils) FILE*
 nacsGetLog()
 {
     return log_f;
 }
 
-NACS_EXPORT void
+NACS_EXPORT(utils) void
 nacsSetLog(FILE *f)
 {
     log_f = f ? f : stderr;
 }
 
-NACS_EXPORT void
+NACS_EXPORT(utils) void
 _nacsLogV(NaCsLogLevel level, const char *func, const char *fmt, va_list ap)
 {
     NACS_RET_IF_FAIL(level >= nacs_log_level && ((int)level) >= 0 &&
@@ -66,7 +66,7 @@ _nacsLogV(NaCsLogLevel level, const char *func, const char *fmt, va_list ap)
     fflush(log_f);
 }
 
-NACS_EXPORT void
+NACS_EXPORT(utils) void
 _nacsLog(NaCsLogLevel level, const char *func, const char *fmt, ...)
 {
     va_list ap;
@@ -75,7 +75,7 @@ _nacsLog(NaCsLogLevel level, const char *func, const char *fmt, ...)
     va_end(ap);
 }
 
-NACS_EXPORT void
+NACS_EXPORT(utils) void
 nacsBacktrace()
 {
 #ifndef NACS_OS_WINDOWS

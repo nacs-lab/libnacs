@@ -23,7 +23,7 @@
 
 namespace NaCs {
 
-NACS_EXPORT void*
+NACS_EXPORT(utils) void*
 mapPhyAddr(void *phy_addr, size_t len)
 {
 #ifdef NACS_OS_LINUX
@@ -36,7 +36,7 @@ mapPhyAddr(void *phy_addr, size_t len)
 #endif
 }
 
-NACS_EXPORT void*
+NACS_EXPORT(utils) void*
 getPhyAddr(void *virt_addr)
 {
 #ifdef NACS_OS_LINUX

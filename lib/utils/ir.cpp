@@ -355,7 +355,7 @@ static BuiltinType getBuiltinType(Builtins id)
     }
 }
 
-NACS_EXPORT bool checkBuiltinType(Builtins id, Type *args, size_t narg)
+NACS_EXPORT(utils) bool checkBuiltinType(Builtins id, Type *args, size_t narg)
 {
     switch (getBuiltinType(id)) {
     case BuiltinType::F64_F64:
@@ -374,7 +374,7 @@ NACS_EXPORT bool checkBuiltinType(Builtins id, Type *args, size_t narg)
     }
 }
 
-NACS_EXPORT double evalBuiltin(Builtins id, TagVal *args)
+NACS_EXPORT(utils) double evalBuiltin(Builtins id, TagVal *args)
 {
     auto _fptr = getBuiltinPtr(id);
     switch (getBuiltinType(id)) {
@@ -464,7 +464,7 @@ static inline const char *cmpName(CmpType cmp)
     }
 }
 
-NACS_EXPORT std::ostream &operator<<(std::ostream &stm, const TagVal &val)
+NACS_EXPORT(utils) std::ostream &operator<<(std::ostream &stm, const TagVal &val)
 {
     stm << typeName(val.typ) << " ";
     switch (val.typ) {
@@ -507,7 +507,7 @@ void Function::printValName(std::ostream &stm, int32_t id) const
     }
 }
 
-NACS_EXPORT Type Function::valType(int32_t id) const
+NACS_EXPORT(utils) Type Function::valType(int32_t id) const
 {
     if (id >= 0) {
         return vals[id];
@@ -669,7 +669,7 @@ void Function::printBB(std::ostream &stm, const BB &bb) const
     }
 }
 
-NACS_EXPORT std::ostream &operator<<(std::ostream &stm, const Function &f)
+NACS_EXPORT(utils) std::ostream &operator<<(std::ostream &stm, const Function &f)
 {
     stm << typeName(f.ret) << " (";
     for (int i = 0;i < f.nargs;i++) {
@@ -687,7 +687,7 @@ NACS_EXPORT std::ostream &operator<<(std::ostream &stm, const Function &f)
     return stm;
 }
 
-NACS_EXPORT std::vector<uint32_t> Function::serialize(void) const
+NACS_EXPORT(utils) std::vector<uint32_t> Function::serialize(void) const
 {
     // [ret][nargs][nvals][vals x nvals]
     // [nconsts][consts x nconsts]
@@ -718,7 +718,7 @@ NACS_EXPORT std::vector<uint32_t> Function::serialize(void) const
     return res;
 }
 
-NACS_EXPORT Function::Function(const uint32_t *data, size_t sz)
+NACS_EXPORT(utils) Function::Function(const uint32_t *data, size_t sz)
     : ret(Type(data[0])),
       nargs(data[1]),
       vals{},
@@ -756,7 +756,7 @@ NACS_EXPORT Function::Function(const uint32_t *data, size_t sz)
     return;
 }
 
-NACS_EXPORT Function::Function(const uint8_t *data, size_t sz)
+NACS_EXPORT(utils) Function::Function(const uint8_t *data, size_t sz)
     : ret(Type(Mem::load_unalign<uint32_t>(data, 0))),
       nargs(Mem::load_unalign<uint32_t>(data, 1)),
       vals{},
@@ -1389,7 +1389,7 @@ struct InterpExeContext : public ExeContext {
     }
 };
 
-NACS_EXPORT std::unique_ptr<ExeContext> ExeContext::get()
+NACS_EXPORT(utils) std::unique_ptr<ExeContext> ExeContext::get()
 {
     return std::unique_ptr<ExeContext>(new InterpExeContext());
 }

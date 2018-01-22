@@ -22,7 +22,7 @@
 namespace NaCs {
 namespace Base64 {
 
-NACS_EXPORT size_t encode_len(const uint8_t*, size_t len)
+NACS_EXPORT(utils) size_t encode_len(const uint8_t*, size_t len)
 {
     size_t nbits2 = len * 4;
     size_t nbytes = nbits2 / 3;
@@ -39,7 +39,7 @@ NACS_EXPORT size_t encode_len(const uint8_t*, size_t len)
 static const uint8_t encode_table[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-NACS_EXPORT void encode(uint8_t *dest, const uint8_t *data, size_t len)
+NACS_EXPORT(utils) void encode(uint8_t *dest, const uint8_t *data, size_t len)
 {
     size_t i = 0;
     for (;i + 3 <= len;i += 3) {
@@ -94,7 +94,7 @@ static constexpr uint8_t decode_table[256] = {
     64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
 };
 
-NACS_EXPORT size_t decode_len(const uint8_t *data, size_t len)
+NACS_EXPORT(utils) size_t decode_len(const uint8_t *data, size_t len)
 {
     assert(len % 4 == 0);
     if (len < 4)
@@ -110,7 +110,7 @@ NACS_EXPORT size_t decode_len(const uint8_t *data, size_t len)
     }
 }
 
-NACS_EXPORT void decode(uint8_t *dest, const uint8_t *data, size_t len)
+NACS_EXPORT(utils) void decode(uint8_t *dest, const uint8_t *data, size_t len)
 {
     if (len < 4)
         return;
@@ -147,21 +147,21 @@ NACS_EXPORT void decode(uint8_t *dest, const uint8_t *data, size_t len)
     }
 }
 
-NACS_EXPORT std::vector<uint8_t> encode(const std::vector<uint8_t> &data)
+NACS_EXPORT(utils) std::vector<uint8_t> encode(const std::vector<uint8_t> &data)
 {
     std::vector<uint8_t> res(encode_len(data.data(), data.size()));
     encode(res.data(), data.data(), data.size());
     return res;
 }
 
-NACS_EXPORT std::vector<uint8_t> decode(const std::vector<uint8_t> &data)
+NACS_EXPORT(utils) std::vector<uint8_t> decode(const std::vector<uint8_t> &data)
 {
     std::vector<uint8_t> res(decode_len(data.data(), data.size()));
     decode(res.data(), data.data(), data.size());
     return res;
 }
 
-NACS_EXPORT bool validate(const uint8_t *data, size_t len)
+NACS_EXPORT(utils) bool validate(const uint8_t *data, size_t len)
 {
     if (len % 4 != 0)
         return false;
@@ -186,7 +186,7 @@ NACS_EXPORT bool validate(const uint8_t *data, size_t len)
     }
 }
 
-NACS_EXPORT bool validate(const std::vector<uint8_t> &data)
+NACS_EXPORT(utils) bool validate(const std::vector<uint8_t> &data)
 {
     return validate(data.data(), data.size());
 }
