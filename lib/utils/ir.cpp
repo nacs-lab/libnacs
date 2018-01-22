@@ -1286,6 +1286,29 @@ struct InterpExeContext : public ExeContext {
         ptr[0] = (f.vals.size() * 8 + 8) & ~(uint32_t)15;
         ptr[1] = nargs;
 #if defined(__x86_64__) || defined(__x86_64)
+#  ifdef NACS_OS_WINDOWS
+        uint32_t nregarg = 0;
+        uint32_t nstack = 0;
+        for (uint32_t i = 0; i < nargs; i++) {
+            auto ty = f.vals[i];
+            if (ty == Type::Float64) {
+                if (nregarg < 3) {
+                    ptr[2 + i] = 3 + nregarg;
+                    nregarg += 1;
+                    continue;
+                }
+            }
+            else {
+                if (nregarg < 3) {
+                    ptr[2 + i] = nregarg;
+                    nregarg += 1;
+                    continue;
+                }
+            }
+            ptr[2 + i] = 48 + nstack * 8;
+            nstack += 1;
+        }
+#else
         uint32_t nintarg = 0;
         uint32_t nfloatarg = 0;
         uint32_t nstack = 0;
@@ -1308,6 +1331,7 @@ struct InterpExeContext : public ExeContext {
             ptr[2 + i] = 16 + nstack * 8;
             nstack += 1;
         }
+#endif
 #elif defined(__i386) || defined(__i386__)
         // 4bytes data pointer, 4 bytes return address and 4 bytes base pointer spill
         uint32_t stack_offset = 12;

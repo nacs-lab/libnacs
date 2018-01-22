@@ -130,7 +130,7 @@ nacs_exefunc_cb:
         testq   %r11, %r11
         jle     .Lskip
 .Lloop:
-        movsbq  4(%RCX,%r11,4), %rax // Load arguments specifiers
+        movsbq  4(%rcx,%r11,4), %rax // Load arguments specifiers
         cmpq    $0, %rax
         cmoveq  %rdx, %rax
         je      .Lint_end
@@ -142,15 +142,12 @@ nacs_exefunc_cb:
         je      .Lint_end
 
         cmpq    $3, %rax
-        movsd   %xmm0, %xmm8
-        je      .Lfloat_end
-        cmpq    $4, %rax
         movsd   %xmm1, %xmm8
         je      .Lfloat_end
-        cmpq    $5, %rax
+        cmpq    $4, %rax
         movsd   %xmm2, %xmm8
         je      .Lfloat_end
-        cmpq    $6, %rax
+        cmpq    $5, %rax
         movsd   %xmm3, %xmm8
         je      .Lfloat_end
 
