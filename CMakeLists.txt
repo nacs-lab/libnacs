@@ -42,8 +42,11 @@ if(ENABLE_LLVM)
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 endif()
 
-add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden
+add_definitions(-Wall -Wextra -g -pthread
   -fno-math-errno -Wconversion -Wno-sign-conversion)
+if(UNIX)
+  add_definitions(-fvisibility=hidden)
+endif()
 
 cmake_c_fix_include_path(lib/utils nacs-utils)
 cmake_c_fix_include_path(lib/kernel nacs-kernel)
