@@ -403,7 +403,7 @@ public:
         template<typename... Args>
         typename FuncType<FT>::ret operator()(Args&&... args)
         {
-            return this->m_base.call<FT>(std::forward<Args>(args)...);
+            return m_base.call<FT>(std::forward<Args>(args)...);
         }
 
     private:

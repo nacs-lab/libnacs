@@ -310,7 +310,7 @@ main()
     }
 
     {
-        static_assert(sizeof(IR::TagVal) == 16);
+        static_assert(sizeof(IR::TagVal) == 16, "");
         const int32_t data[] = {
             3, 2, 6, 50529027, 771, 1, 3, 0, 1073741824, 1, 14, 5,
             5, 0, -3, 3, 4, 5, -3, 3, 2, 3, 1, 1, 2
