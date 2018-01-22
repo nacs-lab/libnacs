@@ -55,11 +55,18 @@ mapFile(int fd, off_t offset, size_t len)
 NACS_EXPORT void*
 mapFile(const char *name, off_t offset, size_t len)
 {
+#ifndef NACS_OS_WINDOWS_
     NACS_RET_IF_FAIL(name, nullptr);
     int fd = open(name, O_RDWR | O_SYNC);
     auto res = mapFile(fd, offset, len);
     close(fd);
     return res;
+#else
+    (void)name;
+    (void)offset;
+    (void)len;
+    return nullptr;
+#endif
 }
 
 NACS_EXPORT bool
