@@ -108,13 +108,8 @@ private:
 };
 
 NACS_EXPORT() Sequence
-PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
+PulsesBuilder::fromBinary(const uint32_t *bin, size_t len)
 {
-    size_t bin_len = Base64::decode_len(data, len);
-    assert(bin_len % 4 == 0);
-    std::vector<uint32_t> bin(bin_len / 4);
-    Base64::decode((uint8_t*)bin.data(), data, len);
-
     // [TTL default: 4B]
     // [n_non_ttl: 4B]
     // [[[chn_type: 4B][chn_id: 4B][defaults: 8B]] x n_non_ttl]
@@ -167,7 +162,7 @@ PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
                        PulseData(IRPulse(std::move(func)))};
         cursor += code_len;
     }
-    if (cursor >= bin.size())
+    if (cursor >= len)
         return Sequence(std::move(seq), std::move(defaults));
     uint32_t n_clocks = bin[cursor];
     cursor++;
@@ -185,6 +180,16 @@ PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
         clock.div = clock_div;
     }
     return Sequence(std::move(seq), std::move(defaults), std::move(clocks));
+}
+
+NACS_EXPORT() Sequence
+PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
+{
+    size_t bin_len = Base64::decode_len(data, len);
+    assert(bin_len % 4 == 0);
+    std::vector<uint32_t> bin(bin_len / 4);
+    Base64::decode((uint8_t*)bin.data(), data, len);
+    return fromBinary(&bin[0], bin_len);
 }
 
 }
