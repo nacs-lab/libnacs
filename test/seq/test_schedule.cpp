@@ -102,6 +102,9 @@ int main(int argn, char **argv)
         case Seq::Channel::DAC:
             channel_name = "DAC";
             break;
+        case Seq::Channel::CLOCK:
+            channel_name = "CLOCK";
+            break;
         default:
             assert(0 && "Unknown channel type.");
         }
