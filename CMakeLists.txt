@@ -42,11 +42,8 @@ if(ENABLE_LLVM)
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 endif()
 
-add_definitions(-Wall -Wextra -g -pthread
+add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden
   -fno-math-errno -Wconversion -Wno-sign-conversion)
-if(UNIX)
-  add_definitions(-fvisibility=hidden)
-endif()
 
 cmake_c_fix_include_path(lib/utils nacs-utils)
 cmake_c_fix_include_path(lib/kernel nacs-kernel)
@@ -63,10 +60,10 @@ cmake_c_add_flags(CMAKE_MODULE_LINKER_FLAGS ${LINKER_FLAGS})
 
 cmake_c_include_fix_path()
 
-if(NOT UNIX)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+if(WIN32 OR CYGWIN OR MINGW OR MSYS)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-bin")
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
 endif()
 
 add_subdirectory(lib)
