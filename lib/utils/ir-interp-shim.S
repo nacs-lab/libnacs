@@ -164,14 +164,15 @@ nacs_exefunc_cb:
         subq    $1, %r11
         jne     .Lloop
 .Lskip:
-        movq    %rsp, %rdx
+        movq    %rsp, %r8
+        movq    %rcx, %rdx
+        subq    $16, %rsp
+        movq    %rsp, %rcx
         subq    $32, %rsp
         call    nacs_exefunc_real
-        addq    $32, %rsp
         // No need to be conditional here...
-        // TODO: check calling convention...
-        movq    %rdx, %xmm0
-        movq    %rdx, %rax
+        movq    40(%rsp), %xmm0
+        movq    40(%rsp), %rax
         movq    %rbp, %rsp
         popq    %rbp
         .cfi_def_cfa 7, 8
