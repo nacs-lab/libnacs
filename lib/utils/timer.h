@@ -20,8 +20,17 @@
 #define _NACS_UTILS_TIMER_H_
 
 #include "log.h"
+#include "macros.h"
+
 #include <inttypes.h>
 
+#ifndef PRIu64
+#  ifdef NACS_OS_WINDOWS_
+#    define PRIu64 "%I64u"
+#  else
+#    define PRIu64 "%llu"
+#  endif
+#endif
 #define PRTime PRIu64
 
 #define TICKS_PER_SECOND (1000000000ll)
