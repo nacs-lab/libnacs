@@ -23,7 +23,7 @@
 
 namespace NaCs {
 
-NACS_EXPORT(utils) uint64_t
+NACS_EXPORT() uint64_t
 getTime()
 {
     using namespace std::chrono;
@@ -31,7 +31,7 @@ getTime()
         .time_since_epoch().count();
 }
 
-NACS_EXPORT(utils) uint64_t
+NACS_EXPORT() uint64_t
 getElapse(uint64_t prev)
 {
     return getTime() - prev;
@@ -39,7 +39,7 @@ getElapse(uint64_t prev)
 
 static thread_local std::vector<uint64_t> tics_list;
 
-NACS_EXPORT(utils) void
+NACS_EXPORT() void
 tic()
 {
     tics_list.push_back(0);
@@ -47,7 +47,7 @@ tic()
     back = getTime();
 }
 
-NACS_EXPORT(utils) uint64_t
+NACS_EXPORT() uint64_t
 toc()
 {
     uint64_t cur_time = getTime();

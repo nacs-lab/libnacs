@@ -24,21 +24,21 @@ namespace NaCs {
 namespace Seq {
 namespace Time {
 
-NACS_EXPORT(seq) Keeper::Keeper(const Constraints &cons)
+NACS_EXPORT() Keeper::Keeper(const Constraints &cons)
     : m_cons(cons),
       m_plens(cons.avg_window - 1)
 {
     reset();
 }
 
-NACS_EXPORT(seq) void Keeper::addPulse(uint64_t dt)
+NACS_EXPORT() void Keeper::addPulse(uint64_t dt)
 {
     size_t pidx = m_npulses % (m_cons.avg_window - 1);
     m_total_len = m_total_len + dt - m_plens[pidx];
     m_plens[pidx] = dt;
 }
 
-NACS_EXPORT(seq) uint64_t Keeper::minDt(uint64_t min_dt) const
+NACS_EXPORT() uint64_t Keeper::minDt(uint64_t min_dt) const
 {
     auto window_sz = m_cons.avg_dt * m_cons.avg_window;
     min_dt = std::max<uint64_t>(min_dt, 1);
@@ -47,7 +47,7 @@ NACS_EXPORT(seq) uint64_t Keeper::minDt(uint64_t min_dt) const
     return std::max(window_sz - m_total_len, min_dt);
 }
 
-NACS_EXPORT(seq) void Keeper::reset(void)
+NACS_EXPORT() void Keeper::reset(void)
 {
     m_npulses = 0;
     m_total_len = 0;

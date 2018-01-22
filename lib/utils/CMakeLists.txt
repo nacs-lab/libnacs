@@ -26,6 +26,8 @@ if(ENABLE_LLVM)
   add_definitions(${LLVM_DEFINITIONS})
 endif()
 
+add_definitions("-\"DNACS_EXPORT_LIB_utils()=\"")
+
 add_library(nacs-utils SHARED
   ${nacs_utils_SRCS})
 

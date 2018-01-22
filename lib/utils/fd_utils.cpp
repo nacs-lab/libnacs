@@ -30,7 +30,7 @@
 
 namespace NaCs {
 
-NACS_EXPORT(utils) void*
+NACS_EXPORT() void*
 mapFile(int fd, off_t offset, size_t len)
 {
 #ifndef NACS_OS_WINDOWS
@@ -52,7 +52,7 @@ mapFile(int fd, off_t offset, size_t len)
 #endif
 }
 
-NACS_EXPORT(utils) void*
+NACS_EXPORT() void*
 mapFile(const char *name, off_t offset, size_t len)
 {
 #ifndef NACS_OS_WINDOWS
@@ -69,7 +69,7 @@ mapFile(const char *name, off_t offset, size_t len)
 #endif
 }
 
-NACS_EXPORT(utils) bool
+NACS_EXPORT() bool
 sendFD(int sock, int fd)
 {
 #ifndef NACS_OS_WINDOWS
@@ -106,7 +106,7 @@ sendFD(int sock, int fd)
 #endif
 }
 
-NACS_EXPORT(utils) int
+NACS_EXPORT() int
 recvFD(int sock)
 {
 #ifndef NACS_OS_WINDOWS
@@ -144,7 +144,7 @@ recvFD(int sock)
 #endif
 }
 
-NACS_EXPORT(utils) bool
+NACS_EXPORT() bool
 fdSetCloexec(int fd, bool cloexec)
 {
 #ifndef NACS_OS_WINDOWS
@@ -168,7 +168,7 @@ fdSetCloexec(int fd, bool cloexec)
 
 }
 
-NACS_EXPORT(utils) bool
+NACS_EXPORT() bool
 fdSetNonBlock(int fd, bool nonblock)
 {
 #ifndef NACS_OS_WINDOWS

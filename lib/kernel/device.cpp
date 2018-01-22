@@ -30,25 +30,25 @@ namespace Kernel {
 
 static int knacs_fd = -1;
 
-NACS_EXPORT(kernel) void
+NACS_EXPORT() void
 init()
 {
     init("/dev/knacs");
 }
 
-NACS_EXPORT(kernel) void
+NACS_EXPORT() void
 init(const char *name)
 {
     init(open(name, O_RDWR | O_SYNC));
 }
 
-NACS_EXPORT(kernel) void
+NACS_EXPORT() void
 init(int fd)
 {
     knacs_fd = fd;
 }
 
-NACS_EXPORT(kernel) bool
+NACS_EXPORT() bool
 initialized()
 {
     return knacs_fd >= 0;

@@ -24,7 +24,7 @@
 namespace NaCs {
 namespace Seq {
 
-NACS_EXPORT(seq) void
+NACS_EXPORT() void
 PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t_cons)
 {
     auto &seq = sequence.pulses;
@@ -107,7 +107,7 @@ private:
     IR::EvalContext m_ctx;
 };
 
-NACS_EXPORT(seq) Sequence
+NACS_EXPORT() Sequence
 PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
 {
     size_t bin_len = Base64::decode_len(data, len);
