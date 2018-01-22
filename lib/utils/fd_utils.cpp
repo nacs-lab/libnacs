@@ -25,8 +25,8 @@
 #  include <sys/socket.h>
 #  include <unistd.h>
 #  include <sys/mman.h>
+#  include <fcntl.h>
 #endif
-#include <fcntl.h>
 
 static const auto page_size = sysconf(_SC_PAGESIZE);
 
@@ -141,6 +141,7 @@ recvFD(int sock)
 NACS_EXPORT bool
 fdSetCloexec(int fd, bool cloexec)
 {
+#ifndef NACS_OS_WINDOWS_
     long flags;
     flags = fcntl(fd, F_GETFD, 0);
     if (flags == -1) {
@@ -152,6 +153,11 @@ fdSetCloexec(int fd, bool cloexec)
         flags &= ~FD_CLOEXEC;
     }
     return fcntl(fd, F_SETFD, flags) != -1;
+#else
+    (void)fd;
+    (void)cloexec;
+    return false;
+#endif
 }
 
 }
@@ -159,6 +165,7 @@ fdSetCloexec(int fd, bool cloexec)
 NACS_EXPORT bool
 fdSetNonBlock(int fd, bool nonblock)
 {
+#ifndef NACS_OS_WINDOWS_
     long flags;
     flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1) {
@@ -170,4 +177,9 @@ fdSetNonBlock(int fd, bool nonblock)
         nonblock &= ~O_NONBLOCK;
     }
     return fcntl(fd, F_SETFL, flags) != -1;
+#else
+    (void)fd;
+    (void)nonblock;
+    return false;
+#endif
 }
