@@ -20,6 +20,7 @@
 #define _NACS_UTILS_FD_UTILS_H_
 
 #include "utils.h"
+#include "macros.h"
 
 #include <sys/stat.h>
 #include <sys/file.h>
@@ -36,6 +37,7 @@ int recvFD(int sock);
 bool fdSetCloexec(int fd, bool cloexec);
 bool fdSetNonBlock(int fd, bool nonblock);
 
+#ifndef NACS_OS_WINDOWS_
 class FLock {
     int m_fd;
 public:
@@ -63,6 +65,7 @@ public:
         flock(m_fd, LOCK_UN);
     }
 };
+#endif
 
 template<typename T>
 static inline T
