@@ -105,7 +105,7 @@
 #  define NACS_EXPORT_SWITCH_REAL(s)                                    \
     NACS_SWITCH(s, __declspec(dllimport), __declspec(dllexport))
 #  define NACS_EXPORT_SWITCH(lib)                       \
-    NACS_EXPORT_SWITCH_REAL(NACS_EXPORT_LIB_#lib())
+    NACS_EXPORT_SWITCH_REAL(NACS_EXPORT_LIB_##lib())
 #  define NACS_EXPORT(lib...)                                           \
     NACS_SWITCH(lib, NACS_EXPORT_SWITCH(lib), __declspec(dllexport))
 #else
