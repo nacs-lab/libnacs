@@ -18,7 +18,7 @@ set(nacs_utils_SRCS
   ir.cpp
   ir-interp-shim.S
   base64.cpp)
-set(nacs_utils_LINKS m rt pthread)
+set(nacs_utils_LINKS m pthread)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 if(ENABLE_LLVM)
