@@ -25,6 +25,8 @@ configure_file(nacs-kernel.pc.in nacs-kernel.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/nacs-kernel.pc
   DESTINATION ${INSTALL_PKGCONFIG_DIR})
 
-install(TARGETS nacs-kernel LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+install(TARGETS nacs-kernel
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(FILES ${nacs_kernel_HDRS}
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-kernel")

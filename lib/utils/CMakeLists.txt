@@ -44,6 +44,8 @@ configure_file(nacs-utils.pc.in nacs-utils.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/nacs-utils.pc
   DESTINATION ${INSTALL_PKGCONFIG_DIR})
 
-install(TARGETS nacs-utils LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+install(TARGETS nacs-utils
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(FILES ${nacs_utils_HDRS}
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-utils")
