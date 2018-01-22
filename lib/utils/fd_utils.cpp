@@ -28,14 +28,13 @@
 #  include <fcntl.h>
 #endif
 
-static const auto page_size = sysconf(_SC_PAGESIZE);
-
 namespace NaCs {
 
 NACS_EXPORT void*
 mapFile(int fd, off_t offset, size_t len)
 {
 #ifndef NACS_OS_WINDOWS_
+    static const auto page_size = sysconf(_SC_PAGESIZE);
     NACS_RET_IF_FAIL(fd >= 0, nullptr);
     off_t start = offset - offset % page_size;
     off_t end = alignTo(offset + len, page_size);
