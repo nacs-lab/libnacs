@@ -547,5 +547,47 @@ NACS_EXPORT() size_t PulsesBuilder::countByteCode(const std::vector<uint8_t> &co
     return count;
 }
 
+namespace {
+
+struct ByteCodePrinter {
+    void ttl(uint32_t ttl, uint64_t t)
+    {
+        stm << "TTL: val=" << std::hex << ttl << std::dec << " t=" << t << std::endl;
+    }
+    void dds_freq(uint8_t chn, uint32_t freq)
+    {
+        stm << "DDS Freq: chn=" << int(chn)
+            << " freq=" << std::hex << freq << std::dec << std::endl;
+    }
+    void dds_amp(uint8_t chn, uint16_t amp)
+    {
+        stm << "DDS Freq: chn=" << int(chn)
+            << " amp=" << std::hex << amp << std::dec << std::endl;
+    }
+    void dac(uint8_t chn, uint16_t V)
+    {
+        stm << "DAC: chn=" << int(chn) << " V=" << std::hex << V << std::dec << std::endl;
+    }
+    void wait(uint64_t t)
+    {
+        stm << "Wait: t=" << t << std::endl;
+    }
+    void clock(uint8_t period)
+    {
+        stm << "Clock: period=" << int(period) << std::endl;
+    }
+    std::ostream &stm;
+};
+
+}
+
+NACS_EXPORT() void PulsesBuilder::printByteCode(std::ostream &stm,
+                                                const std::vector<uint8_t> &code)
+{
+    ByteCodePrinter printer{stm};
+    ByteCodeExeState state;
+    state.runByteCode(printer, &code[0], code.size());
+}
+
 }
 }

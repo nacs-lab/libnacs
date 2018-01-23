@@ -320,6 +320,7 @@ struct PulsesBuilder {
     }
     static std::vector<uint8_t> toByteCode(const Sequence &seq);
     static size_t countByteCode(const std::vector<uint8_t> &code);
+    static void printByteCode(std::ostream &stm, const std::vector<uint8_t> &code);
 private:
     cb_t cb;
 };
