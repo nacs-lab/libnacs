@@ -195,15 +195,22 @@ PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
 namespace {
 
 struct DDSState {
-    uint32_t freq;
-    uint16_t amp;
+    uint32_t freq = 0;
+    uint16_t amp = 0;
+    bool freq_set = false;
+    bool amp_set = false;
+};
+
+struct DACState {
+    uint16_t V = 0;
+    bool set = false;
 };
 
 struct PulserState {
     uint64_t cur_t = 0;
     uint32_t cur_ttl = 0;
     DDSState dds[22] = {};
-    uint16_t dac[4] = {};
+    DACState dac[4] = {};
     size_t last_timed_inst = 0;
     uint8_t max_time_left = 0;
     std::vector<uint8_t> code{};
@@ -378,12 +385,13 @@ struct PulserState {
         uint32_t freq = uint32_t(0.5 + freqf * freq_factor);
         if (freq > 0x7fffffff)
             freq = 0x7fffffff;
-        if (freq == dds[chn].freq)
+        if (dds[chn].freq_set && freq == dds[chn].freq)
             return 1;
         addWait(t - cur_t);
         cur_t += 50;
         uint32_t dfreq = freq - dds[chn].freq;
         dds[chn].freq = freq;
+        dds[chn].freq_set = true;
         if (dfreq <= 0x3f || dfreq >= 0xffffffc0) {
             addInst(ByteInst::DDSDetFreq2{7, uint8_t(chn & 0x1f), uint8_t(dfreq & 0x7f)});
         }
@@ -404,12 +412,13 @@ struct PulserState {
         uint16_t amp = uint16_t(ampf * 4095.0 + 0.5);
         if (amp > 4095)
             amp = 4095;
-        if (amp == dds[chn].amp)
+        if (dds[chn].amp_set && amp == dds[chn].amp)
             return 1;
         addWait(t - cur_t);
         cur_t += 50;
         uint16_t damp = uint16_t(amp - dds[chn].amp);
         dds[chn].amp = amp;
+        dds[chn].amp_set = true;
         if (damp <= 0x3f || damp >= 0xffc0) {
             addInst(ByteInst::DDSDetAmp{11, uint8_t(chn & 0x1f), uint8_t(damp & 0x7f)});
         }
@@ -434,12 +443,13 @@ struct PulserState {
             double offset = 10.0;
             V = uint16_t(((offset - Vf) * scale) + 0.5);
         }
-        if (V == dac[chn])
+        if (dac[chn].set && V == dac[chn].V)
             return 1;
         addWait(t - cur_t);
         cur_t += 45;
-        uint16_t dV = uint16_t(V - dac[chn]);
-        dac[chn] = V;
+        uint16_t dV = uint16_t(V - dac[chn].V);
+        dac[chn].V = V;
+        dac[chn].set = true;
         if (dV <= 0x1ff || dV >= 0xfe00) {
             addInst(ByteInst::DACDet{13, uint8_t(chn & 0x3), uint16_t(dV & 0x3ff)});
         }
