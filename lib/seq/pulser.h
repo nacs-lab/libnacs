@@ -163,41 +163,6 @@ struct Sequence {
     static Sequence fromBinary(const uint32_t *data, size_t len);
 };
 
-namespace ByteCode {
-
-/**
- * Byte code format:
- * TTL all: [#0: 4][t: 4][val: 32] (5 bytes)
- * TTL flip2: [#1: 4][t: 2][val1: 5][val2: 5] (2 bytes, val1 == val2 means single flip)
- * TTL flip4: [#2: 4][val: 5][val: 5][val: 5][val: 5] (3 bytes, len=3)
- * TTL flip5: [#3: 4][t: 3][val: 5][val: 5][val: 5][val: 5][val: 5] (4 bytes)
- * Wait: [#4: 4][exp: 4][t: 16] (3 bytes, len=t * 2^(3 * exp))
- * Wait2: [#4: 4][#1: 1][t: 11] (2 bytes)
- * Clock: [#5: 4][#0: 4][period: 8] (2 bytes)
- * DDS Freq: [#6: 4][chn: 5][freq: 31] (5 bytes)
- * DDS det Freq: [#7: 4][chn: 5][det_freq: 7] (2 bytes)
- * DDS det Freq: [#8: 4][chn: 5][det_freq: 15] (3 bytes)
- * DDS det Freq: [#9: 4][chn: 5][det_freq: 23] (4 bytes)
- * DDS Amp: [#10: 4][#0: 3][chn: 5][amp: 12] (3 bytes)
- * DDS det Amp: [#11: 4][chn: 5][det_amp: 7] (2 bytes)
- * DAC: [#12: 4][#0: 2][chn: 2][val: 16] (3 bytes)
- * DAC det: [#13: 4][chn: 2][val: 10] (2 bytes)
- **/
-
-size_t count(const uint8_t *code, size_t code_len);
-static inline size_t count(const std::vector<uint8_t> &code)
-{
-    return count(&code[0], code.size());
-}
-
-void print(std::ostream &stm, const uint8_t *code, size_t code_len);
-static inline void print(std::ostream &stm, const std::vector<uint8_t> &code)
-{
-    print(stm, &code[0], code.size());
-}
-
-}
-
 namespace ByteInst {
 
 struct __attribute__((__packed__)) TTLAll {
@@ -324,33 +289,42 @@ static constexpr uint8_t codelen[14] = {
 
 }
 
-struct PulsesBuilder {
-    typedef std::function<uint64_t(Channel,Val,uint64_t,uint64_t)> cb_t;
-    typedef std::function<uint64_t(PulsesBuilder&,uint64_t,Event)> seq_cb_t;
-    template<typename T>
-    PulsesBuilder(T &&_cb)
-        : cb(std::forward<T>(_cb))
-    {}
-    uint64_t operator()(Channel chn, Val val, uint64_t t, uint64_t tlim)
-    {
-        return cb(chn, val, t, tlim);
-    }
-    __attribute__((deprecated)) static Sequence fromBase64(const uint8_t *data, size_t len);
-    void schedule(Sequence &, seq_cb_t seq_cb,
-                  Time::Constraints t_cons={50, 40, 4096});
-    void schedule(Sequence &&seq, seq_cb_t seq_cb,
-                  Time::Constraints t_cons={50, 40, 4096})
-    {
-        schedule(seq, seq_cb, t_cons);
-    }
-    static std::vector<uint8_t> toByteCode(const Sequence &seq);
-private:
-    cb_t cb;
-};
+namespace ByteCode {
 
-struct ByteCodeExeState {
+/**
+ * Byte code format:
+ * TTL all: [#0: 4][t: 4][val: 32] (5 bytes)
+ * TTL flip2: [#1: 4][t: 2][val1: 5][val2: 5] (2 bytes, val1 == val2 means single flip)
+ * TTL flip4: [#2: 4][val: 5][val: 5][val: 5][val: 5] (3 bytes, len=3)
+ * TTL flip5: [#3: 4][t: 3][val: 5][val: 5][val: 5][val: 5][val: 5] (4 bytes)
+ * Wait: [#4: 4][exp: 4][t: 16] (3 bytes, len=t * 2^(3 * exp))
+ * Wait2: [#4: 4][#1: 1][t: 11] (2 bytes)
+ * Clock: [#5: 4][#0: 4][period: 8] (2 bytes)
+ * DDS Freq: [#6: 4][chn: 5][freq: 31] (5 bytes)
+ * DDS det Freq: [#7: 4][chn: 5][det_freq: 7] (2 bytes)
+ * DDS det Freq: [#8: 4][chn: 5][det_freq: 15] (3 bytes)
+ * DDS det Freq: [#9: 4][chn: 5][det_freq: 23] (4 bytes)
+ * DDS Amp: [#10: 4][#0: 3][chn: 5][amp: 12] (3 bytes)
+ * DDS det Amp: [#11: 4][chn: 5][det_amp: 7] (2 bytes)
+ * DAC: [#12: 4][#0: 2][chn: 2][val: 16] (3 bytes)
+ * DAC det: [#13: 4][chn: 2][val: 10] (2 bytes)
+ **/
+
+size_t count(const uint8_t *code, size_t code_len);
+static inline size_t count(const std::vector<uint8_t> &code)
+{
+    return count(&code[0], code.size());
+}
+
+void print(std::ostream &stm, const uint8_t *code, size_t code_len);
+static inline void print(std::ostream &stm, const std::vector<uint8_t> &code)
+{
+    print(stm, &code[0], code.size());
+}
+
+struct ExeState {
     template<typename T>
-    void runByteCode(T &&cb, const uint8_t *code, size_t len);
+    void run(T &&cb, const uint8_t *code, size_t len);
 
 private:
     template<typename T>
@@ -370,7 +344,7 @@ private:
 };
 
 template<typename T>
-void ByteCodeExeState::runByteCode(T &&cb, const uint8_t *code, size_t code_len)
+void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
 {
     for (size_t i = 0; i < code_len;) {
         auto *p = &code[i];
@@ -537,6 +511,32 @@ void ByteCodeExeState::runByteCode(T &&cb, const uint8_t *code, size_t code_len)
         }
     }
 }
+
+}
+
+struct PulsesBuilder {
+    typedef std::function<uint64_t(Channel,Val,uint64_t,uint64_t)> cb_t;
+    typedef std::function<uint64_t(PulsesBuilder&,uint64_t,Event)> seq_cb_t;
+    template<typename T>
+    PulsesBuilder(T &&_cb)
+        : cb(std::forward<T>(_cb))
+    {}
+    uint64_t operator()(Channel chn, Val val, uint64_t t, uint64_t tlim)
+    {
+        return cb(chn, val, t, tlim);
+    }
+    __attribute__((deprecated)) static Sequence fromBase64(const uint8_t *data, size_t len);
+    void schedule(Sequence &, seq_cb_t seq_cb,
+                  Time::Constraints t_cons={50, 40, 4096});
+    void schedule(Sequence &&seq, seq_cb_t seq_cb,
+                  Time::Constraints t_cons={50, 40, 4096})
+    {
+        schedule(seq, seq_cb, t_cons);
+    }
+    static std::vector<uint8_t> toByteCode(const Sequence &seq);
+private:
+    cb_t cb;
+};
 
 }
 }

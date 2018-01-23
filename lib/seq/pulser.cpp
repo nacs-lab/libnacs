@@ -604,8 +604,8 @@ struct Printer {
 NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len)
 {
     Printer printer{stm};
-    ByteCodeExeState state;
-    state.runByteCode(printer, code, code_len);
+    ExeState state;
+    state.run(printer, code, code_len);
 }
 
 }
