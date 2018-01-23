@@ -324,6 +324,180 @@ private:
     cb_t cb;
 };
 
+struct ByteCodeExeState {
+    template<typename T>
+    void runByteCode(T &&cb, const uint8_t *code, size_t len);
+
+private:
+    template<typename T>
+    T loadInst(const uint8_t *code, size_t idx=0)
+    {
+        T v;
+        memcpy(&v, &code[idx], sizeof(T));
+        return v;
+    }
+    struct DDS {
+        uint32_t freq = 0;
+        uint16_t amp = 0;
+    };
+    uint32_t m_ttl = 0;
+    DDS m_dds[22] = {};
+    uint16_t m_dac[4] = {};
+};
+
+template<typename T>
+void ByteCodeExeState::runByteCode(T &&cb, const uint8_t *code, size_t code_len)
+{
+    for (size_t i = 0; i < code_len;) {
+        auto *p = &code[i];
+        uint8_t b = *p;
+        uint8_t op = b & 0xf;
+        auto inst_len = ByteInst::codelen[op];
+        i += inst_len;
+        auto consumeAllWait = [&] {
+            uint64_t t = 0;
+            while (true) {
+                auto *p2 = &code[i];
+                uint8_t b2 = *p2;
+                uint8_t op2 = b2 & 0xf;
+                if (op2 != 4)
+                    break;
+                i += sizeof(ByteInst::Wait);
+                auto inst = loadInst<ByteInst::Wait>(p2);
+                t += uint64_t(inst.t) << (inst.exp * 3);
+            }
+            return t;
+        };
+        auto runTTL = [&] (uint32_t ttl, uint64_t t) {
+            t += consumeAllWait();
+            cb.ttl(ttl, t);
+            m_ttl = ttl;
+        };
+        auto runDDSFreq = [&] (uint8_t chn, uint32_t freq) {
+            cb.dds_freq(chn, freq);
+            m_dds[chn].freq = freq;
+        };
+        auto runDDSAmp = [&] (uint8_t chn, uint16_t amp) {
+            cb.dds_amp(chn, amp & 4095);
+            m_dds[chn].amp = amp;
+        };
+        auto runDAC = [&] (uint8_t chn, uint16_t V) {
+            cb.dac(chn, V);
+            m_dac[chn] = V;
+        };
+        switch (op) {
+        case 0: {
+            auto inst = loadInst<ByteInst::TTLAll>(p);
+            runTTL(inst.val, inst.t + 3);
+            break;
+        }
+        case 1: {
+            auto inst = loadInst<ByteInst::TTL2>(p);
+            uint32_t ttl = m_ttl;
+            ttl = ttl ^ (1 << inst.val1);
+            if (inst.val2 != inst.val1)
+                ttl = ttl ^ (1 << inst.val2);
+            runTTL(ttl, inst.t + 3);
+            break;
+        }
+        case 2: {
+            auto inst = loadInst<ByteInst::TTL4>(p);
+            uint32_t ttl = m_ttl;
+            ttl = ttl ^ (1 << inst.val1);
+            ttl = ttl ^ (1 << inst.val2);
+            ttl = ttl ^ (1 << inst.val3);
+            if (inst.val4 != inst.val3)
+                ttl = ttl ^ (1 << inst.val4);
+            runTTL(ttl, 3);
+            break;
+        }
+        case 3: {
+            auto inst = loadInst<ByteInst::TTL5>(p);
+            uint32_t ttl = m_ttl;
+            ttl = ttl ^ (1 << inst.val1);
+            ttl = ttl ^ (1 << inst.val2);
+            ttl = ttl ^ (1 << inst.val3);
+            ttl = ttl ^ (1 << inst.val4);
+            ttl = ttl ^ (1 << inst.val5);
+            runTTL(ttl, inst.t + 3);
+            break;
+        }
+        case 4: {
+            auto inst = loadInst<ByteInst::Wait>(p);
+            uint64_t t = uint64_t(inst.t) << (inst.exp * 3);
+            cb.wait(t + consumeAllWait());
+            break;
+        }
+        case 5: {
+            cb.clock(loadInst<ByteInst::Clock>(p).period);
+            break;
+        }
+        case 6: {
+            auto inst = loadInst<ByteInst::DDSFreq>(p);
+            runDDSFreq(inst.chn, inst.freq);
+            break;
+        }
+        case 7: {
+            auto inst = loadInst<ByteInst::DDSDetFreq2>(p);
+            uint8_t chn = inst.chn;
+            uint32_t freq = inst.freq;
+            if (freq & 0x40)
+                freq = freq | 0xffffff80;
+            runDDSFreq(chn, freq + m_dds[chn].freq);
+            break;
+        }
+        case 8: {
+            auto inst = loadInst<ByteInst::DDSDetFreq3>(p);
+            uint8_t chn = inst.chn;
+            uint32_t freq = inst.freq;
+            if (freq & 0x4000)
+                freq = freq | 0xffff8000;
+            runDDSFreq(chn, freq + m_dds[chn].freq);
+            break;
+        }
+        case 9: {
+            auto inst = loadInst<ByteInst::DDSDetFreq4>(p);
+            uint8_t chn = inst.chn;
+            uint32_t freq = inst.freq;
+            if (freq & 0x400000)
+                freq = freq | 0xff800000;
+            runDDSFreq(chn, freq + m_dds[chn].freq);
+            break;
+        }
+        case 10: {
+            auto inst = loadInst<ByteInst::DDSAmp>(p);
+            runDDSAmp(inst.chn, inst.amp);
+            break;
+        }
+        case 11: {
+            auto inst = loadInst<ByteInst::DDSDetAmp>(p);
+            uint8_t chn = inst.chn;
+            uint32_t amp = inst.amp;
+            if (amp & 0x40)
+                amp = amp | 0xff80;
+            runDDSAmp(chn, amp + m_dds[chn].amp);
+            break;
+        }
+        case 12: {
+            auto inst = loadInst<ByteInst::DAC>(p);
+            runDAC(inst.chn, inst.amp);
+            break;
+        }
+        case 13: {
+            auto inst = loadInst<ByteInst::DACDet>(p);
+            uint8_t chn = inst.chn;
+            uint32_t amp = inst.amp;
+            if (amp & 0x200)
+                amp = amp | 0xfc00;
+            runDAC(chn, amp + m_dac[chn]);
+            break;
+        }
+        default:
+            abort();
+        }
+    }
+}
+
 }
 }
 
