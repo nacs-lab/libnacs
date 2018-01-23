@@ -159,6 +159,8 @@ struct Sequence {
           clocks(std::move(_clocks))
     {
     }
+    static Sequence fromBase64(const uint8_t *data, size_t len);
+    static Sequence fromBinary(const uint32_t *data, size_t len);
 };
 
 /**
@@ -317,8 +319,7 @@ struct PulsesBuilder {
     {
         return cb(chn, val, t, tlim);
     }
-    static Sequence fromBase64(const uint8_t *data, size_t len);
-    static Sequence fromBinary(const uint32_t *data, size_t len);
+    __attribute__((deprecated)) static Sequence fromBase64(const uint8_t *data, size_t len);
     void schedule(Sequence &, seq_cb_t seq_cb,
                   Time::Constraints t_cons={50, 40, 4096});
     void schedule(Sequence &&seq, seq_cb_t seq_cb,

@@ -130,7 +130,7 @@ int main(int argn, char **argv)
         std::string data(std::istreambuf_iterator<char>(istm), {});
         assert(Base64::validate((const uint8_t*)data.data(), data.size()));
         tic();
-        auto seq = Seq::PulsesBuilder::fromBase64((const uint8_t*)data.data(), data.size());
+        auto seq = Seq::Sequence::fromBase64((const uint8_t*)data.data(), data.size());
         printToc();
         tic();
         file_builder.schedule(seq, seq_cb);
@@ -145,7 +145,7 @@ int main(int argn, char **argv)
         std::string data(std::istreambuf_iterator<char>(istm), {});
         assert(Base64::validate((const uint8_t*)data.data(), data.size()));
         tic();
-        auto seq = Seq::PulsesBuilder::fromBase64((const uint8_t*)data.data(), data.size());
+        auto seq = Seq::Sequence::fromBase64((const uint8_t*)data.data(), data.size());
         printToc();
         tic();
         file_builder.schedule(seq, seq_cb);

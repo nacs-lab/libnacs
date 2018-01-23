@@ -24,62 +24,6 @@
 namespace NaCs {
 namespace Seq {
 
-NACS_EXPORT() void
-PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t_cons)
-{
-    auto &seq = sequence.pulses;
-    auto &defaults = sequence.defaults;
-    Filter filter;
-    sort(seq);
-    uint32_t ttl_val = 0;
-    auto ttl_it = defaults.find({Channel::TTL, 0});
-    if (ttl_it != defaults.end())
-        ttl_val = ttl_it->second.val.i32;
-    uint64_t prev_ttl_t = 0;
-    ssize_t prev_ttl_idx = -1;
-    size_t to = 0, from = 0;
-    for (;from < seq.size();from++, to++) {
-        auto &pulse = seq[from];
-        if (pulse.chn.typ != Channel::TTL) {
-            if (from != to)
-                seq[to] = std::move(pulse);
-            continue;
-        }
-        assert(pulse.len == 0);
-        assert(pulse.chn.id < 32);
-        uint32_t mask = uint32_t(1) << pulse.chn.id;
-        bool val = pulse.cb(pulse.t, Val::get<double>((ttl_val & mask) != 0),
-                            pulse.len).val.f64 != 0;
-        uint32_t new_ttl_val;
-        if (val) {
-            new_ttl_val = ttl_val | mask;
-        } else {
-            new_ttl_val = ttl_val & ~mask;
-        }
-        if (new_ttl_val == ttl_val && prev_ttl_idx != -1) {
-            to--;
-            continue;
-        }
-        ttl_val = new_ttl_val;
-        if (prev_ttl_idx != -1 && prev_ttl_t == pulse.t) {
-            seq[prev_ttl_idx].cb = PulseData(Val::get<uint32_t>(new_ttl_val));
-            to--;
-        } else {
-            prev_ttl_idx = to;
-            prev_ttl_t = pulse.t;
-            pulse.chn = {Channel::Type::TTL, 0};
-            pulse.cb = PulseData(Val::get<uint32_t>(new_ttl_val));
-            if (from != to) {
-                seq[to] = std::move(pulse);
-            }
-        }
-    }
-    seq.resize(to);
-    Channel clock_chn{Channel::Type::CLOCK, 0};
-    Seq::schedule(*this, seq, t_cons, defaults, sequence.clocks, filter, std::move(seq_cb),
-                  [] (auto clock_div) { return Val::get<uint32_t>(clock_div); }, clock_chn);
-}
-
 struct IRPulse {
     IRPulse(IR::Function &&func)
         : m_func(std::move(func)),
@@ -108,7 +52,7 @@ private:
 };
 
 NACS_EXPORT() Sequence
-PulsesBuilder::fromBinary(const uint32_t *bin, size_t len)
+Sequence::fromBinary(const uint32_t *bin, size_t len)
 {
     // [TTL default: 4B]
     // [n_non_ttl: 4B]
@@ -183,13 +127,75 @@ PulsesBuilder::fromBinary(const uint32_t *bin, size_t len)
 }
 
 NACS_EXPORT() Sequence
-PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
+Sequence::fromBase64(const uint8_t *data, size_t len)
 {
     size_t bin_len = Base64::decode_len(data, len);
     assert(bin_len % 4 == 0);
     std::vector<uint32_t> bin(bin_len / 4);
     Base64::decode((uint8_t*)bin.data(), data, len);
     return fromBinary(&bin[0], bin_len);
+}
+
+NACS_EXPORT() Sequence
+PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
+{
+    return Sequence::fromBase64(data, len);
+}
+
+NACS_EXPORT() void
+PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t_cons)
+{
+    auto &seq = sequence.pulses;
+    auto &defaults = sequence.defaults;
+    Filter filter;
+    sort(seq);
+    uint32_t ttl_val = 0;
+    auto ttl_it = defaults.find({Channel::TTL, 0});
+    if (ttl_it != defaults.end())
+        ttl_val = ttl_it->second.val.i32;
+    uint64_t prev_ttl_t = 0;
+    ssize_t prev_ttl_idx = -1;
+    size_t to = 0, from = 0;
+    for (;from < seq.size();from++, to++) {
+        auto &pulse = seq[from];
+        if (pulse.chn.typ != Channel::TTL) {
+            if (from != to)
+                seq[to] = std::move(pulse);
+            continue;
+        }
+        assert(pulse.len == 0);
+        assert(pulse.chn.id < 32);
+        uint32_t mask = uint32_t(1) << pulse.chn.id;
+        bool val = pulse.cb(pulse.t, Val::get<double>((ttl_val & mask) != 0),
+                            pulse.len).val.f64 != 0;
+        uint32_t new_ttl_val;
+        if (val) {
+            new_ttl_val = ttl_val | mask;
+        } else {
+            new_ttl_val = ttl_val & ~mask;
+        }
+        if (new_ttl_val == ttl_val && prev_ttl_idx != -1) {
+            to--;
+            continue;
+        }
+        ttl_val = new_ttl_val;
+        if (prev_ttl_idx != -1 && prev_ttl_t == pulse.t) {
+            seq[prev_ttl_idx].cb = PulseData(Val::get<uint32_t>(new_ttl_val));
+            to--;
+        } else {
+            prev_ttl_idx = to;
+            prev_ttl_t = pulse.t;
+            pulse.chn = {Channel::Type::TTL, 0};
+            pulse.cb = PulseData(Val::get<uint32_t>(new_ttl_val));
+            if (from != to) {
+                seq[to] = std::move(pulse);
+            }
+        }
+    }
+    seq.resize(to);
+    Channel clock_chn{Channel::Type::CLOCK, 0};
+    Seq::schedule(*this, seq, t_cons, defaults, sequence.clocks, filter, std::move(seq_cb),
+                  [] (auto clock_div) { return Val::get<uint32_t>(clock_div); }, clock_chn);
 }
 
 namespace {

@@ -39,8 +39,8 @@ int main(int argc, char **argv)
     assert(Base64::validate((const uint8_t*)data.data(), data.size()));
     tic();
     auto code =
-        Seq::PulsesBuilder::toByteCode(Seq::PulsesBuilder::fromBase64((const uint8_t*)data.data(),
-                                                                      data.size()));
+        Seq::PulsesBuilder::toByteCode(Seq::Sequence::fromBase64((const uint8_t*)data.data(),
+                                                                 data.size()));
     printToc();
 
     if (argc >= 3) {
