@@ -261,10 +261,14 @@ struct PulserState {
             // 0x10000 * 2^(3 * i - 3)
             // or
             // 0x2000 << (3 * i)
-            uint64_t tnext_max = uint64_t(0x2000) << (3 * i);
-            if (dt < tnext_max)
-                continue;
+            if (i > 0) {
+                uint64_t tnext_max = uint64_t(0x2000) << (3 * i);
+                if (dt < tnext_max) {
+                    continue;
+                }
+            }
             times[i] = uint16_t(dt >> (3 * i));
+            dt -= times[i];
             if (dt == 0) {
                 break;
             }
