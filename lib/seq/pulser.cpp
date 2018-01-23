@@ -567,11 +567,9 @@ NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
     return count;
 }
 
-}
-
 namespace {
 
-struct ByteCodePrinter {
+struct Printer {
     void ttl(uint32_t ttl, uint64_t t)
     {
         stm << "TTL: val=" << std::hex << ttl << std::dec << " t=" << t << std::endl;
@@ -603,12 +601,13 @@ struct ByteCodePrinter {
 
 }
 
-NACS_EXPORT() void PulsesBuilder::printByteCode(std::ostream &stm,
-                                                const std::vector<uint8_t> &code)
+NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len)
 {
-    ByteCodePrinter printer{stm};
+    Printer printer{stm};
     ByteCodeExeState state;
-    state.runByteCode(printer, &code[0], code.size());
+    state.runByteCode(printer, code, code_len);
+}
+
 }
 
 }

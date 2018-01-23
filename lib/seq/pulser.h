@@ -190,6 +190,12 @@ static inline size_t count(const std::vector<uint8_t> &code)
     return count(&code[0], code.size());
 }
 
+void print(std::ostream &stm, const uint8_t *code, size_t code_len);
+static inline void print(std::ostream &stm, const std::vector<uint8_t> &code)
+{
+    print(stm, &code[0], code.size());
+}
+
 }
 
 namespace ByteInst {
@@ -338,7 +344,6 @@ struct PulsesBuilder {
         schedule(seq, seq_cb, t_cons);
     }
     static std::vector<uint8_t> toByteCode(const Sequence &seq);
-    static void printByteCode(std::ostream &stm, const std::vector<uint8_t> &code);
 private:
     cb_t cb;
 };

@@ -48,7 +48,7 @@ int main(int argc, char **argv)
         ostm.write((const char*)&code[0], code.size());
     }
 
-    // Seq::PulsesBuilder::printByteCode(std::cout, code);
+    // Seq::ByteCode::print(std::cout, code);
 
     std::cout << Seq::ByteCode::count(code) << std::endl;
     std::cout << code.size() << std::endl;
