@@ -288,6 +288,14 @@ struct __attribute__((__packed__)) DACDet {
 };
 static_assert(sizeof(DACDet) == 2);
 
+static constexpr uint8_t codelen[14] = {
+    5, 2, 3, 4, // TTL
+    3, 2, // wait, clock
+    5, 2, 3, 4, // DDS Freq
+    3, 2, // DDS Amp
+    3, 2, // DAC
+};
+
 }
 
 struct PulsesBuilder {
@@ -311,6 +319,7 @@ struct PulsesBuilder {
         schedule(seq, seq_cb, t_cons);
     }
     static std::vector<uint8_t> toByteCode(const Sequence &seq);
+    static size_t countByteCode(const std::vector<uint8_t> &code);
 private:
     cb_t cb;
 };

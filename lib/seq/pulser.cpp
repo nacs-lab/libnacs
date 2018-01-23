@@ -519,5 +519,19 @@ NACS_EXPORT() std::vector<uint8_t> PulsesBuilder::toByteCode(const Sequence &seq
     return state.code;
 }
 
+NACS_EXPORT() size_t PulsesBuilder::countByteCode(const std::vector<uint8_t> &code)
+{
+    size_t count = 0;
+    for (size_t i = 0; i < code.size();) {
+        uint8_t b = code[i];
+        uint8_t op = b & 0xf;
+        assert(op < 14);
+        auto len = ByteInst::codelen[op];
+        i += len;
+        count++;
+    }
+    return count;
+}
+
 }
 }

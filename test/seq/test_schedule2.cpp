@@ -43,6 +43,7 @@ int main(int argc, char **argv)
                                                                       data.size()));
     printToc();
 
+    std::cout << Seq::PulsesBuilder::countByteCode(code) << std::endl;
     std::cout << code.size() << std::endl;
 
     return 0;
