@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 
     // Seq::PulsesBuilder::printByteCode(std::cout, code);
 
-    std::cout << Seq::PulsesBuilder::countByteCode(code) << std::endl;
+    std::cout << Seq::ByteCode::count(code) << std::endl;
     std::cout << code.size() << std::endl;
 
     return 0;

@@ -163,6 +163,8 @@ struct Sequence {
     static Sequence fromBinary(const uint32_t *data, size_t len);
 };
 
+namespace ByteCode {
+
 /**
  * Byte code format:
  * TTL all: [#0: 4][t: 4][val: 32] (5 bytes)
@@ -181,6 +183,14 @@ struct Sequence {
  * DAC: [#12: 4][#0: 2][chn: 2][val: 16] (3 bytes)
  * DAC det: [#13: 4][chn: 2][val: 10] (2 bytes)
  **/
+
+size_t count(const uint8_t *code, size_t code_len);
+static inline size_t count(const std::vector<uint8_t> &code)
+{
+    return count(&code[0], code.size());
+}
+
+}
 
 namespace ByteInst {
 
@@ -328,7 +338,6 @@ struct PulsesBuilder {
         schedule(seq, seq_cb, t_cons);
     }
     static std::vector<uint8_t> toByteCode(const Sequence &seq);
-    static size_t countByteCode(const std::vector<uint8_t> &code);
     static void printByteCode(std::ostream &stm, const std::vector<uint8_t> &code);
 private:
     cb_t cb;
