@@ -175,8 +175,8 @@ struct Sequence {
  * DDS det Freq: [#9: 4][chn: 5][det_freq: 23] (4 bytes)
  * DDS Amp: [#10: 4][#0: 3][chn: 5][amp: 12] (3 bytes)
  * DDS det Amp: [#11: 4][chn: 5][det_amp: 7] (2 bytes)
- * DAC: [#12: 4][#0: 4][chn: 8][val: 16] (4 bytes)
- * DAC det: [#13: 4][chn: 8][val: 12] (3 bytes)
+ * DAC: [#12: 4][#0: 2][chn: 2][val: 16] (3 bytes)
+ * DAC det: [#13: 4][chn: 2][val: 10] (2 bytes)
  **/
 
 namespace ByteInst {
@@ -275,18 +275,18 @@ static_assert(sizeof(DDSDetAmp) == 2);
 
 struct __attribute__((__packed__)) DAC {
     uint8_t op: 4; // 12
-    uint8_t _0: 4;
-    uint16_t chn: 8;
+    uint8_t _0: 2;
+    uint16_t chn: 2;
     uint16_t amp: 16;
 };
-static_assert(sizeof(DAC) == 4);
+static_assert(sizeof(DAC) == 3);
 
 struct __attribute__((__packed__)) DACDet {
     uint8_t op: 4; // 13
-    uint16_t chn: 8;
-    uint16_t amp: 12;
+    uint16_t chn: 2;
+    uint16_t amp: 10;
 };
-static_assert(sizeof(DACDet) == 3);
+static_assert(sizeof(DACDet) == 2);
 
 }
 
