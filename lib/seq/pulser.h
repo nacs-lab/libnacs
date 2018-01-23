@@ -168,6 +168,7 @@ struct Sequence {
  * TTL flip4: [#2: 4][val: 5][val: 5][val: 5][val: 5] (3 bytes, len=3)
  * TTL flip5: [#3: 4][t: 3][val: 5][val: 5][val: 5][val: 5][val: 5] (4 bytes)
  * Wait: [#4: 4][exp: 4][t: 16] (3 bytes, len=t * 2^(3 * exp))
+ * Wait2: [#4: 4][#1: 1][t: 11] (2 bytes)
  * Clock: [#5: 4][#0: 4][period: 8] (2 bytes)
  * DDS Freq: [#6: 4][chn: 5][freq: 31] (5 bytes)
  * DDS det Freq: [#7: 4][chn: 5][det_freq: 7] (2 bytes)
@@ -223,9 +224,16 @@ struct __attribute__((__packed__)) Wait {
 };
 static_assert(sizeof(Wait) == 3);
 
+struct __attribute__((__packed__)) Wait2 {
+    uint8_t op: 4; // 5
+    uint8_t _0: 1; // 1
+    uint16_t t: 11;
+};
+static_assert(sizeof(Wait2) == 2);
+
 struct __attribute__((__packed__)) Clock {
     uint8_t op: 4; // 5
-    uint8_t _0: 4;
+    uint8_t _0: 4; // 0
     uint8_t period;
 };
 static_assert(sizeof(Clock) == 2);
@@ -361,11 +369,21 @@ void ByteCodeExeState::runByteCode(T &&cb, const uint8_t *code, size_t code_len)
                 auto *p2 = &code[i];
                 uint8_t b2 = *p2;
                 uint8_t op2 = b2 & 0xf;
-                if (op2 != 4)
+                if (op2 == 5) {
+                    if (!(b2 & 0x10))
+                        break;
+                    i += sizeof(ByteInst::Wait2);
+                    auto inst = loadInst<ByteInst::Wait2>(p2);
+                    t += uint64_t(inst.t);
+                }
+                else if (op2 != 4) {
                     break;
-                i += sizeof(ByteInst::Wait);
-                auto inst = loadInst<ByteInst::Wait>(p2);
-                t += uint64_t(inst.t) << (inst.exp * 3);
+                }
+                else {
+                    i += sizeof(ByteInst::Wait);
+                    auto inst = loadInst<ByteInst::Wait>(p2);
+                    t += uint64_t(inst.t) << (inst.exp * 3);
+                }
             }
             return t;
         };
@@ -430,7 +448,13 @@ void ByteCodeExeState::runByteCode(T &&cb, const uint8_t *code, size_t code_len)
             break;
         }
         case 5: {
-            cb.clock(loadInst<ByteInst::Clock>(p).period);
+            if (b & 0x10) {
+                auto inst = loadInst<ByteInst::Wait2>(p);
+                cb.wait(uint64_t(inst.t) + consumeAllWait());
+            }
+            else {
+                cb.clock(loadInst<ByteInst::Clock>(p).period);
+            }
             break;
         }
         case 6: {

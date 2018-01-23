@@ -261,7 +261,7 @@ struct PulserState {
             incLastTime(uint8_t(dt));
             return;
         }
-        uint16_t times[16];
+        uint16_t times[17];
         memset(times, 0, sizeof(times));
         for (int i = 15; i >= 0; i--) {
             // The first number not representable by the next one is
@@ -273,6 +273,15 @@ struct PulserState {
                 if (dt < tnext_max) {
                     continue;
                 }
+            }
+            else if (dt <= uint16_t(2047 + max_time_left)) {
+                if (max_time_left) {
+                    dt -= max_time_left;
+                    incLastTime(max_time_left);
+                }
+                times[16] = uint16_t(dt);
+                dt = 0;
+                break;
             }
             times[i] = uint16_t(dt >> (3 * i));
             dt -= times[i];
@@ -288,6 +297,9 @@ struct PulserState {
             if (!times[i])
                 continue;
             addInst(ByteInst::Wait{4, uint8_t(i & 0xf), times[i]});
+        }
+        if (times[16]) {
+            addInst(ByteInst::Wait2{5, 1, uint16_t(times[16] & 2047)});
         }
     }
 
