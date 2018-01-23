@@ -561,7 +561,7 @@ struct ByteCodePrinter {
     }
     void dds_amp(uint8_t chn, uint16_t amp)
     {
-        stm << "DDS Freq: chn=" << int(chn)
+        stm << "DDS Amp: chn=" << int(chn)
             << " amp=" << std::hex << amp << std::dec << std::endl;
     }
     void dac(uint8_t chn, uint16_t V)
