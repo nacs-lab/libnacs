@@ -472,10 +472,10 @@ void ByteCodeExeState::runByteCode(T &&cb, const uint8_t *code, size_t code_len)
         case 11: {
             auto inst = loadInst<ByteInst::DDSDetAmp>(p);
             uint8_t chn = inst.chn;
-            uint32_t amp = inst.amp;
+            uint16_t amp = inst.amp;
             if (amp & 0x40)
                 amp = amp | 0xff80;
-            runDDSAmp(chn, amp + m_dds[chn].amp);
+            runDDSAmp(chn, uint16_t(amp + m_dds[chn].amp));
             break;
         }
         case 12: {
@@ -486,10 +486,10 @@ void ByteCodeExeState::runByteCode(T &&cb, const uint8_t *code, size_t code_len)
         case 13: {
             auto inst = loadInst<ByteInst::DACDet>(p);
             uint8_t chn = inst.chn;
-            uint32_t amp = inst.amp;
+            uint16_t amp = inst.amp;
             if (amp & 0x200)
                 amp = amp | 0xfc00;
-            runDAC(chn, amp + m_dac[chn]);
+            runDAC(chn, uint16_t(amp + m_dac[chn]));
             break;
         }
         default:
