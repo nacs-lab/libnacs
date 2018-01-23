@@ -192,5 +192,331 @@ PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
     return fromBinary(&bin[0], bin_len);
 }
 
+namespace {
+
+struct DDSState {
+    uint32_t freq;
+    uint16_t amp;
+};
+
+struct PulserState {
+    uint64_t cur_t = 0;
+    uint32_t cur_ttl = 0;
+    DDSState dds[22] = {};
+    uint16_t dac[4] = {};
+    size_t last_timed_inst = 0;
+    uint8_t max_time_left = 0;
+    std::vector<uint8_t> code{};
+
+    static constexpr int start_ttl = 0;
+    static constexpr int start_ttl_mask = (1 << start_ttl);
+    static constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
+
+    template<typename Inst>
+    size_t addInst(Inst inst)
+    {
+        auto len = code.size();
+        code.resize(len + sizeof(inst));
+        memcpy(&code[len], &inst, sizeof(inst));
+        max_time_left = 0;
+        return len;
+    }
+
+    void incLastTime(uint8_t t)
+    {
+        assert(t <= max_time_left);
+        max_time_left = uint8_t(max_time_left - t);
+        uint8_t b = code[last_timed_inst];
+        uint8_t op = b & 0xf;
+        uint8_t tmask = 0xf0;
+        switch (op) {
+        case 0: // TTLAll
+            break;
+        case 1: // TTL2
+            tmask = 0x30;
+            break;
+        case 3: // TTL5
+            tmask = 0x70;
+            break;
+        default:
+            abort();
+        }
+        t = uint8_t(t + ((b & tmask) >> 4));
+        code[last_timed_inst] = uint8_t((b & ~tmask) | ((t << 4) & tmask));
+    }
+
+    void addWait(uint64_t dt)
+    {
+        if (dt == 0)
+            return;
+        cur_t += dt;
+        if (dt <= max_time_left) {
+            incLastTime(uint8_t(dt));
+            return;
+        }
+        uint16_t times[16];
+        memset(times, 0, sizeof(times));
+        for (int i = 15; i >= 0; i--) {
+            // The first number not representable by the next one is
+            // 0x10000 * 2^(3 * i - 3)
+            // or
+            // 0x2000 << (3 * i)
+            uint64_t tnext_max = uint64_t(0x2000) << (3 * i);
+            if (dt < tnext_max)
+                continue;
+            times[i] = uint16_t(dt >> (3 * i));
+            if (dt == 0) {
+                break;
+            }
+            else if (dt <= max_time_left) {
+                incLastTime(uint8_t(dt));
+                break;
+            }
+        }
+        for (int i = 15; i >= 0; i--) {
+            if (!times[i])
+                continue;
+            addInst(ByteInst::Wait{4, uint8_t(i & 0xf), times[i]});
+        }
+    }
+
+    uint64_t addTTLReal(uint64_t t, uint32_t ttl)
+    {
+        if (ttl == cur_ttl)
+            return 1;
+        addWait(t - cur_t);
+        cur_t += 3;
+        auto changes = ttl ^ cur_ttl;
+        cur_ttl = ttl;
+        auto nchgs = __builtin_popcountll(changes);
+        assert(nchgs > 0);
+        if (nchgs == 1) {
+            auto bit = __builtin_ffs(changes) - 1;
+            last_timed_inst = addInst(ByteInst::TTL2{1, 0, uint8_t(bit & 0x1f),
+                        uint8_t(bit & 0x1f)});
+            max_time_left = 3;
+        }
+        else if (nchgs == 2) {
+            auto bit1 = __builtin_ffs(changes) - 1;
+            changes = changes ^ (1 << bit1);
+            auto bit2 = __builtin_ffs(changes) - 1;
+            last_timed_inst = addInst(ByteInst::TTL2{1, 0, uint8_t(bit1 & 0x1f),
+                        uint8_t(bit2 & 0x1f)});
+            max_time_left = 3;
+        }
+        else if (nchgs == 3) {
+            auto bit1 = __builtin_ffs(changes) - 1;
+            changes = changes ^ (1 << bit1);
+            auto bit2 = __builtin_ffs(changes) - 1;
+            changes = changes ^ (1 << bit2);
+            auto bit3 = __builtin_ffs(changes) - 1;
+            addInst(ByteInst::TTL4{2, uint8_t(bit1 & 0x1f),
+                        uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit3 & 0x1f)});
+        }
+        else if (nchgs == 4) {
+            auto bit1 = __builtin_ffs(changes) - 1;
+            changes = changes ^ (1 << bit1);
+            auto bit2 = __builtin_ffs(changes) - 1;
+            changes = changes ^ (1 << bit2);
+            auto bit3 = __builtin_ffs(changes) - 1;
+            changes = changes ^ (1 << bit3);
+            auto bit4 = __builtin_ffs(changes) - 1;
+            addInst(ByteInst::TTL4{2, uint8_t(bit1 & 0x1f),
+                        uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit4 & 0x1f)});
+        }
+        else if (nchgs == 5) {
+            auto bit1 = __builtin_ffs(changes) - 1;
+            changes = changes ^ (1 << bit1);
+            auto bit2 = __builtin_ffs(changes) - 1;
+            changes = changes ^ (1 << bit2);
+            auto bit3 = __builtin_ffs(changes) - 1;
+            changes = changes ^ (1 << bit3);
+            auto bit4 = __builtin_ffs(changes) - 1;
+            changes = changes ^ (1 << bit4);
+            auto bit5 = __builtin_ffs(changes) - 1;
+            last_timed_inst = addInst(ByteInst::TTL5{3, 0, uint8_t(bit1 & 0x1f),
+                        uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f),
+                        uint8_t(bit4 & 0x1f), uint8_t(bit5 & 0x1f)});
+            max_time_left = 7;
+        }
+        else {
+            last_timed_inst = addInst(ByteInst::TTLAll{0, 0, ttl});
+            max_time_left = 15;
+        }
+        return 3;
+    }
+
+    uint64_t addTTLSingle(uint64_t t, uint8_t chn, bool val)
+    {
+        if (val) {
+            return addTTLReal(t, cur_ttl | (1 << chn));
+        }
+        else {
+            return addTTLReal(t, cur_ttl & ~uint32_t(1 << chn));
+        }
+    }
+
+    uint64_t addTTL(uint64_t t, uint32_t ttl)
+    {
+        return addTTLReal(t, ttl & ~start_ttl_mask);
+    }
+
+    uint64_t addClock(uint64_t t, uint8_t period)
+    {
+        addWait(t - cur_t);
+        cur_t += 5;
+        addInst(ByteInst::Clock{5, 0, period});
+        return 5;
+    }
+
+    uint64_t addDDSFreq(uint64_t t, uint8_t chn, uint32_t freq)
+    {
+        if (freq > 0x7fffffff)
+            freq = 0x7fffffff;
+        if (freq == dds[chn].freq)
+            return 1;
+        addWait(t - cur_t);
+        cur_t += 50;
+        uint32_t dfreq = freq - dds[chn].freq;
+        dds[chn].freq = freq;
+        if (dfreq <= 0x3f || dfreq >= 0xffffffc0) {
+            addInst(ByteInst::DDSDetFreq2{7, uint8_t(chn & 0x1f), uint8_t(dfreq & 0x7f)});
+        }
+        else if (dfreq <= 0x3fff || dfreq >= 0xffffc000) {
+            addInst(ByteInst::DDSDetFreq3{8, uint8_t(chn & 0x1f), uint16_t(dfreq & 0x7fff)});
+        }
+        else if (dfreq <= 0x003fffff || dfreq >= 0xffc00000) {
+            addInst(ByteInst::DDSDetFreq4{9, uint8_t(chn & 0x1f), uint32_t(dfreq & 0x7fffff)});
+        }
+        else {
+            addInst(ByteInst::DDSFreq{6, uint8_t(chn & 0x1f), uint32_t(freq & 0x7fffffff)});
+        }
+        return 50;
+    }
+
+    uint64_t addDDSAmp(uint64_t t, uint8_t chn, uint16_t amp)
+    {
+        if (amp > 4095)
+            amp = 4095;
+        if (amp == dds[chn].amp)
+            return 1;
+        addWait(t - cur_t);
+        cur_t += 50;
+        uint16_t damp = uint16_t(amp - dds[chn].amp);
+        dds[chn].amp = amp;
+        if (damp <= 0x3f || damp >= 0xffc0) {
+            addInst(ByteInst::DDSDetAmp{11, uint8_t(chn & 0x1f), uint8_t(damp & 0x7f)});
+        }
+        else {
+            addInst(ByteInst::DDSAmp{10, 0, uint8_t(chn & 0x1f), uint16_t(amp & 0xfff)});
+        }
+        return 50;
+    }
+
+    uint64_t addDAC(uint64_t t, uint8_t chn, uint16_t V)
+    {
+        if (V == dac[chn])
+            return 1;
+        addWait(t - cur_t);
+        cur_t += 45;
+        uint16_t dV = uint16_t(V - dac[chn]);
+        dac[chn] = V;
+        if (dV <= 0x1ff || dV >= 0xfe00) {
+            addInst(ByteInst::DACDet{13, uint8_t(chn & 0x3), uint16_t(dV & 0x3ff)});
+        }
+        else {
+            addInst(ByteInst::DAC{12, 0, uint8_t(chn & 0x3), V});
+        }
+        return 45;
+    }
+
+    uint64_t start(uint64_t cur_t)
+    {
+        // wait 100us
+        cur_t += 10000;
+        addTTLSingle(cur_t, start_ttl, true);
+        // 1us
+        cur_t += 100;
+        addTTLSingle(cur_t, start_ttl, false);
+        // 5us
+        return cur_t + 500;
+    }
+
+    uint64_t end(uint64_t cur_t)
+    {
+        // This is a hack that is believed to make the NI card happy.
+        // 1us
+        cur_t += 100;
+        addClock(cur_t, 59);
+        // 30ms
+        cur_t += 3000000;
+        // Turn off the clock even when it is not used just as a
+        // place holder for the end of the sequence.
+        return cur_t + addClock(cur_t, 255);
+    }
+
+    static constexpr uint16_t getDACVoltData(double volt)
+    {
+        if (volt >= 10)
+            return uint16_t(0);
+        if (volt <= -10)
+            return uint16_t(0xffff);
+        // this is for the DAC8814 chip in SPI0
+        double scale = 65535 / 20.0;
+        double offset = 10.0;
+        return uint16_t(((offset - volt) * scale) + 0.5);
+    }
+};
+
+}
+
+NACS_EXPORT() std::vector<uint8_t> PulsesBuilder::toByteCode(const Sequence &seq)
+{
+    PulserState state;
+
+    Seq::PulsesBuilder seq_builder =
+        [&] (Seq::Channel chn, Seq::Val val, uint64_t t, uint64_t tlim) -> uint64_t {
+        uint64_t mint = 50;
+        if (chn.typ == Seq::Channel::TTL) {
+            mint = 3;
+        }
+        else if (chn.typ == Seq::Channel::CLOCK) {
+            mint = 5;
+        }
+        else if (chn.typ == Seq::Channel::DAC) {
+            mint = 45;
+        }
+        if (t + mint > tlim)
+            return 0;
+        switch (chn.typ) {
+        case Seq::Channel::TTL:
+            return state.addTTL(t, val.val.i32);
+        case Seq::Channel::DDS_FREQ:
+            return state.addDDSFreq(t, uint8_t(chn.id),
+                                    uint32_t(0.5 + val.val.f64 * state.freq_factor));
+        case Seq::Channel::DDS_AMP:
+            return state.addDDSAmp(t, uint8_t(chn.id),
+                                   uint16_t(val.val.f64 * 4095.0 + 0.5));
+        case Seq::Channel::DAC:
+            return state.addDAC(t, uint8_t(chn.id), state.getDACVoltData(val.val.f64));
+        case Seq::Channel::CLOCK:
+            return state.addClock(t, uint8_t(val.val.i32 - 1));
+        default:
+            throw std::runtime_error("Invalid Pulse.");
+        }
+        return mint;
+    };
+    auto seq_cb = [&] (auto &, uint64_t cur_t, Seq::Event evt) {
+        if (evt == Seq::Event::start) {
+            return state.start(cur_t);
+        } else {
+            return state.end(cur_t);
+        }
+    };
+    seq_builder.schedule(const_cast<Seq::Sequence&>(seq), seq_cb);
+
+    return state.code;
+}
+
 }
 }
