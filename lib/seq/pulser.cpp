@@ -369,8 +369,9 @@ struct PulserState {
         return 5;
     }
 
-    uint64_t addDDSFreq(uint64_t t, uint8_t chn, uint32_t freq)
+    uint64_t addDDSFreq(uint64_t t, uint8_t chn, double freqf)
     {
+        uint32_t freq = uint32_t(0.5 + freqf * freq_factor);
         if (freq > 0x7fffffff)
             freq = 0x7fffffff;
         if (freq == dds[chn].freq)
@@ -394,8 +395,9 @@ struct PulserState {
         return 50;
     }
 
-    uint64_t addDDSAmp(uint64_t t, uint8_t chn, uint16_t amp)
+    uint64_t addDDSAmp(uint64_t t, uint8_t chn, double ampf)
     {
+        uint16_t amp = uint16_t(ampf * 4095.0 + 0.5);
         if (amp > 4095)
             amp = 4095;
         if (amp == dds[chn].amp)
@@ -413,8 +415,21 @@ struct PulserState {
         return 50;
     }
 
-    uint64_t addDAC(uint64_t t, uint8_t chn, uint16_t V)
+    uint64_t addDAC(uint64_t t, uint8_t chn, double Vf)
     {
+        uint16_t V;
+        if (Vf >= 10) {
+            V = 0;
+        }
+        else if (Vf <= -10) {
+            V = 0xffff;
+        }
+        else {
+            // this is for the DAC8814 chip in SPI0
+            double scale = 65535 / 20.0;
+            double offset = 10.0;
+            V = uint16_t(((offset - Vf) * scale) + 0.5);
+        }
         if (V == dac[chn])
             return 1;
         addWait(t - cur_t);
@@ -454,18 +469,6 @@ struct PulserState {
         // place holder for the end of the sequence.
         return cur_t + addClock(cur_t, 255);
     }
-
-    static constexpr uint16_t getDACVoltData(double volt)
-    {
-        if (volt >= 10)
-            return uint16_t(0);
-        if (volt <= -10)
-            return uint16_t(0xffff);
-        // this is for the DAC8814 chip in SPI0
-        double scale = 65535 / 20.0;
-        double offset = 10.0;
-        return uint16_t(((offset - volt) * scale) + 0.5);
-    }
 };
 
 }
@@ -492,13 +495,11 @@ NACS_EXPORT() std::vector<uint8_t> PulsesBuilder::toByteCode(const Sequence &seq
         case Seq::Channel::TTL:
             return state.addTTL(t, val.val.i32);
         case Seq::Channel::DDS_FREQ:
-            return state.addDDSFreq(t, uint8_t(chn.id),
-                                    uint32_t(0.5 + val.val.f64 * state.freq_factor));
+            return state.addDDSFreq(t, uint8_t(chn.id), val.val.f64);
         case Seq::Channel::DDS_AMP:
-            return state.addDDSAmp(t, uint8_t(chn.id),
-                                   uint16_t(val.val.f64 * 4095.0 + 0.5));
+            return state.addDDSAmp(t, uint8_t(chn.id), val.val.f64);
         case Seq::Channel::DAC:
-            return state.addDAC(t, uint8_t(chn.id), state.getDACVoltData(val.val.f64));
+            return state.addDAC(t, uint8_t(chn.id), val.val.f64);
         case Seq::Channel::CLOCK:
             return state.addClock(t, uint8_t(val.val.i32 - 1));
         default:
