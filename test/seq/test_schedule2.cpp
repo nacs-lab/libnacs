@@ -32,7 +32,7 @@ using namespace NaCs;
 
 int main(int argc, char **argv)
 {
-    assert(argc == 2);
+    assert(argc >= 2);
 
     std::ifstream istm(argv[1]);
     std::string data(std::istreambuf_iterator<char>(istm), {});
@@ -42,6 +42,11 @@ int main(int argc, char **argv)
         Seq::PulsesBuilder::toByteCode(Seq::PulsesBuilder::fromBase64((const uint8_t*)data.data(),
                                                                       data.size()));
     printToc();
+
+    if (argc >= 3) {
+        std::ofstream ostm(argv[2]);
+        ostm.write((const char*)&code[0], code.size());
+    }
 
     std::cout << Seq::PulsesBuilder::countByteCode(code) << std::endl;
     std::cout << code.size() << std::endl;
