@@ -192,7 +192,7 @@ struct __attribute__((__packed__)) TTLAll {
     uint8_t t: 4;
     uint32_t val;
 };
-static_assert(sizeof(TTLAll) == 5);
+static_assert(sizeof(TTLAll) == 5, "");
 
 struct __attribute__((__packed__)) TTL2 {
     uint8_t op: 4; // 1
@@ -200,7 +200,7 @@ struct __attribute__((__packed__)) TTL2 {
     uint16_t val1: 5;
     uint16_t val2: 5;
 };
-static_assert(sizeof(TTL2) == 2);
+static_assert(sizeof(TTL2) == 2, "");
 
 struct __attribute__((__packed__)) TTL4 {
     uint8_t op: 4; // 2
@@ -209,7 +209,7 @@ struct __attribute__((__packed__)) TTL4 {
     uint16_t val3: 5;
     uint16_t val4: 5;
 };
-static_assert(sizeof(TTL4) == 3);
+static_assert(sizeof(TTL4) == 3, "");
 
 struct __attribute__((__packed__)) TTL5 {
     uint8_t op: 4; // 3
@@ -220,56 +220,56 @@ struct __attribute__((__packed__)) TTL5 {
     uint16_t val4: 5;
     uint16_t val5: 5;
 };
-static_assert(sizeof(TTL5) == 4);
+static_assert(sizeof(TTL5) == 4, "");
 
 struct __attribute__((__packed__)) Wait {
     uint8_t op: 4; // 4
     uint8_t exp: 4;
     uint16_t t;
 };
-static_assert(sizeof(Wait) == 3);
+static_assert(sizeof(Wait) == 3, "");
 
 struct __attribute__((__packed__)) Wait2 {
     uint8_t op: 4; // 5
     uint8_t _0: 1; // 1
     uint16_t t: 11;
 };
-static_assert(sizeof(Wait2) == 2);
+static_assert(sizeof(Wait2) == 2, "");
 
 struct __attribute__((__packed__)) Clock {
     uint8_t op: 4; // 5
     uint8_t _0: 4; // 0
     uint8_t period;
 };
-static_assert(sizeof(Clock) == 2);
+static_assert(sizeof(Clock) == 2, "");
 
 struct __attribute__((__packed__)) DDSFreq {
     uint8_t op: 4; // 6
     uint16_t chn: 5;
     uint32_t freq: 31;
 };
-static_assert(sizeof(DDSFreq) == 5);
+static_assert(sizeof(DDSFreq) == 5, "");
 
 struct __attribute__((__packed__)) DDSDetFreq2 {
     uint8_t op: 4; // 7
     uint16_t chn: 5;
     uint32_t freq: 7;
 };
-static_assert(sizeof(DDSDetFreq2) == 2);
+static_assert(sizeof(DDSDetFreq2) == 2, "");
 
 struct __attribute__((__packed__)) DDSDetFreq3 {
     uint8_t op: 4; // 8
     uint16_t chn: 5;
     uint32_t freq: 15;
 };
-static_assert(sizeof(DDSDetFreq3) == 3);
+static_assert(sizeof(DDSDetFreq3) == 3, "");
 
 struct __attribute__((__packed__)) DDSDetFreq4 {
     uint8_t op: 4; // 9
     uint16_t chn: 5;
     uint32_t freq: 23;
 };
-static_assert(sizeof(DDSDetFreq4) == 4);
+static_assert(sizeof(DDSDetFreq4) == 4, "");
 
 struct __attribute__((__packed__)) DDSAmp {
     uint8_t op: 4; // 10
@@ -277,14 +277,14 @@ struct __attribute__((__packed__)) DDSAmp {
     uint16_t chn: 5;
     uint16_t amp: 12;
 };
-static_assert(sizeof(DDSAmp) == 3);
+static_assert(sizeof(DDSAmp) == 3, "");
 
 struct __attribute__((__packed__)) DDSDetAmp {
     uint8_t op: 4; // 11
     uint16_t chn: 5;
     uint16_t amp: 7;
 };
-static_assert(sizeof(DDSDetAmp) == 2);
+static_assert(sizeof(DDSDetAmp) == 2, "");
 
 struct __attribute__((__packed__)) DAC {
     uint8_t op: 4; // 12
@@ -292,14 +292,14 @@ struct __attribute__((__packed__)) DAC {
     uint16_t chn: 2;
     uint16_t amp: 16;
 };
-static_assert(sizeof(DAC) == 3);
+static_assert(sizeof(DAC) == 3, "");
 
 struct __attribute__((__packed__)) DACDet {
     uint8_t op: 4; // 13
     uint16_t chn: 2;
     uint16_t amp: 10;
 };
-static_assert(sizeof(DACDet) == 2);
+static_assert(sizeof(DACDet) == 2, "");
 
 }
 
