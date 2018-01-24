@@ -41,11 +41,18 @@ int main(int argc, char **argv)
     auto code = Seq::Sequence::fromBase64((const uint8_t*)data.data(),
                                           data.size()).toByteCode();
     printToc();
+    size_t code_len;
+    auto code2 = Seq::Sequence::fromBase64((const uint8_t*)data.data(),
+                                           data.size()).toByteCode(&code_len);
 
     if (argc >= 3) {
         std::ofstream ostm(argv[2]);
         ostm.write((const char*)&code[0], code.size());
     }
+
+    assert(code_len == code.size());
+    assert(memcmp(code2, &code[0], code_len) == 0);
+    free(code2);
 
     // Seq::ByteCode::print(std::cout, code);
 
