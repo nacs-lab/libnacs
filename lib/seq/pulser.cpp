@@ -21,6 +21,8 @@
 #include <nacs-utils/utils.h>
 #include <nacs-utils/base64.h>
 
+#include <type_traits>
+
 namespace NaCs {
 namespace Seq {
 
@@ -257,6 +259,7 @@ NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len
 
 namespace {
 
+template<typename Vec>
 struct ScheduleState {
     struct DDS {
         uint32_t freq = 0;
@@ -275,7 +278,7 @@ struct ScheduleState {
     DAC dac[4] = {};
     size_t last_timed_inst = 0;
     uint8_t max_time_left = 0;
-    std::vector<uint8_t> code{};
+    Vec code;
 
     static constexpr int start_ttl = 0;
     static constexpr int start_ttl_mask = (1 << start_ttl);
@@ -565,55 +568,104 @@ struct ScheduleState {
     }
 };
 
-}
+} // anonymous
 
-}
-
-NACS_EXPORT() std::vector<uint8_t> Sequence::toByteCode()
+template<typename Vec>
+Vec SeqToByteCode(Sequence &seq)
 {
-    ByteCode::ScheduleState state;
+    ScheduleState<Vec> state;
 
-    Seq::PulsesBuilder seq_builder =
-        [&] (Seq::Channel chn, Seq::Val val, uint64_t t, uint64_t tlim) -> uint64_t {
+    PulsesBuilder seq_builder =
+        [&] (Channel chn, Val val, uint64_t t, uint64_t tlim) -> uint64_t {
         uint64_t mint = 50;
-        if (chn.typ == Seq::Channel::TTL) {
+        if (chn.typ == Channel::TTL) {
             mint = 3;
         }
-        else if (chn.typ == Seq::Channel::CLOCK) {
+        else if (chn.typ == Channel::CLOCK) {
             mint = 5;
         }
-        else if (chn.typ == Seq::Channel::DAC) {
+        else if (chn.typ == Channel::DAC) {
             mint = 45;
         }
         if (t + mint > tlim)
             return 0;
         switch (chn.typ) {
-        case Seq::Channel::TTL:
+        case Channel::TTL:
             return state.addTTL(t, val.val.i32);
-        case Seq::Channel::DDS_FREQ:
+        case Channel::DDS_FREQ:
             return state.addDDSFreq(t, uint8_t(chn.id), val.val.f64);
-        case Seq::Channel::DDS_AMP:
+        case Channel::DDS_AMP:
             return state.addDDSAmp(t, uint8_t(chn.id), val.val.f64);
-        case Seq::Channel::DAC:
+        case Channel::DAC:
             return state.addDAC(t, uint8_t(chn.id), val.val.f64);
-        case Seq::Channel::CLOCK:
+        case Channel::CLOCK:
             return state.addClock(t, uint8_t(val.val.i32 - 1));
         default:
             throw std::runtime_error("Invalid Pulse.");
         }
         return mint;
     };
-    auto seq_cb = [&] (auto &, uint64_t cur_t, Seq::Event evt) {
-        if (evt == Seq::Event::start) {
+    auto seq_cb = [&] (auto &, uint64_t cur_t, Event evt) {
+        if (evt == Event::start) {
             return state.start(cur_t);
         } else {
             return state.end(cur_t);
         }
     };
-    seq_builder.schedule(*this, seq_cb);
+    seq_builder.schedule(seq, seq_cb);
 
     return state.code;
 }
 
+} // ByteCode
+
+NACS_EXPORT() std::vector<uint8_t> Sequence::toByteCode()
+{
+    return ByteCode::SeqToByteCode<std::vector<uint8_t>>(*this);
 }
+
+namespace {
+
+// Simple wrapper around malloc for C interop.
+// Implement an API close enough to `std::vector` for our purpose.
+// Note that the destructor of this type does **NOT** free the memory.
+template<typename ET>
+struct MallocVector {
+    MallocVector()
+        : m_data(nullptr),
+          m_len(0)
+    {}
+    static_assert(std::is_trivial<ET>::value, "");
+    ET &operator[](size_t i)
+    {
+        return m_data[i];
+    }
+    const ET &operator[](size_t i) const
+    {
+        return m_data[i];
+    }
+    size_t size() const
+    {
+        return m_len;
+    }
+    void resize(size_t sz)
+    {
+        m_data = (ET*)realloc(m_data, sizeof(ET) * sz);
+        m_len = sz;
+    }
+private:
+    ET *m_data;
+    size_t m_len;
+};
+
 }
+
+NACS_EXPORT() uint8_t *Sequence::toByteCode(size_t *sz)
+{
+    auto vec = ByteCode::SeqToByteCode<MallocVector<uint8_t>>(*this);
+    *sz = vec.size();
+    return &vec[0];
+}
+
+} // Seq
+} // NaCs

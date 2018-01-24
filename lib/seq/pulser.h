@@ -162,6 +162,7 @@ struct Sequence {
     static Sequence fromBase64(const uint8_t *data, size_t len);
     static Sequence fromBinary(const uint32_t *data, size_t len);
     std::vector<uint8_t> toByteCode();
+    uint8_t *toByteCode(size_t *sz);
 };
 
 namespace ByteCode {
