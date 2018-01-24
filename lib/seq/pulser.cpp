@@ -542,29 +542,24 @@ struct ScheduleState {
         return 45;
     }
 
-    uint64_t start(uint64_t cur_t)
+    uint64_t start(uint64_t t)
     {
-        // wait 100us
-        cur_t += 10000;
-        addTTLSingle(cur_t, start_ttl, true);
+        // wait 20us
+        t += 2000;
+        addTTLSingle(t, start_ttl, true);
         // 1us
-        cur_t += 100;
-        addTTLSingle(cur_t, start_ttl, false);
+        t += 100;
+        addTTLSingle(t, start_ttl, false);
         // 5us
-        return cur_t + 500;
+        return t + 500;
     }
 
-    uint64_t end(uint64_t cur_t)
+    uint64_t end(uint64_t t)
     {
-        // This is a hack that is believed to make the NI card happy.
         // 1us
-        cur_t += 100;
-        addClock(cur_t, 59);
-        // 30ms
-        cur_t += 3000000;
-        // Turn off the clock even when it is not used just as a
-        // place holder for the end of the sequence.
-        return cur_t + addClock(cur_t, 255);
+        t += 100;
+        addWait(t - cur_t);
+        return t;
     }
 };
 
