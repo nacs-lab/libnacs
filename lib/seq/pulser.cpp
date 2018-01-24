@@ -612,7 +612,7 @@ Vec SeqToByteCode(Sequence &seq)
             return state.end(cur_t);
         }
     };
-    seq_builder.schedule(seq, seq_cb);
+    seq_builder.schedule(seq, seq_cb, {50, 40, 4096});
 
     return state.code;
 }

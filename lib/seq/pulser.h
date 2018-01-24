@@ -547,9 +547,9 @@ struct PulsesBuilder {
     }
     __attribute__((deprecated)) static Sequence fromBase64(const uint8_t *data, size_t len);
     void schedule(Sequence &, seq_cb_t seq_cb,
-                  Time::Constraints t_cons={50, 40, 4096});
+                  Time::Constraints t_cons={100, 40, 4096});
     void schedule(Sequence &&seq, seq_cb_t seq_cb,
-                  Time::Constraints t_cons={50, 40, 4096})
+                  Time::Constraints t_cons={100, 40, 4096})
     {
         schedule(seq, seq_cb, t_cons);
     }
