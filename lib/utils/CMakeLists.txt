@@ -9,7 +9,8 @@ set(nacs_utils_HDRS
   thread.h
   container.h
   ir.h
-  base64.h)
+  base64.h
+  zmq_utils.h)
 set(nacs_utils_SRCS
   log.cpp
   fd_utils.cpp
