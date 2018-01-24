@@ -349,7 +349,7 @@ struct ScheduleState {
                 break;
             }
             times[i] = uint16_t(dt >> (3 * i));
-            dt -= times[i];
+            dt -= uint64_t(times[i]) << (3 * i);
             if (dt == 0) {
                 break;
             }
