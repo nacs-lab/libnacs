@@ -198,25 +198,81 @@ PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t
                   [] (auto clock_div) { return Val::get<uint32_t>(clock_div); }, clock_chn);
 }
 
+namespace ByteCode {
+
+NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
+{
+    size_t count = 0;
+    for (size_t i = 0; i < code_len;) {
+        uint8_t b = code[i];
+        uint8_t op = b & 0xf;
+        assert(op < 14);
+        auto len = inst_size[op];
+        i += len;
+        count++;
+    }
+    return count;
+}
+
 namespace {
 
-struct DDSState {
-    uint32_t freq = 0;
-    uint16_t amp = 0;
-    bool freq_set = false;
-    bool amp_set = false;
+struct Printer {
+    void ttl(uint32_t ttl, uint64_t t)
+    {
+        stm << "TTL: val=" << std::hex << ttl << std::dec << " t=" << t << std::endl;
+    }
+    void dds_freq(uint8_t chn, uint32_t freq)
+    {
+        stm << "DDS Freq: chn=" << int(chn)
+            << " freq=" << std::hex << freq << std::dec << std::endl;
+    }
+    void dds_amp(uint8_t chn, uint16_t amp)
+    {
+        stm << "DDS Amp: chn=" << int(chn)
+            << " amp=" << std::hex << amp << std::dec << std::endl;
+    }
+    void dac(uint8_t chn, uint16_t V)
+    {
+        stm << "DAC: chn=" << int(chn) << " V=" << std::hex << V << std::dec << std::endl;
+    }
+    void wait(uint64_t t)
+    {
+        stm << "Wait: t=" << t << std::endl;
+    }
+    void clock(uint8_t period)
+    {
+        stm << "Clock: period=" << int(period) << std::endl;
+    }
+    std::ostream &stm;
 };
 
-struct DACState {
-    uint16_t V = 0;
-    bool set = false;
-};
+}
 
-struct PulserState {
+NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len)
+{
+    Printer printer{stm};
+    ExeState state;
+    state.run(printer, code, code_len);
+}
+
+namespace {
+
+struct ScheduleState {
+    struct DDS {
+        uint32_t freq = 0;
+        uint16_t amp = 0;
+        bool freq_set = false;
+        bool amp_set = false;
+    };
+    struct DAC {
+        uint16_t V = 0;
+        bool set = false;
+    };
+
     uint64_t cur_t = 0;
     uint32_t cur_ttl = 0;
-    DDSState dds[22] = {};
-    DACState dac[4] = {};
+    DDS dds[22] = {};
+    DAC dac[4] = {};
     size_t last_timed_inst = 0;
     uint8_t max_time_left = 0;
     std::vector<uint8_t> code{};
@@ -302,10 +358,10 @@ struct PulserState {
         for (int i = 15; i >= 0; i--) {
             if (!times[i])
                 continue;
-            addInst(ByteInst::Wait{4, uint8_t(i & 0xf), times[i]});
+            addInst(Inst::Wait{OpCode::Wait, uint8_t(i & 0xf), times[i]});
         }
         if (times[16]) {
-            addInst(ByteInst::Wait2{5, 1, uint16_t(times[16] & 2047)});
+            addInst(Inst::Wait2{OpCode::Wait2, 1, uint16_t(times[16] & 2047)});
         }
     }
 
@@ -321,7 +377,7 @@ struct PulserState {
         assert(nchgs > 0);
         if (nchgs == 1) {
             auto bit = __builtin_ffs(changes) - 1;
-            last_timed_inst = addInst(ByteInst::TTL2{1, 0, uint8_t(bit & 0x1f),
+            last_timed_inst = addInst(Inst::TTL2{OpCode::TTL2, 0, uint8_t(bit & 0x1f),
                         uint8_t(bit & 0x1f)});
             max_time_left = 3;
         }
@@ -329,7 +385,7 @@ struct PulserState {
             auto bit1 = __builtin_ffs(changes) - 1;
             changes = changes ^ (1 << bit1);
             auto bit2 = __builtin_ffs(changes) - 1;
-            last_timed_inst = addInst(ByteInst::TTL2{1, 0, uint8_t(bit1 & 0x1f),
+            last_timed_inst = addInst(Inst::TTL2{OpCode::TTL2, 0, uint8_t(bit1 & 0x1f),
                         uint8_t(bit2 & 0x1f)});
             max_time_left = 3;
         }
@@ -339,7 +395,7 @@ struct PulserState {
             auto bit2 = __builtin_ffs(changes) - 1;
             changes = changes ^ (1 << bit2);
             auto bit3 = __builtin_ffs(changes) - 1;
-            addInst(ByteInst::TTL4{2, uint8_t(bit1 & 0x1f),
+            addInst(Inst::TTL4{OpCode::TTL4, uint8_t(bit1 & 0x1f),
                         uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit3 & 0x1f)});
         }
         else if (nchgs == 4) {
@@ -350,7 +406,7 @@ struct PulserState {
             auto bit3 = __builtin_ffs(changes) - 1;
             changes = changes ^ (1 << bit3);
             auto bit4 = __builtin_ffs(changes) - 1;
-            addInst(ByteInst::TTL4{2, uint8_t(bit1 & 0x1f),
+            addInst(Inst::TTL4{OpCode::TTL4, uint8_t(bit1 & 0x1f),
                         uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit4 & 0x1f)});
         }
         else if (nchgs == 5) {
@@ -363,13 +419,13 @@ struct PulserState {
             auto bit4 = __builtin_ffs(changes) - 1;
             changes = changes ^ (1 << bit4);
             auto bit5 = __builtin_ffs(changes) - 1;
-            last_timed_inst = addInst(ByteInst::TTL5{3, 0, uint8_t(bit1 & 0x1f),
+            last_timed_inst = addInst(Inst::TTL5{OpCode::TTL5, 0, uint8_t(bit1 & 0x1f),
                         uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f),
                         uint8_t(bit4 & 0x1f), uint8_t(bit5 & 0x1f)});
             max_time_left = 7;
         }
         else {
-            last_timed_inst = addInst(ByteInst::TTLAll{0, 0, ttl});
+            last_timed_inst = addInst(Inst::TTLAll{OpCode::TTLAll, 0, ttl});
             max_time_left = 15;
         }
         return 3;
@@ -394,7 +450,7 @@ struct PulserState {
     {
         addWait(t - cur_t);
         cur_t += 5;
-        addInst(ByteInst::Clock{5, 0, period});
+        addInst(Inst::Clock{OpCode::Clock, 0, period});
         return 5;
     }
 
@@ -411,16 +467,20 @@ struct PulserState {
         dds[chn].freq = freq;
         dds[chn].freq_set = true;
         if (dfreq <= 0x3f || dfreq >= 0xffffffc0) {
-            addInst(ByteInst::DDSDetFreq2{7, uint8_t(chn & 0x1f), uint8_t(dfreq & 0x7f)});
+            addInst(Inst::DDSDetFreq2{OpCode::DDSDetFreq2, uint8_t(chn & 0x1f),
+                        uint8_t(dfreq & 0x7f)});
         }
         else if (dfreq <= 0x3fff || dfreq >= 0xffffc000) {
-            addInst(ByteInst::DDSDetFreq3{8, uint8_t(chn & 0x1f), uint16_t(dfreq & 0x7fff)});
+            addInst(Inst::DDSDetFreq3{OpCode::DDSDetFreq3, uint8_t(chn & 0x1f),
+                        uint16_t(dfreq & 0x7fff)});
         }
         else if (dfreq <= 0x003fffff || dfreq >= 0xffc00000) {
-            addInst(ByteInst::DDSDetFreq4{9, uint8_t(chn & 0x1f), uint32_t(dfreq & 0x7fffff)});
+            addInst(Inst::DDSDetFreq4{OpCode::DDSDetFreq4, uint8_t(chn & 0x1f),
+                        uint32_t(dfreq & 0x7fffff)});
         }
         else {
-            addInst(ByteInst::DDSFreq{6, uint8_t(chn & 0x1f), uint32_t(freq & 0x7fffffff)});
+            addInst(Inst::DDSFreq{OpCode::DDSFreq, uint8_t(chn & 0x1f),
+                        uint32_t(freq & 0x7fffffff)});
         }
         return 50;
     }
@@ -438,10 +498,12 @@ struct PulserState {
         dds[chn].amp = amp;
         dds[chn].amp_set = true;
         if (damp <= 0x3f || damp >= 0xffc0) {
-            addInst(ByteInst::DDSDetAmp{11, uint8_t(chn & 0x1f), uint8_t(damp & 0x7f)});
+            addInst(Inst::DDSDetAmp{OpCode::DDSDetAmp, uint8_t(chn & 0x1f),
+                        uint8_t(damp & 0x7f)});
         }
         else {
-            addInst(ByteInst::DDSAmp{10, 0, uint8_t(chn & 0x1f), uint16_t(amp & 0xfff)});
+            addInst(Inst::DDSAmp{OpCode::DDSAmp, 0, uint8_t(chn & 0x1f),
+                        uint16_t(amp & 0xfff)});
         }
         return 50;
     }
@@ -469,10 +531,10 @@ struct PulserState {
         dac[chn].V = V;
         dac[chn].set = true;
         if (dV <= 0x1ff || dV >= 0xfe00) {
-            addInst(ByteInst::DACDet{13, uint8_t(chn & 0x3), uint16_t(dV & 0x3ff)});
+            addInst(Inst::DACDet{OpCode::DACDet, uint8_t(chn & 0x3), uint16_t(dV & 0x3ff)});
         }
         else {
-            addInst(ByteInst::DAC{12, 0, uint8_t(chn & 0x3), V});
+            addInst(Inst::DAC{OpCode::DAC, 0, uint8_t(chn & 0x3), V});
         }
         return 45;
     }
@@ -505,9 +567,11 @@ struct PulserState {
 
 }
 
+}
+
 NACS_EXPORT() std::vector<uint8_t> PulsesBuilder::toByteCode(const Sequence &seq)
 {
-    PulserState state;
+    ByteCode::ScheduleState state;
 
     Seq::PulsesBuilder seq_builder =
         [&] (Seq::Channel chn, Seq::Val val, uint64_t t, uint64_t tlim) -> uint64_t {
@@ -549,65 +613,6 @@ NACS_EXPORT() std::vector<uint8_t> PulsesBuilder::toByteCode(const Sequence &seq
     seq_builder.schedule(const_cast<Seq::Sequence&>(seq), seq_cb);
 
     return state.code;
-}
-
-namespace ByteCode {
-
-NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
-{
-    size_t count = 0;
-    for (size_t i = 0; i < code_len;) {
-        uint8_t b = code[i];
-        uint8_t op = b & 0xf;
-        assert(op < 14);
-        auto len = ByteInst::codelen[op];
-        i += len;
-        count++;
-    }
-    return count;
-}
-
-namespace {
-
-struct Printer {
-    void ttl(uint32_t ttl, uint64_t t)
-    {
-        stm << "TTL: val=" << std::hex << ttl << std::dec << " t=" << t << std::endl;
-    }
-    void dds_freq(uint8_t chn, uint32_t freq)
-    {
-        stm << "DDS Freq: chn=" << int(chn)
-            << " freq=" << std::hex << freq << std::dec << std::endl;
-    }
-    void dds_amp(uint8_t chn, uint16_t amp)
-    {
-        stm << "DDS Amp: chn=" << int(chn)
-            << " amp=" << std::hex << amp << std::dec << std::endl;
-    }
-    void dac(uint8_t chn, uint16_t V)
-    {
-        stm << "DAC: chn=" << int(chn) << " V=" << std::hex << V << std::dec << std::endl;
-    }
-    void wait(uint64_t t)
-    {
-        stm << "Wait: t=" << t << std::endl;
-    }
-    void clock(uint8_t period)
-    {
-        stm << "Clock: period=" << int(period) << std::endl;
-    }
-    std::ostream &stm;
-};
-
-}
-
-NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len)
-{
-    Printer printer{stm};
-    ExeState state;
-    state.run(printer, code, code_len);
-}
-
 }
 
 }
