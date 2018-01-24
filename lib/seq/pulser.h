@@ -560,4 +560,10 @@ private:
 }
 }
 
+extern "C" {
+
+uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data, size_t data_len, size_t *code_len);
+
+}
+
 #endif

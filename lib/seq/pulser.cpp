@@ -669,3 +669,10 @@ NACS_EXPORT() uint8_t *Sequence::toByteCode(size_t *sz)
 
 } // Seq
 } // NaCs
+
+extern "C" NACS_EXPORT() uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data,
+                                                           size_t data_len,
+                                                           size_t *code_len)
+{
+    return NaCs::Seq::Sequence::fromBinary(data, data_len).toByteCode(code_len);
+}
