@@ -569,7 +569,7 @@ struct ScheduleState {
 
 }
 
-NACS_EXPORT() std::vector<uint8_t> PulsesBuilder::toByteCode(const Sequence &seq)
+NACS_EXPORT() std::vector<uint8_t> Sequence::toByteCode()
 {
     ByteCode::ScheduleState state;
 
@@ -610,7 +610,7 @@ NACS_EXPORT() std::vector<uint8_t> PulsesBuilder::toByteCode(const Sequence &seq
             return state.end(cur_t);
         }
     };
-    seq_builder.schedule(const_cast<Seq::Sequence&>(seq), seq_cb);
+    seq_builder.schedule(*this, seq_cb);
 
     return state.code;
 }

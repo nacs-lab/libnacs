@@ -38,9 +38,8 @@ int main(int argc, char **argv)
     std::string data(std::istreambuf_iterator<char>(istm), {});
     assert(Base64::validate((const uint8_t*)data.data(), data.size()));
     tic();
-    auto code =
-        Seq::PulsesBuilder::toByteCode(Seq::Sequence::fromBase64((const uint8_t*)data.data(),
-                                                                 data.size()));
+    auto code = Seq::Sequence::fromBase64((const uint8_t*)data.data(),
+                                          data.size()).toByteCode();
     printToc();
 
     if (argc >= 3) {

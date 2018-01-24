@@ -161,6 +161,7 @@ struct Sequence {
     }
     static Sequence fromBase64(const uint8_t *data, size_t len);
     static Sequence fromBinary(const uint32_t *data, size_t len);
+    std::vector<uint8_t> toByteCode();
 };
 
 namespace ByteCode {
@@ -551,7 +552,6 @@ struct PulsesBuilder {
     {
         schedule(seq, seq_cb, t_cons);
     }
-    static std::vector<uint8_t> toByteCode(const Sequence &seq);
 private:
     cb_t cb;
 };
