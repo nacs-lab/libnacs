@@ -21,6 +21,10 @@ set_target_properties(nacs-kernel PROPERTIES
   COMPILE_FLAGS "-fvisibility=hidden"
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
+if(IS_WINDOWS)
+  set_target_properties(nacs-kernel PROPERTIES PREFIX "")
+endif()
+
 configure_file(nacs-kernel.pc.in nacs-kernel.pc @ONLY)
 if(ENABLE_INSTALL_NONLIB)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/nacs-kernel.pc

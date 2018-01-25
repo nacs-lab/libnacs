@@ -21,6 +21,10 @@ set_target_properties(nacs-seq PROPERTIES
   COMPILE_FLAGS "-fvisibility=hidden"
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
+if(IS_WINDOWS)
+  set_target_properties(nacs-seq PROPERTIES PREFIX "")
+endif()
+
 configure_file(nacs-seq.pc.in nacs-seq.pc @ONLY)
 if(ENABLE_INSTALL_NONLIB)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/nacs-seq.pc
