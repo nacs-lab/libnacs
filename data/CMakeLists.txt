@@ -1,0 +1,5 @@
+#
+
+if(ENABLE_WINDOWS_PYWRAPPER)
+  install(FILES __init__.py DESTINATION "${CMAKE_INSTALL_BINDIR}")
+endif()

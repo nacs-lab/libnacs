@@ -10,6 +10,22 @@ set(MAJOR_VERSION 2)
 set(MINOR_VERSION 1)
 set(PATCH_VERSION 0)
 
+if(WIN32 OR CYGWIN OR MINGW OR MSYS)
+  set(IS_WINDOWS True)
+  set(IS_UNIX False)
+else()
+  set(IS_WINDOWS False)
+  set(IS_UNIX True)
+endif()
+
+option(ENABLE_KNACS "Enable kernel driver" Off)
+option(ENABLE_LLVM "Enable LLVM JIT" Off)
+option(ENABLE_WINDOWS_PYWRAPPER "Enable python wrapper for nacs-seq for windows"
+  ${IS_WINDOWS})
+option(ENABLE_INSTALL_NONLIB
+  "Enable installation of files other than the libraries (e.g. headers and pkgconfig)"
+  ${IS_UNIX})
+
 include(CMakeCMacros)
 include(GNUInstallDirs)
 include(CheckCXXSourceCompiles)
@@ -20,9 +36,6 @@ set(INSTALL_PKGCONFIG_DIR "${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig"
 # Remove rdynamic
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
-
-option(ENABLE_KNACS "Enable kernel driver" Off)
-option(ENABLE_LLVM "Enable LLVM JIT" Off)
 
 set(CMAKE_REQUIRED_FLAGS "-std=gnu++14")
 check_cxx_source_compiles("
@@ -60,7 +73,7 @@ cmake_c_add_flags(CMAKE_MODULE_LINKER_FLAGS ${LINKER_FLAGS})
 
 cmake_c_include_fix_path()
 
-if(WIN32 OR CYGWIN OR MINGW OR MSYS)
+if(IS_WINDOWS)
   # add_definitions(-mno-ms-bitfields)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-bin")
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
@@ -68,6 +81,7 @@ if(WIN32 OR CYGWIN OR MINGW OR MSYS)
 endif()
 
 add_subdirectory(lib)
+add_subdirectory(data)
 add_subdirectory(test)
 
 if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")

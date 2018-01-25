@@ -44,11 +44,13 @@ set_target_properties(nacs-utils PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
 configure_file(nacs-utils.pc.in nacs-utils.pc @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/nacs-utils.pc
-  DESTINATION ${INSTALL_PKGCONFIG_DIR})
+if(ENABLE_INSTALL_NONLIB)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/nacs-utils.pc
+    DESTINATION ${INSTALL_PKGCONFIG_DIR})
+  install(FILES ${nacs_utils_HDRS}
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-utils")
+endif()
 
 install(TARGETS nacs-utils
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-install(FILES ${nacs_utils_HDRS}
-  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-utils")
