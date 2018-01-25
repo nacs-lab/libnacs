@@ -1,7 +1,17 @@
 #
 
+import os
 import os.path
 import ctypes
 
-libname = "@CMAKE_SHARED_LIBRARY_PREFIX@nacs-seq-@MAJOR_VERSION@.dll"
-install_dir = os.path.dirname(os.path.abspath(__file__))
+libdir = r"@INSTALL_WINDOWS_BINDIR@"
+libname = r"@CMAKE_SHARED_LIBRARY_PREFIX@nacs-seq-@MAJOR_VERSION@.dll"
+
+def open_handle(ty):
+    prev_cwd = os.getcwd()
+    try:
+        os.chdir(libdir)
+        hdl = ty(libname)
+    finally:
+        os.chdir(prev_cwd)
+    return hdl
