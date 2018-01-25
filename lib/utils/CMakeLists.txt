@@ -43,10 +43,6 @@ set_target_properties(nacs-utils PROPERTIES
   COMPILE_FLAGS "-fvisibility=hidden"
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
-if(IS_WINDOWS)
-  set_target_properties(nacs-utils PROPERTIES PREFIX "")
-endif()
-
 configure_file(nacs-utils.pc.in nacs-utils.pc @ONLY)
 if(ENABLE_INSTALL_NONLIB)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/nacs-utils.pc
