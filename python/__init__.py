@@ -5,8 +5,8 @@ import ctypes
 
 nacs_seq_bin_to_bytecode = handle.nacs_seq.nacs_seq_bin_to_bytecode
 nacs_seq_bin_to_bytecode.restype = ctypes.c_char_p
-f.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_size_t,
-              ctypes.POINTER(ctypes.c_size_t)]
+nacs_seq_bin_to_bytecode.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_size_t,
+                                     ctypes.POINTER(ctypes.c_size_t)]
 
 PyBytes_FromStringAndSize = ctypes.pythonapi['PyBytes_FromStringAndSize']
 PyBytes_FromStringAndSize.restype = ctypes.py_object
