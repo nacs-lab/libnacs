@@ -55,6 +55,7 @@ function(cmake_utils_is_subpath ret_var parent child)
   file(RELATIVE_PATH rel_path "${parent}" "${child}")
   string(REGEX MATCH "^\\.\\./" match "${rel_path}")
   if(match)
+    # TODO check windows
     set("${ret_var}" False PARENT_SCOPE)
   else()
     set("${ret_var}" True PARENT_SCOPE)
