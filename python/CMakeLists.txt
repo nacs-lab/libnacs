@@ -1,5 +1,7 @@
 #
 
+include(PythonMacros)
+
 if(IS_WINDOWS)
   execute_process(COMMAND cygpath -m "${CMAKE_INSTALL_FULL_BINDIR}"
     OUTPUT_VARIABLE INSTALL_WINDOWS_BINDIR)
@@ -8,6 +10,5 @@ if(IS_WINDOWS)
 else()
   configure_file(handle_lin.py.in handle.py @ONLY)
 endif()
-install(FILES
-  "${CMAKE_CURRENT_BINARY_DIR}/handle.py" __init__.py
-  DESTINATION "${INSTALL_PYTHON_SITE}/libnacs")
+
+python_install_module(libnacs "${CMAKE_CURRENT_BINARY_DIR}/handle.py" __init__.py)
