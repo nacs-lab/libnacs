@@ -1,0 +1,16 @@
+#
+
+import os
+import ctypes
+
+def _open_handle():
+    prev_cwd = os.getcwd()
+    try:
+        os.chdir(r"@INSTALL_WINDOWS_BINDIR@")
+        hdl = ctypes.CDLL(r"@CMAKE_SHARED_LIBRARY_PREFIX@nacs-seq-@MAJOR_VERSION@.dll")
+    finally:
+        os.chdir(prev_cwd)
+    return hdl
+
+nacs_seq = _open_handle()
+libc = nacs_seq

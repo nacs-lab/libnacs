@@ -20,8 +20,7 @@ endif()
 
 option(ENABLE_KNACS "Enable kernel driver" Off)
 option(ENABLE_LLVM "Enable LLVM JIT" Off)
-option(ENABLE_WINDOWS_PYWRAPPER "Enable python wrapper for nacs-seq for windows"
-  ${IS_WINDOWS})
+option(ENABLE_PYWRAPPER "Enable python wrapper for nacs-seq" On)
 option(ENABLE_INSTALL_NONLIB
   "Enable installation of files other than the libraries (e.g. headers and pkgconfig)"
   ${IS_UNIX})
@@ -81,7 +80,9 @@ if(IS_WINDOWS)
 endif()
 
 add_subdirectory(lib)
-add_subdirectory(data)
+if(ENABLE_PYWRAPPER)
+  add_subdirectory(python)
+endif()
 add_subdirectory(test)
 
 if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
