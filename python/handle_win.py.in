@@ -13,4 +13,4 @@ def _open_handle():
     return hdl
 
 nacs_seq = _open_handle()
-libc = nacs_seq
+libc = ctypes.cdll.msvcrt

@@ -3,4 +3,4 @@
 import ctypes
 
 nacs_seq = ctypes.CDLL(r"@CMAKE_SHARED_LIBRARY_PREFIX@nacs-seq.so.@MAJOR_VERSION@")
-libc = ctypes.cdll.msvcrt
+libc = nacs_seq
