@@ -69,14 +69,17 @@ if(PYTHONINTERP_FOUND)
   if(python_config)
     string(REGEX REPLACE ".*exec_prefix:([^\n]+).*$" "\\1"
       PYTHON_PREFIX ${python_config})
+    cmake_utils_cygpath(PYTHON_PREFIX "${PYTHON_PREFIX}")
     string(REGEX REPLACE ".*\nshort_version:([^\n]+).*$" "\\1"
       PYTHON_SHORT_VERSION ${python_config})
     string(REGEX REPLACE ".*\nlong_version:([^\n]+).*$" "\\1"
       PYTHON_LONG_VERSION ${python_config})
     string(REGEX REPLACE ".*\npy_inc_dir:([^\n]+).*$" "\\1"
       _TMP_PYTHON_INCLUDE_PATH ${python_config})
+    cmake_utils_cygpath(_TMP_PYTHON_INCLUDE_PATH "${_TMP_PYTHON_INCLUDE_PATH}")
     string(REGEX REPLACE ".*\nsite_packages_dir:([^\n]+).*$" "\\1"
       _TMP_PYTHON_SITE_PACKAGES_DIR ${python_config})
+    cmake_utils_cygpath(_TMP_PYTHON_SITE_PACKAGES_DIR "${_TMP_PYTHON_SITE_PACKAGES_DIR}")
     string(REGEX REPLACE ".*\nmagic_tag:([^\n]*).*$" "\\1"
       PYTHON_MAGIC_TAG ${python_config})
 

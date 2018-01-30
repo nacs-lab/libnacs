@@ -27,6 +27,17 @@
 
 include(CMakeArrayMacros)
 
+function(cmake_utils_cygpath var path)
+  if(WIN32 OR CYGWIN OR MINGW OR MSYS)
+    execute_process(COMMAND cygpath -m "${path}"
+      OUTPUT_VARIABLE cygpath)
+    string(STRIP "${cygpath}" cygpath)
+    set("${var}" "${cygpath}" PARENT_SCOPE)
+  else()
+    set("${var}" "${path}" PARENT_SCOPE)
+  endif()
+endfunction()
+
 function(cmake_utils_abs_path var path)
   get_filename_component(abs_path "${path}" ABSOLUTE)
   if("x${abs_path}x" MATCHES "^x//")
