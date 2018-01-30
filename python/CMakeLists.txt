@@ -3,9 +3,7 @@
 include(PythonMacros)
 
 if(IS_WINDOWS)
-  execute_process(COMMAND cygpath -m "${CMAKE_INSTALL_FULL_BINDIR}"
-    OUTPUT_VARIABLE INSTALL_WINDOWS_BINDIR)
-  string(STRIP "${INSTALL_WINDOWS_BINDIR}" INSTALL_WINDOWS_BINDIR)
+  cmake_utils_cygpath_m(INSTALL_WINDOWS_BINDIR "${CMAKE_INSTALL_FULL_BINDIR}")
   configure_file(handle_win.py.in handle.py @ONLY)
 else()
   configure_file(handle_lin.py.in handle.py @ONLY)

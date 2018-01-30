@@ -28,7 +28,18 @@
 include(CMakeArrayMacros)
 
 function(cmake_utils_cygpath var path)
-  if(WIN32 OR CYGWIN OR MINGW OR MSYS)
+  if(CYGWIN OR MINGW OR MSYS)
+    execute_process(COMMAND cygpath -u "${path}"
+      OUTPUT_VARIABLE cygpath)
+    string(STRIP "${cygpath}" cygpath)
+    set("${var}" "${cygpath}" PARENT_SCOPE)
+  else()
+    set("${var}" "${path}" PARENT_SCOPE)
+  endif()
+endfunction()
+
+function(cmake_utils_cygpath_m var path)
+  if(CYGWIN OR MINGW OR MSYS)
     execute_process(COMMAND cygpath -m "${path}"
       OUTPUT_VARIABLE cygpath)
     string(STRIP "${cygpath}" cygpath)
