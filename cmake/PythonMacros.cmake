@@ -52,13 +52,29 @@ get_filename_component(PYTHON_MACROS_MODULE_PATH
 set(_cmake_python_helper "${_py_cmake_module_dir}/cmake-python-helper.py")
 
 function(_python_compile SOURCE_FILE OUT_PY OUT_PYC)
-  cmake_utils_abs_path(src "${SOURCE_FILE}")
+  # Filename
   get_filename_component(src_base "${SOURCE_FILE}" NAME_WE)
-  cmake_utils_src_to_bin(dst "${src}")
-  cmake_utils_is_subpath(issub "${CMAKE_BINARY_DIR}" "${dst}")
-  if(NOT issub)
-    set(dst "${CMAKE_CURRENT_BINARY_DIR}")
+
+  cmake_utils_abs_path(src "${SOURCE_FILE}")
+  cmake_utils_is_subpath(issub "${CMAKE_BINARY_DIR}" "${src}")
+  if(issub)
+    # Already in the bin dir
+    # Don't copy the file onto itself.
+    set(dst "${src}")
+  else()
+    cmake_utils_src_to_bin(dst "${src}")
+    cmake_utils_is_subpath(issub "${CMAKE_BINARY_DIR}" "${dst}")
+    if(NOT issub)
+      # In case we mess up the path, do something not damaging at least...
+      # We could also just throw an error
+      set(dst "${CMAKE_CURRENT_BINARY_DIR}")
+    endif()
+    add_custom_command(
+      OUTPUT "${dst}"
+      COMMAND ${CMAKE_COMMAND} -E copy "${src}" "${dst}"
+      DEPENDS "${src}")
   endif()
+
   get_filename_component(src_path "${src}" PATH)
   get_filename_component(dst_path "${dst}" PATH)
   file(MAKE_DIRECTORY "${dst_path}")
@@ -71,14 +87,6 @@ function(_python_compile SOURCE_FILE OUT_PY OUT_PYC)
   else()
     # python2
     set(dst_pyc "${dst_path}/${src_base}.pyc")
-  endif()
-
-  # Don't copy the file onto itself.
-  if(NOT "${dst}" STREQUAL "${src}")
-    add_custom_command(
-      OUTPUT "${dst}"
-      COMMAND ${CMAKE_COMMAND} -E copy "${src}" "${dst}"
-      DEPENDS "${src}")
   endif()
   add_custom_command(
     OUTPUT "${dst_pyc}"
