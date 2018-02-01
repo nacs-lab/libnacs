@@ -135,7 +135,7 @@ Sequence::fromBase64(const uint8_t *data, size_t len)
     assert(bin_len % 4 == 0);
     std::vector<uint32_t> bin(bin_len / 4);
     Base64::decode((uint8_t*)bin.data(), data, len);
-    return fromBinary(&bin[0], bin_len);
+    return fromBinary(&bin[0], bin.size());
 }
 
 NACS_EXPORT() Sequence
