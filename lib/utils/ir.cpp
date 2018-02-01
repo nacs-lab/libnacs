@@ -1399,7 +1399,7 @@ struct InterpExeContext : public ExeContext {
         for (uint32_t i = 0; i < nargs; i++) {
             auto ty = f.vals[i];
             if (ty == Type::Float64) {
-                if (nfloatarg < 6) {
+                if (nfloatarg < 8) {
                     ptr[2 + i] = 5 + nfloatarg;
                     nfloatarg += 1;
                     continue;
