@@ -350,41 +350,40 @@ nacs_exefunc_cb:
         add     r10, r0, r12, lsl #2
         add     r8, sp, r12, lsl #3
         ldr     r10, [r10, #4] // Load arguments specifiers
-        cmp     r10, #0
-        moveq   r10, r1
-        beq     .Lint_end
-        cmp     r10, #1
-        moveq   r10, r2
-        beq     .Lint_end
-        cmp     r10, #2
-        moveq   r10, r3
-        beq     .Lint_end
 
-        cmp     r10, #3
+        cmp     r10, #11
+        // Each case below uses 2 instructions (8 bytes)
+        // Add that offset to the PC direction.
+        // The `pc` value during this instruction is 8 bytes ahead
+        // so a `r10` of 0 will skip the next instruction.
+        addlo   pc, pc, r10, lsl #3
+        b       .Lspill_start
+
+        mov     r10, r1
+        b       .Lint_end
+        mov     r10, r2
+        b       .Lint_end
+        mov     r10, r3
+        b       .Lint_end
+
         vmov.f64 d8, d0
-        beq     .Lfloat_end
-        cmp     r10, #4
+        b       .Lfloat_end
         vmov.f64 d8, d1
-        beq     .Lfloat_end
-        cmp     r10, #5
+        b       .Lfloat_end
         vmov.f64 d8, d2
-        beq     .Lfloat_end
-        cmp     r10, #6
+        b       .Lfloat_end
         vmov.f64 d8, d3
-        beq     .Lfloat_end
-        cmp     r10, #7
+        b       .Lfloat_end
         vmov.f64 d8, d4
-        beq     .Lfloat_end
-        cmp     r10, #8
+        b       .Lfloat_end
         vmov.f64 d8, d5
-        beq     .Lfloat_end
-        cmp     r10, #9
+        b       .Lfloat_end
         vmov.f64 d8, d6
-        beq     .Lfloat_end
-        cmp     r10, #10
+        b       .Lfloat_end
         vmov.f64 d8, d7
-        beq     .Lfloat_end
+        b       .Lfloat_end
 
+.Lspill_start:
         cmp     r10, #0
         blt     .Lfloat_spill
         add     r10, fp, r10
