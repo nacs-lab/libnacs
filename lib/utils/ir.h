@@ -422,6 +422,7 @@ public:
                      new std::remove_reference_t<T>(std::forward<T>(v)),
                      GenericCallback<std::remove_reference_t<T>,FT>::free)
         {
+            static_assert(!std::is_same<std::decay_t<T>,Func<FT>>::value, "");
         }
         Func()
             : m_base()
