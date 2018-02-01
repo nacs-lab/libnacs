@@ -38,49 +38,54 @@ nacs_exefunc_cb:
         movl    4(%rdi), %r11d
         testq   %r11, %r11
         jle     .Lskip
+        leaq    .labels_cases(%rip), %r10
 .Lloop:
         movsbq  4(%rdi,%r11,4), %rax // Load arguments specifiers
-        cmpq    $0, %rax
-        cmoveq  %rsi, %rax
-        je      .Lint_end
-        cmpq    $1, %rax
-        cmoveq  %rdx, %rax
-        je      .Lint_end
-        cmpq    $2, %rax
-        cmoveq  %rcx, %rax
-        je      .Lint_end
-        cmpq    $3, %rax
-        cmoveq  %r8, %rax
-        je      .Lint_end
-        cmpq    $4, %rax
-        cmoveq  %r9, %rax
-        je      .Lint_end
-
-        cmpq    $5, %rax
-        movsd   %xmm0, %xmm8
-        je      .Lfloat_end
-        cmpq    $6, %rax
-        movsd   %xmm1, %xmm8
-        je      .Lfloat_end
-        cmpq    $7, %rax
-        movsd   %xmm2, %xmm8
-        je      .Lfloat_end
-        cmpq    $8, %rax
-        movsd   %xmm3, %xmm8
-        je      .Lfloat_end
-        cmpq    $9, %rax
-        movsd   %xmm4, %xmm8
-        je      .Lfloat_end
-        cmpq    $10, %rax
-        movsd   %xmm5, %xmm8
-        je      .Lfloat_end
-        cmpq    $11, %rax
-        movsd   %xmm6, %xmm8
-        je      .Lfloat_end
         cmpq    $12, %rax
-        movsd   %xmm7, %xmm8
-        je      .Lfloat_end
+        jae     .Lspill_start
+        jmp     *(%r10,%rax,8)
 
+.Lcase0:
+        movq    %rsi, %rax
+        jmp     .Lint_end
+.Lcase1:
+        movq    %rdx, %rax
+        jmp     .Lint_end
+.Lcase2:
+        movq    %rcx, %rax
+        jmp     .Lint_end
+.Lcase3:
+        movq    %r8, %rax
+        jmp     .Lint_end
+.Lcase4:
+        movq    %r9, %rax
+        jmp     .Lint_end
+.Lcase5:
+        movsd   %xmm0, %xmm8
+        jmp     .Lfloat_end
+.Lcase6:
+        movsd   %xmm1, %xmm8
+        jmp     .Lfloat_end
+.Lcase7:
+        movsd   %xmm2, %xmm8
+        jmp     .Lfloat_end
+.Lcase8:
+        movsd   %xmm3, %xmm8
+        jmp     .Lfloat_end
+.Lcase9:
+        movsd   %xmm4, %xmm8
+        jmp     .Lfloat_end
+.Lcase10:
+        movsd   %xmm5, %xmm8
+        jmp     .Lfloat_end
+.Lcase11:
+        movsd   %xmm6, %xmm8
+        jmp     .Lfloat_end
+.Lcase12:
+        movsd   %xmm7, %xmm8
+        jmp     .Lfloat_end
+
+.Lspill_start:
         movq    (%rbp,%rax), %rax
 .Lint_end:
         movq    %rax, -8(%rsp,%r11,8)
@@ -103,6 +108,25 @@ nacs_exefunc_cb:
         .cfi_endproc
 
         .size   nacs_exefunc_cb, . - nacs_exefunc_cb
+
+        .section        .data.rel.ro.local,"aw",@progbits
+        .align  32
+        .type   labels_cases, @object
+        .size   labels_cases, 104
+.labels_cases:
+        .quad   .Lcase0
+        .quad   .Lcase1
+        .quad   .Lcase2
+        .quad   .Lcase3
+        .quad   .Lcase4
+        .quad   .Lcase5
+        .quad   .Lcase6
+        .quad   .Lcase7
+        .quad   .Lcase8
+        .quad   .Lcase9
+        .quad   .Lcase10
+        .quad   .Lcase11
+        .quad   .Lcase12
 #  else
         .text
         .p2align        4,0x90
