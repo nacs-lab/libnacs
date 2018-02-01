@@ -20,6 +20,10 @@ set(test_ir_SOURCES test_ir.cpp)
 add_executable(test-ir ${test_ir_SOURCES})
 target_link_libraries(test-ir nacs-utils)
 
+set(test_ir_cc_SOURCES test_ir_cc.cpp)
+add_executable(test-ir_cc ${test_ir_cc_SOURCES})
+target_link_libraries(test-ir_cc nacs-utils)
+
 set(test_base64_SOURCES test_base64.cpp)
 add_executable(test-base64 ${test_base64_SOURCES})
 target_link_libraries(test-base64 nacs-utils)
