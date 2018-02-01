@@ -42,7 +42,7 @@ nacs_exefunc_cb:
 .Lloop:
         movsbq  4(%rdi,%r11,4), %rax // Load arguments specifiers
         cmpq    $12, %rax
-        jae     .Lspill_start
+        ja      .Lspill_start
         jmp     *(%r10,%rax,8)
 
 .Lcase0:
