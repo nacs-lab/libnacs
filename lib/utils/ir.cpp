@@ -1260,6 +1260,8 @@ TagVal EvalContext::eval(void)
     return eval_func(m_f, &m_vals[0]);
 }
 
+namespace {
+
 static inline Function *get_interp_func(uint32_t *data, uint32_t nargs)
 {
     uint32_t offset = nargs + 2;
@@ -1272,29 +1274,57 @@ static inline Function *get_interp_func(uint32_t *data)
     return get_interp_func(data, data[1]);
 }
 
-template<typename T> T getV(GenVal);
-template<> bool getV<bool>(GenVal v)
+template<typename T> static T getV(GenVal);
+template<> inline bool getV<bool>(GenVal v)
 {
     return v.b;
 }
-template<> int32_t getV<int32_t>(GenVal v)
+template<> inline int32_t getV<int32_t>(GenVal v)
 {
     return v.i32;
 }
-template<> double getV<double>(GenVal v)
+template<> inline double getV<double>(GenVal v)
 {
     return v.f64;
 }
 
-struct InterpExeContext : public ExeContext {
-    template<typename Arg1, typename... Args>
-    static inline void set_args(GenVal *vals, Arg1 arg1, Args... args)
-    {
-        *vals = TagVal(arg1).val;
-        set_args(vals + 1, args...);
-    }
+static inline void set_args(GenVal*)
+{
+}
 
-    template<typename Ret, typename... Args>
+template<typename Arg1, typename... Args>
+static inline void set_args(GenVal *vals, Arg1 arg1, Args... args)
+{
+    *vals = TagVal(arg1).val;
+    set_args(vals + 1, args...);
+}
+
+template<int n, int max, typename... Args>
+struct Dispatch {
+    static_assert(n + sizeof...(Args) == max, "");
+    static inline void (*check(Function &f))(void)
+    {
+        if (f.nargs > max)
+            return nullptr;
+        static constexpr int i = max - n;
+        if (i >= f.nargs)
+            return Dispatch<-1,max,Args...>::check(f);
+        switch (f.vals[i]) {
+        case Type::Bool:
+            return Dispatch<n - 1,max,Args...,bool>::check(f);
+        case Type::Int32:
+            return Dispatch<n - 1,max,Args...,int32_t>::check(f);
+        case Type::Float64:
+            return Dispatch<n - 1,max,Args...,double>::check(f);
+        default:
+            return nullptr;
+        }
+    }
+};
+
+template<int max, typename... Args>
+struct Dispatch<-1,max,Args...> {
+    template<typename Ret>
     static Ret spec_execfunc_cb(void *data, Args... args)
     {
         uint32_t *data32 = (uint32_t*)data;
@@ -1303,7 +1333,22 @@ struct InterpExeContext : public ExeContext {
         auto v = eval_func(*get_interp_func(data32, uint32_t(sizeof...(Args))), vals).val;
         return getV<Ret>(v);
     }
+    static inline void (*check(Function &f))(void)
+    {
+        switch (f.ret) {
+        case Type::Bool:
+            return (void(*)())spec_execfunc_cb<bool>;
+        case Type::Int32:
+            return (void(*)())spec_execfunc_cb<int32_t>;
+        case Type::Float64:
+            return (void(*)())spec_execfunc_cb<double>;
+        default:
+            return nullptr;
+        }
+    }
+};
 
+struct InterpExeContext : public ExeContext {
     static void exefunc_free(void *data)
     {
         auto func = get_interp_func((uint32_t*)data);
@@ -1320,6 +1365,10 @@ struct InterpExeContext : public ExeContext {
         auto ptr = (uint32_t*)malloc(sz);
         ptr[0] = (f.vals.size() * 8 + 8) & ~(uint32_t)15;
         ptr[1] = nargs;
+        if (auto fptr = Dispatch<3,3>::check(f)) {
+            new (get_interp_func(ptr)) Function(std::move(f));
+            return ExeFuncBase(fptr, ptr, exefunc_free);
+        }
 #if defined(__x86_64__) || defined(__x86_64)
 #  ifdef NACS_OS_WINDOWS
         uint32_t nregarg = 0;
@@ -1447,6 +1496,8 @@ struct InterpExeContext : public ExeContext {
         return getFuncIntern(std::move(f));
     }
 };
+
+}
 
 NACS_EXPORT() std::unique_ptr<ExeContext> ExeContext::get()
 {
