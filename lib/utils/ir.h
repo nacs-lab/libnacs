@@ -344,13 +344,29 @@ class ExeContext {
         using ret = R;
         using fptr = R(*)(void*, Args...);
     };
-public:
-    class ExeFuncBase {
+    template<typename T, typename FT> struct GenericCallback;
+    template<typename T, typename R, typename... Args> struct GenericCallback<T, R(Args...)> {
+        static R cb(void *data, Args... args)
+        {
+            T &v = *(T*)data;
+            return v(args...);
+        }
+        static void free(void *data)
+        {
+            T *p = (T*)data;
+            delete p;
+        }
+    };
+protected:
+    class FuncBase {
     public:
-        ExeFuncBase(void (*cb)(void), void *data, void (*free)(void*))
+        FuncBase(void (*cb)(void), void *data, void (*free)(void*))
             : m_cb(cb), m_data(data), m_free(free)
         {}
-        ExeFuncBase(ExeFuncBase &&other)
+        FuncBase()
+            : FuncBase(nullptr, nullptr, nullptr)
+        {}
+        FuncBase(FuncBase &&other)
             : m_cb(other.m_cb),
               m_data(other.m_data),
               m_free(other.m_free)
@@ -359,16 +375,16 @@ public:
             other.m_data = nullptr;
             other.m_free = nullptr;
         }
-        ExeFuncBase(const ExeFuncBase&) = delete;
-        ExeFuncBase &operator=(ExeFuncBase &&other)
+        FuncBase(const FuncBase&) = delete;
+        FuncBase &operator=(FuncBase &&other)
         {
             std::swap(other.m_cb, m_cb);
             std::swap(other.m_data, m_data);
             std::swap(other.m_free, m_free);
             return *this;
         }
-        ExeFuncBase &operator=(const ExeFuncBase&) = delete;
-        ~ExeFuncBase()
+        FuncBase &operator=(const FuncBase&) = delete;
+        ~FuncBase()
         {
             if (m_free) {
                 m_free(m_data);
@@ -378,45 +394,71 @@ public:
         {
             return typename FuncType<FT>::fptr(m_cb)(m_data, std::forward<Args>(args)...);
         }
+        operator bool() const
+        {
+            return m_cb;
+        }
+        bool operator!() const
+        {
+            return !m_cb;
+        }
 
     private:
         void (*m_cb)(void);
         void *m_data;
         void (*m_free)(void*);
     };
+public:
     template<typename FT>
-    class ExeFunc {
+    class Func {
     public:
-        ExeFunc(ExeFuncBase &&base)
+        Func(FuncBase &&base)
             : m_base(std::move(base))
         {}
-        ExeFunc(ExeFunc &&other)
+        Func(Func &&other)
             : m_base(std::move(other.m_base))
         {}
-        ExeFunc(const ExeFunc&) = delete;
-        ExeFunc &operator=(ExeFunc &&other)
+        template<typename T>
+        Func(T &&v)
+            : m_base((void(*)())GenericCallback<T,FT>::cb, new T(std::forward<T>(v)),
+                     GenericCallback<T,FT>::free)
+        {
+        }
+        Func()
+            : m_base()
+        {}
+        Func(const Func&) = delete;
+        Func &operator=(Func &&other)
         {
             m_base = std::move(other.m_base);
             return *this;
         }
-        ExeFuncBase &operator=(const ExeFuncBase&) = delete;
+        FuncBase &operator=(const FuncBase&) = delete;
         template<typename... Args>
         typename FuncType<FT>::ret operator()(Args&&... args)
         {
             return m_base.call<FT>(std::forward<Args>(args)...);
         }
+        operator bool() const
+        {
+            return m_base;
+        }
+        bool operator!() const
+        {
+            return !m_base;
+        }
 
     private:
-        ExeFuncBase m_base;
+        FuncBase m_base;
         friend class ExeContext;
     };
     static std::unique_ptr<ExeContext> get();
-    virtual ExeFuncBase getFuncBase(const Function &) = 0;
-    virtual ExeFuncBase getFuncBase(Function&&) = 0;
+    virtual FuncBase getFuncBase(const Function &) = 0;
+    virtual FuncBase getFuncBase(Function&&) = 0;
     template<typename FT, typename F>
-    ExeFunc<FT> getFunc(F &&f)
+    Func<FT> getFunc(F &&f)
     {
-        return ExeFunc<FT>(getFuncBase(std::forward<F>(f)));
+        return Func<FT>(getFuncBase(std::forward<F>(f)));
     }
 };
 

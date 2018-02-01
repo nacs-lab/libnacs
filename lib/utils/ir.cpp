@@ -1356,7 +1356,7 @@ struct InterpExeContext : public ExeContext {
         ::free(data);
     }
 
-    static inline ExeFuncBase getFuncIntern(Function f)
+    static inline FuncBase getFuncIntern(Function f)
     {
         uint32_t nargs = f.nargs;
         uint32_t offset = nargs + 2;
@@ -1367,7 +1367,7 @@ struct InterpExeContext : public ExeContext {
         ptr[1] = nargs;
         if (auto fptr = Dispatch<3,3>::check(f)) {
             new (get_interp_func(ptr)) Function(std::move(f));
-            return ExeFuncBase(fptr, ptr, exefunc_free);
+            return FuncBase(fptr, ptr, exefunc_free);
         }
 #if defined(__x86_64__) || defined(__x86_64)
 #  ifdef NACS_OS_WINDOWS
@@ -1484,14 +1484,14 @@ struct InterpExeContext : public ExeContext {
 #  error "Unsupported architecture"
 #endif
         new (get_interp_func(ptr)) Function(std::move(f));
-        return ExeFuncBase(nacs_exefunc_cb, ptr, exefunc_free);
+        return FuncBase(nacs_exefunc_cb, ptr, exefunc_free);
     }
 
-    ExeFuncBase getFuncBase(const Function &f) override
+    FuncBase getFuncBase(const Function &f) override
     {
         return getFuncIntern(f);
     }
-    ExeFuncBase getFuncBase(Function &&f) override
+    FuncBase getFuncBase(Function &&f) override
     {
         return getFuncIntern(std::move(f));
     }

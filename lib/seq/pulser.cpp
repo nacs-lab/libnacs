@@ -26,36 +26,10 @@
 namespace NaCs {
 namespace Seq {
 
-struct IRPulse {
-    IRPulse(IR::Function &&func)
-        : m_func(std::move(func)),
-          m_ctx(m_func)
-    {}
-    IRPulse(const IR::Function &func)
-        : m_func(func),
-          m_ctx(m_func)
-    {}
-    IRPulse(IRPulse &&other)
-        : IRPulse(std::move(other.m_func))
-    {}
-    IRPulse(const IRPulse &other)
-        : IRPulse(other.m_func)
-    {}
-    Val operator()(uint64_t t, Val start, uint64_t)
-    {
-        double t_start = double(t) * 10e-9;
-        m_ctx.reset(0, IR::TagVal(t_start).val);
-        m_ctx.reset(1, start.val);
-        return m_ctx.eval().val;
-    }
-private:
-    IR::Function m_func;
-    IR::EvalContext m_ctx;
-};
-
 NACS_EXPORT() Sequence
 Sequence::fromBinary(const uint32_t *bin, size_t len)
 {
+    auto exectx = IR::ExeContext::get();
     // [TTL default: 4B]
     // [n_non_ttl: 4B]
     // [[[chn_type: 4B][chn_id: 4B][defaults: 8B]] x n_non_ttl]
@@ -103,9 +77,8 @@ Sequence::fromBinary(const uint32_t *bin, size_t len)
             continue;
         }
         cursor += 7;
-        IR::Function func(&bin[cursor], code_len);
-        seq[i] = Pulse{t_start, t_len, chn,
-                       PulseData(IRPulse(std::move(func)))};
+        auto func = exectx->getFunc<double(double, double)>(IR::Function(&bin[cursor], code_len));
+        seq[i] = Pulse{t_start, t_len, chn, PulseData(std::move(func))};
         cursor += code_len;
     }
     if (cursor >= len)
@@ -125,7 +98,7 @@ Sequence::fromBinary(const uint32_t *bin, size_t len)
         clock.len = t_len_ns / 10;
         clock.div = clock_div;
     }
-    return Sequence(std::move(seq), std::move(defaults), std::move(clocks));
+    return Sequence(std::move(seq), std::move(defaults), std::move(clocks), std::move(exectx));
 }
 
 NACS_EXPORT() Sequence

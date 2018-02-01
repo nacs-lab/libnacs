@@ -61,17 +61,16 @@ int main(int argn, char **argv)
     };
     std::vector<Seq::Pulse> seq;
     seq.push_back(Seq::Pulse{0, tlen, {Seq::Channel::DAC, 0},
-                [] (auto t, auto start, auto) {
-                    return Seq::Val::get<double>(start.val.f64 + (double)t);
+                [] (auto t, auto start) {
+                    return start + t;
                 }});
     seq.push_back(Seq::Pulse{0, tlen, {Seq::Channel::DAC, 1},
-                [] (auto t, auto start, auto) {
-                    return Seq::Val::get<double>(start.val.f64 - (double)t);
+                [] (auto t, auto start) {
+                    return start - t;
                 }});
     seq.push_back(Seq::Pulse{0, tlen, {Seq::Channel::DAC, 3},
-                [] (auto t, auto start, auto) {
-                    return Seq::Val::get<double>(start.val.f64 +
-                                                 sin((double)t / 1000.0));
+                [] (auto t, auto start) {
+                    return start + sin(t / 1000.0);
                 }});
     seq.push_back(Seq::Pulse{5000, 0, {Seq::Channel::DAC, 2},
                 Seq::Val::get<double>(20)});

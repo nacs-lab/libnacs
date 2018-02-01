@@ -87,7 +87,7 @@ private:
 };
 
 struct PulseData {
-    typedef std::function<Val(uint64_t,Val,uint64_t)> func_t;
+    typedef IR::ExeContext::Func<double(double,double)> func_t;
     PulseData(PulseData&&) = default;
     PulseData &operator=(PulseData&&) = default;
     PulseData()
@@ -102,20 +102,24 @@ struct PulseData {
         : m_val(val),
           m_cb()
     {}
+    PulseData(func_t func)
+        : m_val(),
+          m_cb(std::move(func))
+    {}
     template<typename T>
     PulseData(T &&v)
-        : m_val(),
-          m_cb(new func_t(std::forward<T>(v)))
-    {}
+        : PulseData(func_t(std::forward<T>(v)))
+    {
+    }
     Val operator()(uint64_t t, Val start, uint64_t len) const
     {
         if (m_cb)
-            return (*m_cb)(t, start, len);
+            return IR::TagVal(m_cb(double(t) * 10e-9, start.val.f64)).val;
         return m_val;
     }
 private:
     Val m_val;
-    mutable std::unique_ptr<func_t> m_cb;
+    mutable func_t m_cb;
 };
 
 typedef BasePulse<Channel, PulseData> Pulse;
@@ -146,17 +150,14 @@ struct Sequence {
     std::vector<Pulse> pulses;
     std::map<Channel,Val> defaults;
     std::vector<Clock> clocks;
-    Sequence(std::vector<Pulse> &&_pulses, std::map<Channel,Val> &&_defaults)
-        : pulses(std::move(_pulses)),
-          defaults(std::move(_defaults)),
-          clocks{}
-    {
-    }
+    std::unique_ptr<IR::ExeContext> exectx;
     Sequence(std::vector<Pulse> &&_pulses, std::map<Channel,Val> &&_defaults,
-             std::vector<Clock> &&_clocks)
+             std::vector<Clock> &&_clocks={},
+             std::unique_ptr<IR::ExeContext> _exectx=IR::ExeContext::get())
         : pulses(std::move(_pulses)),
           defaults(std::move(_defaults)),
-          clocks(std::move(_clocks))
+          clocks(std::move(_clocks)),
+          exectx(std::move(_exectx))
     {
     }
     static Sequence fromBase64(const uint8_t *data, size_t len);
