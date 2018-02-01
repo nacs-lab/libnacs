@@ -1260,15 +1260,50 @@ TagVal EvalContext::eval(void)
     return eval_func(m_f, &m_vals[0]);
 }
 
-static inline Function *get_interp_func(uint32_t *data)
+static inline Function *get_interp_func(uint32_t *data, uint32_t nargs)
 {
-    auto nargs = data[1];
     uint32_t offset = nargs + 2;
     offset = (offset + 3) & ~(uint32_t)3; // align to 16bytes
     return (Function*)&data[offset];
 }
 
+static inline Function *get_interp_func(uint32_t *data)
+{
+    return get_interp_func(data, data[1]);
+}
+
+template<typename T> T getV(GenVal);
+template<> bool getV<bool>(GenVal v)
+{
+    return v.b;
+}
+template<> int32_t getV<int32_t>(GenVal v)
+{
+    return v.i32;
+}
+template<> double getV<double>(GenVal v)
+{
+    return v.f64;
+}
+
 struct InterpExeContext : public ExeContext {
+    template<typename Arg1, typename... Args>
+    static inline void set_args(GenVal *vals, Arg1 arg1, Args... args)
+    {
+        *vals = TagVal(arg1).val;
+        set_args(vals + 1, args...);
+    }
+
+    template<typename Ret, typename... Args>
+    static Ret spec_execfunc_cb(void *data, Args... args)
+    {
+        uint32_t *data32 = (uint32_t*)data;
+        GenVal vals[data32[0]];
+        set_args(vals, args...);
+        auto v = eval_func(*get_interp_func(data32, uint32_t(sizeof...(Args))), vals).val;
+        return getV<Ret>(v);
+    }
+
     static void exefunc_free(void *data)
     {
         auto func = get_interp_func((uint32_t*)data);
