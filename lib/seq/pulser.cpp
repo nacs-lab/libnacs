@@ -141,8 +141,7 @@ PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t
         assert(pulse.len == 0);
         assert(pulse.chn.id < 32);
         uint32_t mask = uint32_t(1) << pulse.chn.id;
-        bool val = pulse.cb(pulse.t, Val::get<double>((ttl_val & mask) != 0),
-                            pulse.len).val.f64 != 0;
+        bool val = pulse.cb(pulse.t, Val::get<double>((ttl_val & mask) != 0)).val.f64 != 0;
         uint32_t new_ttl_val;
         if (val) {
             new_ttl_val = ttl_val | mask;

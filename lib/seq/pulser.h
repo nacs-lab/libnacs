@@ -111,7 +111,7 @@ struct PulseData {
         : PulseData(func_t(std::forward<T>(v)))
     {
     }
-    Val operator()(uint64_t t, Val start, uint64_t len) const
+    Val operator()(uint64_t t, Val start) const
     {
         if (m_cb)
             return IR::TagVal(m_cb(double(t) * 10e-9, start.val.f64)).val;
