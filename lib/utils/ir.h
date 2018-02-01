@@ -348,7 +348,7 @@ class ExeContext {
     template<typename T, typename R, typename... Args> struct GenericCallback<T, R(Args...)> {
         static R cb(void *data, Args... args)
         {
-            T &v = *(T*)data;
+            auto &v = *(T*)data;
             return v(args...);
         }
         static void free(void *data)
@@ -420,7 +420,8 @@ public:
         {}
         template<typename T>
         Func(T &&v)
-            : m_base((void(*)())GenericCallback<T,FT>::cb, new T(std::forward<T>(v)),
+            : m_base((void(*)())GenericCallback<T,FT>::cb,
+                     new std::remove_reference_t<T>(std::forward<T>(v)),
                      GenericCallback<T,FT>::free)
         {
         }
