@@ -68,12 +68,6 @@ main()
                     "L0:\n"
                     "  ret Float64 %0\n"
                     "}");
-        IR::EvalContext ctx(builder.get());
-        ctx.reset({1.2});
-        test_str_eq(ctx.eval(), "Float64 1.2");
-        ctx.reset({4.2});
-        test_str_eq(ctx.eval(), "Float64 4.2");
-
         auto f = exectx->getFunc<double(double)>(builder.get());
         assert(f(1.2) == 1.2);
         assert(f(4.2) == 4.2);
@@ -86,9 +80,6 @@ main()
                     "L0:\n"
                     "  ret Bool false\n"
                     "}");
-        IR::EvalContext ctx(builder.get());
-        test_str_eq(ctx.eval(), "Bool false");
-
         auto f = exectx->getFunc<bool()>(builder.get());
         assert(f() == false);
     }
@@ -100,9 +91,6 @@ main()
                     "L0:\n"
                     "  ret Float64 1.1\n"
                     "}");
-        IR::EvalContext ctx(builder.get());
-        test_str_eq(ctx.eval(), "Float64 1.1");
-
         auto f = exectx->getFunc<double()>(builder.get());
         assert(f() == 1.1);
     }
@@ -114,9 +102,6 @@ main()
                     "L0:\n"
                     "  ret Int32 42\n"
                     "}");
-        IR::EvalContext ctx(builder.get());
-        test_str_eq(ctx.eval(), "Int32 42");
-
         auto f = exectx->getFunc<int()>(builder.get());
         assert(f() == 42);
     }
@@ -139,12 +124,6 @@ main()
                     "L2:\n"
                     "  ret Float64 3.4\n"
                     "}");
-        IR::EvalContext ctx(builder.get());
-        ctx.reset({true, 1.3});
-        test_str_eq(ctx.eval(), "Float64 1.3");
-        ctx.reset({false, 1.3});
-        test_str_eq(ctx.eval(), "Float64 3.4");
-
         auto f = exectx->getFunc<double(bool, double)>(builder.get());
         assert(f(true, 1.3) == 1.3);
         assert(f(false, 1.3) == 3.4);
@@ -164,10 +143,6 @@ main()
                     "  Float64 %4 = sub Float64 %2, Float64 %3\n"
                     "  ret Float64 %4\n"
                     "}");
-        IR::EvalContext ctx(builder.get());
-        ctx.reset({2.3, 1.3});
-        test_str_eq(ctx.eval(), "Float64 -1.71");
-
         auto f = exectx->getFunc<double(double, double)>(builder.get());
         assert(f(2.3, 1.3) == -1.71);
     }
@@ -182,10 +157,6 @@ main()
                     "  Float64 %2 = fdiv Int32 %0, Int32 %1\n"
                     "  ret Float64 %2\n"
                     "}");
-        IR::EvalContext ctx(builder.get());
-        ctx.reset({3, 2});
-        test_str_eq(ctx.eval(), "Float64 1.5");
-
         auto f = exectx->getFunc<double(int, int)>(builder.get());
         assert(f(3, 2) == 1.5);
     }
@@ -210,12 +181,6 @@ main()
                     "L2:\n"
                     "  ret Int32 %0\n"
                     "}");
-        IR::EvalContext ctx(builder.get());
-        ctx.reset({20, 1.3});
-        test_str_eq(ctx.eval(), "Float64 1.3");
-        ctx.reset({-10, 1.3});
-        test_str_eq(ctx.eval(), "Float64 -10");
-
         auto f = exectx->getFunc<double(int, double)>(builder.get());
         assert(f(20, 1.3) == 1.3);
         assert(f(-10, 1.3) == -10);
@@ -253,12 +218,6 @@ main()
                     "L2:\n"
                     "  ret Int32 %5\n"
                     "}");
-        IR::EvalContext ctx(builder.get());
-        ctx.reset({1, 3});
-        test_str_eq(ctx.eval(), "Int32 6");
-        ctx.reset({2, 1000});
-        test_str_eq(ctx.eval(), "Int32 500499");
-
         auto f = exectx->getFunc<int(int, int)>(builder.get());
         assert(f(1, 3) == 6);
         assert(f(2, 1000) == 500499);
@@ -278,12 +237,6 @@ main()
                     "  Float64 %4 = add Float64 %3, Float64 %2\n"
                     "  ret Float64 %4\n"
                     "}");
-        IR::EvalContext ctx(builder.get());
-        ctx.reset({1});
-        test_str_eq(ctx.eval(), "Float64 1.75077");
-        ctx.reset({2});
-        test_str_eq(ctx.eval(), "Float64 0.152495");
-
         auto f1 = exectx->getFunc<double(int)>(builder.get());
         assert(f1(1) == sin(1) + sin(2));
         assert(f1(2) == sin(4) + sin(2));
@@ -291,21 +244,13 @@ main()
         auto data = builder.get().serialize();
         IR::Function newfunc(data);
         test_str_eq(newfunc, sprint(builder.get()));
-        IR::EvalContext ctx2(newfunc);
-        ctx2.reset({1});
-        test_str_eq(ctx2.eval(), "Float64 1.75077");
+        auto f2 = exectx->getFunc<double(int)>(newfunc);
+        assert(f2(1) == f1(1));
+        assert(f2(2) == f1(2));
 
-        tic();
-        for (int i = 0;i < 1000000;i++) {
-            ctx2.reset(0, IR::TagVal(1).val);
-            ctx2.eval();
-        }
-        printToc();
-
-        auto f = exectx->getFunc<double(int)>(newfunc);
         tic();
         for (int i = 0;i < 1000000;i++)
-            f(1);
+            f2(1);
         printToc();
     }
 
@@ -353,14 +298,6 @@ main()
                     "  Float64 %1 = interp [2, (4) +3] (Float64 %0) {0, 0.1, 0.2, 0.6}\n"
                     "  ret Float64 %1\n"
                     "}");
-        IR::EvalContext ctx(builder.get());
-        ctx.reset({2.3});
-        test_str_eq(ctx.eval(), "Float64 0.03");
-        ctx.reset({3.5});
-        test_str_eq(ctx.eval(), "Float64 0.15");
-        ctx.reset({4.4});
-        test_str_eq(ctx.eval(), "Float64 0.36");
-
         const double points[] = {0, 0.1, 0.2, 0.6};
         auto f = exectx->getFunc<double(double)>(builder.get());
         assert(f(2.3) == linearInterpolate(2.3, 2, 3, 4, points));

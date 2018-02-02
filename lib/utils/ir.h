@@ -310,7 +310,7 @@ private:
     std::map<double, int> const_floats;
 };
 
-struct NACS_EXPORT(utils) EvalContext {
+struct NACS_EXPORT(utils) __attribute__((deprecated)) EvalContext {
     EvalContext(const Function &f)
         : m_f(f),
           m_vals(f.vals.size())
