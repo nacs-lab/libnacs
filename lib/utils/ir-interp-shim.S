@@ -40,7 +40,7 @@ nacs_exefunc_cb:
         jle     .Lskip
         leaq    .labels_cases(%rip), %r10
 .Lloop:
-        movsbq  4(%rdi,%r11,4), %rax // Load arguments specifiers
+        movslq  4(%rdi,%r11,4), %rax // Load arguments specifiers
         cmpq    $12, %rax
         ja      .Lspill_start
         jmp     *(%r10,%rax,8)
@@ -154,7 +154,7 @@ nacs_exefunc_cb:
         testq   %r11, %r11
         jle     .Lskip
 .Lloop:
-        movsbq  4(%rcx,%r11,4), %rax // Load arguments specifiers
+        movslq  4(%rcx,%r11,4), %rax // Load arguments specifiers
         cmpq    $0, %rax
         cmoveq  %rdx, %rax
         je      .Lint_end
