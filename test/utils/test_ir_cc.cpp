@@ -41,56 +41,71 @@ template<> struct type_id<double> {
     constexpr static auto value = IR::Type::Float64;
 };
 
-struct ArgSet1 {
-    template<typename T> static T get(int i);
+class ArgSetBase {
+    virtual bool get_bool(int i) const = 0;
+    virtual int32_t get_int32(int i) const = 0;
+    virtual double get_float64(int i) const = 0;
+public:
+    template<typename T> T get(int i) const;
 };
 template<>
-bool ArgSet1::get<bool>(int i)
+bool ArgSetBase::get<bool>(int i) const
 {
-    return i % 2 == 0;
+    return get_bool(i);
 }
 template<>
-int32_t ArgSet1::get<int32_t>(int i)
+int32_t ArgSetBase::get<int32_t>(int i) const
 {
-    return i * i + i * 2 - 1000000;
+    return get_int32(i);
 }
 template<>
-double ArgSet1::get<double>(int i)
+double ArgSetBase::get<double>(int i) const
 {
-    return (i * 2.5 - 0.4) / (i + 2);
+    return get_float64(i);
 }
 
-struct ArgSet2 {
-    template<typename T> static T get(int i);
+struct ArgSet1 :ArgSetBase {
+    bool get_bool(int i) const override
+    {
+        return i % 2 == 0;
+    }
+    int32_t get_int32(int i) const override
+    {
+        return i * i + i * 2 - 1000000;
+    }
+    double get_float64(int i) const override
+    {
+        return (i * 2.5 - 0.4) / (i + 2);
+    }
 };
-template<>
-bool ArgSet2::get<bool>(int i)
-{
-    return i % 2 != 0;
-}
-template<>
-int32_t ArgSet2::get<int32_t>(int i)
-{
-    return i * i + i * 2 + 2000000;
-}
-template<>
-double ArgSet2::get<double>(int i)
-{
-    return (i * 2.5 - 0.4) / (i + 2) * 1000 + 20;
-}
 
-template<typename ArgSet, typename Res>
-void test_res(Res res, int i, IR::Type t)
+struct ArgSet2 :ArgSetBase {
+    bool get_bool(int i) const override
+    {
+        return i % 2 != 0;
+    }
+    int32_t get_int32(int i) const override
+    {
+        return i * i + i * 2 + 2000000;
+    }
+    double get_float64(int i) const override
+    {
+        return (i * 2.5 - 0.4) / (i + 2) * 1000 + 20;
+    }
+};
+
+template<typename Res>
+void test_res(Res res, int i, IR::Type t, const ArgSetBase &argset)
 {
     switch (t) {
     case IR::Type::Bool:
-        assert(res == (Res)ArgSet::template get<bool>(i));
+        assert(res == (Res)argset.get<bool>(i));
         return;
     case IR::Type::Int32:
-        assert(res == (Res)ArgSet::template get<int32_t>(i));
+        assert(res == (Res)argset.get<int32_t>(i));
         return;
     case IR::Type::Float64:
-        assert(res == (Res)ArgSet::template get<double>(i));
+        assert(res == (Res)argset.get<double>(i));
         return;
     default:
         assert(0 && "Invalid type id");
@@ -99,43 +114,41 @@ void test_res(Res res, int i, IR::Type t)
 
 template<typename Ret, typename... Arg, int... I>
 static void test_single_arg(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
-                            int arg, const std::vector<IR::Type> &ids)
+                            int arg, const std::vector<IR::Type> &ids, const ArgSetBase &argset)
 {
     IR::Builder builder(type_id<Ret>::value, ids);
     builder.createRet(arg);
     auto f = exectx->getFunc<Ret(Arg...)>(builder.get());
-    test_res<ArgSet1>(f(ArgSet1::get<Arg>(I)...), arg, ids[arg]);
-    test_res<ArgSet2>(f(ArgSet2::get<Arg>(I)...), arg, ids[arg]);
-}
-
-template<typename ArgSet, typename Ret, typename... Arg, int... I>
-static void test_const_ret(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
-                           const std::vector<IR::Type> &ids)
-{
-    IR::Builder builder(type_id<Ret>::value, ids);
-    builder.createRet(builder.getConst(IR::TagVal(ArgSet::template get<Ret>(-1))));
-    auto f = exectx->getFunc<Ret(Arg...)>(builder.get());
-    test_res<ArgSet>(f(ArgSet::template get<Arg>(I)...), -1, type_id<Ret>::value);
+    test_res(f(argset.get<Arg>(I)...), arg, ids[arg], argset);
 }
 
 template<typename Ret, typename... Arg, int... I>
-static void _test_cc_sig(IR::ExeContext *exectx, std::integer_sequence<int,I...> seq)
+static void test_const_ret(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
+                           const std::vector<IR::Type> &ids, const ArgSetBase &argset)
+{
+    IR::Builder builder(type_id<Ret>::value, ids);
+    builder.createRet(builder.getConst(IR::TagVal(argset.get<Ret>(-1))));
+    auto f = exectx->getFunc<Ret(Arg...)>(builder.get());
+    test_res(f(argset.get<Arg>(I)...), -1, type_id<Ret>::value, argset);
+}
+
+template<typename Ret, typename... Arg, int... I>
+static void _test_cc_sig(IR::ExeContext *exectx, std::integer_sequence<int,I...> seq,
+                         const ArgSetBase &argset)
 {
     std::vector<IR::Type> ids = {type_id<Arg>::value...};
-#if defined(__cpp_fold_expressions) && __cpp_fold_expressions >= 201411
-    (test_single_arg<Ret,Arg...>(exectx, seq, I, ids), ...);
-#else
-    int dummy[] = {0, (test_single_arg<Ret,Arg...>(exectx, seq, I, ids), 0)...};
-    (void)dummy;
-#endif
-    test_const_ret<ArgSet1,Ret,Arg...>(exectx, seq, ids);
-    test_const_ret<ArgSet2,Ret,Arg...>(exectx, seq, ids);
+    for (size_t i = 0; i < sizeof...(Arg); i++)
+        test_single_arg<Ret,Arg...>(exectx, seq, int(i), ids, argset);
+    test_const_ret<Ret,Arg...>(exectx, seq, ids, argset);
 }
 
 template<typename Ret, typename... Arg>
 static void test_cc_sig(IR::ExeContext *exectx)
 {
-    _test_cc_sig<Ret,Arg...>(exectx, std::make_integer_sequence<int,int(sizeof...(Arg))>());
+    _test_cc_sig<Ret,Arg...>(exectx, std::make_integer_sequence<int,int(sizeof...(Arg))>(),
+                             ArgSet1());
+    _test_cc_sig<Ret,Arg...>(exectx, std::make_integer_sequence<int,int(sizeof...(Arg))>(),
+                             ArgSet2());
 }
 
 template<int nargs, typename... Arg>
@@ -177,8 +190,18 @@ int main()
     test_prefix<int,double>(exectx.get());
     test_prefix<int,double,double,int>(exectx.get());
     // For Linux x64
-    test_prefix<double,int,double,double,int,double,double,int,double>(exectx.get());
-    test_prefix<double,int,double,int,double,int,double,double,double,int,double>(exectx.get());
+    test_prefix<double,int,double,double,int,double,
+                double,int,double>(exectx.get());
+    test_prefix<double,int,double,int,double,int,
+                double,double,double,int,double>(exectx.get());
+    // For Linux aarch64
+    test_prefix<double,int,double,int,double,int,double,
+                int,double,int,double>(exectx.get());
+    test_prefix<double,int,double,int,double,int,
+                double,int,double,int,double,int,double>(exectx.get());
+    // For Linux arm
+    test_prefix<double,double,double,int,double,double,double>(exectx.get());
+    test_prefix<double,double,int,double,double,int,double,double,double>(exectx.get());
 
     return 0;
 }
