@@ -186,8 +186,8 @@ int main()
 
 #if IR_CC_TESTSET == 0
     test_prefix<>(exectx.get());
-    // For Win64
 #elif IR_CC_TESTSET == 1
+    // For Win64
     test_prefix<int,double>(exectx.get());
 #elif IR_CC_TESTSET == 2
     test_prefix<int,double,double,int>(exectx.get());
