@@ -41,68 +41,56 @@ template<> struct type_id<double> {
     constexpr static auto value = IR::Type::Float64;
 };
 
-template<typename T> static T get_arg1(int i);
+struct ArgSet1 {
+    template<typename T> static T get(int i);
+};
 template<>
-bool get_arg1<bool>(int i)
+bool ArgSet1::get<bool>(int i)
 {
     return i % 2 == 0;
 }
 template<>
-int32_t get_arg1<int32_t>(int i)
+int32_t ArgSet1::get<int32_t>(int i)
 {
     return i * i + i * 2 - 1000000;
 }
 template<>
-double get_arg1<double>(int i)
+double ArgSet1::get<double>(int i)
 {
     return (i * 2.5 - 0.4) / (i + 2);
 }
-template<typename Res>
-void test_res1(Res res, int i, IR::Type t)
-{
-    switch (t) {
-    case IR::Type::Bool:
-        assert(res == (Res)get_arg1<bool>(i));
-        return;
-    case IR::Type::Int32:
-        assert(res == (Res)get_arg1<int32_t>(i));
-        return;
-    case IR::Type::Float64:
-        assert(res == (Res)get_arg1<double>(i));
-        return;
-    default:
-        assert(0 && "Invalid type id");
-    }
-}
 
-template<typename T> static T get_arg2(int i);
+struct ArgSet2 {
+    template<typename T> static T get(int i);
+};
 template<>
-bool get_arg2<bool>(int i)
+bool ArgSet2::get<bool>(int i)
 {
     return i % 2 != 0;
 }
 template<>
-int32_t get_arg2<int32_t>(int i)
+int32_t ArgSet2::get<int32_t>(int i)
 {
     return i * i + i * 2 + 2000000;
 }
 template<>
-double get_arg2<double>(int i)
+double ArgSet2::get<double>(int i)
 {
     return (i * 2.5 - 0.4) / (i + 2) * 1000 + 20;
 }
-template<typename Res>
-void test_res2(Res res, int i, IR::Type t)
+
+template<typename ArgSet, typename Res>
+void test_res(Res res, int i, IR::Type t)
 {
     switch (t) {
     case IR::Type::Bool:
-        assert(res == (Res)get_arg2<bool>(i));
+        assert(res == (Res)ArgSet::template get<bool>(i));
         return;
     case IR::Type::Int32:
-        assert(res == (Res)get_arg2<int32_t>(i));
+        assert(res == (Res)ArgSet::template get<int32_t>(i));
         return;
     case IR::Type::Float64:
-        assert(res == (Res)get_arg2<double>(i));
+        assert(res == (Res)ArgSet::template get<double>(i));
         return;
     default:
         assert(0 && "Invalid type id");
@@ -116,28 +104,32 @@ static void test_single_arg(IR::ExeContext *exectx, std::integer_sequence<int,I.
     IR::Builder builder(type_id<Ret>::value, ids);
     builder.createRet(arg);
     auto f = exectx->getFunc<Ret(Arg...)>(builder.get());
-    test_res1(f(get_arg1<Arg>(I)...), arg, ids[arg]);
-    test_res2(f(get_arg2<Arg>(I)...), arg, ids[arg]);
+    test_res<ArgSet1>(f(ArgSet1::get<Arg>(I)...), arg, ids[arg]);
+    test_res<ArgSet2>(f(ArgSet2::get<Arg>(I)...), arg, ids[arg]);
 }
 
-template<typename Ret, typename... Arg, int... I>
-static void test_const_ret1(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
-                            const std::vector<IR::Type> &ids)
+template<typename ArgSet, typename Ret, typename... Arg, int... I>
+static void test_const_ret(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
+                           const std::vector<IR::Type> &ids)
 {
     IR::Builder builder(type_id<Ret>::value, ids);
-    builder.createRet(builder.getConst(IR::TagVal(get_arg1<Ret>(-1))));
+    builder.createRet(builder.getConst(IR::TagVal(ArgSet::template get<Ret>(-1))));
     auto f = exectx->getFunc<Ret(Arg...)>(builder.get());
-    test_res1(f(get_arg1<Arg>(I)...), -1, type_id<Ret>::value);
+    test_res<ArgSet>(f(ArgSet::template get<Arg>(I)...), -1, type_id<Ret>::value);
 }
 
 template<typename Ret, typename... Arg, int... I>
 static void _test_cc_sig(IR::ExeContext *exectx, std::integer_sequence<int,I...> seq)
 {
     std::vector<IR::Type> ids = {type_id<Arg>::value...};
-    // (test_single_arg<I,Ret,Arg...>(exectx, seq, ids), ...);
+#if defined(__cpp_fold_expressions) && __cpp_fold_expressions >= 201411
+    (test_single_arg<Ret,Arg...>(exectx, seq, I, ids), ...);
+#else
     int dummy[] = {0, (test_single_arg<Ret,Arg...>(exectx, seq, I, ids), 0)...};
     (void)dummy;
-    test_const_ret1<Ret,Arg...>(exectx, seq, ids);
+#endif
+    test_const_ret<ArgSet1,Ret,Arg...>(exectx, seq, ids);
+    test_const_ret<ArgSet2,Ret,Arg...>(exectx, seq, ids);
 }
 
 template<typename Ret, typename... Arg>
