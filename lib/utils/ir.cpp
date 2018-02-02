@@ -1465,6 +1465,7 @@ struct InterpExeContext : public ExeContext {
                     nfloatarg += 1;
                 }
                 else {
+                    stack_offset = (stack_offset + 7) & ~7;
                     ptr[2 + i] = stack_offset | 0x80000000;
                     stack_offset += 8;
                 }
