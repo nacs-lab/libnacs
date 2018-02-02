@@ -35,9 +35,12 @@ add_library(nacs-utils SHARED
   ${nacs_utils_SRCS})
 
 if(ENABLE_LLVM)
-  llvm_config(nacs-utils USE_SHARED all)
+  # AFAICT llvm_config is pretty broken so just do it ourselves...
+  execute_process(COMMAND llvm-config --libs --link-shared OUTPUT_VARIABLE llvm_libs)
+  string(STRIP "${llvm_libs}" llvm_libs)
+  target_link_libraries(nacs-utils ${llvm_libs})
 endif()
-target_link_libraries(nacs-utils PUBLIC ${nacs_utils_LINKS})
+target_link_libraries(nacs-utils ${nacs_utils_LINKS})
 
 set_target_properties(nacs-utils PROPERTIES
   VERSION "${MAJOR_VERSION}.${MINOR_VERSION}"
