@@ -142,7 +142,7 @@ template<int nargs, typename... Arg>
 struct Tester {
     static inline void test(IR::ExeContext *exectx)
     {
-        // Tester<nargs - 1, Arg..., bool>::test(exectx);
+        Tester<nargs - 1, Arg..., bool>::test(exectx);
         Tester<nargs - 1, Arg..., int32_t>::test(exectx);
         Tester<nargs - 1, Arg..., double>::test(exectx);
     }
@@ -152,25 +152,33 @@ template<typename... Arg>
 struct Tester<-1, Arg...> {
     static inline void test(IR::ExeContext *exectx)
     {
-        // test_cc_sig<bool, Arg...>(exectx);
+        test_cc_sig<bool, Arg...>(exectx);
         test_cc_sig<int32_t, Arg...>(exectx);
         test_cc_sig<double, Arg...>(exectx);
     }
 };
 
+template<typename... ArgPrefix>
+static void test_prefix(IR::ExeContext *exectx)
+{
+    Tester<0,ArgPrefix...>::test(exectx);
+    Tester<1,ArgPrefix...>::test(exectx);
+    Tester<2,ArgPrefix...>::test(exectx);
+    Tester<3,ArgPrefix...>::test(exectx);
+    Tester<4,ArgPrefix...>::test(exectx);
+}
+
 int main()
 {
     auto exectx = IR::ExeContext::get();
 
-    Tester<1>::test(exectx.get());
-    Tester<2>::test(exectx.get());
-    Tester<3>::test(exectx.get());
-    Tester<4>::test(exectx.get());
-    Tester<5>::test(exectx.get());
-    Tester<6>::test(exectx.get());
-    Tester<7>::test(exectx.get());
-    Tester<8>::test(exectx.get());
-    Tester<9>::test(exectx.get());
+    test_prefix<>(exectx.get());
+    // For Win64
+    test_prefix<int,double>(exectx.get());
+    test_prefix<int,double,double,int>(exectx.get());
+    // For Linux x64
+    test_prefix<double,int,double,double,int,double,double,int,double>(exectx.get());
+    test_prefix<double,int,double,int,double,int,double,double,double,int,double>(exectx.get());
 
     return 0;
 }
