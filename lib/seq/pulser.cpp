@@ -82,7 +82,7 @@ Sequence::fromBinary(const uint32_t *bin, size_t len)
         cursor += code_len;
     }
     if (cursor >= len)
-        return Sequence(std::move(seq), std::move(defaults));
+        return Sequence(std::move(seq), std::move(defaults), {}, std::move(exectx));
     uint32_t n_clocks = bin[cursor];
     cursor++;
     std::vector<Clock> clocks(n_clocks);
