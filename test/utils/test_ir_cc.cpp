@@ -184,23 +184,35 @@ int main()
 {
     auto exectx = IR::ExeContext::get();
 
+#if IR_CC_TESTSET == 0
     test_prefix<>(exectx.get());
     // For Win64
+#elif IR_CC_TESTSET == 1
     test_prefix<int,double>(exectx.get());
+#elif IR_CC_TESTSET == 2
     test_prefix<int,double,double,int>(exectx.get());
+#elif IR_CC_TESTSET == 3
     // For Linux x64
     test_prefix<double,int,double,double,int,double,
                 double,int,double>(exectx.get());
+#elif IR_CC_TESTSET == 4
     test_prefix<double,int,double,int,double,int,
                 double,double,double,int,double>(exectx.get());
+#elif IR_CC_TESTSET == 5
     // For Linux aarch64
     test_prefix<double,int,double,int,double,int,double,
                 int,double,int,double>(exectx.get());
+#elif IR_CC_TESTSET == 6
     test_prefix<double,int,double,int,double,int,
                 double,int,double,int,double,int,double>(exectx.get());
+#elif IR_CC_TESTSET == 7
     // For Linux arm
     test_prefix<double,double,double,int,double,double,double>(exectx.get());
+#elif IR_CC_TESTSET == 8
     test_prefix<double,double,int,double,double,int,double,double,double>(exectx.get());
+#else
+#  error "Unknown test set."
+#endif
 
     return 0;
 }

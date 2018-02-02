@@ -21,8 +21,12 @@ add_executable(test-ir ${test_ir_SOURCES})
 target_link_libraries(test-ir nacs-utils)
 
 set(test_ir_cc_SOURCES test_ir_cc.cpp)
-add_executable(test-ir_cc ${test_ir_cc_SOURCES})
-target_link_libraries(test-ir_cc nacs-utils)
+foreach(TESTSET RANGE 8)
+  add_executable("test-ir_cc-${TESTSET}" ${test_ir_cc_SOURCES})
+  target_link_libraries("test-ir_cc-${TESTSET}" nacs-utils)
+  set_target_properties("test-ir_cc-${TESTSET}" PROPERTIES
+    COMPILE_DEFINITIONS "IR_CC_TESTSET=${TESTSET}")
+endforeach()
 
 set(test_base64_SOURCES test_base64.cpp)
 add_executable(test-base64 ${test_base64_SOURCES})
