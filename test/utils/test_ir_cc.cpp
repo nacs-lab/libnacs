@@ -58,9 +58,9 @@ double get_arg1<double>(int i)
     return (i * 2.5 - 0.4) / (i + 2);
 }
 template<typename Res>
-void test_res1(Res res, int i, const std::vector<IR::Type> &ids)
+void test_res1(Res res, int i, IR::Type t)
 {
-    switch (ids[i]) {
+    switch (t) {
     case IR::Type::Bool:
         assert(res == (Res)get_arg1<bool>(i));
         return;
@@ -75,14 +75,59 @@ void test_res1(Res res, int i, const std::vector<IR::Type> &ids)
     }
 }
 
-template<int arg, typename Ret, typename... Arg, int... I>
-static inline void test_single_arg(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
-                                   const std::vector<IR::Type> &ids)
+template<typename T> static T get_arg2(int i);
+template<>
+bool get_arg2<bool>(int i)
+{
+    return i % 2 != 0;
+}
+template<>
+int32_t get_arg2<int32_t>(int i)
+{
+    return i * i + i * 2 + 2000000;
+}
+template<>
+double get_arg2<double>(int i)
+{
+    return (i * 2.5 - 0.4) / (i + 2) * 1000 + 20;
+}
+template<typename Res>
+void test_res2(Res res, int i, IR::Type t)
+{
+    switch (t) {
+    case IR::Type::Bool:
+        assert(res == (Res)get_arg2<bool>(i));
+        return;
+    case IR::Type::Int32:
+        assert(res == (Res)get_arg2<int32_t>(i));
+        return;
+    case IR::Type::Float64:
+        assert(res == (Res)get_arg2<double>(i));
+        return;
+    default:
+        assert(0 && "Invalid type id");
+    }
+}
+
+template<typename Ret, typename... Arg, int... I>
+static void test_single_arg(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
+                            int arg, const std::vector<IR::Type> &ids)
 {
     IR::Builder builder(type_id<Ret>::value, ids);
     builder.createRet(arg);
     auto f = exectx->getFunc<Ret(Arg...)>(builder.get());
-    test_res1(f(get_arg1<Arg>(I)...), arg, ids);
+    test_res1(f(get_arg1<Arg>(I)...), arg, ids[arg]);
+    test_res2(f(get_arg2<Arg>(I)...), arg, ids[arg]);
+}
+
+template<typename Ret, typename... Arg, int... I>
+static void test_const_ret1(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
+                            const std::vector<IR::Type> &ids)
+{
+    IR::Builder builder(type_id<Ret>::value, ids);
+    builder.createRet(builder.getConst(IR::TagVal(get_arg1<Ret>(-1))));
+    auto f = exectx->getFunc<Ret(Arg...)>(builder.get());
+    test_res1(f(get_arg1<Arg>(I)...), -1, type_id<Ret>::value);
 }
 
 template<typename Ret, typename... Arg, int... I>
@@ -90,8 +135,9 @@ static void _test_cc_sig(IR::ExeContext *exectx, std::integer_sequence<int,I...>
 {
     std::vector<IR::Type> ids = {type_id<Arg>::value...};
     // (test_single_arg<I,Ret,Arg...>(exectx, seq, ids), ...);
-    int dummy[] = {0, (test_single_arg<I,Ret,Arg...>(exectx, seq, ids), 0)...};
+    int dummy[] = {0, (test_single_arg<Ret,Arg...>(exectx, seq, I, ids), 0)...};
     (void)dummy;
+    test_const_ret1<Ret,Arg...>(exectx, seq, ids);
 }
 
 template<typename Ret, typename... Arg>
