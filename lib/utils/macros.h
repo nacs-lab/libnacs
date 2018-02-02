@@ -139,7 +139,7 @@
 /**
  * Suppress unused parameter warning on variable \param x.
  */
-#define NACS_UNUSED(x) ((void)(x))
+#define NACS_UNUSED __attribute__((unused))
 
 /**
  * cast the \param member pointer \param ptr of a structure \param type to
