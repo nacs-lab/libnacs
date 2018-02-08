@@ -349,6 +349,12 @@ static inline void print(std::ostream &stm, const std::vector<uint8_t> &code)
     print(stm, &code[0], code.size());
 }
 
+uint64_t total_time(const uint8_t *code, size_t code_len);
+static inline uint64_t total_time(const std::vector<uint8_t> &code)
+{
+    return total_time(&code[0], code.size());
+}
+
 struct ExeState {
     template<typename T>
     void run(T &&cb, const uint8_t *code, size_t len);
@@ -570,6 +576,7 @@ private:
 extern "C" {
 
 uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data, size_t data_len, size_t *code_len);
+uint64_t nacs_seq_bytecode_total_time(const uint8_t *code, size_t code_len);
 
 }
 

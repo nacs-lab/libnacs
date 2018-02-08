@@ -220,6 +220,34 @@ struct Printer {
     std::ostream &stm;
 };
 
+struct TimeKeeper {
+    void ttl(uint32_t, uint64_t t)
+    {
+        total_t += t;
+    }
+    void dds_freq(uint8_t, uint32_t)
+    {
+        total_t += 50;
+    }
+    void dds_amp(uint8_t, uint16_t)
+    {
+        total_t += 50;
+    }
+    void dac(uint8_t, uint16_t)
+    {
+        total_t += 45;
+    }
+    void wait(uint64_t t)
+    {
+        total_t += t;
+    }
+    void clock(uint8_t)
+    {
+        total_t += 5;
+    }
+    uint64_t total_t = 0;
+};
+
 }
 
 NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len)
@@ -227,6 +255,14 @@ NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len
     Printer printer{stm};
     ExeState state;
     state.run(printer, code, code_len);
+}
+
+NACS_EXPORT() uint64_t total_time(const uint8_t *code, size_t code_len)
+{
+    TimeKeeper keeper;
+    ExeState state;
+    state.run(keeper, code, code_len);
+    return keeper.total_t;
 }
 
 namespace {
@@ -637,9 +673,17 @@ NACS_EXPORT() uint8_t *Sequence::toByteCode(size_t *sz)
 } // Seq
 } // NaCs
 
+using namespace NaCs::Seq;
+
 extern "C" NACS_EXPORT() uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data,
                                                            size_t data_len,
                                                            size_t *code_len)
 {
-    return NaCs::Seq::Sequence::fromBinary(data, data_len).toByteCode(code_len);
+    return Sequence::fromBinary(data, data_len).toByteCode(code_len);
+}
+
+extern "C" NACS_EXPORT() uint64_t nacs_seq_bytecode_total_time(const uint8_t *code,
+                                                               size_t code_len)
+{
+    return ByteCode::total_time(code, code_len);
 }
