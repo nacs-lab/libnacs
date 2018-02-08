@@ -387,7 +387,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
         i += inst_len;
         auto consumeAllWait = [&] {
             uint64_t t = 0;
-            while (true) {
+            while (i < code_len) {
                 auto *p2 = &code[i];
                 uint8_t b2 = *p2;
                 uint8_t op2 = b2 & 0xf;
