@@ -122,8 +122,9 @@ PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t
 {
     auto &seq = sequence.pulses;
     auto &defaults = sequence.defaults;
-    Filter filter;
     sort(seq);
+
+    // Merge TTL pulses that happen at the same time into a single TTL pulse
     uint32_t ttl_val = 0;
     auto ttl_it = defaults.find({Channel::TTL, 0});
     if (ttl_it != defaults.end())
@@ -168,7 +169,7 @@ PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t
     }
     seq.resize(to);
     Channel clock_chn{Channel::Type::CLOCK, 0};
-    Seq::schedule(*this, seq, t_cons, defaults, sequence.clocks, filter, std::move(seq_cb),
+    Seq::schedule(*this, seq, t_cons, defaults, sequence.clocks, Filter{}, std::move(seq_cb),
                   [] (auto clock_div) { return Val::get<uint32_t>(clock_div); }, clock_chn);
 }
 
@@ -280,8 +281,14 @@ struct ScheduleState {
         bool set = false;
     };
 
+    ScheduleState(uint32_t ttl)
+        : cur_ttl(ttl)
+    {
+    }
+
     uint64_t cur_t = 0;
     uint32_t cur_ttl = 0;
+    bool ttl_set = false;
     DDS dds[22] = {};
     DAC dac[4] = {};
     size_t last_timed_inst = 0;
@@ -378,11 +385,15 @@ struct ScheduleState {
 
     uint64_t addTTLReal(uint64_t t, uint32_t ttl)
     {
-        if (ttl == cur_ttl)
+        if (ttl == cur_ttl && ttl_set)
             return 1;
         addWait(t - cur_t);
         cur_t += 3;
         auto changes = ttl ^ cur_ttl;
+        if (!ttl_set) {
+            ttl_set = true;
+            changes = ttl;
+        }
         cur_ttl = ttl;
         auto nchgs = __builtin_popcountll(changes);
         assert(nchgs > 0);
@@ -576,7 +587,12 @@ struct ScheduleState {
 template<typename Vec>
 Vec SeqToByteCode(Sequence &seq)
 {
-    ScheduleState<Vec> state;
+    uint32_t ttl_default = 0;
+    auto ttl_it = seq.defaults.find({Channel::TTL, 0});
+    if (ttl_it != seq.defaults.end())
+        ttl_default = ttl_it->second.val.i32;
+
+    ScheduleState<Vec> state(ttl_default);
 
     PulsesBuilder seq_builder =
         [&] (Channel chn, Val val, uint64_t t, uint64_t tlim) -> uint64_t {
