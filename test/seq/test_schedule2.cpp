@@ -39,11 +39,11 @@ int main(int argc, char **argv)
     assert(Base64::validate((const uint8_t*)data.data(), data.size()));
     tic();
     auto code = Seq::Sequence::fromBase64((const uint8_t*)data.data(),
-                                          data.size()).toByteCode();
+                                          data.size()).toByteCode(nullptr);
     printToc();
     size_t code_len;
     auto code2 = Seq::Sequence::fromBase64((const uint8_t*)data.data(),
-                                           data.size()).toByteCode(&code_len);
+                                           data.size()).toByteCode(&code_len, nullptr);
 
     if (argc >= 3) {
         std::ofstream ostm(argv[2]);
