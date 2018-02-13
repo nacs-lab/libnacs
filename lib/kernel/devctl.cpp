@@ -44,6 +44,7 @@ mapPulseCtrl()
     return mapFile(getFD(), 0, 32 * 4);
 }
 
+#if 0
 void*
 allocDmaBuffer(size_t len)
 {
@@ -71,6 +72,7 @@ sendDmaBuffer(void *buff, size_t len)
     };
     checkErrno(ioctl(getFD(), KNACS_SEND_DMA_BUFFER, &kernel_buff));
 }
+#endif
 
 }
 }

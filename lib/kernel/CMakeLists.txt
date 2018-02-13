@@ -1,11 +1,13 @@
 set(nacs_kernel_HDRS
   device.h
   devctl.h
-  dma_buffer.h)
+  # dma_buffer.h
+  )
 set(nacs_kernel_SRCS
   device.cpp
   devctl.cpp
-  dma_buffer.cpp)
+  # dma_buffer.cpp
+  )
 set(nacs_kernel_LINKS nacs-utils)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
