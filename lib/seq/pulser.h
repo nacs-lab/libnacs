@@ -162,8 +162,8 @@ struct Sequence {
     }
     static Sequence fromBase64(const uint8_t *data, size_t len);
     static Sequence fromBinary(const uint32_t *data, size_t len);
-    std::vector<uint8_t> toByteCode();
-    uint8_t *toByteCode(size_t *sz);
+    std::vector<uint8_t> toByteCode(uint32_t *ttl_mask=nullptr);
+    uint8_t *toByteCode(size_t *sz, uint32_t *ttl_mask=nullptr);
 };
 
 namespace ByteCode {
@@ -559,12 +559,12 @@ struct PulsesBuilder {
         return cb(chn, val, t, tlim);
     }
     __attribute__((deprecated)) static Sequence fromBase64(const uint8_t *data, size_t len);
-    void schedule(Sequence &, seq_cb_t seq_cb,
+    void schedule(Sequence&, seq_cb_t seq_cb, uint32_t *ttl_mask_out=nullptr,
                   Time::Constraints t_cons={100, 40, 4096});
-    void schedule(Sequence &&seq, seq_cb_t seq_cb,
+    void schedule(Sequence &&seq, seq_cb_t seq_cb, uint32_t *ttl_mask_out=nullptr,
                   Time::Constraints t_cons={100, 40, 4096})
     {
-        schedule(seq, seq_cb, t_cons);
+        schedule(seq, seq_cb, ttl_mask_out, t_cons);
     }
 private:
     cb_t cb;
@@ -575,7 +575,8 @@ private:
 
 extern "C" {
 
-uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data, size_t data_len, size_t *code_len);
+uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data, size_t data_len,
+                                  size_t *code_len, uint32_t *ttl_mask);
 uint64_t nacs_seq_bytecode_total_time(const uint8_t *code, size_t code_len);
 
 }

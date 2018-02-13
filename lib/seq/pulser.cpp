@@ -118,7 +118,8 @@ PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
 }
 
 NACS_EXPORT() void
-PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t_cons)
+PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb,
+                        uint32_t *ttl_mask_out, Time::Constraints t_cons)
 {
     auto &seq = sequence.pulses;
     auto &defaults = sequence.defaults;
@@ -129,6 +130,7 @@ PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t
     auto ttl_it = defaults.find({Channel::TTL, 0});
     if (ttl_it != defaults.end())
         ttl_val = ttl_it->second.val.i32;
+    uint32_t used_ttl_mask = 0;
     uint64_t prev_ttl_t = 0;
     ssize_t prev_ttl_idx = -1;
     size_t to = 0, from = 0;
@@ -142,6 +144,7 @@ PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t
         assert(pulse.len == 0);
         assert(pulse.chn.id < 32);
         uint32_t mask = uint32_t(1) << pulse.chn.id;
+        used_ttl_mask = used_ttl_mask | mask;
         bool val = pulse.cb(pulse.t, Val::get<double>((ttl_val & mask) != 0)).val.f64 != 0;
         uint32_t new_ttl_val;
         if (val) {
@@ -167,6 +170,8 @@ PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb, Time::Constraints t
             }
         }
     }
+    if (ttl_mask_out)
+        *ttl_mask_out = used_ttl_mask;
     seq.resize(to);
     Channel clock_chn{Channel::Type::CLOCK, 0};
     Seq::schedule(*this, seq, t_cons, defaults, sequence.clocks, Filter{}, std::move(seq_cb),
@@ -585,7 +590,7 @@ struct ScheduleState {
 } // anonymous
 
 template<typename Vec>
-Vec SeqToByteCode(Sequence &seq)
+Vec SeqToByteCode(Sequence &seq, uint32_t *ttl_mask)
 {
     uint32_t ttl_default = 0;
     auto ttl_it = seq.defaults.find({Channel::TTL, 0});
@@ -631,16 +636,16 @@ Vec SeqToByteCode(Sequence &seq)
             return state.end(cur_t);
         }
     };
-    seq_builder.schedule(seq, seq_cb, {50, 40, 4096});
+    seq_builder.schedule(seq, seq_cb, ttl_mask, {50, 40, 4096});
 
     return state.code;
 }
 
 } // ByteCode
 
-NACS_EXPORT() std::vector<uint8_t> Sequence::toByteCode()
+NACS_EXPORT() std::vector<uint8_t> Sequence::toByteCode(uint32_t *ttl_mask)
 {
-    return ByteCode::SeqToByteCode<std::vector<uint8_t>>(*this);
+    return ByteCode::SeqToByteCode<std::vector<uint8_t>>(*this, ttl_mask);
 }
 
 namespace {
@@ -679,9 +684,9 @@ private:
 
 }
 
-NACS_EXPORT() uint8_t *Sequence::toByteCode(size_t *sz)
+NACS_EXPORT() uint8_t *Sequence::toByteCode(size_t *sz, uint32_t *ttl_mask)
 {
-    auto vec = ByteCode::SeqToByteCode<MallocVector<uint8_t>>(*this);
+    auto vec = ByteCode::SeqToByteCode<MallocVector<uint8_t>>(*this, ttl_mask);
     *sz = vec.size();
     return &vec[0];
 }
@@ -693,9 +698,10 @@ using namespace NaCs::Seq;
 
 extern "C" NACS_EXPORT() uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data,
                                                            size_t data_len,
-                                                           size_t *code_len)
+                                                           size_t *code_len,
+                                                           uint32_t *ttl_mask)
 {
-    return Sequence::fromBinary(data, data_len).toByteCode(code_len);
+    return Sequence::fromBinary(data, data_len).toByteCode(code_len, ttl_mask);
 }
 
 extern "C" NACS_EXPORT() uint64_t nacs_seq_bytecode_total_time(const uint8_t *code,
