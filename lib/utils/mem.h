@@ -42,15 +42,15 @@ store_unalign(void *p, T v, size_t idx=0)
 }
 
 template<typename T> static inline T
-read(volatile void *addr)
+read(volatile void *addr, size_t idx=0)
 {
-    return *(volatile T*)addr;
+    return ((volatile T*)addr)[idx];
 }
 
 template<typename T, typename T2> static inline void
-write(volatile void *addr, T2 val)
+write(volatile void *addr, T2 val, size_t idx=0)
 {
-    *(volatile T*)addr = val;
+    ((volatile T*)addr)[idx] = val;
 }
 }
 
