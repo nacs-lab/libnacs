@@ -293,6 +293,7 @@ struct ScheduleState {
 
     uint64_t cur_t = 0;
     uint32_t cur_ttl = 0;
+    uint32_t _all_ttl_mask = 0;
     bool ttl_set = false;
     DDS dds[22] = {};
     DAC dac[4] = {};
@@ -303,6 +304,11 @@ struct ScheduleState {
     static constexpr int start_ttl = 0;
     static constexpr int start_ttl_mask = (1 << start_ttl);
     static constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
+
+    uint32_t all_ttl_mask() const
+    {
+        return _all_ttl_mask | start_ttl_mask;
+    }
 
     template<typename Inst>
     size_t addInst(Inst inst)
@@ -390,6 +396,8 @@ struct ScheduleState {
 
     uint64_t addTTLReal(uint64_t t, uint32_t ttl)
     {
+        ttl = ttl & all_ttl_mask();
+        cur_ttl = cur_ttl & all_ttl_mask();
         if (ttl == cur_ttl && ttl_set)
             return 1;
         addWait(t - cur_t);
@@ -592,6 +600,7 @@ struct ScheduleState {
 template<typename Vec>
 Vec SeqToByteCode(Sequence &seq, uint32_t *ttl_mask)
 {
+    // The bytecode is guaranteed to not enable any channel that is not present in the mask.
     uint32_t ttl_default = 0;
     auto ttl_it = seq.defaults.find({Channel::TTL, 0});
     if (ttl_it != seq.defaults.end())
@@ -636,7 +645,10 @@ Vec SeqToByteCode(Sequence &seq, uint32_t *ttl_mask)
             return state.end(cur_t);
         }
     };
-    seq_builder.schedule(seq, seq_cb, ttl_mask, {50, 40, 4096});
+    seq_builder.schedule(seq, seq_cb, &state._all_ttl_mask, {50, 40, 4096});
+
+    if (ttl_mask)
+        *ttl_mask = state.all_ttl_mask();
 
     return state.code;
 }
