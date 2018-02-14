@@ -1,10 +1,12 @@
 set(nacs_seq_HDRS
   bytecode.h
+  cmdlist.h
   seq.h
   timing.h
   pulser.h)
 set(nacs_seq_SRCS
   bytecode.cpp
+  cmdlist.cpp
   timing.cpp
   pulser.cpp)
 set(nacs_seq_LINKS nacs-utils)
