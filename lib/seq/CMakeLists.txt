@@ -3,6 +3,7 @@ set(nacs_seq_HDRS
   timing.h
   pulser.h)
 set(nacs_seq_SRCS
+  bytecode.cpp
   timing.cpp
   pulser.cpp)
 set(nacs_seq_LINKS nacs-utils)

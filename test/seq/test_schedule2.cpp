@@ -22,7 +22,7 @@
 
 #include <nacs-utils/timer.h>
 #include <nacs-utils/base64.h>
-#include <nacs-seq/pulser.h>
+#include <nacs-seq/bytecode.h>
 
 #include <iostream>
 #include <fstream>
