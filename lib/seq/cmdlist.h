@@ -74,7 +74,7 @@ static_assert(sizeof(TTLAll) == 5, "");
 
 struct NACS_PACKED TTL1 {
     OpCode op; // 1
-    uint8_t t: 2;
+    uint8_t t: 2; // Total time is `t + 3`
     uint8_t val: 1;
     uint16_t chn: 5;
 };
@@ -151,6 +151,177 @@ size_t count(const uint8_t *code, size_t code_len);
 static inline size_t count(const std::vector<uint8_t> &code)
 {
     return count(&code[0], code.size());
+}
+
+/**
+ * Print all instructions in a human readable format.
+ *
+ * Similar to most other functions on the cmdlist, this merge wait instructions together
+ * and also merge wait into TTL instructions.
+ */
+void print(std::ostream &stm, const uint8_t *code, size_t code_len);
+static inline void print(std::ostream &stm, const std::vector<uint8_t> &code)
+{
+    print(stm, &code[0], code.size());
+}
+
+/**
+ * Total time it takes to execute the cmdlist.
+ */
+uint64_t total_time(const uint8_t *code, size_t code_len);
+static inline uint64_t total_time(const std::vector<uint8_t> &code)
+{
+    return total_time(&code[0], code.size());
+}
+
+// Keep track of user state during execution of cmdlist
+struct ExeState {
+    /**
+     * Execute the cmdlist and use the user provided `cb` to generate action.
+     * Wait will be merged together and into TTL pulses when possible.
+     *
+     * The `cb` must have the following field/method.
+     *
+     * * `ttl(uint32_t ttl, uint64_t t)`:
+     *
+     *    Generate a TTL pulse with the value `ttl` and wait a total of time `t` cycles.
+     *
+     * * `ttl1(uint8_t chn, bool val, uint64_t t)`:
+     *
+     *    Generate a TTL pulse that set the channel `chn` to `val`,
+     *    wait a total of time `t` cycles.
+     *
+     * * `dds_freq(uint8_t chn, uint32_t freq)`:
+     *
+     *    Generate a DDS frequency pulse. Should take `50` cycles.
+     *
+     * * `dds_amp(uint8_t chn, uint16_t amp)`:
+     *
+     *    Generate a DDS amplitude pulse. Should take `50` cycles.
+     *
+     * * `dds_phase(uint8_t chn, uint16_t phase)`:
+     *
+     *    Generate a DDS phase pulse. Should take `50` cycles.
+     *
+     * * `dds_detphase(uint8_t chn, uint16_t detphase)`:
+     *
+     *    Generate a DDS det phase pulse. Should take `50` cycles.
+     *
+     * * `dds_reset(uint8_t chn)`:
+     *
+     *    Generate a DDS reset pulse. Should take `50` cycles.
+     *
+     * * `dac(uint8_t chn, uint16_t V)`:
+     *
+     *    Generate a DAC pulse. Should take `45` cycles.
+     *
+     * * `wait(uint64_t t)`:
+     *
+     *    Wait a total of time `t` cycles.
+     *
+     * * `clock(uint8_t period)`:
+     *
+     *    Generate a clock pulse (`255` is off). Should take 5 cycles.
+     */
+    template<typename T>
+    void run(T &&cb, const uint8_t *code, size_t len);
+
+private:
+    // Unaligned and typed load.
+    template<typename T>
+    T loadInst(const uint8_t *code, size_t idx=0)
+    {
+        T v;
+        memcpy(&v, &code[idx], sizeof(T));
+        return v;
+    }
+};
+
+template<typename T>
+void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
+{
+    for (size_t i = 0; i < code_len;) {
+        auto *p = &code[i];
+        uint8_t op = *p;
+        auto inst_len = cmd_size[op];
+        i += inst_len;
+        // Look forward until the end of the code or a non-wait pulse is find.
+        // Return the total time consumed.
+        auto consumeAllWait = [&] {
+            uint64_t t = 0;
+            while (i < code_len) {
+                auto *p2 = &code[i];
+                uint8_t op2 = *p2;
+                if (op2 != OpCode::Wait)
+                    break;
+                i += sizeof(Inst::Wait);
+                auto inst = loadInst<Inst::Wait>(p2);
+                t += inst.t;
+            }
+            return t;
+        };
+        auto runTTL = [&] (uint32_t ttl) {
+            cb.ttl(ttl, consumeAllWait() + 3);
+        };
+        auto runTTL1 = [&] (uint8_t chn, bool val, uint64_t t) {
+            t += consumeAllWait();
+            cb.ttl1(chn, val, t);
+        };
+        switch (op) {
+        case OpCode::TTLAll: {
+            auto inst = loadInst<Inst::TTLAll>(p);
+            runTTL(inst.val);
+            break;
+        }
+        case OpCode::TTL1: {
+            auto inst = loadInst<Inst::TTL1>(p);
+            runTTL1(inst.chn, inst.val, inst.t + 3);
+            break;
+        }
+        case OpCode::Wait: {
+            auto inst = loadInst<Inst::Wait>(p);
+            uint64_t t = inst.t;
+            cb.wait(t + consumeAllWait());
+            break;
+        }
+        case OpCode::Clock: {
+            cb.clock(loadInst<Inst::Clock>(p).period);
+            break;
+        }
+        case OpCode::DDSFreq: {
+            auto inst = loadInst<Inst::DDSFreq>(p);
+            cb.dds_freq(inst.chn, inst.freq);
+            break;
+        }
+        case OpCode::DDSAmp: {
+            auto inst = loadInst<Inst::DDSAmp>(p);
+            cb.dds_amp(inst.chn, inst.amp);
+            break;
+        }
+        case OpCode::DDSPhase: {
+            auto inst = loadInst<Inst::DDSPhase>(p);
+            cb.dds_phase(inst.chn, inst.phase);
+            break;
+        }
+        case OpCode::DDSDetPhase: {
+            auto inst = loadInst<Inst::DDSDetPhase>(p);
+            cb.dds_detphase(inst.chn, inst.det_phase);
+            break;
+        }
+        case OpCode::DDSReset: {
+            auto inst = loadInst<Inst::DDSReset>(p);
+            cb.dds_reset(inst.chn);
+            break;
+        }
+        case OpCode::DAC: {
+            auto inst = loadInst<Inst::DAC>(p);
+            cb.dac(inst.chn, inst.amp);
+            break;
+        }
+        default:
+            abort();
+        }
+    }
 }
 
 }
