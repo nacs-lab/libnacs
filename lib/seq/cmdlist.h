@@ -135,20 +135,6 @@ static_assert(sizeof(DAC) == 4, "");
 
 }
 
-
-/**
- * Command format:
- * TTL all: [#0: 8][val: 32] (5 bytes)
- * TTL1: [#1: 8][t: 2][val: 1][chn: 5] (2 bytes)
- * Wait: [#2: 8][t: 64] (9 bytes)
- * Clock: [#3: 8][period: 8] (2 bytes)
- * DDS Freq: [#4: 8][chn: 8][freq: 32] (6 bytes)
- * DDS Amp: [#5: 8][chn: 8][amp: 16] (4 bytes)
- * DDS Phase: [#6: 8][chn: 8][phase: 16] (4 bytes)
- * DDS Det Phase: [#7: 8][chn: 8][det_phase: 16] (4 bytes)
- * DDS Reset: [#8: 8][chn: 8] (2 bytes)
- * DAC: [#9: 8][chn: 8][val: 16] (4 bytes)
- **/
 static constexpr uint8_t cmd_size[10] = {
     5, 2, // TTL
     9, 2, // wait, clock

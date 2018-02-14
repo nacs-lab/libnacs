@@ -247,7 +247,7 @@ struct ExeState {
      *
      * * `ttl(uint32_t ttl, uint64_t t)`:
      *
-     *    Generate a TTL pulse with the value `TTL` and wait a total of time `t` cycles.
+     *    Generate a TTL pulse with the value `ttl` and wait a total of time `t` cycles.
      *
      * * `dds_freq(uint8_t chn, uint32_t freq)`:
      *
@@ -307,14 +307,14 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
                 auto *p2 = &code[i];
                 uint8_t b2 = *p2;
                 uint8_t op2 = b2 & 0xf;
-                if (op2 == 5) {
+                if (op2 == OpCode::Wait2) {
                     if (!(b2 & 0x10))
                         break;
                     i += sizeof(Inst::Wait2);
                     auto inst = loadInst<Inst::Wait2>(p2);
                     t += uint64_t(inst.t);
                 }
-                else if (op2 != 4) {
+                else if (op2 != OpCode::Wait) {
                     break;
                 }
                 else {
