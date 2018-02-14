@@ -1,4 +1,5 @@
 set(nacs_seq_HDRS
+  bytecode.h
   seq.h
   timing.h
   pulser.h)
