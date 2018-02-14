@@ -173,4 +173,10 @@
         }                                               \
     } while (0)
 
+#if defined(__x86_64__) || defined(__x86_64) || defined(__i386) || defined(__i386__)
+#  define NACS_PACKED __attribute__((__packed__, gcc_struct))
+#else
+#  define NACS_PACKED __attribute__((__packed__))
+#endif
+
 #endif

@@ -57,20 +57,14 @@ enum OpCode : uint8_t {
 
 namespace Inst {
 
-#if defined(__x86_64__) || defined(__x86_64) || defined(__i386) || defined(__i386__)
-#  define BYTE_INST_ATTR __attribute__((__packed__, gcc_struct))
-#else
-#  define BYTE_INST_ATTR __attribute__((__packed__))
-#endif
-
-struct BYTE_INST_ATTR TTLAll {
+struct NACS_PACKED TTLAll {
     uint8_t op: 4; // 0
     uint8_t t: 4;
     uint32_t val;
 };
 static_assert(sizeof(TTLAll) == 5, "");
 
-struct BYTE_INST_ATTR TTL2 {
+struct NACS_PACKED TTL2 {
     uint8_t op: 4; // 1
     uint8_t t: 2;
     uint16_t val1: 5;
@@ -78,7 +72,7 @@ struct BYTE_INST_ATTR TTL2 {
 };
 static_assert(sizeof(TTL2) == 2, "");
 
-struct BYTE_INST_ATTR TTL4 {
+struct NACS_PACKED TTL4 {
     uint8_t op: 4; // 2
     uint16_t val1: 5;
     uint16_t val2: 5;
@@ -87,7 +81,7 @@ struct BYTE_INST_ATTR TTL4 {
 };
 static_assert(sizeof(TTL4) == 3, "");
 
-struct BYTE_INST_ATTR TTL5 {
+struct NACS_PACKED TTL5 {
     uint8_t op: 4; // 3
     uint8_t t: 3;
     uint16_t val1: 5;
@@ -98,56 +92,56 @@ struct BYTE_INST_ATTR TTL5 {
 };
 static_assert(sizeof(TTL5) == 4, "");
 
-struct BYTE_INST_ATTR Wait {
+struct NACS_PACKED Wait {
     uint8_t op: 4; // 4
     uint8_t exp: 4;
     uint16_t t;
 };
 static_assert(sizeof(Wait) == 3, "");
 
-struct BYTE_INST_ATTR Wait2 {
+struct NACS_PACKED Wait2 {
     uint8_t op: 4; // 5
     uint8_t _0: 1; // 1
     uint16_t t: 11;
 };
 static_assert(sizeof(Wait2) == 2, "");
 
-struct BYTE_INST_ATTR Clock {
+struct NACS_PACKED Clock {
     uint8_t op: 4; // 5
     uint8_t _0: 4; // 0
     uint8_t period;
 };
 static_assert(sizeof(Clock) == 2, "");
 
-struct BYTE_INST_ATTR DDSFreq {
+struct NACS_PACKED DDSFreq {
     uint8_t op: 4; // 6
     uint16_t chn: 5;
     uint32_t freq: 31;
 };
 static_assert(sizeof(DDSFreq) == 5, "");
 
-struct BYTE_INST_ATTR DDSDetFreq2 {
+struct NACS_PACKED DDSDetFreq2 {
     uint8_t op: 4; // 7
     uint16_t chn: 5;
     uint32_t freq: 7;
 };
 static_assert(sizeof(DDSDetFreq2) == 2, "");
 
-struct BYTE_INST_ATTR DDSDetFreq3 {
+struct NACS_PACKED DDSDetFreq3 {
     uint8_t op: 4; // 8
     uint16_t chn: 5;
     uint32_t freq: 15;
 };
 static_assert(sizeof(DDSDetFreq3) == 3, "");
 
-struct BYTE_INST_ATTR DDSDetFreq4 {
+struct NACS_PACKED DDSDetFreq4 {
     uint8_t op: 4; // 9
     uint16_t chn: 5;
     uint32_t freq: 23;
 };
 static_assert(sizeof(DDSDetFreq4) == 4, "");
 
-struct BYTE_INST_ATTR DDSAmp {
+struct NACS_PACKED DDSAmp {
     uint8_t op: 4; // 10
     uint8_t _0: 3;
     uint16_t chn: 5;
@@ -155,14 +149,14 @@ struct BYTE_INST_ATTR DDSAmp {
 };
 static_assert(sizeof(DDSAmp) == 3, "");
 
-struct BYTE_INST_ATTR DDSDetAmp {
+struct NACS_PACKED DDSDetAmp {
     uint8_t op: 4; // 11
     uint16_t chn: 5;
     uint16_t amp: 7;
 };
 static_assert(sizeof(DDSDetAmp) == 2, "");
 
-struct BYTE_INST_ATTR DAC {
+struct NACS_PACKED DAC {
     uint8_t op: 4; // 12
     uint8_t _0: 2;
     uint16_t chn: 2;
@@ -170,7 +164,7 @@ struct BYTE_INST_ATTR DAC {
 };
 static_assert(sizeof(DAC) == 3, "");
 
-struct BYTE_INST_ATTR DACDet {
+struct NACS_PACKED DACDet {
     uint8_t op: 4; // 13
     uint16_t chn: 2;
     uint16_t amp: 10;
