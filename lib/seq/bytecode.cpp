@@ -56,6 +56,86 @@ NACS_EXPORT() uint64_t total_time(const uint8_t *code, size_t code_len)
 
 namespace {
 
+struct PulsesBuilder {
+    typedef std::function<uint64_t(Channel,Val,uint64_t,uint64_t)> cb_t;
+    typedef std::function<uint64_t(PulsesBuilder&,uint64_t,Event)> seq_cb_t;
+    template<typename T>
+    PulsesBuilder(T &&_cb)
+        : cb(std::forward<T>(_cb))
+    {}
+    uint64_t operator()(Channel chn, Val val, uint64_t t, uint64_t tlim)
+    {
+        return cb(chn, val, t, tlim);
+    }
+    // In `ttl_mask_out` will return the mask of all TTL channels
+    // used by the sequence. It is guaranteed that the slot is filled before
+    // actual scheduling starts or the start callback is invoked.
+    void schedule(Sequence&, seq_cb_t seq_cb, uint32_t *ttl_mask_out,
+                  Time::Constraints t_cons);
+private:
+    cb_t cb;
+};
+
+void PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb,
+                             uint32_t *ttl_mask_out, Time::Constraints t_cons)
+{
+    auto &seq = sequence.pulses;
+    auto &defaults = sequence.defaults;
+    sort(seq);
+
+    // Merge TTL pulses that happen at the same time into a single TTL pulse
+    uint32_t ttl_val = 0;
+    auto ttl_it = defaults.find({Channel::TTL, 0});
+    if (ttl_it != defaults.end())
+        ttl_val = ttl_it->second.val.i32;
+    uint32_t used_ttl_mask = 0;
+    uint64_t prev_ttl_t = 0;
+    ssize_t prev_ttl_idx = -1;
+    size_t to = 0, from = 0;
+    for (;from < seq.size();from++, to++) {
+        auto &pulse = seq[from];
+        if (pulse.chn.typ != Channel::TTL) {
+            if (from != to)
+                seq[to] = std::move(pulse);
+            continue;
+        }
+        assert(pulse.len == 0);
+        assert(pulse.chn.id < 32);
+        uint32_t mask = uint32_t(1) << pulse.chn.id;
+        used_ttl_mask = used_ttl_mask | mask;
+        bool val = pulse.cb(pulse.t, Val::get<double>((ttl_val & mask) != 0)).val.f64 != 0;
+        uint32_t new_ttl_val;
+        if (val) {
+            new_ttl_val = ttl_val | mask;
+        } else {
+            new_ttl_val = ttl_val & ~mask;
+        }
+        if (new_ttl_val == ttl_val && prev_ttl_idx != -1) {
+            to--;
+            continue;
+        }
+        ttl_val = new_ttl_val;
+        if (prev_ttl_idx != -1 && prev_ttl_t == pulse.t) {
+            seq[prev_ttl_idx].cb = PulseData(Val::get<uint32_t>(new_ttl_val));
+            to--;
+        } else {
+            prev_ttl_idx = to;
+            prev_ttl_t = pulse.t;
+            pulse.chn = {Channel::Type::TTL, 0};
+            pulse.cb = PulseData(Val::get<uint32_t>(new_ttl_val));
+            if (from != to) {
+                seq[to] = std::move(pulse);
+            }
+        }
+    }
+    if (ttl_mask_out)
+        *ttl_mask_out = used_ttl_mask;
+    seq.resize(to);
+    Channel clock_chn{Channel::Type::CLOCK, 0};
+    Seq::schedule(*this, seq, t_cons, defaults, sequence.clocks, Filter{}, std::move(seq_cb),
+                  [] (auto clock_div) { return Val::get<uint32_t>(clock_div); }, clock_chn);
+}
+
 template<typename Vec>
 struct ScheduleState {
     struct DDS {

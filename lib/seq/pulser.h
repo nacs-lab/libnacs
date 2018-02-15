@@ -166,31 +166,6 @@ struct Sequence {
     uint8_t *toByteCode(size_t *sz, uint32_t *ttl_mask);
 };
 
-struct PulsesBuilder {
-    typedef std::function<uint64_t(Channel,Val,uint64_t,uint64_t)> cb_t;
-    typedef std::function<uint64_t(PulsesBuilder&,uint64_t,Event)> seq_cb_t;
-    template<typename T>
-    PulsesBuilder(T &&_cb)
-        : cb(std::forward<T>(_cb))
-    {}
-    uint64_t operator()(Channel chn, Val val, uint64_t t, uint64_t tlim)
-    {
-        return cb(chn, val, t, tlim);
-    }
-    // In `ttl_mask_out`, when not NULL, will return the mask of all TTL channels
-    // used by the sequence. It is guaranteed that the slot is filled before
-    // actual scheduling starts or the start callback is invoked.
-    void schedule(Sequence&, seq_cb_t seq_cb, uint32_t *ttl_mask_out=nullptr,
-                  Time::Constraints t_cons={100, 40, 4096});
-    void schedule(Sequence &&seq, seq_cb_t seq_cb, uint32_t *ttl_mask_out=nullptr,
-                  Time::Constraints t_cons={100, 40, 4096})
-    {
-        schedule(seq, seq_cb, ttl_mask_out, t_cons);
-    }
-private:
-    cb_t cb;
-};
-
 }
 }
 
