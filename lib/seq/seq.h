@@ -71,7 +71,7 @@ static constexpr int default_clock_div = 100;
 // TTL pulses should be folded first.
 template<typename Accum, typename Cid, typename Cb, typename Filter,
          typename SeqCB, typename ValT, typename ConvertClock>
-static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
+static void schedule(Accum &&accum, const std::vector<BasePulse<Cid,Cb>> &seq,
                      const Time::Constraints &t_cons,
                      const std::map<Cid,ValT> &defaults,
                      const std::vector<Clock> &clocks,
