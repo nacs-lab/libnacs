@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2016 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2018 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -127,7 +127,7 @@ struct Pulse {
     uint64_t t;
     uint64_t len;
     Channel chn;
-    // Called with `cb(uint64_t t, ValT start, uint64_t len) -> ValT`
+    // Called with `cb(uint64_t t, Val start, uint64_t len) -> Val`
     // where `t` is the time within the pulse,
     // `start` is the value of the channel at the begining of the pulse.
     // `len` is the length pulse.
