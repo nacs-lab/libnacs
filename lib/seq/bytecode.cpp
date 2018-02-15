@@ -56,29 +56,12 @@ NACS_EXPORT() uint64_t total_time(const uint8_t *code, size_t code_len)
 
 namespace {
 
-struct PulsesBuilder {
-    typedef std::function<uint64_t(Channel,Val,uint64_t,uint64_t)> cb_t;
-    template<typename T>
-    PulsesBuilder(T &&_cb)
-        : cb(std::forward<T>(_cb))
-    {}
-    uint64_t operator()(Channel chn, Val val, uint64_t t, uint64_t tlim)
-    {
-        return cb(chn, val, t, tlim);
-    }
-    // In `ttl_mask_out` will return the mask of all TTL channels
-    // used by the sequence. It is guaranteed that the slot is filled before
-    // actual scheduling starts or the start callback is invoked.
-    template<typename seq_cb_t>
-    void schedule(Sequence&, seq_cb_t &&seq_cb, uint32_t *ttl_mask_out,
-                  Time::Constraints t_cons);
-private:
-    cb_t cb;
-};
-
-template<typename seq_cb_t>
-void PulsesBuilder::schedule(Sequence &sequence, seq_cb_t &&seq_cb,
-                             uint32_t *ttl_mask_out, Time::Constraints t_cons)
+// In `ttl_mask_out` will return the mask of all TTL channels
+// used by the sequence. It is guaranteed that the slot is filled before
+// actual scheduling starts or the start callback is invoked.
+template<typename cb_t, typename seq_cb_t>
+static void schedule_seq(Sequence &sequence, cb_t &&cb, seq_cb_t &&seq_cb,
+                         uint32_t *ttl_mask_out, Time::Constraints t_cons)
 {
     auto &seq = sequence.pulses;
     auto &defaults = sequence.defaults;
@@ -133,7 +116,7 @@ void PulsesBuilder::schedule(Sequence &sequence, seq_cb_t &&seq_cb,
         *ttl_mask_out = used_ttl_mask;
     seq.resize(to);
     Channel clock_chn{Channel::Type::CLOCK, 0};
-    Seq::schedule(cb, seq, t_cons, defaults, sequence.clocks, Filter{},
+    Seq::schedule(std::forward<cb_t>(cb), seq, t_cons, defaults, sequence.clocks, Filter{},
                   std::forward<seq_cb_t>(seq_cb),
                   [] (auto clock_div) { return Val::get<uint32_t>(clock_div); }, clock_chn);
 }
@@ -473,8 +456,7 @@ Vec SeqToByteCode(Sequence &seq, uint32_t *ttl_mask)
 
     ScheduleState<Vec> state(ttl_default);
 
-    PulsesBuilder seq_builder =
-        [&] (Channel chn, Val val, uint64_t t, uint64_t tlim) -> uint64_t {
+    auto accum_cb = [&] (Channel chn, Val val, uint64_t t, uint64_t tlim) -> uint64_t {
         uint64_t mint = 50;
         if (chn.typ == Channel::TTL) {
             mint = 3;
@@ -510,7 +492,7 @@ Vec SeqToByteCode(Sequence &seq, uint32_t *ttl_mask)
             return state.end(cur_t);
         }
     };
-    seq_builder.schedule(seq, seq_cb, &state._all_ttl_mask, {50, 40, 4096});
+    schedule_seq(seq, accum_cb, seq_cb, &state._all_ttl_mask, {50, 40, 4096});
 
     if (ttl_mask)
         *ttl_mask = state.all_ttl_mask();
