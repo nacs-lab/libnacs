@@ -2,13 +2,12 @@ set(nacs_seq_HDRS
   bytecode.h
   cmdlist.h
   seq.h
-  timing.h
-  pulser.h)
+  timing.h)
 set(nacs_seq_SRCS
   bytecode.cpp
   cmdlist.cpp
-  timing.cpp
-  pulser.cpp)
+  seq.cpp
+  timing.cpp)
 set(nacs_seq_LINKS nacs-utils)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")

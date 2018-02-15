@@ -29,7 +29,7 @@
  * only the ones that can be used in an experimental sequence.
  */
 
-#include "pulser.h"
+#include "seq.h"
 
 namespace NaCs {
 namespace Seq {

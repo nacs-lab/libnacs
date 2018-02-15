@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "pulser.h"
+#include "seq.h"
 
 #include <nacs-utils/utils.h>
 #include <nacs-utils/base64.h>

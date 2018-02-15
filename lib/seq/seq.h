@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#include <nacs-utils/ir.h>
+
 #include "timing.h"
 
 #include <vector>
@@ -64,6 +66,119 @@ struct Clock {
     // Clock division. Each clock cycle consists of `div` number of time points at high
     // and `div` number of time points at low.
     uint32_t div;
+};
+
+struct Channel {
+    enum Type {
+        TTL = 1,
+        DDS_FREQ = 2,
+        DDS_AMP = 3,
+        DAC = 4,
+        CLOCK = 5
+    };
+    Type typ;
+    int id;
+};
+
+static inline bool operator<(const Channel &id1, const Channel id2)
+{
+    if (id1.typ < id2.typ) {
+        return true;
+    } else if (id1.typ > id2.typ) {
+        return false;
+    }
+    return id1.id < id2.id;
+}
+
+struct Val {
+    IR::GenVal val;
+    Val(IR::GenVal v=getGenVal<double>(0)) : val(v)
+    {}
+    template<typename T, typename T2> static inline Val get(T2 val=0)
+    {
+        Val v;
+        v.val = getGenVal<T>(val);
+        return v;
+    }
+    template<typename T> static inline Val get()
+    {
+        return get<T>(0);
+    }
+private:
+    template<typename T, typename T2>
+    static inline std::enable_if_t<std::is_same<T,double>::value, IR::GenVal>
+    getGenVal(T2 val)
+    {
+        IR::GenVal gv;
+        gv.f64 = val;
+        return gv;
+    }
+    template<typename T, typename T2>
+    static inline std::enable_if_t<std::is_same<T,uint32_t>::value, IR::GenVal>
+    getGenVal(T2 val)
+    {
+        IR::GenVal gv;
+        gv.i32 = val;
+        return gv;
+    }
+};
+
+struct PulseData {
+    typedef IR::ExeContext::Func<double(double,double)> func_t;
+    PulseData(PulseData&&) = default;
+    PulseData &operator=(PulseData&&) = default;
+    PulseData()
+        : m_val(),
+          m_cb()
+    {}
+    PulseData(const Val &val)
+        : m_val(val),
+          m_cb()
+    {}
+    PulseData(Val &&val)
+        : m_val(val),
+          m_cb()
+    {}
+    PulseData(func_t func)
+        : m_val(),
+          m_cb(std::move(func))
+    {}
+    template<typename T>
+    PulseData(T &&v)
+        : PulseData(func_t(std::forward<T>(v)))
+    {
+    }
+    Val operator()(uint64_t t, Val start) const
+    {
+        if (m_cb)
+            return IR::TagVal(m_cb(double(t) * 10e-9, start.val.f64)).val;
+        return m_val;
+    }
+private:
+    Val m_val;
+    mutable func_t m_cb;
+};
+
+typedef BasePulse<Channel, PulseData> Pulse;
+
+struct Sequence {
+    std::vector<Pulse> pulses;
+    std::map<Channel,Val> defaults;
+    std::vector<Clock> clocks;
+    std::unique_ptr<IR::ExeContext> exectx;
+    Sequence(std::vector<Pulse> &&_pulses, std::map<Channel,Val> &&_defaults,
+             std::vector<Clock> &&_clocks={},
+             std::unique_ptr<IR::ExeContext> _exectx=IR::ExeContext::get())
+        : pulses(std::move(_pulses)),
+          defaults(std::move(_defaults)),
+          clocks(std::move(_clocks)),
+          exectx(std::move(_exectx))
+    {
+    }
+    static Sequence fromBase64(const uint8_t *data, size_t len);
+    static Sequence fromBinary(const uint32_t *data, size_t len);
+    std::vector<uint8_t> toByteCode(uint32_t *ttl_mask);
+    uint8_t *toByteCode(size_t *sz, uint32_t *ttl_mask);
 };
 
 }

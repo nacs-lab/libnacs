@@ -20,6 +20,8 @@
 
 #include "bytecode.h"
 
+#include <math.h>
+
 namespace NaCs {
 namespace Seq {
 

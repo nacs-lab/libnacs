@@ -29,7 +29,7 @@
  * the (main) usecase.
  */
 
-#include "pulser.h"
+#include "seq.h"
 
 namespace NaCs {
 namespace Seq {
