@@ -32,42 +32,6 @@
 namespace NaCs {
 namespace Seq {
 
-template<typename Cid, typename Cb>
-struct BasePulse {
-    uint64_t t;
-    uint64_t len;
-    Cid chn;
-    // Called with `cb(uint64_t t, ValT start, uint64_t len) -> ValT`
-    // where `t` is the time within the pulse,
-    // `start` is the value of the channel at the begining of the pulse.
-    // `len` is the length pulse.
-    Cb cb;
-};
-
-template<typename Cid, typename Cb>
-static void sort(std::vector<BasePulse<Cid,Cb>> &seq)
-{
-    std::stable_sort(seq.begin(), seq.end(),
-                     [] (auto &p1, auto &p2) { return p1.t < p2.t; });
-}
-
-enum class Event {
-    start,
-    end
-};
-
-struct Clock {
-    // Time index of the first clock edge. The clock pulse should happen `div` time points
-    // before this time.
-    uint64_t t;
-    // Length of the pulse in time index. The clock end pulse should be `len` time points after
-    // the start pulse.
-    uint64_t len;
-    // Clock division. Each clock cycle consists of `div` number of time points at high
-    // and `div` number of time points at low.
-    uint32_t div;
-};
-
 struct Channel {
     enum Type {
         TTL = 1,
@@ -159,7 +123,34 @@ private:
     mutable func_t m_cb;
 };
 
-typedef BasePulse<Channel, PulseData> Pulse;
+struct Pulse {
+    uint64_t t;
+    uint64_t len;
+    Channel chn;
+    // Called with `cb(uint64_t t, ValT start, uint64_t len) -> ValT`
+    // where `t` is the time within the pulse,
+    // `start` is the value of the channel at the begining of the pulse.
+    // `len` is the length pulse.
+    PulseData cb;
+};
+
+static inline void sort(std::vector<Pulse> &seq)
+{
+    std::stable_sort(seq.begin(), seq.end(),
+                     [] (auto &p1, auto &p2) { return p1.t < p2.t; });
+}
+
+struct Clock {
+    // Time index of the first clock edge. The clock pulse should happen `div` time points
+    // before this time.
+    uint64_t t;
+    // Length of the pulse in time index. The clock end pulse should be `len` time points after
+    // the start pulse.
+    uint64_t len;
+    // Clock division. Each clock cycle consists of `div` number of time points at high
+    // and `div` number of time points at low.
+    uint32_t div;
+};
 
 struct Sequence {
     std::vector<Pulse> pulses;
