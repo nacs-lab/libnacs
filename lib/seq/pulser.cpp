@@ -111,12 +111,6 @@ Sequence::fromBase64(const uint8_t *data, size_t len)
     return fromBinary(&bin[0], bin.size());
 }
 
-NACS_EXPORT() Sequence
-PulsesBuilder::fromBase64(const uint8_t *data, size_t len)
-{
-    return Sequence::fromBase64(data, len);
-}
-
 NACS_EXPORT() void
 PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb,
                         uint32_t *ttl_mask_out, Time::Constraints t_cons)

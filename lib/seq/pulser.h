@@ -177,7 +177,6 @@ struct PulsesBuilder {
     {
         return cb(chn, val, t, tlim);
     }
-    __attribute__((deprecated)) static Sequence fromBase64(const uint8_t *data, size_t len);
     // In `ttl_mask_out`, when not NULL, will return the mask of all TTL channels
     // used by the sequence. It is guaranteed that the slot is filled before
     // actual scheduling starts or the start callback is invoked.
