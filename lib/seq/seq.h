@@ -134,12 +134,6 @@ struct Pulse {
     PulseData cb;
 };
 
-static inline void sort(std::vector<Pulse> &seq)
-{
-    std::stable_sort(seq.begin(), seq.end(),
-                     [] (auto &p1, auto &p2) { return p1.t < p2.t; });
-}
-
 struct Clock {
     // Time index of the first clock edge. The clock pulse should happen `div` time points
     // before this time.

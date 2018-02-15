@@ -102,7 +102,8 @@ struct ScheduleState {
         if (ttl_it != defaults.end())
             cur_ttl = ttl_it->second.val.i32;
 
-        sort(pulses);
+        std::stable_sort(pulses.begin(), pulses.end(),
+                         [] (auto &p1, auto &p2) { return p1.t < p2.t; });
 
         // Merge TTL pulses that happen at the same time into a single TTL pulse
         uint32_t ttl_val = cur_ttl;
