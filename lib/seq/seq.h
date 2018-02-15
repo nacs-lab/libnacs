@@ -94,7 +94,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
     //     from the original value for the channel.
 
     // `seq_cb` is called with
-    // * `seq_cb(Accum accum, uint64_t cur_t, Event evt) -> uint64_t`
+    // * `seq_cb(uint64_t cur_t, Event evt) -> uint64_t`
     //     Add necessary pulses to start or finish the sequence
     //     (turn on/off start trigger/clock output). Returns the new
     //     current time. (t=0 for start)
@@ -189,7 +189,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
     }
 
     // Start the sequence and restart timer.
-    start_t = seq_cb(accum, next_t, Event::start);
+    start_t = seq_cb(next_t, Event::start);
     if (clocks.empty()) {
         // Start continuous clock with default divider
         accum(clock_chn, convert_clock(default_clock_div), start_t, UINT64_MAX);
@@ -420,7 +420,7 @@ static void schedule(Accum &accum, const std::vector<BasePulse<Cid,Cb>> &seq,
         next_t = next_clock_time + mindt;
         forward_clock();
     }
-    seq_cb(accum, next_t + start_t, Event::end);
+    seq_cb(next_t + start_t, Event::end);
 }
 
 }

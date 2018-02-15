@@ -58,7 +58,6 @@ namespace {
 
 struct PulsesBuilder {
     typedef std::function<uint64_t(Channel,Val,uint64_t,uint64_t)> cb_t;
-    typedef std::function<uint64_t(PulsesBuilder&,uint64_t,Event)> seq_cb_t;
     template<typename T>
     PulsesBuilder(T &&_cb)
         : cb(std::forward<T>(_cb))
@@ -70,13 +69,15 @@ struct PulsesBuilder {
     // In `ttl_mask_out` will return the mask of all TTL channels
     // used by the sequence. It is guaranteed that the slot is filled before
     // actual scheduling starts or the start callback is invoked.
-    void schedule(Sequence&, seq_cb_t seq_cb, uint32_t *ttl_mask_out,
+    template<typename seq_cb_t>
+    void schedule(Sequence&, seq_cb_t &&seq_cb, uint32_t *ttl_mask_out,
                   Time::Constraints t_cons);
 private:
     cb_t cb;
 };
 
-void PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb,
+template<typename seq_cb_t>
+void PulsesBuilder::schedule(Sequence &sequence, seq_cb_t &&seq_cb,
                              uint32_t *ttl_mask_out, Time::Constraints t_cons)
 {
     auto &seq = sequence.pulses;
@@ -132,7 +133,8 @@ void PulsesBuilder::schedule(Sequence &sequence, seq_cb_t seq_cb,
         *ttl_mask_out = used_ttl_mask;
     seq.resize(to);
     Channel clock_chn{Channel::Type::CLOCK, 0};
-    Seq::schedule(*this, seq, t_cons, defaults, sequence.clocks, Filter{}, std::move(seq_cb),
+    Seq::schedule(cb, seq, t_cons, defaults, sequence.clocks, Filter{},
+                  std::forward<seq_cb_t>(seq_cb),
                   [] (auto clock_div) { return Val::get<uint32_t>(clock_div); }, clock_chn);
 }
 
@@ -501,7 +503,7 @@ Vec SeqToByteCode(Sequence &seq, uint32_t *ttl_mask)
         }
         return mint;
     };
-    auto seq_cb = [&] (auto &, uint64_t cur_t, Event evt) {
+    auto seq_cb = [&] (uint64_t cur_t, Event evt) {
         if (evt == Event::start) {
             return state.start(cur_t);
         } else {
