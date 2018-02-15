@@ -18,8 +18,6 @@
 
 #include <nacs-utils/ir.h>
 
-#include "timing.h"
-
 #include <vector>
 #include <algorithm>
 #include <map>

@@ -80,6 +80,65 @@ struct Filter {
     }
 };
 
+namespace Time {
+
+struct Constraints {
+    // preferred pulse spacing when outputting contineous updates
+    uint64_t prefer_dt;
+    // minimum average pulse spacing and the average window
+    uint64_t avg_dt;
+    size_t avg_window;
+};
+
+struct Keeper {
+public:
+    Keeper(const Constraints &);
+    void addPulse(uint64_t dt);
+    uint64_t minDt(uint64_t min_dt) const;
+    uint64_t minDt(void) const
+    {
+        return minDt(m_cons.prefer_dt);
+    }
+    void reset(void);
+private:
+    Constraints m_cons;
+    size_t m_npulses;
+    uint64_t m_total_len;
+    std::vector<uint64_t> m_plens;
+};
+
+Keeper::Keeper(const Constraints &cons)
+    : m_cons(cons),
+      m_plens(cons.avg_window - 1)
+{
+    reset();
+}
+
+void Keeper::addPulse(uint64_t dt)
+{
+    size_t pidx = m_npulses % (m_cons.avg_window - 1);
+    m_total_len = m_total_len + dt - m_plens[pidx];
+    m_plens[pidx] = dt;
+}
+
+uint64_t Keeper::minDt(uint64_t min_dt) const
+{
+    auto window_sz = m_cons.avg_dt * m_cons.avg_window;
+    min_dt = std::max<uint64_t>(min_dt, 1);
+    if (m_npulses < m_cons.avg_window - 1 || m_total_len >= window_sz)
+        return min_dt;
+    return std::max(window_sz - m_total_len, min_dt);
+}
+
+void Keeper::reset(void)
+{
+    m_npulses = 0;
+    m_total_len = 0;
+    memset(m_plens.data(), 0, m_plens.size() * sizeof(uint64_t));
+}
+
+}
+
 template<typename Vec>
 struct ScheduleState {
     struct DDS {
