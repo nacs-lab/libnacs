@@ -20,7 +20,6 @@
 #include <nacs-seq/seq.h>
 
 #include <type_traits>
-#include <functional>
 #include <memory>
 
 #include <math.h>
@@ -123,28 +122,6 @@ private:
 };
 
 typedef BasePulse<Channel, PulseData> Pulse;
-
-struct Filter {
-    bool operator()(Channel)
-    {
-        return true;
-    }
-    bool operator()(Channel cid, Val val1, Val val2)
-    {
-        switch (cid.typ) {
-        case Channel::TTL:
-            return val1.val.i32 != val2.val.i32;
-        case Channel::DDS_FREQ:
-            return fabs(val1.val.f64 - val2.val.f64) > 0.2;
-        case Channel::DDS_AMP:
-            return fabs(val1.val.f64 - val2.val.f64) > 0.00005;
-        case Channel::DAC:
-            return fabs(val1.val.f64 - val2.val.f64) > 0.0002;
-        default:
-            return val1.val.f64 != val2.val.f64;
-        }
-    }
-};
 
 struct Sequence {
     std::vector<Pulse> pulses;
