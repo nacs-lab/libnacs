@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#include "exehelper_p.h"
+
 #include "bytecode.h"
 
 namespace NaCs {
@@ -35,68 +37,6 @@ NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
         count++;
     }
     return count;
-}
-
-namespace {
-
-struct Printer {
-    void ttl(uint32_t ttl, uint64_t t)
-    {
-        stm << "TTL: val=" << std::hex << ttl << std::dec << " t=" << t << std::endl;
-    }
-    void dds_freq(uint8_t chn, uint32_t freq)
-    {
-        stm << "DDS Freq: chn=" << int(chn)
-            << " freq=" << std::hex << freq << std::dec << std::endl;
-    }
-    void dds_amp(uint8_t chn, uint16_t amp)
-    {
-        stm << "DDS Amp: chn=" << int(chn)
-            << " amp=" << std::hex << amp << std::dec << std::endl;
-    }
-    void dac(uint8_t chn, uint16_t V)
-    {
-        stm << "DAC: chn=" << int(chn) << " V=" << std::hex << V << std::dec << std::endl;
-    }
-    void wait(uint64_t t)
-    {
-        stm << "Wait: t=" << t << std::endl;
-    }
-    void clock(uint8_t period)
-    {
-        stm << "Clock: period=" << int(period) << std::endl;
-    }
-    std::ostream &stm;
-};
-
-struct TimeKeeper {
-    void ttl(uint32_t, uint64_t t)
-    {
-        total_t += t;
-    }
-    void dds_freq(uint8_t, uint32_t)
-    {
-        total_t += 50;
-    }
-    void dds_amp(uint8_t, uint16_t)
-    {
-        total_t += 50;
-    }
-    void dac(uint8_t, uint16_t)
-    {
-        total_t += 45;
-    }
-    void wait(uint64_t t)
-    {
-        total_t += t;
-    }
-    void clock(uint8_t)
-    {
-        total_t += 5;
-    }
-    uint64_t total_t = 0;
-};
-
 }
 
 NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len)
