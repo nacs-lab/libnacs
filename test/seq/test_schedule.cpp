@@ -21,7 +21,6 @@
 #endif
 
 #include <nacs-utils/timer.h>
-#include <nacs-utils/base64.h>
 #include <nacs-seq/bytecode.h>
 
 #include <iostream>
@@ -35,15 +34,18 @@ int main(int argc, char **argv)
     assert(argc >= 2);
 
     std::ifstream istm(argv[1]);
-    std::string data(std::istreambuf_iterator<char>(istm), {});
-    assert(Base64::validate((const uint8_t*)data.data(), data.size()));
+    istm.seekg(0, std::ios::end);
+    auto filesize = (size_t)istm.tellg();
+    istm.seekg(0, std::ios::beg);
+    std::vector<uint32_t> data(filesize / 4);
+    istm.read((char*)data.data(), filesize);
     tic();
-    auto code = Seq::Sequence::fromBase64((const uint8_t*)data.data(),
-                                          data.size()).toByteCode(nullptr);
+    auto code = Seq::Sequence::fromBinary(data.data(), data.size())
+        .toByteCode(nullptr);
     printToc();
     size_t code_len;
-    auto code2 = Seq::Sequence::fromBase64((const uint8_t*)data.data(),
-                                           data.size()).toByteCode(&code_len, nullptr);
+    auto code2 = Seq::Sequence::fromBinary(data.data(), data.size())
+        .toByteCode(&code_len, nullptr);
 
     if (argc >= 3) {
         std::ofstream ostm(argv[2]);
