@@ -25,6 +25,10 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <fcntl.h>
+#ifdef NACS_OS_LINUX
+#  include <sys/eventfd.h>
+#endif
+
 #include <stdexcept>
 #include <system_error>
 
@@ -67,14 +71,20 @@ public:
 };
 #endif
 
-template<typename T>
-static inline T
-checkErrno(T res)
+template<typename T, typename... Arg>
+static inline T checkErrno(T res, Arg&&... arg)
 {
     if (res == -1)
-        throw std::system_error(errno, std::system_category());
+        throw std::system_error(errno, std::system_category(), std::forward<Arg>(arg)...);
     return res;
 }
+
+#ifdef NACS_OS_LINUX
+static inline int openEvent(int init, int flags)
+{
+    return checkErrno(eventfd(init, flags), "Cannot open eventfd.");
+}
+#endif
 
 }
 
