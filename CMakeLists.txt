@@ -18,6 +18,7 @@ else()
   set(IS_UNIX True)
 endif()
 
+# Options
 option(ENABLE_KNACS "Enable kernel driver" Off)
 option(ENABLE_LLVM "Enable LLVM JIT" Off)
 option(ENABLE_PYWRAPPER "Enable python wrapper for nacs-seq" On)
@@ -44,6 +45,7 @@ check_cxx_source_compiles("
           ::exp10;
       }" HAS_EXP10)
 if(HAS_EXP10)
+  # For the interpreter on windows
   add_definitions(-DNACS_HAS_EXP10)
 endif()
 
