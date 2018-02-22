@@ -28,7 +28,7 @@
 namespace NaCs {
 
 // Wrapping an arbitrary pointer/object's lifetime
-class AnyPtr : std::unique_ptr<void*,void(*)(void*)> {
+class AnyPtr : std::unique_ptr<void,void(*)(void*)> {
     // C++20
     template<typename T>
     using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
@@ -40,7 +40,7 @@ class AnyPtr : std::unique_ptr<void*,void(*)(void*)> {
         }
     };
 public:
-    using std::unique_ptr<void*,void(*)(void*)>::unique_ptr;
+    using std::unique_ptr<void,void(*)(void*)>::unique_ptr;
     template<typename T, class=std::enable_if_t<!std::is_same<T,void>::value>>
     AnyPtr(T *v)
         : unique_ptr((void*)v, Destructor<T>::deleter)
