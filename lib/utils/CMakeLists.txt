@@ -1,23 +1,23 @@
 set(nacs_utils_HDRS
-  utils.h
-  macros.h
-  log.h
-  number.h
-  fd_utils.h
-  timer.h
-  mem.h
-  thread.h
   container.h
+  fd_utils.h
   ir.h
+  log.h
+  macros.h
+  mem.h
+  number.h
+  thread.h
+  timer.h
+  utils.h
   zmq_utils.h)
 set(nacs_utils_SRCS
-  log.cpp
   fd_utils.cpp
-  timer.cpp
-  mem.cpp
-  ir.cpp
   interp.cpp
-  ir-interp-shim.S)
+  ir.cpp
+  ir-interp-shim.S
+  log.cpp
+  mem.cpp
+  timer.cpp)
 set(nacs_utils_LINKS m pthread)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
