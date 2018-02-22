@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2013 - 2014 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2013 - 2018 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -173,7 +173,8 @@
         }                                               \
     } while (0)
 
-#if defined(__x86_64__) || defined(__x86_64) || defined(__i386) || defined(__i386__)
+#if (defined(__x86_64__) || defined(__x86_64) || defined(__i386) || defined(__i386__)) && \
+    !defined(__clang__)
 #  define NACS_PACKED __attribute__((__packed__, gcc_struct))
 #else
 #  define NACS_PACKED __attribute__((__packed__))
