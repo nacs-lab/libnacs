@@ -19,7 +19,6 @@
 #include "seq.h"
 
 #include <nacs-utils/utils.h>
-#include <nacs-utils/base64.h>
 
 #include <type_traits>
 
