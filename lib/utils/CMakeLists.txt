@@ -9,7 +9,6 @@ set(nacs_utils_HDRS
   thread.h
   container.h
   ir.h
-  base64.h
   zmq_utils.h)
 set(nacs_utils_SRCS
   log.cpp
@@ -18,8 +17,7 @@ set(nacs_utils_SRCS
   mem.cpp
   ir.cpp
   interp.cpp
-  ir-interp-shim.S
-  base64.cpp)
+  ir-interp-shim.S)
 set(nacs_utils_LINKS m pthread)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")

@@ -101,15 +101,5 @@ Sequence::fromBinary(const uint32_t *bin, size_t len)
     return Sequence(std::move(seq), std::move(defaults), std::move(clocks), std::move(exectx));
 }
 
-NACS_EXPORT() Sequence
-Sequence::fromBase64(const uint8_t *data, size_t len)
-{
-    size_t bin_len = Base64::decode_len(data, len);
-    assert(bin_len % 4 == 0);
-    std::vector<uint32_t> bin(bin_len / 4);
-    Base64::decode((uint8_t*)bin.data(), data, len);
-    return fromBinary(&bin[0], bin.size());
-}
-
 } // Seq
 } // NaCs

@@ -27,7 +27,3 @@ foreach(TESTSET RANGE 8)
   set_target_properties("test-ir_cc-${TESTSET}" PROPERTIES
     COMPILE_DEFINITIONS "IR_CC_TESTSET=${TESTSET}")
 endforeach()
-
-set(test_base64_SOURCES test_base64.cpp)
-add_executable(test-base64 ${test_base64_SOURCES})
-target_link_libraries(test-base64 nacs-utils)
