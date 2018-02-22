@@ -1,3 +1,11 @@
+#
+
+add_definitions(-UNDEBUG)
+
+set(test_anyptr_SOURCES test_anyptr.cpp)
+add_executable(test-anyptr ${test_anyptr_SOURCES})
+target_link_libraries(test-anyptr nacs-utils)
+
 set(test_thread_SOURCES test_thread.cpp)
 add_executable(test-thread ${test_thread_SOURCES})
 target_link_libraries(test-thread nacs-utils)
