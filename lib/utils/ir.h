@@ -388,7 +388,8 @@ protected:
                 m_free(m_data);
             }
         }
-        template<typename FT, typename... Args> typename FuncType<FT>::ret call(Args&&... args)
+        template<typename FT, typename... Args> typename FuncType<FT>::ret
+        call(Args&&... args) const
         {
             return typename FuncType<FT>::fptr(m_cb)(m_data, std::forward<Args>(args)...);
         }
@@ -435,7 +436,7 @@ public:
         }
         FuncBase &operator=(const FuncBase&) = delete;
         template<typename... Args>
-        typename FuncType<FT>::ret operator()(Args&&... args)
+        typename FuncType<FT>::ret operator()(Args&&... args) const
         {
             return m_base.call<FT>(std::forward<Args>(args)...);
         }

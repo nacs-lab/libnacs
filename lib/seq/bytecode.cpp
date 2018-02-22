@@ -180,7 +180,7 @@ struct ScheduleState {
             assert(pulse.chn.id < 32);
             uint32_t mask = uint32_t(1) << pulse.chn.id;
             all_ttl_mask = all_ttl_mask | mask;
-            bool val = pulse.cb(pulse.t, Val::get<double>((ttl_val & mask) != 0)).val.f64 != 0;
+            bool val = pulse(pulse.t, Val::get<double>((ttl_val & mask) != 0)).val.f64 != 0;
             uint32_t new_ttl_val;
             if (val) {
                 new_ttl_val = ttl_val | mask;
@@ -193,13 +193,13 @@ struct ScheduleState {
             }
             ttl_val = new_ttl_val;
             if (prev_ttl_idx != -1 && prev_ttl_t == pulse.t) {
-                pulses[prev_ttl_idx].cb = PulseData(Val::get<uint32_t>(new_ttl_val));
+                pulses[prev_ttl_idx].set(Val::get<uint32_t>(new_ttl_val));
                 to--;
             } else {
                 prev_ttl_idx = to;
                 prev_ttl_t = pulse.t;
                 pulse.chn = {Channel::Type::TTL, 0};
-                pulse.cb = PulseData(Val::get<uint32_t>(new_ttl_val));
+                pulse.set(Val::get<uint32_t>(new_ttl_val));
                 if (from != to) {
                     pulses[to] = std::move(pulse);
                 }
@@ -678,7 +678,7 @@ struct ScheduleState {
             if (rel_t > pulse.len)
                 rel_t = pulse.len;
             auto start = start_vals[pulse.chn];
-            return pulse.cb(rel_t, start);
+            return pulse(rel_t, start);
         };
 
         std::map<Channel,size_t> cur_pulses;

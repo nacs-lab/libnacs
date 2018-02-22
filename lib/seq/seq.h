@@ -85,66 +85,52 @@ private:
     }
 };
 
-struct PulseData {
-    typedef IR::ExeContext::Func<double(double,double)> func_t;
-    PulseData(PulseData&&) = default;
-    PulseData &operator=(PulseData&&) = default;
-    PulseData()
-        : m_val(),
-          m_cb()
-    {}
-    PulseData(const Val &val)
-        : m_val(val),
-          m_cb()
-    {}
-    PulseData(Val &&val)
-        : m_val(val),
-          m_cb()
-    {}
-    PulseData(func_t func)
-        : m_val(),
-          m_cb(std::move(func))
-    {}
-    template<typename T>
-    PulseData(T &&v)
-        : PulseData(func_t(std::forward<T>(v)))
-    {
-    }
-    Val operator()(uint64_t t, Val start) const
-    {
-        if (m_cb)
-            return IR::TagVal(m_cb(double(t) * 10e-9, start.val.f64)).val;
-        return m_val;
-    }
-private:
-    Val m_val;
-    mutable func_t m_cb;
-};
-
-struct Pulse {
-    uint64_t t;
-    uint64_t len;
-    Channel chn;
-    // Called with `cb(uint64_t t, Val start, uint64_t len) -> Val`
-    // where `t` is the time within the pulse,
-    // `start` is the value of the channel at the begining of the pulse.
-    // `len` is the length pulse.
-    PulseData cb;
-};
-
-struct Clock {
-    // Time index of the first clock edge. The clock pulse should happen `div` time points
-    // before this time.
-    uint64_t t;
-    // Length of the pulse in time index. The clock end pulse should be `len` time points after
-    // the start pulse.
-    uint64_t len;
-    // Clock division. Each clock cycle consists of `div` number of time points at high
-    // and `div` number of time points at low.
-    uint32_t div;
-};
-
 struct Sequence {
+    struct Pulse {
+        typedef IR::ExeContext::Func<double(double,double)> func_t;
+        uint64_t t;
+        uint64_t len;
+        Channel chn;
+        Pulse(Pulse&&) = default;
+        Pulse &operator=(Pulse&&) = default;
+        Pulse()
+        {}
+        Pulse(uint64_t t, uint64_t len, Channel chn, Val val)
+            : t(t), len(len), chn(chn), m_val(val), m_cb()
+        {
+        }
+        Pulse(uint64_t t, uint64_t len, Channel chn, func_t func)
+            : t(t), len(len), chn(chn), m_val(), m_cb(std::move(func))
+        {
+        }
+        Val operator()(uint64_t t, Val start) const
+        {
+            // `t` is the time within the pulse,
+            // `start` is the value of the channel at the begining of the pulse.
+            if (m_cb)
+                return IR::TagVal(m_cb(double(t) * 10e-9, start.val.f64)).val;
+            return m_val;
+        }
+        void set(Val v)
+        {
+            m_val = v;
+            m_cb = func_t();
+        }
+    private:
+        Val m_val;
+        func_t m_cb;
+    };
+    struct Clock {
+        // Time index of the first clock edge. The clock pulse should happen `div` time points
+        // before this time.
+        uint64_t t;
+        // Length of the pulse in time index. The clock end pulse should be `len` time points after
+        // the start pulse.
+        uint64_t len;
+        // Clock division. Each clock cycle consists of `div` number of time points at high
+        // and `div` number of time points at low.
+        uint32_t div;
+    };
     std::vector<Pulse> pulses;
     std::map<Channel,Val> defaults;
     std::vector<Clock> clocks;
