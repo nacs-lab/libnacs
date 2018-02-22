@@ -22,9 +22,39 @@
 #include "thread.h"
 #include "number.h"
 
+#include <memory>
 #include <type_traits>
 
 namespace NaCs {
+
+// Wrapping an arbitrary pointer/object's lifetime
+class AnyPtr : std::unique_ptr<void*,void(*)(void*)> {
+    // C++20
+    template<typename T>
+    using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+    template<typename T>
+    struct Destructor {
+        static void deleter(void *p)
+        {
+            delete (T*)p;
+        }
+    };
+public:
+    using std::unique_ptr<void*,void(*)(void*)>::unique_ptr;
+    template<typename T, class=std::enable_if_t<!std::is_same<T,void>::value>>
+    AnyPtr(T *v)
+        : unique_ptr((void*)v, Destructor<T>::deleter)
+    {
+    }
+    template<typename T,
+             class=std::enable_if_t<!std::is_lvalue_reference<T>::value &&
+                                    !std::is_same<remove_cvref_t<T>,AnyPtr>::value &&
+                                    !std::is_pointer<T>::value>>
+    AnyPtr(T &&v)
+        : AnyPtr(new T(std::move(v)))
+    {
+    }
+};
 
 template<typename T, typename Lock=SpinLock>
 class FIFO {
