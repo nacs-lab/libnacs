@@ -57,6 +57,73 @@ write(volatile void *addr, T2 val, size_t idx=0)
 void *mapPhyAddr(void*, size_t);
 void *getPhyAddr(void*);
 
+// Pre-allocate memory for a number of objects so that they can be allocated quickly.
+template<typename T, size_t n>
+class SmallAllocator {
+    struct alignas(T) Ceil {
+        char buff[sizeof(T)];
+    };
+    Ceil m_buff[n];
+    static constexpr auto nbits32 = (n + 31) / 32;
+    uint32_t m_bits[nbits32];
+    size_t m_cur = 0;
+    Ceil *find_ceil()
+    {
+        const auto old_cur = m_cur;
+        auto cur = old_cur;
+        do {
+            auto bits = m_bits[cur];
+            auto idx = __builtin_ffs(bits);
+            if (idx) {
+                idx -= 1;
+                m_bits[cur] = bits & ~(1 << idx);
+                m_cur = cur;
+                return &m_buff[idx + cur * 32];
+            }
+            cur++;
+            if (cur == nbits32) {
+                cur = 0;
+            }
+        } while (cur != old_cur);
+        return nullptr;
+    }
+    NACS_INLINE Ceil *alloc_mem()
+    {
+        if (auto cached = find_ceil())
+            return cached;
+        return new Ceil;
+    }
+    NACS_INLINE void free_mem(Ceil *mem)
+    {
+        if (m_buff <= mem && mem < m_buff + n) {
+            auto idx = mem - m_buff;
+            m_bits[idx / 32] |= 1 << (idx % 32);
+        }
+        else {
+            delete mem;
+        }
+    }
+public:
+    SmallAllocator()
+    {
+        memset(&m_bits, 0xff, sizeof(m_bits));
+        if (auto nleft = n % 32) {
+            m_bits[nbits32 - 1] = (1 << nleft) - 1;
+        }
+    }
+    template<typename... Args>
+    NACS_INLINE T *alloc(Args&&... args)
+    {
+        auto mem = alloc_mem();
+        return new (&mem->buff) T(std::forward<Args>(args)...);
+    }
+    NACS_INLINE void free(T *p)
+    {
+        p->~T();
+        free_mem(reinterpret_cast<Ceil*>(p));
+    }
+};
+
 }
 
 #endif
