@@ -16,71 +16,41 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "test_helpers.h"
-
-#include <nacs-utils/container.h>
-
-#include <assert.h>
-
 #include <utility>
 
-using namespace NaCs;
-
-int main()
-{
-    int val = 0;
-    // Make sure the increment class works.
+struct Increment {
+    Increment(int *ptr, int inc=1)
+        : m_ptr(ptr),
+          m_inc(inc)
     {
-        Increment inc1(&val);
-        assert(val == 0);
     }
-    assert(val == 1);
+    Increment()
+    {}
+    Increment &operator=(Increment &&other)
     {
-        Increment inc1;
+        std::swap(m_ptr, other.m_ptr);
+        std::swap(m_inc, other.m_inc);
+        return *this;
     }
-    assert(val == 1);
+    Increment &operator=(const Increment &other) = delete;
+    Increment(Increment &&other)
     {
-        Increment inc1;
-        {
-            Increment inc2(&val);
-            inc1 = std::move(inc2);
+        *this = std::move(other);
+    }
+    Increment(const Increment &other) = delete;
+    ~Increment()
+    {
+        if (m_ptr) {
+            *m_ptr += m_inc;
         }
-        assert(val == 1);
     }
-    assert(val == 2);
-    {
-        UnmovableIncrement inc1(&val);
-        assert(val == 2);
-    }
-    assert(val == 3);
-    {
-        UnmovableIncrement inc1;
-    }
-    assert(val == 3);
 
-    // Actually testing AnyPtr
-    {
-        AnyPtr ptr(new Increment(&val));
-        assert(val == 3);
-    }
-    assert(val == 4);
-    {
-        // Should work for unmovable classes too
-        AnyPtr ptr(new UnmovableIncrement(&val));
-        assert(val == 4);
-    }
-    assert(val == 5);
-    {
-        // Only work for movable class
-        AnyPtr ptr{Increment(&val)};
-        assert(val == 5);
-    }
-    assert(val == 6);
-    {
-        // Arbitrary callback
-        AnyPtr ptr{&val, [] (void *p) { ++*(int*)p; }};
-        assert(val == 6);
-    }
-    assert(val == 7);
-    return 0;
-}
+private:
+    int *m_ptr = nullptr;
+    int m_inc = 0;
+};
+
+struct UnmovableIncrement : Increment {
+    using Increment::Increment;
+    UnmovableIncrement(UnmovableIncrement &&other) = delete;
+};
