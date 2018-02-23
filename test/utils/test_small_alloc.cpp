@@ -29,6 +29,7 @@ using namespace NaCs;
 template<size_t nstatic>
 class AllocatorTester {
     static constexpr auto padding = 8192;
+    static constexpr auto ncounters = nstatic ? nstatic : 5;
     using Eltype = UnmovableIncrement;
     using Allocator = SmallAllocator<Eltype,nstatic>;
     struct Allocation {
@@ -45,11 +46,14 @@ public:
           m_rng(std::random_device()())
     {
         memset(m_allocated, 0, sizeof(m_allocated));
+        m_allocated[nstatic] = true; // dummy
         memset(m_counters, 0, sizeof(m_counters));
         memset(m_counters2, 0, sizeof(m_counters2));
         m_allocator->free((Eltype*)m_base);
-        assert(m_palloc + padding <= m_base);
-        assert(m_pend - padding > m_base);
+        if (nstatic) {
+            assert(m_palloc + padding <= m_base);
+            assert(m_pend - padding > m_base);
+        }
     }
     void test(size_t nrun)
     {
@@ -69,6 +73,7 @@ private:
                 assert(b);
             return -1;
         }
+        assert(nstatic);
         assert(p >= m_base);
         assert(p < m_base + sizeof(Eltype) * nstatic);
         auto offset = p - m_base;
@@ -99,6 +104,7 @@ private:
             std::uniform_int_distribution<size_t>{0, m_allocations.size() - 1}(m_rng);
         auto alloc = m_allocations[to_free];
         if (alloc.pool_idx >= 0) {
+            assert(m_base);
             assert((char*)alloc.obj == m_base + sizeof(Eltype) * alloc.pool_idx);
             assert(m_allocated[alloc.pool_idx]);
             m_allocated[alloc.pool_idx] = false;
@@ -127,17 +133,19 @@ private:
     char *const m_pend;
     Allocator *const m_allocator;
     char *const m_base;
-    bool m_allocated[nstatic];
-    int m_counters[nstatic];
-    int m_counters2[nstatic];
+    bool m_allocated[nstatic + 1]; // To suppress the warning when `nstatic == 0`
+    int m_counters[ncounters];
+    int m_counters2[ncounters];
     std::default_random_engine m_rng;
-    std::uniform_int_distribution<int> m_counter_dist{-1, nstatic - 1};
-    std::uniform_int_distribution<size_t> m_action_dist{0, nstatic * 2 - 1};
+    std::uniform_int_distribution<int> m_counter_dist{-1, ncounters - 1};
+    std::uniform_int_distribution<size_t> m_action_dist{0, (nstatic ? nstatic * 2 : 10) - 1};
     std::vector<Allocation> m_allocations;
 };
 
 int main()
 {
+    AllocatorTester<0> tester0;
+    tester0.test(100000);
     AllocatorTester<10> tester;
     tester.test(100000);
     AllocatorTester<32> tester2;

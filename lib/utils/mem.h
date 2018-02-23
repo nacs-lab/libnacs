@@ -69,6 +69,8 @@ class SmallAllocator {
     size_t m_cur = 0;
     Ceil *find_ceil()
     {
+        if (n == 0)
+            return nullptr;
         const auto old_cur = m_cur;
         auto cur = old_cur;
         do {
@@ -95,7 +97,7 @@ class SmallAllocator {
     }
     NACS_INLINE void free_mem(Ceil *mem)
     {
-        if (m_buff <= mem && mem < m_buff + n) {
+        if (n && m_buff <= mem && mem < m_buff + n) {
             auto idx = mem - m_buff;
             m_bits[idx / 32] |= 1 << (idx % 32);
         }
