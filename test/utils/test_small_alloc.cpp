@@ -19,6 +19,7 @@
 #include "test_helpers.h"
 
 #include <nacs-utils/mem.h>
+#include <nacs-utils/timer.h>
 
 #include <assert.h>
 
@@ -142,6 +143,28 @@ private:
     std::vector<Allocation> m_allocations;
 };
 
+template<size_t nstatic>
+__attribute__((noinline)) void benchmark(size_t nlive, size_t ncycle)
+{
+    std::vector<int*> pointers(nlive, nullptr);
+    SmallAllocator<int,nstatic> allocator;
+    tic();
+    for (size_t i = 0; i < ncycle; i++) {
+        size_t idx = i % nlive;
+        if (auto old = pointers[idx])
+            allocator.free(old);
+        pointers[idx] = allocator.alloc(1);
+        asm volatile ("" :: "r"(pointers[idx]) : "memory");
+        asm volatile ("" :: "r"(&pointers[0]) : "memory");
+    }
+    printToc();
+    for (auto ptr: pointers) {
+        if (ptr) {
+            allocator.free(ptr);
+        }
+    }
+}
+
 int main()
 {
     AllocatorTester<0> tester0;
@@ -152,5 +175,15 @@ int main()
     tester2.test(100000);
     AllocatorTester<1023> tester3;
     tester3.test(10000000);
+
+    benchmark<0>(10, 10000000);
+    benchmark<4>(10, 10000000);
+    benchmark<8>(10, 10000000);
+    benchmark<16>(10, 10000000);
+
+    benchmark<0>(100, 10000000);
+    benchmark<64>(100, 10000000);
+    benchmark<128>(100, 10000000);
+
     return 0;
 }
