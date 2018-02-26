@@ -21,9 +21,12 @@
 
 #include "thread.h"
 #include "number.h"
+#include "mem.h"
 
 #include <memory>
 #include <type_traits>
+
+#include <assert.h>
 
 namespace NaCs {
 
@@ -210,6 +213,137 @@ public:
         }
         return pop<false>(v, len);
     }
+};
+
+/**
+ * This is a queue from one thread (producer) to another thread (filter) and back.
+ * Based on Herb Sutter's version in
+ * http://www.drdobbs.com/parallel/writing-lock-free-code-a-corrected-queue/210604448
+ * Wrapped in an API that's suitable for passing the data to another thread an back.
+ * Assuming atomics on pointers are lockless, this should be wait-free,
+ * and have all allocations done only on the producer thread.
+ *
+ * The items are chained in a singly linked list. The list is never empty.
+ * The head pointer points to the head of the list where items are removed
+ * from the list by the producer and the tail pointer points to the tail
+ * of the list where new items are added by the producer.
+ * A peak pointer always points to somewhere in between and represents the points
+ *
+ * The head and the tail pointers belong to the producer thread and may not be
+ * read by the filter thread.
+ * The peak pointer belongs to the filter thread but can also be read by the
+ * producer thread.
+ * Read(write) on the peak pointer by the producer(filter)
+ * should have acquire(release) ordering. Since the pointer is only writen by
+ * the filter thread, reading from the filter thread does not need to be ordered.
+ *
+ * All three pointers can only be moved forward in the list.
+ *
+ * The filter thread may never change the list link.
+ * It may access any elements following the peak pointer,
+ * except for the item pointed to directly by the peak pointer,
+ * which only allow reading of the next pointer from the filter thread.
+ *
+ * The producer thread may add new element to the end of the list
+ * and remove element from anywhere above the peak pointer.
+ * The producer thread may access any elements in the list.
+ *
+ * In another word, the filter thread owns the lists up to
+ * but not including the peak pointer (from the tail),
+ * moving the peak pointer forward hands the list element to the producer thread.
+ * Access of elements are synchronized by the user.
+ *
+ * With the above constraints, the defined operations are,
+ *
+ * Producer:
+ * * Push element
+ * * Remove element (assumed to be before peak point)
+ *
+ * Filter:
+ * * Read peak point
+ * * Forward peak point
+ */
+template<typename T>
+class FilterQueue {
+    struct Item;
+    using atomic_ptr = std::atomic<Item*>;
+    struct Item {
+        T *obj;
+        atomic_ptr next;
+        Item(T *obj)
+            : obj(obj),
+              next(nullptr)
+        {
+        }
+    };
+public:
+    // For producer thread
+    T *pop()
+    {
+        auto peak = m_peak.load(std::memory_order_acquire);
+        auto head = m_head;
+        while (true) {
+            auto res = head->obj;
+            if (head == peak) {
+                head->obj = nullptr;
+                return res;
+            }
+            m_head = head->next.load(std::memory_order_relaxed);
+            auto new_head = m_head;
+            m_alloc.free(head);
+            if (res)
+                return res;
+            head = new_head;
+        }
+    }
+    void push(T *p)
+    {
+        assert(p);
+        auto item = m_alloc.alloc(p);
+        auto tail = m_tail;
+        m_tail = item;
+        tail->next.store(item, std::memory_order_release);
+    }
+
+    // For filter thread
+    T *get_filter()
+    {
+        if (auto item = get_peak())
+            return item->obj;
+        return nullptr;
+    }
+    void forward_filter()
+    {
+        // `get_filter` must have returned a non `NULL`
+        assert(m_peak_cache);
+        m_peak.store(m_peak_cache, std::memory_order_release);
+        m_peak_cache = m_peak_cache->next.load(std::memory_order_acquire);
+    }
+
+    FilterQueue()
+        : m_head(m_alloc.alloc(nullptr)),
+          m_tail(m_head),
+          m_peak(m_head)
+    {
+    }
+
+private:
+    inline Item *get_peak()
+    {
+        if (!m_peak_cache) {
+            m_peak_cache = m_peak.load(std::memory_order_relaxed)
+                ->next.load(std::memory_order_acquire);
+        }
+        return m_peak_cache;
+    }
+    // Accessed by producer only
+    SmallAllocator<Item,32> m_alloc;
+    Item *m_head;
+    Item *m_tail;
+    // Accessed by both threads
+    atomic_ptr m_peak __attribute__ ((aligned(64)));
+    // Accessed by filter thread only
+    Item *m_peak_cache __attribute__ ((aligned(64))) = nullptr; // for filter
 };
 
 }
