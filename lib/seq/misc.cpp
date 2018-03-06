@@ -56,6 +56,8 @@ bool WavemeterParser::do_parse(std::istream &stm, bool inc)
     // Update `m_last_pos` and `m_last_line` if the parsing succeeded.
     bool started = inc;
     pos_type prev_read = 0;
+    if (inc)
+        prev_read = m_last_pos;
     while (true) {
         auto pos = stm.tellg();
         if (!try_parseline(stm)) {

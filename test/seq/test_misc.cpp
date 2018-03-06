@@ -39,11 +39,15 @@ int main(int argc, char **argv)
     size_t sz;
 
     tic();
-    auto ptrs0 = parser.parse(istm, &sz, true);
+    parser.parse(istm, &sz, true);
     printToc();
 
     tic();
     auto ptrs = parser.parse(istm, &sz, true);
+    printToc();
+
+    tic();
+    parser.parse(istm, &sz, true);
     printToc();
 
     std::cout << (void*)ptrs.first << " "
