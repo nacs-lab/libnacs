@@ -9,7 +9,7 @@ nacs_seq_new_wavemeter_parser.restype = ctypes.c_void_p
 nacs_seq_new_wavemeter_parser.argtypes = []
 
 nacs_seq_free_wavemeter_parser = handle.nacs_seq.nacs_seq_free_wavemeter_parser
-nacs_seq_free_wavemeter_parser.restype = ctypes.c_void
+nacs_seq_free_wavemeter_parser.restype = None
 nacs_seq_free_wavemeter_parser.argtypes = [ctypes.c_void_p]
 
 nacs_seq_wavemeter_parse = handle.nacs_seq.nacs_seq_wavemeter_parse
@@ -32,8 +32,8 @@ class WavemeterParser:
         sz = nacs_seq_wavemeter_parse(self.hdl, name.encode(),
                                       ctypes.byref(ptime), ctypes.byref(pdata),
                                       use_cache)
-        btime = PyBytes_FromStringAndSize(ptime, sz.value * 8)
-        bdata = PyBytes_FromStringAndSize(pdata, sz.value * 8)
+        btime = PyBytes_FromStringAndSize(ptime, sz * 8)
+        bdata = PyBytes_FromStringAndSize(pdata, sz * 8)
         return array.array('d', btime), array.array('d', bdata)
 
     def __del__(self):
