@@ -95,8 +95,12 @@ bool WavemeterParser::try_parseline(std::istream &stm)
     // Read time failed
     if (stm.eof() || !stm)
         return false;
-    timedate.tm_isdst = -1;
-    auto ts = std::mktime(&timedate);
+    timedate.tm_isdst = 0;
+#ifdef NACS_OS_WINDOWS
+    auto ts = _mkgmtime(&timedate);
+#else
+    auto ts = timegm(&timedate);
+#endif
     // Convert time failed
     if (ts == -1)
         return false;
