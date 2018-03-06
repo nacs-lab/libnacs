@@ -65,7 +65,10 @@ bool WavemeterParser::do_parse(std::istream &stm, bool inc)
                     return false;
                 m_last_pos = prev_read;
                 stm.seekg(prev_read);
-                std::getline(stm, m_last_line);
+                if (stm)
+                    std::getline(stm, m_last_line);
+                if (!stm)
+                    m_last_line.clear();
                 return true;
             }
             if (stm.eof())
@@ -118,6 +121,39 @@ bool WavemeterParser::try_parseline(std::istream &stm)
     m_time.push_back(tsf);
     m_data.push_back(val);
     return true;
+}
+
+bool WavemeterParser::match_cache(std::istream &stm)
+{
+    if (m_last_line.empty())
+        return false;
+    stm.seekg(m_last_pos);
+    if (!stm)
+        return false;
+    std::string l;
+    std::getline(stm, l);
+    return stm && m_last_line == l;
+}
+
+std::pair<const double*,const double*>
+WavemeterParser::parse(std::istream &stm, size_t *sz, bool allow_cache)
+{
+    if (allow_cache)
+        allow_cache = match_cache(stm);
+    // TODO: Try maintain the old cache?
+    if (!allow_cache) {
+        m_time.clear();
+        m_data.clear();
+    }
+    if (!try_parseline(stm)) {
+        m_time.clear();
+        m_data.clear();
+        m_last_line.clear();
+        *sz = 0;
+        return {nullptr, nullptr};
+    }
+    *sz = m_time.size();
+    return {m_time.data(), m_data.data()};
 }
 
 }

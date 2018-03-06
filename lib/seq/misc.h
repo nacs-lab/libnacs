@@ -36,9 +36,11 @@
 namespace NaCs {
 
 class WavemeterParser {
+    using pos_type = std::istream::pos_type;
+
     bool try_parseline(std::istream &stm);
     bool do_parse(std::istream &stm, bool inc);
-    using pos_type = std::istream::pos_type;
+    bool match_cache(std::istream &stm);
 
 public:
     std::pair<const double*,const double*> parse(std::istream &stm, size_t *sz,
@@ -47,7 +49,7 @@ public:
 private:
     std::vector<double> m_time;
     std::vector<double> m_data;
-    std::locale m_locale{"en_US.utf-8"};
+    const std::locale m_locale{"en_US.utf-8"};
     pos_type m_last_pos;
     std::string m_last_line;
 };
