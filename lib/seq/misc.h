@@ -29,7 +29,6 @@
 #include <nacs-utils/utils.h>
 
 #include <istream>
-#include <locale>
 #include <string>
 #include <vector>
 #include <utility>
@@ -51,11 +50,6 @@ public:
 private:
     std::vector<double> m_time;
     std::vector<double> m_data;
-#ifdef NACS_OS_WINDOWS
-    const std::locale m_locale{"en_US"};
-#else
-    const std::locale m_locale{"en_US.utf-8"};
-#endif
     pos_type m_last_pos = 0;
     std::string m_last_line;
 };
