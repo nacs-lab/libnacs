@@ -124,7 +124,7 @@ bool WavemeterParser::try_parseline(std::istream &stm)
     // Not the end of current record
     if (nc != ',' && nc != '\n' && nc != eofc)
         return false;
-    m_time.push_back(tsf);
+    m_time.push_back(tsf / 86400 + 719529);
     m_data.push_back(val);
     return true;
 }
