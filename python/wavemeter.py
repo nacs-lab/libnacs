@@ -32,6 +32,8 @@ class WavemeterParser:
         sz = nacs_seq_wavemeter_parse(self.hdl, name.encode(),
                                       ctypes.byref(ptime), ctypes.byref(pdata),
                                       use_cache)
+        if sz == 0:
+            return array.array('d'), array.array('d')
         btime = PyBytes_FromStringAndSize(ptime, sz * 8)
         bdata = PyBytes_FromStringAndSize(pdata, sz * 8)
         return array.array('d', btime), array.array('d', bdata)
