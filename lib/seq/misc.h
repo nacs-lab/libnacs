@@ -40,17 +40,18 @@ class WavemeterParser {
 
     bool try_parseline(std::istream &stm);
     bool do_parse(std::istream &stm, bool inc);
-    bool match_cache(std::istream &stm);
+    bool match_cache(std::istream &stm) const;
 
 public:
     std::pair<const double*,const double*> parse(std::istream &stm, size_t *sz,
                                                  bool allow_cache);
+    WavemeterParser();
 
 private:
     std::vector<double> m_time;
     std::vector<double> m_data;
     const std::locale m_locale{"en_US.utf-8"};
-    pos_type m_last_pos;
+    pos_type m_last_pos = 0;
     std::string m_last_line;
 };
 

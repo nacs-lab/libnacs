@@ -39,11 +39,12 @@ static std::istream &ignore_space(std::istream &stm)
     while (true) {
         auto c = stm.peek();
         if (c == eofc)
-            return stm;
+            break;
         if (c != ' ' && c != '\t')
-            return stm;
+            break;
         stm.get();
     }
+    return stm;
 }
 
 }
@@ -74,10 +75,12 @@ bool WavemeterParser::do_parse(std::istream &stm, bool inc)
             if (stm.eof())
                 return false;
             stm.clear();
+            stm >> ignore_line;
             continue;
         }
         started = true;
         prev_read = pos;
+        stm >> ignore_line;
     }
 }
 
@@ -87,7 +90,7 @@ bool WavemeterParser::try_parseline(std::istream &stm)
     memset(&timedate, 0, sizeof(timedate));
     stm >> ignore_space >> std::get_time(&timedate, "%Y-%m-%dT%H:%M:%S");
     // Read time failed
-    if (stm.fail())
+    if (stm.eof() || !stm)
         return false;
     timedate.tm_isdst = -1;
     auto ts = std::mktime(&timedate);
@@ -123,7 +126,7 @@ bool WavemeterParser::try_parseline(std::istream &stm)
     return true;
 }
 
-bool WavemeterParser::match_cache(std::istream &stm)
+bool WavemeterParser::match_cache(std::istream &stm) const
 {
     if (m_last_line.empty())
         return false;
@@ -135,25 +138,29 @@ bool WavemeterParser::match_cache(std::istream &stm)
     return stm && m_last_line == l;
 }
 
-std::pair<const double*,const double*>
+NACS_EXPORT() std::pair<const double*,const double*>
 WavemeterParser::parse(std::istream &stm, size_t *sz, bool allow_cache)
 {
     if (allow_cache)
         allow_cache = match_cache(stm);
-    // TODO: Try maintain the old cache?
     if (!allow_cache) {
         m_time.clear();
         m_data.clear();
     }
-    if (!try_parseline(stm)) {
-        m_time.clear();
-        m_data.clear();
-        m_last_line.clear();
+    auto old_size = m_time.size();
+    if (!do_parse(stm, allow_cache)) {
+        // `m_last_pos` and `m_last_line` are only modified if the return value is `true`
+        m_time.resize(old_size);
+        m_data.resize(old_size);
         *sz = 0;
         return {nullptr, nullptr};
     }
     *sz = m_time.size();
     return {m_time.data(), m_data.data()};
+}
+
+NACS_EXPORT() WavemeterParser::WavemeterParser()
+{
 }
 
 }
