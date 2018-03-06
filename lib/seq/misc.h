@@ -25,6 +25,7 @@
  * They can probably be moved to `nacs-utils` but I'm too lazy to try....
  */
 
+#include <nacs-utils/macros.h>
 #include <nacs-utils/utils.h>
 
 #include <istream>
@@ -50,7 +51,11 @@ public:
 private:
     std::vector<double> m_time;
     std::vector<double> m_data;
+#ifdef NACS_OS_WINDOWS
+    const std::locale m_locale{"en_US"};
+#else
     const std::locale m_locale{"en_US.utf-8"};
+#endif
     pos_type m_last_pos = 0;
     std::string m_last_line;
 };
