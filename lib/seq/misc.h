@@ -57,4 +57,13 @@ private:
 
 }
 
+extern "C" {
+
+void *nacs_seq_new_wavemeter_parser(void);
+size_t nacs_seq_wavemeter_parse(void *parser, const char *name, const double **ts,
+                                const double **data, int cache);
+void nacs_seq_free_wavemeter_parser(void *parser);
+
+}
+
 #endif

@@ -21,6 +21,7 @@
 #include <ctime>
 #include <iomanip>
 #include <limits>
+#include <fstream>
 
 namespace NaCs {
 
@@ -161,6 +162,35 @@ WavemeterParser::parse(std::istream &stm, size_t *sz, bool allow_cache)
 
 NACS_EXPORT() WavemeterParser::WavemeterParser()
 {
+}
+
+}
+
+extern "C" {
+
+using namespace NaCs;
+
+NACS_EXPORT() void *nacs_seq_new_wavemeter_parser(void)
+{
+    return new WavemeterParser;
+}
+
+NACS_EXPORT() size_t nacs_seq_wavemeter_parse(void *_parser, const char *name,
+                                              const double **ts, const double **data,
+                                              int cache)
+{
+    auto parser = (WavemeterParser*)_parser;
+    size_t sz = 0;
+    std::ifstream stm(name);
+    auto ptrs = parser->parse(stm, &sz, cache);
+    *ts = ptrs.first;
+    *data = ptrs.second;
+    return sz;
+}
+
+NACS_EXPORT() void nacs_seq_free_wavemeter_parser(void *parser)
+{
+    delete (WavemeterParser*)parser;
 }
 
 }
