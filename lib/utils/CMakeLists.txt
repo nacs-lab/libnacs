@@ -6,6 +6,7 @@ set(nacs_utils_HDRS
   macros.h
   mem.h
   number.h
+  term.h
   thread.h
   timer.h
   utils.h
@@ -17,6 +18,7 @@ set(nacs_utils_SRCS
   ir-interp-shim.S
   log.cpp
   mem.cpp
+  term.cpp
   timer.cpp)
 set(nacs_utils_LINKS m pthread)
 

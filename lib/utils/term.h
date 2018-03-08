@@ -1,0 +1,78 @@
+/*************************************************************************
+ *   Copyright (c) 2017 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *                                                                       *
+ *   This library is free software; you can redistribute it and/or       *
+ *   modify it under the terms of the GNU Lesser General Public          *
+ *   License as published by the Free Software Foundation; either        *
+ *   version 3.0 of the License, or (at your option) any later version.  *
+ *                                                                       *
+ *   This library is distributed in the hope that it will be useful,     *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU    *
+ *   Lesser General Public License for more details.                     *
+ *                                                                       *
+ *   You should have received a copy of the GNU Lesser General Public    *
+ *   License along with this library. If not,                            *
+ *   see <http://www.gnu.org/licenses/>.                                 *
+ *************************************************************************/
+
+#ifndef __NACS_UTILS_TERM_H__
+#define __NACS_UTILS_TERM_H__
+
+#include <ostream>
+
+namespace NaCs {
+namespace Term {
+
+struct _TermState {
+    static constexpr _TermState get_fg(int fg)
+    {
+        return _TermState(fg, 0, false, true, false);
+    }
+    static constexpr _TermState get_bg(int bg)
+    {
+        return _TermState(0, bg, false, false, true);
+    }
+    static constexpr _TermState get_bold(bool bold)
+    {
+        return _TermState(0, 0, bold, false, false);
+    }
+    constexpr _TermState operator()(bool bold) const
+    {
+        return _TermState(fg, bg, bold, has_fg, has_bg);
+    }
+    constexpr _TermState operator|(_TermState other) const
+    {
+        _TermState res = *this;
+        if (other.has_fg) {
+            res.has_fg = true;
+            res.fg = other.fg;
+        }
+        if (other.has_bg) {
+            res.has_bg = true;
+            res.bg = other.bg;
+        }
+        if (other.bold)
+            res.bold = true;
+        return res;
+    }
+    constexpr _TermState(const _TermState&) = default;
+    constexpr _TermState &operator=(const _TermState&) = default;
+    constexpr _TermState(int fg, int bg, bool bold, bool has_fg, bool has_bg)
+    : fg(fg), bg(bg), bold(bold), has_fg(has_fg), has_bg(has_bg)
+    {
+    }
+    int fg;
+    int bg;
+    bool bold;
+    bool has_fg;
+    bool has_bg;
+};
+
+std::ostream &operator<<(std::ostream &stm, _TermState state);
+std::ostream &reset(std::ostream &stm);
+
+}
+}
+
+#endif
