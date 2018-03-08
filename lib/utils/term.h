@@ -33,9 +33,9 @@ struct _TermState {
     {
         return _TermState(0, bg, false, false, true);
     }
-    static constexpr _TermState get_bold(bool bold)
+    static constexpr _TermState get_bold()
     {
-        return _TermState(0, 0, bold, false, false);
+        return _TermState(0, 0, true, false, false);
     }
     constexpr _TermState operator()(bool bold) const
     {
@@ -68,6 +68,26 @@ struct _TermState {
     bool has_fg;
     bool has_bg;
 };
+
+constexpr auto black = _TermState::get_fg(0);
+constexpr auto red = _TermState::get_fg(1);
+constexpr auto green = _TermState::get_fg(2);
+constexpr auto yellow = _TermState::get_fg(3);
+constexpr auto blue = _TermState::get_fg(4);
+constexpr auto magenta = _TermState::get_fg(5);
+constexpr auto cyan = _TermState::get_fg(6);
+constexpr auto white = _TermState::get_fg(7);
+
+constexpr auto black_bg = _TermState::get_bg(0);
+constexpr auto red_bg = _TermState::get_bg(1);
+constexpr auto green_bg = _TermState::get_bg(2);
+constexpr auto yellow_bg = _TermState::get_bg(3);
+constexpr auto blue_bg = _TermState::get_bg(4);
+constexpr auto magenta_bg = _TermState::get_bg(5);
+constexpr auto cyan_bg = _TermState::get_bg(6);
+constexpr auto white_bg = _TermState::get_bg(7);
+
+constexpr auto bold = _TermState::get_bold();
 
 std::ostream &operator<<(std::ostream &stm, _TermState state);
 std::ostream &reset(std::ostream &stm);

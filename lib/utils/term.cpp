@@ -88,6 +88,7 @@ static bool has_color()
 
 static bool isattystm(std::ostream &stm)
 {
+    // This is the most reliable way I can find to get the corresponding fd from a std::ostream
     auto buf = stm.rdbuf();
 #ifndef NACS_OS_WINDOWS
     if (buf == std::cout.rdbuf())
