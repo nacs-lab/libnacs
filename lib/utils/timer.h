@@ -40,6 +40,7 @@
 namespace NaCs {
 
 uint64_t getTime();
+uint64_t getCoarseTime();
 uint64_t getElapse(uint64_t prev);
 void tic();
 uint64_t toc();

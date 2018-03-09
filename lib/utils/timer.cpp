@@ -18,7 +18,8 @@
 
 #include "timer.h"
 
-#include <chrono>
+#include <time.h>
+
 #include <vector>
 
 namespace NaCs {
@@ -26,9 +27,17 @@ namespace NaCs {
 NACS_EXPORT() uint64_t
 getTime()
 {
-    using namespace std::chrono;
-    return time_point_cast<nanoseconds>(high_resolution_clock::now())
-        .time_since_epoch().count();
+    timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return uint64_t(t.tv_sec) * 1000 * 1000 * 1000 + t.tv_nsec;
+}
+
+NACS_EXPORT() uint64_t
+getCoarseTime()
+{
+    timespec t;
+    clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
+    return uint64_t(t.tv_sec) * 1000 * 1000 * 1000 + t.tv_nsec;
 }
 
 NACS_EXPORT() uint64_t
