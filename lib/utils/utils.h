@@ -68,6 +68,29 @@ static NACS_INLINE bool unlikely(T x)
     return expect(bool(x), false);
 }
 
+#if nacs_has_builtin(__builtin_assume)
+template<typename T>
+static NACS_INLINE T assume(T v)
+{
+    __builtin_assume(bool(v));
+    return v;
+}
+#elif defined(__GNUC__)
+template<typename T>
+static NACS_INLINE T assume(T v)
+{
+    if (!bool(v))
+        __builtin_unreachable();
+    return v;
+}
+#else
+template<typename T>
+static NACS_INLINE T assume(T v)
+{
+    return v;
+}
+#endif
+
 template<typename T>
 class ScopeSwap {
     T m_orig_val;

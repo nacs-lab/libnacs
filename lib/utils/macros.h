@@ -44,6 +44,12 @@
 #  define NACS_OS_DARWIN 1
 #endif
 
+#ifdef __has_builtin
+#  define nacs_has_builtin(x) __has_builtin(x)
+#else
+#  define nacs_has_builtin(x) 0
+#endif
+
 /** \defgroup nacs_switch Macros for detecting empty arguments
  * \brief Used to implement function overloading and default arguments in c.
  *
