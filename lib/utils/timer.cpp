@@ -32,6 +32,10 @@ getTime()
     return uint64_t(t.tv_sec) * 1000 * 1000 * 1000 + t.tv_nsec;
 }
 
+#ifndef CLOCK_MONOTONIC_COARSE
+#  define CLOCK_MONOTONIC_COARSE CLOCK_MONOTONIC
+#endif
+
 NACS_EXPORT() uint64_t
 getCoarseTime()
 {
