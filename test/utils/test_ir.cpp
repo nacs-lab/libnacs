@@ -248,10 +248,10 @@ main()
         assert(f2(1) == f1(1));
         assert(f2(2) == f1(2));
 
-        tic();
+        Timer timer;
         for (int i = 0;i < 1000000;i++)
             f2(1);
-        printToc();
+        timer.print();
     }
 
     {

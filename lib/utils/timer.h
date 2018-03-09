@@ -42,24 +42,33 @@ namespace NaCs {
 uint64_t getTime();
 uint64_t getCoarseTime();
 uint64_t getElapse(uint64_t prev);
-void tic();
-uint64_t toc();
 
 static inline void
 printTime(uint64_t time)
 {
     nacsLog("Time: %" PRIu64 "\n", time);
 }
-static inline void
-printToc()
-{
-    printTime(toc());
-}
-static inline void
-printElapse(uint64_t prev)
-{
-    printTime(getElapse(prev));
-}
+
+struct Timer {
+    uint64_t elapsed(bool restart=false)
+    {
+        auto new_time = getTime();
+        auto res = new_time - m_start_time;
+        if (restart)
+            m_start_time = new_time;
+        return res;
+    }
+    void print(bool restart=false)
+    {
+        printTime(elapsed(restart));
+    }
+    void restart()
+    {
+        elapsed(true);
+    }
+private:
+    uint64_t m_start_time = getTime();
+};
 
 }
 

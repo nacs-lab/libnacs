@@ -39,10 +39,10 @@ int main(int argc, char **argv)
     istm.seekg(0, std::ios::beg);
     std::vector<uint32_t> data(filesize / 4);
     istm.read((char*)data.data(), filesize);
-    tic();
+    Timer timer;
     auto code = Seq::Sequence::fromBinary(data.data(), data.size())
         .toByteCode(nullptr);
-    printToc();
+    timer.print();
     size_t code_len;
     auto code2 = Seq::Sequence::fromBinary(data.data(), data.size())
         .toByteCode(&code_len, nullptr);

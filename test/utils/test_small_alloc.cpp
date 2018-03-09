@@ -148,7 +148,7 @@ __attribute__((noinline)) void benchmark(size_t nlive, size_t ncycle)
 {
     std::vector<int*> pointers(nlive, nullptr);
     SmallAllocator<int,nstatic> allocator;
-    tic();
+    Timer timer;
     for (size_t i = 0; i < ncycle; i++) {
         size_t idx = i % nlive;
         if (auto old = pointers[idx])
@@ -157,7 +157,7 @@ __attribute__((noinline)) void benchmark(size_t nlive, size_t ncycle)
         asm volatile ("" :: "r"(pointers[idx]) : "memory");
         asm volatile ("" :: "r"(&pointers[0]) : "memory");
     }
-    printToc();
+    timer.print();
     for (auto ptr: pointers) {
         if (ptr) {
             allocator.free(ptr);

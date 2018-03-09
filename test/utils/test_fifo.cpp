@@ -113,7 +113,7 @@ test_fifo()
     assert(fifo.capacity() == init_size);
     assert(fifo.spaceLeft() == init_size);
 
-    tic();
+    Timer timer;
     std::thread t1([&] {
             std::this_thread::yield();
             for (size_t i = 0;i < N;i++) {
@@ -130,31 +130,31 @@ test_fifo()
         assert(res == i);
     }
     t1.join();
-    auto write_time = toc();
+    auto write_time = timer.elapsed();
 
     std::cout << "Average time per write: "
               << double(write_time) / double(N) / 1e3 << " us"
               << std::endl;
 
-    tic();
+    timer.restart();
     std::thread t3([&] {
             fifo_list_try_pusher<1>(fifo);
         });
     fifo_poper<3>(fifo);
     t3.join();
-    auto write_time3 = toc();
+    auto write_time3 = timer.elapsed();
 
     std::cout << "Average time per write: "
               << double(write_time3) / double(N) / 1e3 << " us"
               << std::endl;
 
-    tic();
+    timer.restart();
     std::thread t4([&] {
             fifo_list_try_pusher<3>(fifo);
         });
     fifo_poper<1>(fifo);
     t4.join();
-    auto write_time4 = toc();
+    auto write_time4 = timer.elapsed();
 
     std::cout << "Average time per write: "
               << double(write_time4) / double(N) / 1e3 << " us"
@@ -162,7 +162,7 @@ test_fifo()
 
     assert(fifo.capacity() == init_size);
 
-    tic();
+    timer.restart();
     std::thread t2([&] {
             std::this_thread::yield();
             for (size_t i = 0;i < N;i++) {
@@ -181,33 +181,33 @@ test_fifo()
         }
     }
     t2.join();
-    auto write_time2 = toc();
+    auto write_time2 = timer.elapsed();
 
     std::cout << "Average time per write: "
               << double(write_time2) / double(N) / 1e3 << " us"
               << std::endl;
     std::cout << "Total size: " << fifo.capacity() << std::endl;
 
-    tic();
+    timer.restart();
     std::thread t5([&] {
             fifo_list_pusher<1>(fifo);
         });
     fifo_try_poper<3>(fifo);
     t5.join();
-    auto write_time5 = toc();
+    auto write_time5 = timer.elapsed();
 
     std::cout << "Average time per write: "
               << double(write_time5) / double(N) / 1e3 << " us"
               << std::endl;
     std::cout << "Total size: " << fifo.capacity() << std::endl;
 
-    tic();
+    timer.restart();
     std::thread t6([&] {
             fifo_list_pusher<3>(fifo);
         });
     fifo_try_poper<1>(fifo);
     t6.join();
-    auto write_time6 = toc();
+    auto write_time6 = timer.elapsed();
     std::cout << "Average time per write: "
               << double(write_time6) / double(N) / 1e3 << " us"
               << std::endl;

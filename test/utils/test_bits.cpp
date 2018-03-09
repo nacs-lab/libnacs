@@ -42,12 +42,12 @@ template<typename T>
 static inline void
 test_get_bits()
 {
-    tic();
+    Timer timer;
     T i(-1);
     do {
         test_single_get_bits(i);
     } while (i-- > 0);
-    printToc();
+    timer.print();
 }
 
 int

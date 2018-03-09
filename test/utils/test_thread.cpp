@@ -32,10 +32,9 @@ using namespace std::literals;
 
 static constexpr int N = 1000000;
 
-static inline void
-tocPerCycle(int n=N)
+static inline void tocPerCycle(NaCs::Timer &timer, int n=N)
 {
-    std::cout << "Time: " << double(NaCs::toc()) / double(n) / 1e3
+    std::cout << "Time: " << double(timer.elapsed(true)) / double(n) / 1e3
               << " us" << std::endl;
 }
 
@@ -47,11 +46,11 @@ struct test_lock {
     operator()()
     {
         Lock lock;
-        NaCs::tic();
+        NaCs::Timer timer;
         for (int i = 0;i < N;i++) {
             std::lock_guard<Lock> locker(lock);
         }
-        tocPerCycle();
+        tocPerCycle(timer);
     }
 };
 
@@ -78,7 +77,7 @@ template<int n=N, int _nthread=2, typename Lock, typename Func>
 static inline void
 test_n_threads(Func &&func, Lock &lock)
 {
-    NaCs::tic();
+    NaCs::Timer timer;
     RepeatRunner<Func, Lock, n> runner(func, lock);
     constexpr static int nthread =
         std::is_same<DummyLock, Lock>() ? 1 : _nthread;
@@ -89,7 +88,7 @@ test_n_threads(Func &&func, Lock &lock)
     for (auto &t: threads) {
         t.join();
     }
-    tocPerCycle(n * nthread);
+    tocPerCycle(timer, n * nthread);
 }
 
 template<typename Lock>
@@ -219,16 +218,15 @@ static void
 test_cond_var()
 {
     CondVar cv;
-    NaCs::tic();
+    NaCs::Timer timer;
     for (int i = 0;i < N;i++) {
         cv.notify_one();
     }
-    tocPerCycle();
-    NaCs::tic();
+    tocPerCycle(timer);
     for (int i = 0;i < N;i++) {
         cv.notify_all();
     }
-    tocPerCycle();
+    tocPerCycle(timer);
     std::thread thread([&] {
             Locker locker;
             for (int i = 0;i < N * 2;i++) {
@@ -237,16 +235,15 @@ test_cond_var()
             }
         });
     thread.detach();
-    NaCs::tic();
+    timer.restart();
     for (int i = 0;i < N;i++) {
         cv.notify_one();
     }
-    tocPerCycle();
-    NaCs::tic();
+    tocPerCycle(timer);
     for (int i = 0;i < N;i++) {
         cv.notify_all();
     }
-    tocPerCycle();
+    tocPerCycle(timer);
 }
 
 template<template<typename...> class Tester>
@@ -275,17 +272,17 @@ main()
     locks_tester<test_thread_lock>();
 
     std::cout << "function call" << std::endl;
-    NaCs::tic();
+    NaCs::Timer timer;
     for (int i = 0;i < N;i++) {
         f();
     }
-    tocPerCycle();
+    tocPerCycle(timer);
 
     std::cout << "inlined function call" << std::endl;
-    NaCs::tic();
+    timer.restart();
     for (int i = 0;i < N;i++) {
         f_inline();
     }
-    tocPerCycle();
+    tocPerCycle(timer);
     return 0;
 }

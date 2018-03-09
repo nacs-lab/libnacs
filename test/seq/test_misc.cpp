@@ -38,17 +38,15 @@ int main(int argc, char **argv)
     WavemeterParser parser;
     size_t sz;
 
-    tic();
+    Timer timer;
     parser.parse(istm, &sz, true);
-    printToc();
+    timer.print(true);
 
-    tic();
     auto ptrs = parser.parse(istm, &sz, true);
-    printToc();
+    timer.print(true);
 
-    tic();
     parser.parse(istm, &sz, true);
-    printToc();
+    timer.print(true);
 
     std::cout << (void*)ptrs.first << " "
               << (void*)ptrs.second << std::endl;

@@ -50,26 +50,4 @@ getElapse(uint64_t prev)
     return getTime() - prev;
 }
 
-static thread_local std::vector<uint64_t> tics_list;
-
-NACS_EXPORT() void
-tic()
-{
-    tics_list.push_back(0);
-    auto &back = tics_list.back();
-    back = getTime();
-}
-
-NACS_EXPORT() uint64_t
-toc()
-{
-    uint64_t cur_time = getTime();
-    if (!tics_list.size()) {
-        return 0;
-    }
-    uint64_t old_time = tics_list.back();
-    tics_list.pop_back();
-    return cur_time - old_time;
-}
-
 }

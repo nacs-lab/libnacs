@@ -12,11 +12,10 @@ using namespace NaCs;
 void
 test_write(volatile void *ptr, uint32_t nrun)
 {
-    tic();
-    for (uint32_t i = 0;i < nrun;i++) {
+    Timer timer;
+    for (uint32_t i = 0;i < nrun;i++)
         Mem::write<uint64_t>(ptr, i);
-    }
-    auto time = toc();
+    auto time = timer.elapsed();
     std::cout << "Time per write: " << std::setprecision(4)
               << double(time) / double(nrun) / 1e3
               << " us" << std::endl;
