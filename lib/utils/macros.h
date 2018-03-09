@@ -108,6 +108,14 @@
     (NACS_GCC_VERSION >= nacsMakeVersion(args))
 
 /**
+ * \brief always inline the function.
+ *
+ * Should only be used for small functions
+ */
+#define NACS_INLINE __attribute__((always_inline)) inline
+#define NACS_NOINLINE __attribute__((noinline))
+
+/**
  * \brief Export symbol.
  */
 #if NACS_OS_WINDOWS
@@ -117,9 +125,12 @@
     NACS_EXPORT_SWITCH_REAL(NACS_EXPORT_LIB_##lib())
 #  define NACS_EXPORT(lib...)                                           \
     NACS_SWITCH(lib, NACS_EXPORT_SWITCH(lib), __declspec(dllexport))
+#  define NACS_PROTECTED(lib...) NACS_EXPORT(lib)
 #else
 #  define NACS_EXPORT(...) __attribute__((visibility("default")))
+#  define NACS_PROTECTED(...) __attribute__((visibility("protected")))
 #endif
+#define NACS_INTERNAL __attribute__((visibility("internal")))
 
 /**
  * \def NACS_BEGIN_DECLS
@@ -137,13 +148,6 @@
 #  define NACS_BEGIN_DECLS
 #  define NACS_END_DECLS
 #endif
-
-/**
- * \brief always inline the function.
- *
- * Should only be used for small functions
- */
-#define NACS_INLINE __attribute__((always_inline)) inline
 
 /**
  * Suppress unused parameter warning on variable \param x.
