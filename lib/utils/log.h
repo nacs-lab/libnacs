@@ -35,7 +35,7 @@ extern NaCsLogLevel nacs_log_level;
 static NACS_INLINE bool
 nacsCheckLogLevel(unsigned level)
 {
-    return nacsUnlikely(level <= NACS_LOG_FORCE && level >= nacs_log_level);
+    return NaCs::unlikely(level <= NACS_LOG_FORCE && level >= nacs_log_level);
 }
 
 void nacsSetLog(FILE *log_f);

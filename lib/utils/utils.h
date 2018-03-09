@@ -36,6 +36,38 @@
 
 namespace NaCs {
 
+/**
+ * Tell the compiler that \param val is likely to be \param exp.
+ */
+template<typename T1, typename T2>
+static NACS_INLINE T1 expect(T1 val, T2 exp)
+{
+#if NACS_CHECK_GCC_VERSION(3, 0)
+    return __builtin_expect(val, exp);
+#else
+    (void)exp;
+    return val;
+#endif
+}
+
+/**
+ * Tell the compiler that \param x is likely to be true.
+ */
+template<typename T>
+static NACS_INLINE bool likely(T x)
+{
+    return expect(bool(x), true);
+}
+
+/**
+ * Tell the compiler that \param x is likely to be false.
+ */
+template<typename T>
+static NACS_INLINE bool unlikely(T x)
+{
+    return expect(bool(x), false);
+}
+
 template<typename T>
 class ScopeSwap {
     T m_orig_val;

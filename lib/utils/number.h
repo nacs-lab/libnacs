@@ -171,10 +171,10 @@ static inline double linearInterpolate(double x, double x0, double dx,
     // Offset
     x -= x0;
     // Scale
-    if (nacsUnlikely(x <= 0)) {
+    if (unlikely(x <= 0)) {
         return points[0];
     }
-    else if (nacsUnlikely(x >= dx)) {
+    else if (unlikely(x >= dx)) {
         return points[npoints - 1];
     }
     x = x * (npoints - 1) / dx;

@@ -157,27 +157,8 @@
 #define nacsContainerOf(ptr, type, member)              \
     ((type*)(((char*)(ptr)) - offsetof(type, member)))
 
-/**
- * Tell the compiler that \param exp is likely to be \param var.
- */
-#if NACS_CHECK_GCC_VERSION(3, 0)
-#  define nacsExpect(exp, var) __builtin_expect(exp, var)
-#else
-#  define nacsExpect(exp, var) (exp)
-#endif
-
-/**
- * Tell the compiler that \param x is likely to be true.
- */
-#define nacsLikely(x) nacsExpect(!!(x), 1)
-
-/**
- * Tell the compiler that \param x is likely to be false.
- */
-#define nacsUnlikely(x) nacsExpect(!!(x), 0)
-
 #define NACS_RET_IF_FAIL(exp, val...) do {              \
-        if (!nacsLikely(exp)) {                         \
+        if (!NaCs::likely(exp)) {                       \
             return (NACS_DEFAULT(val, (void)0));        \
         }                                               \
     } while (0)
