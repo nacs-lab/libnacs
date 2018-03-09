@@ -26,7 +26,7 @@
 #include <sys/file.h>
 #include <fcntl.h>
 #include <assert.h>
-#ifdef NACS_OS_LINUX
+#if NACS_OS_LINUX
 #  include <sys/eventfd.h>
 #endif
 
@@ -42,7 +42,7 @@ int recvFD(int sock);
 bool fdSetCloexec(int fd, bool cloexec);
 bool fdSetNonBlock(int fd, bool nonblock);
 
-#ifndef NACS_OS_WINDOWS
+#if !NACS_OS_WINDOWS
 class FLock {
     int m_fd;
 public:
@@ -80,7 +80,7 @@ static inline T checkErrno(T res, Arg&&... arg)
     return res;
 }
 
-#ifdef NACS_OS_LINUX
+#if NACS_OS_LINUX
 // Helper functions for event fd.
 
 // Open a eventfd and check for error

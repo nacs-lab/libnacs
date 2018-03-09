@@ -96,7 +96,7 @@ bool WavemeterParser::try_parseline(std::istream &stm)
     if (stm.eof() || !stm)
         return false;
     timedate.tm_isdst = 0;
-#ifdef NACS_OS_WINDOWS
+#if NACS_OS_WINDOWS
     auto ts = _mkgmtime(&timedate);
 #else
     auto ts = timegm(&timedate);

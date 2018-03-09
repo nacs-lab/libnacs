@@ -269,7 +269,7 @@ struct InterpExeContext : public ExeContext {
             return FuncBase(fptr, ptr, exefunc_free);
         }
 #if defined(__x86_64__) || defined(__x86_64)
-#  ifdef NACS_OS_WINDOWS
+#  if NACS_OS_WINDOWS
         uint32_t nregarg = 0;
         uint32_t nstack = 0;
         for (uint32_t i = 0; i < nargs; i++) {

@@ -19,7 +19,7 @@
 #include "utils.h"
 #include "term.h"
 
-#ifndef NACS_OS_WINDOWS
+#if !NACS_OS_WINDOWS
 #  include <spawn.h>
 #  include <sys/stat.h>
 #  include <fcntl.h>
@@ -39,7 +39,7 @@ static bool has_color()
 {
     static bool _has_color = [] {
         bool res = false;
-#ifndef NACS_OS_WINDOWS
+#if !NACS_OS_WINDOWS
         pid_t pid;
         char *argv[] = {(char*)"tput", (char*)"colors", NULL};
         posix_spawn_file_actions_t faction;
@@ -90,7 +90,7 @@ static bool isattystm(std::ostream &stm)
 {
     // This is the most reliable way I can find to get the corresponding fd from a std::ostream
     auto buf = stm.rdbuf();
-#ifndef NACS_OS_WINDOWS
+#if !NACS_OS_WINDOWS
     if (buf == std::cout.rdbuf())
         return isatty(1);
     if (buf == std::cerr.rdbuf())

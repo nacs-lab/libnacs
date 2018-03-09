@@ -25,14 +25,23 @@
  * \brief Definitions of some useful macros.
  */
 
+#define NACS_OS_FREEBSD 0
+#define NACS_OS_LINUX 0
+#define NACS_OS_WINDOWS 0
+#define NACS_OS_DARWIN 0
+
 #if defined(__FreeBSD__)
-#  define NACS_OS_FREEBSD
+#  undef NACS_OS_FREEBSD
+#  define NACS_OS_FREEBSD 1
 #elif defined(__linux__)
-#  define NACS_OS_LINUX
+#  undef NACS_OS_LINUX
+#  define NACS_OS_LINUX 1
 #elif defined(_WIN32) || defined(_WIN64)
-#  define NACS_OS_WINDOWS
+#  undef NACS_OS_WINDOWS
+#  define NACS_OS_WINDOWS 1
 #elif defined(__APPLE__) && defined(__MACH__)
-#  define NACS_OS_DARWIN
+#  undef NACS_OS_DARWIN
+#  define NACS_OS_DARWIN 1
 #endif
 
 /** \defgroup nacs_switch Macros for detecting empty arguments
@@ -101,7 +110,7 @@
 /**
  * \brief Export symbol.
  */
-#ifdef NACS_OS_WINDOWS
+#if NACS_OS_WINDOWS
 #  define NACS_EXPORT_SWITCH_REAL(s)                                    \
     NACS_SWITCH(s, __declspec(dllimport), __declspec(dllexport))
 #  define NACS_EXPORT_SWITCH(lib)                       \
