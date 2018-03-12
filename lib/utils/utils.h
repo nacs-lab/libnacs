@@ -34,6 +34,10 @@
 #include <string>
 #include <map>
 
+#if NACS_CPU_X86_64 || NACS_CPU_X86
+#  include <immintrin.h>
+#endif
+
 namespace NaCs {
 
 /**
@@ -90,6 +94,43 @@ static NACS_INLINE T assume(T v)
     return v;
 }
 #endif
+
+namespace CPU {
+// Update codegen version in `ccall.cpp` after changing either `pause` or `wake`
+#ifdef __MIC__
+static NACS_INLINE void pause()
+{
+    _mm_delay_64(100);
+}
+static NACS_INLINE void wake()
+{
+}
+#elif NACS_CPU_X86_64 || NACS_CPU_X86  /* !__MIC__ */
+static NACS_INLINE void pause()
+{
+    _mm_pause();
+}
+static NACS_INLINE void wake()
+{
+}
+#elif NACS_CPU_AARCH64 || (NACS_CPU_ARM && __ARM_ARCH >= 7)
+static NACS_INLINE void pause()
+{
+    __asm__ volatile ("wfe" ::: "memory");
+}
+static NACS_INLINE void wake()
+{
+    __asm__ volatile ("sev" ::: "memory");
+}
+#else
+static NACS_INLINE void pause()
+{
+}
+static NACS_INLINE void wake()
+{
+}
+#endif
+}
 
 template<typename T>
 class ScopeSwap {
