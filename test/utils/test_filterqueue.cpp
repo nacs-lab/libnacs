@@ -35,11 +35,12 @@ void test(int n)
             for (int i = 0; i < n; i++) {
                 int *p;
                 while ((p = queue.get_filter()) == nullptr)
-                    std::this_thread::yield(); // pause
+                    CPU::pause();
                 assert(p == queue.get_filter());
                 assert(*p == i);
                 *p = i * 2 + 1;
                 queue.forward_filter();
+                CPU::wake();
             }
         });
     int nwrite = 0;
@@ -56,13 +57,14 @@ void test(int n)
         if (do_read) {
             int *p;
             while ((p = queue.pop()) == nullptr)
-                std::this_thread::yield(); // pause
+                CPU::pause();
             assert(*p == 2 * nread + 1);
             delete p;
             nread++;
         }
         else {
             queue.push(new int(nwrite));
+            CPU::wake();
             nwrite++;
         }
     }
