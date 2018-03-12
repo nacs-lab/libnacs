@@ -56,13 +56,25 @@ void test(int n)
         }
         if (do_read) {
             int *p;
-            while ((p = queue.pop()) == nullptr)
-                CPU::pause();
+            auto exp = queue.peak();
+            assert(exp.first);
+            if (exp.second) {
+                p = queue.pop();
+                assert(p);
+            }
+            else {
+                while ((p = queue.pop()) == nullptr) {
+                    CPU::pause();
+                }
+            }
+            assert(exp.first == p);
             assert(*p == 2 * nread + 1);
             delete p;
             nread++;
         }
         else {
+            if (det)
+                assert(queue.peak().first);
             queue.push(new int(nwrite));
             CPU::wake();
             nwrite++;
