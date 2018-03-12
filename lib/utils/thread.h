@@ -19,6 +19,8 @@
 #ifndef _NACS_UTILS_THREAD_H_
 #define _NACS_UTILS_THREAD_H_
 
+#include "utils.h"
+
 #include <atomic>
 #include <thread>
 #include <mutex>
@@ -65,22 +67,20 @@ public:
     inline bool
     try_lock()
     {
-        return !m_spin.exchange(true);
+        return !m_spin.exchange(true, std::memory_order_acquire);
     }
     inline void
     lock()
     {
-        while (m_spin.exchange(true)) {
-            // It is not a issue if we go to sleep and yielding execution
-            // here seems to make the timing in the present of lock contention
-            // shorter and more consistent.
-            std::this_thread::yield();
+        while (!try_lock()) {
+            CPU::pause();
         }
     }
     inline void
     unlock()
     {
-        m_spin = false;
+        m_spin.store(false, std::memory_order_release);
+        CPU::wake();
     }
 };
 

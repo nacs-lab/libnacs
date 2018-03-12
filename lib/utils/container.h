@@ -209,6 +209,7 @@ public:
     {
         std::unique_lock<Lock> locker(m_lock, std::defer_lock);
         if (!locker.try_lock()) {
+            CPU::pause();
             return 0;
         }
         return pop<false>(v, len);
