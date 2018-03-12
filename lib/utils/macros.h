@@ -44,6 +44,34 @@
 #  define NACS_OS_DARWIN 1
 #endif
 
+#define NACS_CPU_X86_64 0
+#define NACS_CPU_X86 0
+#define NACS_CPU_AARCH64 0
+#define NACS_CPU_AARCH32 0
+#define NACS_CPU_PPC64 0
+#define NACS_CPU_PPC32 0
+
+#if defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || \
+    defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
+#  undef NACS_CPU_X86_64
+#  define NACS_CPU_X86_64 1
+#elif defined(i386) || defined(__i386) || defined(__i386__) || defined(_M_IX86) || defined(_X86_)
+#  undef NACS_CPU_X86
+#  define NACS_CPU_X86 1
+#elif defined(__aarch64__)
+#  undef NACS_CPU_AARCH64
+#  define NACS_CPU_AARCH64 1
+#elif defined(__arm__) || defined(_M_ARM)
+#  undef NACS_CPU_AARCH32
+#  define NACS_CPU_AARCH32 1
+#elif defined(__PPC64__)
+#  undef NACS_CPU_PPC64
+#  define NACS_CPU_PPC64 1
+#elif defined(_ARCH_PPC)
+#  undef NACS_CPU_PPC32
+#  define NACS_CPU_PPC32 1
+#endif
+
 #ifdef __has_builtin
 #  define nacs_has_builtin(x) __has_builtin(x)
 #else
