@@ -118,8 +118,15 @@ void Keeper::reset(void)
 
 }
 
+/**
+ * The writer class maintains all the states for bytecode generation.
+ */
 template<typename Vec>
-struct ScheduleState {
+class Writer {
+    // Hard coded start trigger TTL channel.
+    static constexpr int start_ttl = 0;
+    static constexpr int start_ttl_mask = (1 << start_ttl);
+
     struct DDS {
         uint32_t freq = 0;
         uint16_t amp = 0;
@@ -131,108 +138,16 @@ struct ScheduleState {
         bool set = false;
     };
 
-    ScheduleState(Sequence &seq)
-        : seq(seq)
-    {
-        auto &pulses = seq.pulses;
-        auto &defaults = seq.defaults;
-        auto ttl_it = defaults.find({Channel::TTL, 0});
-        if (ttl_it != defaults.end())
-            cur_ttl = ttl_it->second.val.i32;
-
-        std::stable_sort(pulses.begin(), pulses.end(),
-                         [] (auto &p1, auto &p2) { return p1.t < p2.t; });
-
-        // Merge TTL pulses that happen at the same time into a single TTL pulse
-        uint32_t ttl_val = cur_ttl;
-        uint64_t prev_ttl_t = 0;
-        ssize_t prev_ttl_idx = -1;
-        size_t to = 0, from = 0;
-        for (;from < pulses.size();from++, to++) {
-            auto &pulse = pulses[from];
-            if (pulse.chn.typ != Channel::TTL) {
-                if (from != to)
-                    pulses[to] = std::move(pulse);
-                continue;
-            }
-            assert(pulse.len == 0);
-            assert(pulse.chn.id < 32);
-            uint32_t mask = uint32_t(1) << pulse.chn.id;
-            all_ttl_mask = all_ttl_mask | mask;
-            bool val = pulse(pulse.t, Val::get<double>((ttl_val & mask) != 0)).val.f64 != 0;
-            uint32_t new_ttl_val;
-            if (val) {
-                new_ttl_val = ttl_val | mask;
-            } else {
-                new_ttl_val = ttl_val & ~mask;
-            }
-            if (new_ttl_val == ttl_val && prev_ttl_idx != -1) {
-                to--;
-                continue;
-            }
-            ttl_val = new_ttl_val;
-            if (prev_ttl_idx != -1 && prev_ttl_t == pulse.t) {
-                pulses[prev_ttl_idx].set(Val::get<uint32_t>(new_ttl_val));
-                to--;
-            } else {
-                prev_ttl_idx = to;
-                prev_ttl_t = pulse.t;
-                pulse.chn = {Channel::Type::TTL, 0};
-                pulse.set(Val::get<uint32_t>(new_ttl_val));
-                if (from != to) {
-                    pulses[to] = std::move(pulse);
-                }
-            }
-        }
-        pulses.resize(to);
-    }
-
-    uint64_t addPulse(Channel chn, Val val, uint64_t t, uint64_t tlim)
-    {
-        uint64_t mint = 50;
-        if (chn.typ == Channel::TTL) {
-            mint = 3;
-        }
-        else if (chn.typ == Channel::CLOCK) {
-            mint = 5;
-        }
-        else if (chn.typ == Channel::DAC) {
-            mint = 45;
-        }
-        if (t + mint > tlim)
-            return 0;
-        switch (chn.typ) {
-        case Channel::TTL:
-            return addTTL(t, val.val.i32);
-        case Channel::DDS_FREQ:
-            return addDDSFreq(t, uint8_t(chn.id), val.val.f64);
-        case Channel::DDS_AMP:
-            return addDDSAmp(t, uint8_t(chn.id), val.val.f64);
-        case Channel::DAC:
-            return addDAC(t, uint8_t(chn.id), val.val.f64);
-        case Channel::CLOCK:
-            return addClock(t, uint8_t(val.val.i32 - 1));
-        default:
-            throw std::runtime_error("Invalid Pulse.");
-        }
-        return mint;
-    }
-
     // States
-    Sequence &seq;
-    uint64_t cur_t = 0;
     uint32_t cur_ttl = 0;
     uint32_t all_ttl_mask = start_ttl_mask;
     bool ttl_set = false;
     DDS dds[22] = {};
     DAC dac[4] = {};
-    size_t last_timed_inst = 0;
-    uint8_t max_time_left = 0;
-    Vec code;
 
-    static constexpr int start_ttl = 0;
-    static constexpr int start_ttl_mask = (1 << start_ttl);
-    static constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
+    uint64_t cur_t = 0;
+    uint8_t max_time_left = 0;
+    size_t last_timed_inst = 0;
 
     template<typename Inst>
     size_t addInst(Inst inst)
@@ -424,6 +339,7 @@ struct ScheduleState {
         return 5;
     }
 
+    static constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
     uint64_t addDDSFreq(uint64_t t, uint8_t chn, double freqf)
     {
         uint32_t freq = uint32_t(0.5 + freqf * freq_factor);
@@ -509,6 +425,19 @@ struct ScheduleState {
         return 45;
     }
 
+public:
+    Vec code;
+
+    uint32_t get_ttl_mask() const
+    {
+        return all_ttl_mask;
+    }
+
+    void init_ttl(uint32_t ttl, uint32_t mask)
+    {
+        cur_ttl = ttl;
+        all_ttl_mask = start_ttl_mask | mask;
+    }
     uint64_t start(uint64_t t)
     {
         // wait 20us
@@ -526,6 +455,103 @@ struct ScheduleState {
         // 1us
         t += 100;
         addWait(t - cur_t);
+    }
+
+    uint64_t addPulse(Channel chn, Val val, uint64_t t, uint64_t tlim)
+    {
+        uint64_t mint = 50;
+        if (chn.typ == Channel::TTL) {
+            mint = 3;
+        }
+        else if (chn.typ == Channel::CLOCK) {
+            mint = 5;
+        }
+        else if (chn.typ == Channel::DAC) {
+            mint = 45;
+        }
+        if (t + mint > tlim)
+            return 0;
+        switch (chn.typ) {
+        case Channel::TTL:
+            return addTTL(t, val.val.i32);
+        case Channel::DDS_FREQ:
+            return addDDSFreq(t, uint8_t(chn.id), val.val.f64);
+        case Channel::DDS_AMP:
+            return addDDSAmp(t, uint8_t(chn.id), val.val.f64);
+        case Channel::DAC:
+            return addDAC(t, uint8_t(chn.id), val.val.f64);
+        case Channel::CLOCK:
+            return addClock(t, uint8_t(val.val.i32 - 1));
+        default:
+            throw std::runtime_error("Invalid Pulse.");
+        }
+        return mint;
+    }
+};
+
+template<typename Vec>
+struct ScheduleState {
+    Sequence &seq;
+    Writer<Vec> &writer;
+
+    ScheduleState(Sequence &seq, Writer<Vec> &writer)
+        : seq(seq),
+          writer(writer)
+    {
+        auto &pulses = seq.pulses;
+        auto &defaults = seq.defaults;
+        auto ttl_it = defaults.find({Channel::TTL, 0});
+        uint32_t cur_ttl = 0;
+        uint32_t all_ttl_mask = 0;
+        if (ttl_it != defaults.end())
+            cur_ttl = ttl_it->second.val.i32;
+
+        std::stable_sort(pulses.begin(), pulses.end(),
+                         [] (auto &p1, auto &p2) { return p1.t < p2.t; });
+
+        // Merge TTL pulses that happen at the same time into a single TTL pulse
+        uint32_t ttl_val = cur_ttl;
+        uint64_t prev_ttl_t = 0;
+        ssize_t prev_ttl_idx = -1;
+        size_t to = 0, from = 0;
+        for (;from < pulses.size();from++, to++) {
+            auto &pulse = pulses[from];
+            if (pulse.chn.typ != Channel::TTL) {
+                if (from != to)
+                    pulses[to] = std::move(pulse);
+                continue;
+            }
+            assert(pulse.len == 0);
+            assert(pulse.chn.id < 32);
+            uint32_t mask = uint32_t(1) << pulse.chn.id;
+            all_ttl_mask = all_ttl_mask | mask;
+            bool val = pulse(pulse.t, Val::get<double>((ttl_val & mask) != 0)).val.f64 != 0;
+            uint32_t new_ttl_val;
+            if (val) {
+                new_ttl_val = ttl_val | mask;
+            } else {
+                new_ttl_val = ttl_val & ~mask;
+            }
+            if (new_ttl_val == ttl_val && prev_ttl_idx != -1) {
+                to--;
+                continue;
+            }
+            ttl_val = new_ttl_val;
+            if (prev_ttl_idx != -1 && prev_ttl_t == pulse.t) {
+                pulses[prev_ttl_idx].set(Val::get<uint32_t>(new_ttl_val));
+                to--;
+            } else {
+                prev_ttl_idx = to;
+                prev_ttl_t = pulse.t;
+                pulse.chn = {Channel::Type::TTL, 0};
+                pulse.set(Val::get<uint32_t>(new_ttl_val));
+                if (from != to) {
+                    pulses[to] = std::move(pulse);
+                }
+            }
+        }
+        pulses.resize(to);
+        writer.init_ttl(cur_ttl, all_ttl_mask);
     }
 
     // Returns if the new value is significantly different
@@ -546,7 +572,7 @@ struct ScheduleState {
         }
     }
 
-    uint32_t schedule(Time::Constraints t_cons)
+    void schedule(Time::Constraints t_cons)
     {
         // TODO: the value computing logic can probably be wrapped in a class with
         // cached state instead of interleave that logic with scheduling.
@@ -625,11 +651,12 @@ struct ScheduleState {
                 uint64_t tlim = next_clock_time;
                 if (tlim != UINT64_MAX)
                     tlim += start_t;
-                uint64_t min_dt = addPulse(cid, val, t + start_t, tlim);
+                uint64_t min_dt = writer.addPulse(cid, val, t + start_t, tlim);
                 if (min_dt == 0) {
                     keeper.addPulse(next_clock_time - prev_t);
-                    uint64_t min_dt = addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
-                                               next_clock_time + start_t, UINT64_MAX);
+                    uint64_t min_dt =
+                        writer.addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
+                                        next_clock_time + start_t, UINT64_MAX);
                     prev_t = next_clock_time;
                     next_t = prev_t + min_dt;
                     forward_clock();
@@ -655,16 +682,17 @@ struct ScheduleState {
                 start_vals[cid] = def_val;
                 cur_vals[cid] = def_val;
                 prev_t = get_next_time(t_cons.prefer_dt * 2);
-                uint64_t min_dt = addPulse(cid, def_val, prev_t, UINT64_MAX);
+                uint64_t min_dt = writer.addPulse(cid, def_val, prev_t, UINT64_MAX);
                 next_t = prev_t + std::max(t_cons.prefer_dt, min_dt);
             }
         }
 
         // Start the sequence and restart timer.
-        start_t = start(next_t);
+        start_t = writer.start(next_t);
         if (clocks.empty()) {
             // Start continuous clock with default divider
-            addPulse(clock_chn, Val::get<uint32_t>(default_clock_div), start_t, UINT64_MAX);
+            writer.addPulse(clock_chn, Val::get<uint32_t>(default_clock_div),
+                            start_t, UINT64_MAX);
             start_t += default_clock_div;
         }
         else {
@@ -673,7 +701,8 @@ struct ScheduleState {
             auto first_clock = clocks[0];
             if (first_clock.t <= first_clock.div) {
                 clock_neg_offset = int(first_clock.div - first_clock.t);
-                addPulse(clock_chn, Val::get<uint32_t>(first_clock.div), start_t, UINT64_MAX);
+                writer.addPulse(clock_chn, Val::get<uint32_t>(first_clock.div),
+                                start_t, UINT64_MAX);
                 next_clock_time = first_clock.len - clock_neg_offset;
                 start_t += clock_neg_offset;
                 next_clock_div = 256;
@@ -907,13 +936,12 @@ struct ScheduleState {
             }
         }
         while (next_clock_time != UINT64_MAX) {
-            uint64_t mindt = addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
-                                      next_clock_time + start_t, UINT64_MAX);
+            uint64_t mindt = writer.addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
+                                             next_clock_time + start_t, UINT64_MAX);
             next_t = next_clock_time + mindt;
             forward_clock();
         }
-        end(next_t + start_t);
-        return all_ttl_mask;
+        writer.end(next_t + start_t);
     }
 };
 
@@ -923,11 +951,12 @@ template<typename Vec>
 Vec SeqToByteCode(Sequence &seq, uint32_t *ttl_mask)
 {
     // The bytecode is guaranteed to not enable any channel that is not present in the mask.
-    ScheduleState<Vec> state(seq);
-    auto ttl_mask_v = state.schedule({50, 40, 4096});
+    Writer<Vec> writer;
+    ScheduleState<Vec> state(seq, writer);
+    state.schedule({50, 40, 4096});
     if (ttl_mask)
-        *ttl_mask = ttl_mask_v;
-    return state.code;
+        *ttl_mask = writer.get_ttl_mask();
+    return writer.code;
 }
 
 } // ByteCode
