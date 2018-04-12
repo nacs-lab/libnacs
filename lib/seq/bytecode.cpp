@@ -558,7 +558,19 @@ struct ScheduleState {
         Channel clock_chn{Channel::Type::CLOCK, 0};
 
         Time::Keeper keeper(t_cons);
+        // This map stores the "old value" on this channel
+        // before the current sequence pulse starts.
+        // This is the value given to the sequence pulse callback as the old_val
+        // (second parameter). This should be updated whenever a sequence pulse retires,
+        // no matter whether the value has been (or will ever be) outputed or not.
         std::map<Channel,Val> start_vals;
+        // This map stores the true current value of the channel.
+        // This is **NOT** what the sequence specifies the value to be but what
+        // the, partially, scheduled sequence will actually output on the channel
+        // at the current time.
+        // In another word, this should always be the value we've set the channel to
+        // with `addPulse` in this function and should be updated
+        // whenever `addPulse` succeeded on a non-clock channel.
         std::map<Channel,Val> cur_vals;
         // The earliest time we can schedule the next pulse.
         // When we are not hitting the time constraint, this is the time we finish
@@ -682,15 +694,34 @@ struct ScheduleState {
             return pulse(rel_t, start);
         };
 
+        // The pulses that have been started but not finished yet.
+        // This map serves two purposes:
+        // 1. This is where we look for pulses to output when we've scheduled more urgent
+        //    stuff (i.e. clocks, new pulses, etc).
+        // 2. When a pulse is finished and therefore removed from this, it's final
+        //    value will be used to update `start_vals` for the next pulse.
+        // The only code that mutate this is `record_pulse` and `finalize_chn`.
+        // * `record_pulse` adds a new pulse to `cur_pulses` if it's not finished already.
+        //     This automatically satisfies purpose 1 but not purpose 2 for pulses that
+        //     are already finished when we first output it (e.g. single value change)
+        //     we update `start_vals` for those pulses in this function.
+        // * `finalize_chn` removes pulses from `cur_pulses` after their end time
+        //     and updates `start_vals`.
         std::map<Channel,size_t> cur_pulses;
         std::set<size_t> finalized;
         size_t cursor = 0;
         size_t npulse = pulses.size();
 
-        auto record_pulse = [&] (size_t id, uint64_t t) {
+        auto record_pulse = [&] (size_t id, uint64_t t, Val val) {
+            // id: pulse index
+            // t: current time
+            // val: the pulse value at t
             auto &pulse = pulses[id];
-            if (pulse.t + pulse.len <= t)
+            if (pulse.t + pulse.len <= t) {
+                // As if we called finalize_chn right after this.
+                start_vals[pulse.chn] = val;
                 return;
+            }
             cur_pulses[pulse.chn] = id;
         };
 
@@ -748,22 +779,18 @@ struct ScheduleState {
             if (pending.empty() && to_flush.empty())
                 return false;
             // Flush the ones to finish.
-            if (!to_flush.empty()) {
-                for (auto cid: to_flush)
-                    output_pulse(cid, start_vals[cid], next_t);
-                to_flush.clear();
-            }
+            for (auto cid: to_flush)
+                output_pulse(cid, start_vals[cid], next_t);
+            to_flush.clear();
             // Output queued pulses in the queued order, after the finishing ones.
-            if (!pending.empty()) {
-                for (auto pid: pending) {
-                    if (finalized.find(pid) != finalized.end())
-                        continue;
-                    auto val = calc_pulse(pid, next_t);
-                    record_pulse(pid, next_t);
-                    output_pulse(pulses[pid].chn, val, next_t);
-                }
-                pending.clear();
+            for (auto pid: pending) {
+                if (finalized.find(pid) != finalized.end())
+                    continue;
+                auto val = calc_pulse(pid, next_t);
+                record_pulse(pid, next_t, val);
+                output_pulse(pulses[pid].chn, val, next_t);
             }
+            pending.clear();
             return true;
         };
 
@@ -797,7 +824,7 @@ struct ScheduleState {
                     uint64_t dt = (new_pulse.t > prev_t ? new_pulse.t - prev_t : 0);
                     uint64_t t = get_next_time(dt);
                     auto val = calc_pulse(cursor, t);
-                    record_pulse(cursor, t);
+                    record_pulse(cursor, t, val);
                     output_pulse(new_pulse.chn, val, t);
                     cursor++;
                     continue;
@@ -853,7 +880,7 @@ struct ScheduleState {
                 uint64_t dt = (pulse.t > prev_t ? pulse.t - prev_t : 0);
                 uint64_t t = get_next_time(dt);
                 auto val = calc_pulse(cursor, t);
-                record_pulse(cursor, t);
+                record_pulse(cursor, t, val);
                 output_pulse(pulse.chn, val, t);
                 cursor++;
                 continue;
