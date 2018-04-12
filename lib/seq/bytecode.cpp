@@ -548,6 +548,8 @@ struct ScheduleState {
 
     uint32_t schedule(Time::Constraints t_cons)
     {
+        // TODO: the value computing logic can probably be wrapped in a class with
+        // cached state instead of interleave that logic with scheduling.
         static constexpr int default_clock_div = 100;
         auto &pulses = seq.pulses;
         auto &clocks = seq.clocks;
@@ -708,7 +710,6 @@ struct ScheduleState {
         // * `finalize_chn` removes pulses from `cur_pulses` after their end time
         //     and updates `start_vals`.
         std::map<Channel,size_t> cur_pulses;
-        std::set<size_t> finalized;
         size_t cursor = 0;
         size_t npulse = pulses.size();
 
@@ -727,7 +728,6 @@ struct ScheduleState {
 
         // * Update `start_val` to the pulse's final value
         // * Remove the pulse from `cur_pulses`
-        // * Add the pulse to `finalized`
         // * Does **NOT** add any output. If the user want to output the final value
         //   of the pulse, it can read the value from the updated `start_val`.
         //   Similarly, it doesn't update `cur_vals` either since that holds the
@@ -741,15 +741,25 @@ struct ScheduleState {
             auto fin_val = calc_pulse(pid, pulse.t + pulse.len);
             start_vals[cid] = fin_val;
             it = cur_pulses.erase(it);
-            finalized.insert(pid);
             return it;
         };
 
+        /* These variables are actually local variables for `handle_overdue`.
+         * They are declared here to have their allocations cached.
+         */
+        // Channels that are finished and needs their final value outputted.
+        // This will be overwritten if a new pulse is taking over on the channel.
+        std::set<Channel> to_flush;
+        // New pulse on the channel. We don't output immediately in case
+        // the next pulse starts before that.
+        // The one we actually need to output is recorded for the channel in
+        // `latest_pending` and all pulses before that will only be used to update
+        // `start_vals`.
+        std::vector<size_t> pending;
+        std::map<Channel,size_t> latest_pending;
         // Check if any channel has overdue changes.
         // This includes new pulses or finishing of pulses that should happen
         // before the next preferred time point.
-        std::set<Channel> to_flush;
-        std::vector<size_t> pending;
         auto handle_overdue = [&] () {
             uint64_t tlim = next_t;
             // First collect and finalize pulses that should be finished.
@@ -775,6 +785,7 @@ struct ScheduleState {
                     to_flush.erase(flush_it);
                 finalize_chn(pulse.chn);
                 pending.push_back(cursor);
+                latest_pending[pulse.chn] = cursor;
             }
             if (pending.empty() && to_flush.empty())
                 return false;
@@ -784,13 +795,19 @@ struct ScheduleState {
             to_flush.clear();
             // Output queued pulses in the queued order, after the finishing ones.
             for (auto pid: pending) {
-                if (finalized.find(pid) != finalized.end())
+                auto &pulse = pulses[pid];
+                if (latest_pending[pulse.chn] != pid) {
+                    // This is replaced by a new one.
+                    auto fin_val = calc_pulse(pid, pulse.t + pulse.len);
+                    start_vals[pulse.chn] = fin_val;
                     continue;
+                }
                 auto val = calc_pulse(pid, next_t);
                 record_pulse(pid, next_t, val);
                 output_pulse(pulses[pid].chn, val, next_t);
             }
             pending.clear();
+            latest_pending.clear();
             return true;
         };
 
