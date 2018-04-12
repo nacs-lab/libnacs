@@ -85,6 +85,7 @@ add_subdirectory(lib)
 if(ENABLE_PYWRAPPER)
   add_subdirectory(python)
 endif()
+add_subdirectory(tools)
 add_subdirectory(test)
 
 if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
