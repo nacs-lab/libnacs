@@ -29,6 +29,7 @@ namespace ByteCode {
 
 NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
 {
+    // This cannot use the `ExeState` helper to avoid fusing of instructions.
     size_t count = 0;
     for (size_t i = 0; i < code_len;) {
         uint8_t b = code[i];
