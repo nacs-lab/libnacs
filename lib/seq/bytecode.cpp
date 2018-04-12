@@ -218,6 +218,7 @@ struct ScheduleState {
         return mint;
     }
 
+    // States
     Sequence &seq;
     uint64_t cur_t = 0;
     uint32_t cur_ttl = 0;
@@ -243,6 +244,9 @@ struct ScheduleState {
         return len;
     }
 
+    // Increase the wait time encoded in the last instruction by `t`.
+    // The caller should have checked that the time fits in the maximum time possible to be
+    // encoded.
     void incLastTime(uint8_t t)
     {
         assert(t <= max_time_left);
@@ -266,6 +270,10 @@ struct ScheduleState {
         code[last_timed_inst] = uint8_t((b & ~tmask) | ((t << 4) & tmask));
     }
 
+    // The `add***` functions below provides an abstraction to the bytecode and hides
+    // the detail about the bytecode encoding. The code tries to use the most compact
+    // encoding when available and can fallback to generic encoding if not.
+    // This is the same level as the API of `ExeState`.
     void addWait(uint64_t dt)
     {
         if (dt == 0)
@@ -520,10 +528,10 @@ struct ScheduleState {
         addWait(t - cur_t);
     }
 
+    // Returns if the new value is significantly different
+    // from the original value for the channel.
     static bool filter(Channel cid, Val val1, Val val2)
     {
-        // Returns if the new value is significantly different
-        // from the original value for the channel.
         switch (cid.typ) {
         case Channel::TTL:
             return val1.val.i32 != val2.val.i32;
