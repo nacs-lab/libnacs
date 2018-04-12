@@ -145,6 +145,7 @@ struct Sequence {
     {
     }
     static Sequence fromBinary(const uint32_t *data, size_t len);
+    static void dumpBinary(std::ostream &stm, const uint32_t *data, size_t len);
     std::vector<uint8_t> toByteCode(uint32_t *ttl_mask);
     uint8_t *toByteCode(size_t *sz, uint32_t *ttl_mask);
 };

@@ -4,5 +4,9 @@ set(nacs_bcdump_SOURCES nacs_bcdump.cpp)
 add_executable(nacs-bcdump ${nacs_bcdump_SOURCES})
 target_link_libraries(nacs-bcdump nacs-seq)
 
-install(TARGETS nacs-bcdump
+set(nacs_seqdump_SOURCES nacs_seqdump.cpp)
+add_executable(nacs-seqdump ${nacs_seqdump_SOURCES})
+target_link_libraries(nacs-seqdump nacs-seq)
+
+install(TARGETS nacs-bcdump nacs-seqdump
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")

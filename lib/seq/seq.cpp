@@ -21,6 +21,7 @@
 #include <nacs-utils/utils.h>
 
 #include <type_traits>
+#include <iomanip>
 
 namespace NaCs {
 namespace Seq {
@@ -97,6 +98,107 @@ Sequence::fromBinary(const uint32_t *bin, size_t len)
         clock.div = clock_div;
     }
     return Sequence(std::move(seq), std::move(defaults), std::move(clocks), std::move(exectx));
+}
+
+static void print_channel(std::ostream &stm, Channel::Type chn_type, int chn_id,
+                          bool allow_ttl=true, bool allow_clock=false)
+{
+    auto invalid_type = [&] { stm << "<invalid channel type" << (int)chn_type << ">"; };
+    switch (chn_type) {
+    case Channel::DDS_FREQ:
+        stm << "dds_freq";
+        break;
+    case Channel::DDS_AMP:
+        stm << "dds_amp";
+        break;
+    case Channel::DAC:
+        stm << "dac";
+        break;
+    case Channel::TTL:
+        if (!allow_ttl) {
+            invalid_type();
+        }
+        else {
+            stm << "ttl";
+        }
+        break;
+    case Channel::CLOCK:
+        if (!allow_clock) {
+            invalid_type();
+        }
+        else {
+            stm << "clock";
+        }
+        break;
+    default:
+        invalid_type();
+        break;
+    }
+    stm << "(" << chn_id << ")";
+}
+
+NACS_EXPORT() void Sequence::dumpBinary(std::ostream &stm, const uint32_t *bin, size_t len)
+{
+    stm << "TTL default: 0x" << std::hex << std::setfill('0')
+        << std::setw(8) << bin[0] << std::dec << std::endl;
+    uint32_t n_non_ttl = bin[1];
+    stm << "Channels(non TTL): " << n_non_ttl << std::endl;
+    size_t cursor = 2;
+
+    for (uint32_t i = 0;i < n_non_ttl;i++) {
+        auto chn_type = Channel::Type(bin[cursor]);
+        int chn_id = int(bin[cursor + 1]);
+        double val;
+        memcpy(&val, &bin[cursor + 2], 8);
+        stm << "    " << i + 1 << ". ";
+        print_channel(stm, chn_type, chn_id, false);
+        stm << std::endl
+            << "      default: " << val << std::endl;
+        cursor += 4;
+    }
+
+    uint32_t n_pulses = bin[cursor];
+    cursor++;
+    stm << "Pulses: " << n_pulses << std::endl;
+    for (uint32_t i = 0;i < n_pulses;i++) {
+        auto chn_type = Channel::Type(bin[cursor]);
+        int chn_id = int(bin[cursor + 1]);
+        double t_startf;
+        double t_lenf;
+        memcpy(&t_startf, &bin[cursor + 2], 8);
+        memcpy(&t_lenf, &bin[cursor + 4], 8);
+        stm << "    " << i + 1 << ". ";
+        print_channel(stm, chn_type, chn_id, true);
+        stm << std::endl
+            << "      time: " << t_startf << " + " << t_lenf << std::endl;
+        uint32_t code_len = bin[cursor + 6];
+        if (code_len == 0) {
+            double val;
+            memcpy(&val, &bin[cursor + 7], 8);
+            stm << "      val: " << val << std::endl;
+            cursor += 9;
+            continue;
+        }
+        cursor += 7;
+        stm << IR::Function(&bin[cursor], code_len) << std::endl;
+        cursor += code_len;
+    }
+    if (cursor >= len)
+        return;
+    uint32_t n_clocks = bin[cursor];
+    cursor++;
+    stm << "Clocks: " << n_clocks << std::endl;
+    for (uint32_t i = 0;i < n_clocks;i++) {
+        uint64_t t_start_ns;
+        uint64_t t_len_ns;
+        memcpy(&t_start_ns, &bin[cursor], 8);
+        memcpy(&t_len_ns, &bin[cursor + 2], 8);
+        uint32_t clock_div = bin[cursor + 4];
+        cursor += 5;
+        stm << "    " << i + 1 << ". start (ns): " << t_start_ns << std::endl
+            << "      len (ns): " << t_len_ns << std::endl
+            << "      clock_div: " << clock_div << std::endl;
+    }
 }
 
 } // Seq
