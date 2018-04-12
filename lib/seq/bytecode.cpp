@@ -490,16 +490,334 @@ public:
 };
 
 template<typename Vec>
-struct ScheduleState {
-    Sequence &seq;
+class ScheduleState {
+    static constexpr Channel clock_chn{Channel::Type::CLOCK, 0};
+    static constexpr int default_clock_div = 100;
+
+    std::vector<Sequence::Pulse> &pulses;
+    const size_t n_pulses;
+    std::map<Channel,Val> &defaults;
+    std::vector<Sequence::Clock> &clocks;
     Writer<Vec> &writer;
 
-    ScheduleState(Sequence &seq, Writer<Vec> &writer)
-        : seq(seq),
-          writer(writer)
+    Time::Constraints t_cons;
+    Time::Keeper keeper;
+
+    // This map stores the "old value" on this channel
+    // before the current sequence pulse starts.
+    // This is the value given to the sequence pulse callback as the old_val
+    // (second parameter). This should be updated whenever a sequence pulse retires,
+    // no matter whether the value has been (or will ever be) outputed or not.
+    std::map<Channel,Val> start_vals;
+    // This map stores the true current value of the channel.
+    // This is **NOT** what the sequence specifies the value to be but what
+    // the, partially, scheduled sequence will actually output on the channel
+    // at the current time.
+    // In another word, this should always be the value we've set the channel to
+    // with `addPulse` in this function and should be updated
+    // whenever `addPulse` succeeded on a non-clock channel.
+    std::map<Channel,Val> cur_vals;
+    // The earliest time we can schedule the next pulse.
+    // When we are not hitting the time constraint, this is the time we finish
+    // the previous pulse.
+    uint64_t next_t = 0;
+    // The time of the last pulse.
+    uint64_t prev_t = 0;
+    // Time offset of start, only the output should care about this.
+    uint64_t start_t = 0;
+    // The time when we should output the next clock pulse.
+    // Set to `UINT64_MAX` when there isn't any left.
+    // The time is shifted by `-clock_div` such that it is the time to output the pulse
+    // and not the time the clock edge should be delivered.
+    uint64_t next_clock_time = UINT64_MAX;
+    // The index of the next clock pulse in `clocks` after the current clock period is finished.
+    // If one is currently running (started and haven't end) this is the index to the next one
+    // that is not running.
+    size_t next_clock_idx = 0;
+    // `next_clock_div` == 256 means we are finishing a clock period.
+    int next_clock_div = 256;
+    int clock_neg_offset = 0;
+
+    // The pulses that have been started but not finished yet.
+    // This map serves two purposes:
+    // 1. This is where we look for pulses to output when we've scheduled more urgent
+    //    stuff (i.e. clocks, new pulses, etc).
+    // 2. When a pulse is finished and therefore removed from this, it's final
+    //    value will be used to update `start_vals` for the next pulse.
+    // The only code that mutate this is `record_pulse` and `finalize_chn`.
+    // * `record_pulse` adds a new pulse to `cur_pulses` if it's not finished already.
+    //     This automatically satisfies purpose 1 but not purpose 2 for pulses that
+    //     are already finished when we first output it (e.g. single value change)
+    //     we update `start_vals` for those pulses in this function.
+    // * `finalize_chn` removes pulses from `cur_pulses` after their end time
+    //     and updates `start_vals`.
+    std::map<Channel,size_t> cur_pulses;
+    size_t cursor = 0;
+
+    // Returns if the new value is significantly different
+    // from the original value for the channel.
+    static bool filter(Channel cid, Val val1, Val val2)
     {
-        auto &pulses = seq.pulses;
-        auto &defaults = seq.defaults;
+        switch (cid.typ) {
+        case Channel::TTL:
+            return val1.val.i32 != val2.val.i32;
+        case Channel::DDS_FREQ:
+            return fabs(val1.val.f64 - val2.val.f64) > 0.2;
+        case Channel::DDS_AMP:
+            return fabs(val1.val.f64 - val2.val.f64) > 0.00005;
+        case Channel::DAC:
+            return fabs(val1.val.f64 - val2.val.f64) > 0.0002;
+        default:
+            return val1.val.f64 != val2.val.f64;
+        }
+    }
+
+    // Helper functions
+
+    void forward_clock()
+    {
+        if (next_clock_div != 256) {
+            next_clock_div = 256;
+            next_clock_time = next_clock_time + clocks[next_clock_idx - 1].len;
+            return;
+        }
+        if (next_clock_idx >= clocks.size()) {
+            next_clock_time = UINT64_MAX;
+            return;
+        }
+        auto next_clock = clocks[next_clock_idx];
+        next_clock_idx++;
+        next_clock_div = next_clock.div;
+        next_clock_time = next_clock.t - clock_neg_offset;
+    }
+
+    // Get the time to output the next pulse at least `dt` after the previous
+    // pulse.
+    uint64_t get_next_time(uint64_t dt)
+    {
+        return std::max(prev_t + dt, next_t);
+    }
+
+    // Add a pulse at `t`. The caller is expected to check the time limit
+    // before calling this function.
+    void output_pulse(Channel cid, Val val, uint64_t t)
+    {
+        if (!filter(cid, cur_vals[cid], val))
+            return;
+        while (true) {
+            uint64_t tlim = next_clock_time;
+            if (tlim != UINT64_MAX)
+                tlim += start_t;
+            uint64_t min_dt = writer.addPulse(cid, val, t + start_t, tlim);
+            if (min_dt == 0) {
+                keeper.addPulse(next_clock_time - prev_t);
+                uint64_t min_dt =
+                    writer.addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
+                                    next_clock_time + start_t, UINT64_MAX);
+                prev_t = next_clock_time;
+                next_t = prev_t + min_dt;
+                forward_clock();
+                if (t < next_t)
+                    t = next_t;
+                continue;
+            }
+            cur_vals[cid] = val;
+            uint64_t dt = t - prev_t;
+            keeper.addPulse(dt);
+            prev_t = t;
+            next_t = t + keeper.minDt(min_dt);
+            return;
+        }
+    }
+
+    Val calc_pulse(size_t id, uint64_t t)
+    {
+        auto &pulse = pulses[id];
+        uint64_t rel_t = t < pulse.t ? 0 : t - pulse.t;
+        if (rel_t > pulse.len)
+            rel_t = pulse.len;
+        auto start = start_vals[pulse.chn];
+        return pulse(rel_t, start);
+    }
+
+    void record_pulse(size_t id, uint64_t t, Val val)
+    {
+        // id: pulse index
+        // t: current time
+        // val: the pulse value at t
+        auto &pulse = pulses[id];
+        if (pulse.t + pulse.len <= t) {
+            // As if we called finalize_chn right after this.
+            start_vals[pulse.chn] = val;
+            return;
+        }
+        cur_pulses[pulse.chn] = id;
+    }
+
+    // * Update `start_val` to the pulse's final value
+    // * Remove the pulse from `cur_pulses`
+    // * Does **NOT** add any output. If the user want to output the final value
+    //   of the pulse, it can read the value from the updated `start_val`.
+    //   Similarly, it doesn't update `cur_vals` either since that holds the
+    //   value of the latest pulse.
+    auto finalize_chn (Channel cid) -> decltype(cur_pulses.find(cid))
+    {
+        auto it = cur_pulses.find(cid);
+        if (it == cur_pulses.end())
+            return it;
+        size_t pid = it->second;
+        auto &pulse = pulses[pid];
+        auto fin_val = calc_pulse(pid, pulse.t + pulse.len);
+        start_vals[cid] = fin_val;
+        it = cur_pulses.erase(it);
+        return it;
+    };
+
+    /* These variables are actually local variables for `handle_overdue`.
+     * They are declared here to have their allocations cached.
+     */
+    // Channels that are finished and needs their final value outputted.
+    // This will be overwritten if a new pulse is taking over on the channel.
+    std::set<Channel> to_flush;
+    // New pulse on the channel. We don't output immediately in case
+    // the next pulse starts before that.
+    // The one we actually need to output is recorded for the channel in
+    // `latest_pending` and all pulses before that will only be used to update
+    // `start_vals`.
+    std::vector<size_t> pending;
+    std::map<Channel,size_t> latest_pending;
+    // Check if any channel has overdue changes.
+    // This includes new pulses or finishing of pulses that should happen
+    // before the next preferred time point.
+    bool handle_overdue()
+    {
+        uint64_t tlim = next_t;
+        // First collect and finalize pulses that should be finished.
+        for (auto it = cur_pulses.begin();it != cur_pulses.end();) {
+            auto pid = it->second;
+            auto &pulse = pulses[pid];
+            if (pulse.t + pulse.len > tlim) {
+                ++it;
+                continue;
+            }
+            to_flush.insert(it->first);
+            it = finalize_chn(pulse.chn);
+        }
+
+        // Now see if there's any new pulses that needs handling.
+        // Remove the corresponding pulse from `to_flush` as we encounter it.
+        for (;cursor < n_pulses;cursor++) {
+            auto &pulse = pulses[cursor];
+            if (pulse.t > tlim)
+                break;
+            auto flush_it = to_flush.find(pulse.chn);
+            if (flush_it != to_flush.end())
+                to_flush.erase(flush_it);
+            finalize_chn(pulse.chn);
+            pending.push_back(cursor);
+            latest_pending[pulse.chn] = cursor;
+        }
+        if (pending.empty() && to_flush.empty())
+            return false;
+        // Flush the ones to finish.
+        for (auto cid: to_flush)
+            output_pulse(cid, start_vals[cid], next_t);
+        to_flush.clear();
+        // Output queued pulses in the queued order, after the finishing ones.
+        for (auto pid: pending) {
+            auto &pulse = pulses[pid];
+            if (latest_pending[pulse.chn] != pid) {
+                // This is replaced by a new one.
+                auto fin_val = calc_pulse(pid, pulse.t + pulse.len);
+                start_vals[pulse.chn] = fin_val;
+                continue;
+            }
+            auto val = calc_pulse(pid, next_t);
+            record_pulse(pid, next_t, val);
+            output_pulse(pulses[pid].chn, val, next_t);
+        }
+        pending.clear();
+        latest_pending.clear();
+        return true;
+    }
+
+    void handle_update()
+    {
+        size_t num_updates = cur_pulses.size();
+        // Compute a deadline after which we will ignore any new pulses and
+        // focuses on updating the on-going updates.
+        uint64_t deadline = get_next_time(t_cons.prefer_dt * num_updates * 2);
+        // Check repeatedly if there's any channels to be finalized
+        bool has_finalize;
+        do {
+            has_finalize = false;
+            for (auto it = cur_pulses.begin();it != cur_pulses.end();) {
+                auto pid = it->second;
+                auto cid = it->first;
+                auto &pulse = pulses[pid];
+                if (pulse.t + pulse.len > next_t) {
+                    ++it;
+                    continue;
+                }
+                has_finalize = true;
+                it = finalize_chn(cid);
+                output_pulse(cid, start_vals[cid], next_t);
+            }
+        } while (has_finalize);
+        auto cur_copy = cur_pulses;
+        while (next_t <= deadline && !cur_copy.empty() && cursor < n_pulses) {
+            uint64_t next_seq_t = get_next_time(t_cons.prefer_dt);
+            auto &new_pulse = pulses[cursor];
+            if (new_pulse.t <= next_seq_t) {
+                uint64_t dt = (new_pulse.t > prev_t ? new_pulse.t - prev_t : 0);
+                uint64_t t = get_next_time(dt);
+                auto val = calc_pulse(cursor, t);
+                record_pulse(cursor, t, val);
+                output_pulse(new_pulse.chn, val, t);
+                cursor++;
+                continue;
+            }
+            auto it = cur_copy.begin();
+            auto pid = it->second;
+            auto cid = it->first;
+            cur_copy.erase(it);
+            auto &pulse = pulses[pid];
+            if (pulse.t + pulse.len <= next_seq_t) {
+                finalize_chn(cid);
+                output_pulse(cid, start_vals[cid], next_seq_t);
+            } else {
+                output_pulse(cid, calc_pulse(pid, next_seq_t), next_seq_t);
+            }
+        }
+        // If we reached the deadline with pending updates, flush all of them.
+        for (auto &it: cur_copy) {
+            uint64_t next_seq_t = get_next_time(t_cons.prefer_dt);
+            auto pid = it.second;
+            auto cid = it.first;
+            auto &pulse = pulses[pid];
+            if (pulse.t + pulse.len <= next_seq_t) {
+                finalize_chn(cid);
+                output_pulse(cid, start_vals[cid], next_seq_t);
+            } else {
+                output_pulse(cid, calc_pulse(pid, next_seq_t), next_seq_t);
+            }
+        }
+    }
+
+public:
+    ScheduleState(Sequence &seq, Writer<Vec> &writer, Time::Constraints t_cons)
+        : pulses(seq.pulses),
+          n_pulses(pulses.size()),
+          defaults(seq.defaults),
+          clocks(seq.clocks),
+          writer(writer),
+          t_cons(t_cons),
+          keeper(t_cons)
+    {
+    }
+
+    void init()
+    {
         auto ttl_it = defaults.find({Channel::TTL, 0});
         uint32_t cur_ttl = 0;
         uint32_t all_ttl_mask = 0;
@@ -514,7 +832,7 @@ struct ScheduleState {
         uint64_t prev_ttl_t = 0;
         ssize_t prev_ttl_idx = -1;
         size_t to = 0, from = 0;
-        for (;from < pulses.size();from++, to++) {
+        for (;from < n_pulses;from++, to++) {
             auto &pulse = pulses[from];
             if (pulse.chn.typ != Channel::TTL) {
                 if (from != to)
@@ -554,124 +872,12 @@ struct ScheduleState {
         writer.init_ttl(cur_ttl, all_ttl_mask);
     }
 
-    // Returns if the new value is significantly different
-    // from the original value for the channel.
-    static bool filter(Channel cid, Val val1, Val val2)
-    {
-        switch (cid.typ) {
-        case Channel::TTL:
-            return val1.val.i32 != val2.val.i32;
-        case Channel::DDS_FREQ:
-            return fabs(val1.val.f64 - val2.val.f64) > 0.2;
-        case Channel::DDS_AMP:
-            return fabs(val1.val.f64 - val2.val.f64) > 0.00005;
-        case Channel::DAC:
-            return fabs(val1.val.f64 - val2.val.f64) > 0.0002;
-        default:
-            return val1.val.f64 != val2.val.f64;
-        }
-    }
-
-    void schedule(Time::Constraints t_cons)
+    // Complexity O(nchannel * npulse)
+    // Assume pulses are sorted according to start time.
+    void schedule()
     {
         // TODO: the value computing logic can probably be wrapped in a class with
         // cached state instead of interleave that logic with scheduling.
-        static constexpr int default_clock_div = 100;
-        auto &pulses = seq.pulses;
-        auto &clocks = seq.clocks;
-        auto &defaults = seq.defaults;
-
-        // Complexity O(nchannel * npulse)
-        // Assume pulses are sorted according to start time.
-        Channel clock_chn{Channel::Type::CLOCK, 0};
-
-        Time::Keeper keeper(t_cons);
-        // This map stores the "old value" on this channel
-        // before the current sequence pulse starts.
-        // This is the value given to the sequence pulse callback as the old_val
-        // (second parameter). This should be updated whenever a sequence pulse retires,
-        // no matter whether the value has been (or will ever be) outputed or not.
-        std::map<Channel,Val> start_vals;
-        // This map stores the true current value of the channel.
-        // This is **NOT** what the sequence specifies the value to be but what
-        // the, partially, scheduled sequence will actually output on the channel
-        // at the current time.
-        // In another word, this should always be the value we've set the channel to
-        // with `addPulse` in this function and should be updated
-        // whenever `addPulse` succeeded on a non-clock channel.
-        std::map<Channel,Val> cur_vals;
-        // The earliest time we can schedule the next pulse.
-        // When we are not hitting the time constraint, this is the time we finish
-        // the previous pulse.
-        uint64_t next_t = 0;
-        // The time of the last pulse.
-        uint64_t prev_t = 0;
-        // Time offset of start, only the output should care about this.
-        uint64_t start_t = 0;
-        // The time when we should output the next clock pulse.
-        // Set to `UINT64_MAX` when there isn't any left.
-        // The time is shifted by `-clock_div` such that it is the time to output the pulse
-        // and not the time the clock edge should be delivered.
-        uint64_t next_clock_time = UINT64_MAX;
-        // The index of the next clock pulse in `clocks` after the current clock period is finished.
-        // If one is currently running (started and haven't end) this is the index to the next one
-        // that is not running.
-        size_t next_clock_idx = 0;
-        // `next_clock_div` == 256 means we are finishing a clock period.
-        int next_clock_div = 256;
-        int clock_neg_offset = 0;
-
-        // Helper functions
-        auto forward_clock = [&] () {
-            if (next_clock_div != 256) {
-                next_clock_div = 256;
-                next_clock_time = next_clock_time + clocks[next_clock_idx - 1].len;
-                return;
-            }
-            if (next_clock_idx >= clocks.size()) {
-                next_clock_time = UINT64_MAX;
-                return;
-            }
-            auto next_clock = clocks[next_clock_idx];
-            next_clock_idx++;
-            next_clock_div = next_clock.div;
-            next_clock_time = next_clock.t - clock_neg_offset;
-        };
-        // Get the time to output the next pulse at least `dt` after the previous
-        // pulse.
-        auto get_next_time = [&] (uint64_t dt) {
-            return std::max(prev_t + dt, next_t);
-        };
-        // Add a pulse at `t`. The caller is expected to check the time limit
-        // before calling this function.
-        auto output_pulse = [&] (Channel cid, Val val, uint64_t t) {
-            if (!filter(cid, cur_vals[cid], val))
-                return;
-            while (true) {
-                uint64_t tlim = next_clock_time;
-                if (tlim != UINT64_MAX)
-                    tlim += start_t;
-                uint64_t min_dt = writer.addPulse(cid, val, t + start_t, tlim);
-                if (min_dt == 0) {
-                    keeper.addPulse(next_clock_time - prev_t);
-                    uint64_t min_dt =
-                        writer.addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
-                                        next_clock_time + start_t, UINT64_MAX);
-                    prev_t = next_clock_time;
-                    next_t = prev_t + min_dt;
-                    forward_clock();
-                    if (t < next_t)
-                        t = next_t;
-                    continue;
-                }
-                cur_vals[cid] = val;
-                uint64_t dt = t - prev_t;
-                keeper.addPulse(dt);
-                prev_t = t;
-                next_t = t + keeper.minDt(min_dt);
-                return;
-            }
-        };
 
         // Initialize channels
         for (auto &pulse: pulses) {
@@ -716,194 +922,8 @@ struct ScheduleState {
         keeper.reset();
         prev_t = next_t = 0;
 
-        auto calc_pulse = [&] (size_t id, uint64_t t) -> Val {
-            auto &pulse = pulses[id];
-            uint64_t rel_t = t < pulse.t ? 0 : t - pulse.t;
-            if (rel_t > pulse.len)
-                rel_t = pulse.len;
-            auto start = start_vals[pulse.chn];
-            return pulse(rel_t, start);
-        };
-
-        // The pulses that have been started but not finished yet.
-        // This map serves two purposes:
-        // 1. This is where we look for pulses to output when we've scheduled more urgent
-        //    stuff (i.e. clocks, new pulses, etc).
-        // 2. When a pulse is finished and therefore removed from this, it's final
-        //    value will be used to update `start_vals` for the next pulse.
-        // The only code that mutate this is `record_pulse` and `finalize_chn`.
-        // * `record_pulse` adds a new pulse to `cur_pulses` if it's not finished already.
-        //     This automatically satisfies purpose 1 but not purpose 2 for pulses that
-        //     are already finished when we first output it (e.g. single value change)
-        //     we update `start_vals` for those pulses in this function.
-        // * `finalize_chn` removes pulses from `cur_pulses` after their end time
-        //     and updates `start_vals`.
-        std::map<Channel,size_t> cur_pulses;
-        size_t cursor = 0;
-        size_t npulse = pulses.size();
-
-        auto record_pulse = [&] (size_t id, uint64_t t, Val val) {
-            // id: pulse index
-            // t: current time
-            // val: the pulse value at t
-            auto &pulse = pulses[id];
-            if (pulse.t + pulse.len <= t) {
-                // As if we called finalize_chn right after this.
-                start_vals[pulse.chn] = val;
-                return;
-            }
-            cur_pulses[pulse.chn] = id;
-        };
-
-        // * Update `start_val` to the pulse's final value
-        // * Remove the pulse from `cur_pulses`
-        // * Does **NOT** add any output. If the user want to output the final value
-        //   of the pulse, it can read the value from the updated `start_val`.
-        //   Similarly, it doesn't update `cur_vals` either since that holds the
-        //   value of the latest pulse.
-        auto finalize_chn = [&] (Channel cid) {
-            auto it = cur_pulses.find(cid);
-            if (it == cur_pulses.end())
-                return it;
-            size_t pid = it->second;
-            auto &pulse = pulses[pid];
-            auto fin_val = calc_pulse(pid, pulse.t + pulse.len);
-            start_vals[cid] = fin_val;
-            it = cur_pulses.erase(it);
-            return it;
-        };
-
-        /* These variables are actually local variables for `handle_overdue`.
-         * They are declared here to have their allocations cached.
-         */
-        // Channels that are finished and needs their final value outputted.
-        // This will be overwritten if a new pulse is taking over on the channel.
-        std::set<Channel> to_flush;
-        // New pulse on the channel. We don't output immediately in case
-        // the next pulse starts before that.
-        // The one we actually need to output is recorded for the channel in
-        // `latest_pending` and all pulses before that will only be used to update
-        // `start_vals`.
-        std::vector<size_t> pending;
-        std::map<Channel,size_t> latest_pending;
-        // Check if any channel has overdue changes.
-        // This includes new pulses or finishing of pulses that should happen
-        // before the next preferred time point.
-        auto handle_overdue = [&] () {
-            uint64_t tlim = next_t;
-            // First collect and finalize pulses that should be finished.
-            for (auto it = cur_pulses.begin();it != cur_pulses.end();) {
-                auto pid = it->second;
-                auto &pulse = pulses[pid];
-                if (pulse.t + pulse.len > tlim) {
-                    ++it;
-                    continue;
-                }
-                to_flush.insert(it->first);
-                it = finalize_chn(pulse.chn);
-            }
-
-            // Now see if there's any new pulses that needs handling.
-            // Remove the corresponding pulse from `to_flush` as we encounter it.
-            for (;cursor < npulse;cursor++) {
-                auto &pulse = pulses[cursor];
-                if (pulse.t > tlim)
-                    break;
-                auto flush_it = to_flush.find(pulse.chn);
-                if (flush_it != to_flush.end())
-                    to_flush.erase(flush_it);
-                finalize_chn(pulse.chn);
-                pending.push_back(cursor);
-                latest_pending[pulse.chn] = cursor;
-            }
-            if (pending.empty() && to_flush.empty())
-                return false;
-            // Flush the ones to finish.
-            for (auto cid: to_flush)
-                output_pulse(cid, start_vals[cid], next_t);
-            to_flush.clear();
-            // Output queued pulses in the queued order, after the finishing ones.
-            for (auto pid: pending) {
-                auto &pulse = pulses[pid];
-                if (latest_pending[pulse.chn] != pid) {
-                    // This is replaced by a new one.
-                    auto fin_val = calc_pulse(pid, pulse.t + pulse.len);
-                    start_vals[pulse.chn] = fin_val;
-                    continue;
-                }
-                auto val = calc_pulse(pid, next_t);
-                record_pulse(pid, next_t, val);
-                output_pulse(pulses[pid].chn, val, next_t);
-            }
-            pending.clear();
-            latest_pending.clear();
-            return true;
-        };
-
-        auto handle_update = [&] () {
-            size_t num_updates = cur_pulses.size();
-            // Compute a deadline after which we will ignore any new pulses and
-            // focuses on updating the on-going updates.
-            uint64_t deadline = get_next_time(t_cons.prefer_dt * num_updates * 2);
-            // Check repeatedly if there's any channels to be finalized
-            bool has_finalize;
-            do {
-                has_finalize = false;
-                for (auto it = cur_pulses.begin();it != cur_pulses.end();) {
-                    auto pid = it->second;
-                    auto cid = it->first;
-                    auto &pulse = pulses[pid];
-                    if (pulse.t + pulse.len > next_t) {
-                        ++it;
-                        continue;
-                    }
-                    has_finalize = true;
-                    it = finalize_chn(cid);
-                    output_pulse(cid, start_vals[cid], next_t);
-                }
-            } while (has_finalize);
-            auto cur_copy = cur_pulses;
-            while (next_t <= deadline && !cur_copy.empty() && cursor < npulse) {
-                uint64_t next_seq_t = get_next_time(t_cons.prefer_dt);
-                auto &new_pulse = pulses[cursor];
-                if (new_pulse.t <= next_seq_t) {
-                    uint64_t dt = (new_pulse.t > prev_t ? new_pulse.t - prev_t : 0);
-                    uint64_t t = get_next_time(dt);
-                    auto val = calc_pulse(cursor, t);
-                    record_pulse(cursor, t, val);
-                    output_pulse(new_pulse.chn, val, t);
-                    cursor++;
-                    continue;
-                }
-                auto it = cur_copy.begin();
-                auto pid = it->second;
-                auto cid = it->first;
-                cur_copy.erase(it);
-                auto &pulse = pulses[pid];
-                if (pulse.t + pulse.len <= next_seq_t) {
-                    finalize_chn(cid);
-                    output_pulse(cid, start_vals[cid], next_seq_t);
-                } else {
-                    output_pulse(cid, calc_pulse(pid, next_seq_t), next_seq_t);
-                }
-            }
-            // If we reached the deadline with pending updates, flush all of them.
-            for (auto &it: cur_copy) {
-                uint64_t next_seq_t = get_next_time(t_cons.prefer_dt);
-                auto pid = it.second;
-                auto cid = it.first;
-                auto &pulse = pulses[pid];
-                if (pulse.t + pulse.len <= next_seq_t) {
-                    finalize_chn(cid);
-                    output_pulse(cid, start_vals[cid], next_seq_t);
-                } else {
-                    output_pulse(cid, calc_pulse(pid, next_seq_t), next_seq_t);
-                }
-            }
-        };
-
         bool prev_overdue = false;
-        while (cursor < npulse || !cur_pulses.empty()) {
+        while (cursor < n_pulses || !cur_pulses.empty()) {
             uint64_t old_next_t = next_t;
             // 1. Check and handle any overdue changes.
             //
@@ -920,7 +940,7 @@ struct ScheduleState {
             handle_update();
 
             // 3. Forward time if there's no on-going pulses.
-            if (cur_pulses.empty() && cursor < npulse) {
+            if (cur_pulses.empty() && cursor < n_pulses) {
                 auto &pulse = pulses[cursor];
                 // These should be no-op but just to be safe
                 uint64_t dt = (pulse.t > prev_t ? pulse.t - prev_t : 0);
@@ -952,8 +972,9 @@ Vec SeqToByteCode(Sequence &seq, uint32_t *ttl_mask)
 {
     // The bytecode is guaranteed to not enable any channel that is not present in the mask.
     Writer<Vec> writer;
-    ScheduleState<Vec> state(seq, writer);
-    state.schedule({50, 40, 4096});
+    ScheduleState<Vec> state(seq, writer, {50, 40, 4096});
+    state.init();
+    state.schedule();
     if (ttl_mask)
         *ttl_mask = writer.get_ttl_mask();
     return writer.code;
