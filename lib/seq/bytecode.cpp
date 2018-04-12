@@ -351,9 +351,13 @@ struct ScheduleState {
             ttl_set = true;
             changes = ttl;
         }
+        else {
+            assert(changes);
+        }
         cur_ttl = ttl;
         auto nchgs = __builtin_popcountll(changes);
-        assert(nchgs > 0);
+        // The case where nchgs == 0, i.e. initial setting to 0, will be handled by
+        // the generic case below.
         if (nchgs == 1) {
             auto bit = __builtin_ffs(changes) - 1;
             last_timed_inst = addInst(Inst::TTL2{OpCode::TTL2, 0, uint8_t(bit & 0x1f),
