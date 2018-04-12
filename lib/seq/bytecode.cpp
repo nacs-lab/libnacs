@@ -59,28 +59,6 @@ NACS_EXPORT() uint64_t total_time(const uint8_t *code, size_t code_len)
 
 namespace {
 
-struct Filter {
-    bool operator()(Channel)
-    {
-        return true;
-    }
-    bool operator()(Channel cid, Val val1, Val val2)
-    {
-        switch (cid.typ) {
-        case Channel::TTL:
-            return val1.val.i32 != val2.val.i32;
-        case Channel::DDS_FREQ:
-            return fabs(val1.val.f64 - val2.val.f64) > 0.2;
-        case Channel::DDS_AMP:
-            return fabs(val1.val.f64 - val2.val.f64) > 0.00005;
-        case Channel::DAC:
-            return fabs(val1.val.f64 - val2.val.f64) > 0.0002;
-        default:
-            return val1.val.f64 != val2.val.f64;
-        }
-    }
-};
-
 namespace Time {
 
 struct Constraints {
@@ -542,10 +520,27 @@ struct ScheduleState {
         addWait(t - cur_t);
     }
 
+    static bool filter(Channel cid, Val val1, Val val2)
+    {
+        // Returns if the new value is significantly different
+        // from the original value for the channel.
+        switch (cid.typ) {
+        case Channel::TTL:
+            return val1.val.i32 != val2.val.i32;
+        case Channel::DDS_FREQ:
+            return fabs(val1.val.f64 - val2.val.f64) > 0.2;
+        case Channel::DDS_AMP:
+            return fabs(val1.val.f64 - val2.val.f64) > 0.00005;
+        case Channel::DAC:
+            return fabs(val1.val.f64 - val2.val.f64) > 0.0002;
+        default:
+            return val1.val.f64 != val2.val.f64;
+        }
+    }
+
     uint32_t schedule(Time::Constraints t_cons)
     {
         static constexpr int default_clock_div = 100;
-        Filter filter{};
         auto &pulses = seq.pulses;
         auto &clocks = seq.clocks;
         auto &defaults = seq.defaults;
@@ -553,13 +548,6 @@ struct ScheduleState {
         // Complexity O(nchannel * npulse)
         // Assume pulses are sorted according to start time.
         Channel clock_chn{Channel::Type::CLOCK, 0};
-
-        // `filter` is called with
-        // * `filter(Channel cid) -> bool`:
-        //     Returns if the specified channel should be handled.
-        // * `filter(Channel cid, Val orig_val, Val new_val) -> bool`
-        //     Returns if the new value is significantly different
-        //     from the original value for the channel.
 
         Time::Keeper keeper(t_cons);
         std::map<Channel,Val> start_vals;
@@ -639,7 +627,7 @@ struct ScheduleState {
         // Initialize channels
         for (auto &pulse: pulses) {
             auto cid = pulse.chn;
-            if (filter(cid) && start_vals.find(cid) == start_vals.end()) {
+            if (start_vals.find(cid) == start_vals.end()) {
                 auto it = defaults.find(cid);
                 Val def_val = it == defaults.end() ? Val() : it->second;
                 start_vals[cid] = def_val;
@@ -743,8 +731,6 @@ struct ScheduleState {
                 auto &pulse = pulses[cursor];
                 if (pulse.t > tlim)
                     break;
-                if (!filter(pulse.chn))
-                    continue;
                 auto flush_it = to_flush.find(pulse.chn);
                 if (flush_it != to_flush.end())
                     to_flush.erase(flush_it);
@@ -799,10 +785,6 @@ struct ScheduleState {
             while (next_t <= deadline && !cur_copy.empty() && cursor < npulse) {
                 uint64_t next_seq_t = get_next_time(t_cons.prefer_dt);
                 auto &new_pulse = pulses[cursor];
-                if (!filter(new_pulse.chn)) {
-                    cursor++;
-                    continue;
-                }
                 if (new_pulse.t <= next_seq_t) {
                     uint64_t dt = (new_pulse.t > prev_t ? new_pulse.t - prev_t : 0);
                     uint64_t t = get_next_time(dt);
@@ -859,10 +841,6 @@ struct ScheduleState {
             // 3. Forward time if there's no on-going pulses.
             if (cur_pulses.empty() && cursor < npulse) {
                 auto &pulse = pulses[cursor];
-                if (!filter(pulse.chn)) {
-                    cursor++;
-                    continue;
-                }
                 // These should be no-op but just to be safe
                 uint64_t dt = (pulse.t > prev_t ? pulse.t - prev_t : 0);
                 uint64_t t = get_next_time(dt);
