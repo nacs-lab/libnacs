@@ -71,6 +71,8 @@ cmake_c_add_flags(CMAKE_EXE_LINKER_FLAGS ${LINKER_FLAGS})
 cmake_c_add_flags(CMAKE_STATIC_LINKER_FLAGS ${LINKER_FLAGS})
 cmake_c_add_flags(CMAKE_SHARED_LINKER_FLAGS ${LINKER_FLAGS})
 cmake_c_add_flags(CMAKE_MODULE_LINKER_FLAGS ${LINKER_FLAGS})
+cmake_c_add_flags(CMAKE_C_FLAGS_DEBUG -ggdb3 -O0)
+cmake_c_add_flags(CMAKE_CXX_FLAGS_DEBUG -ggdb3 -O0)
 
 cmake_c_include_fix_path()
 

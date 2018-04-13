@@ -489,11 +489,12 @@ public:
     }
 };
 
+// Easier to deal with than static members.
+static constexpr Channel clock_chn{Channel::Type::CLOCK, 0};
+static constexpr int default_clock_div = 100;
+
 template<typename Vec>
 class ScheduleState {
-    static constexpr Channel clock_chn{Channel::Type::CLOCK, 0};
-    static constexpr int default_clock_div = 100;
-
     std::vector<Sequence::Pulse> &pulses;
     const size_t n_pulses;
     std::map<Channel,Val> &defaults;
