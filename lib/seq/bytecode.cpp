@@ -504,12 +504,24 @@ class Scheduler {
     Time::Constraints t_cons;
     Time::Keeper keeper;
 
-    // This map stores the "old value" on this channel
-    // before the current sequence pulse starts.
+    /**
+     * States for value calculations.
+     */
+    // This is an array of the same length as `pulses`,
+    // storing the corresponding start values for each pulse.
     // This is the value given to the sequence pulse callback as the old_val
-    // (second parameter). This should be updated whenever a sequence pulse retires,
-    // no matter whether the value has been (or will ever be) outputed or not.
-    std::map<Channel,Val> start_vals;
+    // (second parameter).
+    std::vector<Val> start_vals;
+    // Final value for each pulses.
+    // This value can be computed from `start_vals` and `pulses` but is cached because
+    // it is already computed when initializing `start_vals`. See `init_pulse_vals`
+    std::vector<Val> end_vals;
+    // The value we should initialize the channel to at the beginning of the sequence.
+    std::map<Channel,Val> init_vals;
+
+    /**
+     * States for timing.
+     */
     // The earliest time we can schedule the next pulse.
     // When we are not hitting the time constraint, this is the time we finish
     // the previous pulse.
@@ -518,6 +530,10 @@ class Scheduler {
     uint64_t prev_t = 0;
     // Time offset of start, only the output should care about this.
     uint64_t start_t = 0;
+
+    /**
+     * States for clock output.
+     */
     // The time when we should output the next clock pulse.
     // Set to `UINT64_MAX` when there isn't any left.
     // The time is shifted by `-clock_div` such that it is the time to output the pulse
@@ -531,24 +547,21 @@ class Scheduler {
     int next_clock_div = 256;
     int clock_neg_offset = 0;
 
+    /**
+     * States for keeping track of pulses.
+     */
     // The pulses that have been started but not finished yet.
-    // This map serves two purposes:
-    // 1. This is where we look for pulses to output when we've scheduled more urgent
-    //    stuff (i.e. clocks, new pulses, etc).
-    // 2. When a pulse is finished and therefore removed from this, it's final
-    //    value will be used to update `start_vals` for the next pulse.
+    // This is where we look for pulses to output when we've scheduled more urgent
+    // stuff (i.e. clocks, new pulses, etc).
     // The only code that mutate this is `record_pulse` and `finalize_chn`.
     // * `record_pulse` adds a new pulse to `cur_pulses` if it's not finished already.
-    //     This automatically satisfies purpose 1 but not purpose 2 for pulses that
-    //     are already finished when we first output it (e.g. single value change)
-    //     we update `start_vals` for those pulses in this function.
-    // * `finalize_chn` removes pulses from `cur_pulses` after their end time
-    //     and updates `start_vals`.
+    // * `finalize_chn` removes pulses from `cur_pulses` after their end time.
     std::map<Channel,size_t> cur_pulses;
     size_t cursor = 0;
 
-    // Helper functions
-
+    /**
+     * Helper functions
+     */
     void forward_clock()
     {
         if (next_clock_div != 256) {
@@ -608,42 +621,34 @@ class Scheduler {
         auto &pulse = pulses[id];
         uint64_t rel_t = t < pulse.t ? 0 : t - pulse.t;
         if (rel_t > pulse.len)
-            rel_t = pulse.len;
-        auto start = start_vals[pulse.chn];
-        return pulse(rel_t, start);
+            return end_vals[id];
+        return pulse(rel_t, start_vals[id]);
     }
 
-    // The caller must make sure everything before the new pulse is finalized on the channel.
-    // This usually means `finalized_chn` should be called right before calling this
-    // unless the `cur_pulses` is otherwise known to be empty.
-    void record_pulse(size_t id, uint64_t t, Val val)
+    // If `cleanup` is `false`,
+    // the caller must make sure everything before the new pulse is finalized on the channel.
+    void record_pulse(size_t id, uint64_t t, bool cleanup=false)
     {
         // id: pulse index
         // t: current time
-        // val: the pulse value at t
         auto &pulse = pulses[id];
-        assert(cur_pulses.find(pulse.chn) == cur_pulses.end());
+        assert(cleanup || cur_pulses.find(pulse.chn) == cur_pulses.end());
         if (pulse.t + pulse.len <= t) {
-            // As if we called finalize_chn right after this.
-            start_vals[pulse.chn] = val;
+            if (cleanup)
+                finalize_chn(pulse.chn);
             return;
         }
         cur_pulses[pulse.chn] = id;
     }
 
-    // * Update `start_val` to the pulse's final value
     // * Remove the pulse from `cur_pulses`
     // * Does **NOT** add any output. If the user want to output the final value
-    //   of the pulse, it can read the value from the updated `start_val`.
-    auto finalize_chn (Channel cid) -> decltype(cur_pulses.find(cid))
+    //   of the pulse, the value can be read from the `end_vals`.
+    auto finalize_chn(Channel cid) -> decltype(cur_pulses.find(cid))
     {
         auto it = cur_pulses.find(cid);
         if (it == cur_pulses.end())
             return it;
-        size_t pid = it->second;
-        auto &pulse = pulses[pid];
-        auto fin_val = calc_pulse(pid, pulse.t + pulse.len);
-        start_vals[cid] = fin_val;
         it = cur_pulses.erase(it);
         return it;
     };
@@ -653,12 +658,11 @@ class Scheduler {
      */
     // Channels that are finished and needs their final value outputted.
     // This will be overwritten if a new pulse is taking over on the channel.
-    std::set<Channel> to_flush;
+    std::map<Channel,Val> to_flush;
     // New pulse on the channel. We don't output immediately in case
     // the next pulse starts before that.
     // The one we actually need to output is recorded for the channel in
-    // `latest_pending` and all pulses before that will only be used to update
-    // `start_vals`.
+    // `latest_pending`.
     std::vector<size_t> pending;
     std::map<Channel,size_t> latest_pending;
     // Check if any channel has overdue changes.
@@ -675,7 +679,7 @@ class Scheduler {
                 ++it;
                 continue;
             }
-            to_flush.insert(it->first);
+            to_flush.insert({it->first, end_vals[pid]});
             it = finalize_chn(pulse.chn);
         }
 
@@ -688,27 +692,25 @@ class Scheduler {
             auto flush_it = to_flush.find(pulse.chn);
             if (flush_it != to_flush.end())
                 to_flush.erase(flush_it);
-            finalize_chn(pulse.chn);
+            // We'll finalize the channel automatically in `record_pulse`
+            // when handling the pending pulses below.
             pending.push_back(cursor);
             latest_pending[pulse.chn] = cursor;
         }
         if (pending.empty() && to_flush.empty())
             return false;
         // Flush the ones to finish.
-        for (auto cid: to_flush)
-            output_pulse(cid, start_vals[cid], next_t);
+        for (auto it: to_flush)
+            output_pulse(it.first, it.second, next_t);
         to_flush.clear();
         // Output queued pulses in the queued order, after the finishing ones.
         for (auto pid: pending) {
             auto &pulse = pulses[pid];
-            if (latest_pending[pulse.chn] != pid) {
-                // This is replaced by a new one.
-                auto fin_val = calc_pulse(pid, pulse.t + pulse.len);
-                start_vals[pulse.chn] = fin_val;
+            // This is replaced by a new one.
+            if (latest_pending[pulse.chn] != pid)
                 continue;
-            }
             auto val = calc_pulse(pid, next_t);
-            record_pulse(pid, next_t, val);
+            record_pulse(pid, next_t, true);
             output_pulse(pulses[pid].chn, val, next_t);
         }
         pending.clear();
@@ -736,7 +738,7 @@ class Scheduler {
                 }
                 has_finalize = true;
                 it = finalize_chn(cid);
-                output_pulse(cid, start_vals[cid], next_t);
+                output_pulse(cid, end_vals[pid], next_t);
             }
         } while (has_finalize);
         auto cur_copy = cur_pulses;
@@ -750,9 +752,8 @@ class Scheduler {
                 auto it = cur_copy.find(new_pulse.chn);
                 if (it != cur_copy.end())
                     cur_copy.erase(it);
-                finalize_chn(new_pulse.chn);
                 auto val = calc_pulse(cursor, t);
-                record_pulse(cursor, t, val);
+                record_pulse(cursor, t, true);
                 output_pulse(new_pulse.chn, val, t);
                 cursor++;
                 continue;
@@ -764,7 +765,7 @@ class Scheduler {
             auto &pulse = pulses[pid];
             if (pulse.t + pulse.len <= next_seq_t) {
                 finalize_chn(cid);
-                output_pulse(cid, start_vals[cid], next_seq_t);
+                output_pulse(cid, end_vals[pid], next_seq_t);
             } else {
                 output_pulse(cid, calc_pulse(pid, next_seq_t), next_seq_t);
             }
@@ -777,10 +778,37 @@ class Scheduler {
             auto &pulse = pulses[pid];
             if (pulse.t + pulse.len <= next_seq_t) {
                 finalize_chn(cid);
-                output_pulse(cid, start_vals[cid], next_seq_t);
+                output_pulse(cid, end_vals[pid], next_seq_t);
             } else {
                 output_pulse(cid, calc_pulse(pid, next_seq_t), next_seq_t);
             }
+        }
+    }
+
+    void init_pulse_vals()
+    {
+        // Populate `start_vals` and `end_vals` for all pulses,
+        // and `init_vals` for all channels.
+        std::map<Channel,Val> cur_vals;
+        for (size_t i = 0; i < n_pulses; i++) {
+            auto &pulse = pulses[i];
+            auto cid = pulse.chn;
+            auto it = cur_vals.find(cid);
+            Val val;
+            if (it == cur_vals.end()) {
+                // This is a new channel, find it's default value and populate `init_vals`
+                auto dit = defaults.find(cid);
+                val = dit == defaults.end() ? Val() : dit->second;
+                it = cur_vals.insert({cid, val}).first;
+                init_vals[cid] = val;
+            }
+            else {
+                val = it->second;
+            }
+            start_vals[i] = val;
+            val = pulse(pulse.len, val);
+            end_vals[i] = val;
+            it->second = val;
         }
     }
 
@@ -792,7 +820,9 @@ public:
           clocks(seq.clocks),
           writer(writer),
           t_cons(t_cons),
-          keeper(t_cons)
+          keeper(t_cons),
+          start_vals(n_pulses),
+          end_vals(n_pulses)
     {
     }
 
@@ -850,28 +880,20 @@ public:
         }
         pulses.resize(to);
         writer.init_ttl(cur_ttl, all_ttl_mask);
+        init_pulse_vals();
     }
 
     // Complexity O(nchannel * npulse)
     // Assume pulses are sorted according to start time.
     void schedule()
     {
-        // TODO: the value computing logic can probably be wrapped in a class with
-        // cached state instead of interleave that logic with scheduling.
-
         // Initialize channels
-        for (auto &pulse: pulses) {
-            auto cid = pulse.chn;
-            if (start_vals.find(cid) == start_vals.end()) {
-                auto it = defaults.find(cid);
-                Val def_val = it == defaults.end() ? Val() : it->second;
-                start_vals[cid] = def_val;
-                prev_t = get_next_time(t_cons.prefer_dt * 2);
-                int min_dt = writer.addPulse(cid, def_val, prev_t, UINT64_MAX);
-                next_t = prev_t;
-                if (min_dt > 0) {
-                    next_t += std::max(t_cons.prefer_dt, uint64_t(min_dt));
-                }
+        for (auto it: init_vals) {
+            prev_t = get_next_time(t_cons.prefer_dt * 2);
+            int min_dt = writer.addPulse(it.first, it.second, prev_t, UINT64_MAX);
+            next_t = prev_t;
+            if (min_dt > 0) {
+                next_t += std::max(t_cons.prefer_dt, uint64_t(min_dt));
             }
         }
 
@@ -928,7 +950,7 @@ public:
                 uint64_t dt = (pulse.t > prev_t ? pulse.t - prev_t : 0);
                 uint64_t t = get_next_time(dt);
                 auto val = calc_pulse(cursor, t);
-                record_pulse(cursor, t, val);
+                record_pulse(cursor, t);
                 output_pulse(pulse.chn, val, t);
                 cursor++;
                 continue;
