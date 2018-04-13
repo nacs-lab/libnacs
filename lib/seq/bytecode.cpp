@@ -496,7 +496,7 @@ static constexpr int default_clock_div = 100;
 template<typename Vec>
 class Scheduler {
     std::vector<Sequence::Pulse> &pulses;
-    const size_t n_pulses;
+    size_t n_pulses;
     std::map<Channel,Val> &defaults;
     std::vector<Sequence::Clock> &clocks;
     Writer<Vec> &writer;
@@ -879,6 +879,7 @@ public:
             }
         }
         pulses.resize(to);
+        n_pulses = to;
         writer.init_ttl(cur_ttl, all_ttl_mask);
         init_pulse_vals();
     }
