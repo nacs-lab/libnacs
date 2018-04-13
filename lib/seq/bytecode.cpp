@@ -240,12 +240,12 @@ class Writer {
         }
     }
 
-    uint64_t addTTLReal(uint64_t t, uint32_t ttl)
+    int addTTLReal(uint64_t t, uint32_t ttl)
     {
         ttl = ttl & all_ttl_mask;
         cur_ttl = cur_ttl & all_ttl_mask;
         if (ttl == cur_ttl && ttl_set)
-            return 1;
+            return 0;
         addWait(t - cur_t);
         cur_t += 3;
         auto changes = ttl ^ cur_ttl;
@@ -316,7 +316,7 @@ class Writer {
         return 3;
     }
 
-    uint64_t addTTLSingle(uint64_t t, uint8_t chn, bool val)
+    int addTTLSingle(uint64_t t, uint8_t chn, bool val)
     {
         if (val) {
             return addTTLReal(t, cur_ttl | (1 << chn));
@@ -326,12 +326,12 @@ class Writer {
         }
     }
 
-    uint64_t addTTL(uint64_t t, uint32_t ttl)
+    int addTTL(uint64_t t, uint32_t ttl)
     {
         return addTTLReal(t, ttl & ~start_ttl_mask);
     }
 
-    uint64_t addClock(uint64_t t, uint8_t period)
+    int addClock(uint64_t t, uint8_t period)
     {
         addWait(t - cur_t);
         cur_t += 5;
@@ -340,13 +340,13 @@ class Writer {
     }
 
     static constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
-    uint64_t addDDSFreq(uint64_t t, uint8_t chn, double freqf)
+    int addDDSFreq(uint64_t t, uint8_t chn, double freqf)
     {
         uint32_t freq = uint32_t(0.5 + freqf * freq_factor);
         if (freq > 0x7fffffff)
             freq = 0x7fffffff;
         if (dds[chn].freq_set && freq == dds[chn].freq)
-            return 1;
+            return 0;
         addWait(t - cur_t);
         cur_t += 50;
         uint32_t dfreq = freq - dds[chn].freq;
@@ -371,13 +371,13 @@ class Writer {
         return 50;
     }
 
-    uint64_t addDDSAmp(uint64_t t, uint8_t chn, double ampf)
+    int addDDSAmp(uint64_t t, uint8_t chn, double ampf)
     {
         uint16_t amp = uint16_t(ampf * 4095.0 + 0.5);
         if (amp > 4095)
             amp = 4095;
         if (dds[chn].amp_set && amp == dds[chn].amp)
-            return 1;
+            return 0;
         addWait(t - cur_t);
         cur_t += 50;
         uint16_t damp = uint16_t(amp - dds[chn].amp);
@@ -394,7 +394,7 @@ class Writer {
         return 50;
     }
 
-    uint64_t addDAC(uint64_t t, uint8_t chn, double Vf)
+    int addDAC(uint64_t t, uint8_t chn, double Vf)
     {
         uint16_t V;
         if (Vf >= 10) {
@@ -410,7 +410,7 @@ class Writer {
             V = uint16_t(((offset - Vf) * scale) + 0.5);
         }
         if (dac[chn].set && V == dac[chn].V)
-            return 1;
+            return 0;
         addWait(t - cur_t);
         cur_t += 45;
         uint16_t dV = uint16_t(V - dac[chn].V);
@@ -457,9 +457,9 @@ public:
         addWait(t - cur_t);
     }
 
-    uint64_t addPulse(Channel chn, Val val, uint64_t t, uint64_t tlim)
+    int addPulse(Channel chn, Val val, uint64_t t, uint64_t tlim)
     {
-        uint64_t mint = 50;
+        int mint = 50;
         if (chn.typ == Channel::TTL) {
             mint = 3;
         }
@@ -470,7 +470,7 @@ public:
             mint = 45;
         }
         if (t + mint > tlim)
-            return 0;
+            return -1;
         switch (chn.typ) {
         case Channel::TTL:
             return addTTL(t, val.val.i32);
@@ -494,7 +494,7 @@ static constexpr Channel clock_chn{Channel::Type::CLOCK, 0};
 static constexpr int default_clock_div = 100;
 
 template<typename Vec>
-class ScheduleState {
+class Scheduler {
     std::vector<Sequence::Pulse> &pulses;
     const size_t n_pulses;
     std::map<Channel,Val> &defaults;
@@ -609,12 +609,11 @@ class ScheduleState {
             uint64_t tlim = next_clock_time;
             if (tlim != UINT64_MAX)
                 tlim += start_t;
-            uint64_t min_dt = writer.addPulse(cid, val, t + start_t, tlim);
-            if (min_dt == 0) {
+            int min_dt = writer.addPulse(cid, val, t + start_t, tlim);
+            if (min_dt < 0) {
                 keeper.addPulse(next_clock_time - prev_t);
-                uint64_t min_dt =
-                    writer.addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
-                                    next_clock_time + start_t, UINT64_MAX);
+                int min_dt = writer.addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
+                                             next_clock_time + start_t, UINT64_MAX);
                 prev_t = next_clock_time;
                 next_t = prev_t + min_dt;
                 forward_clock();
@@ -623,10 +622,12 @@ class ScheduleState {
                 continue;
             }
             cur_vals[cid] = val;
-            uint64_t dt = t - prev_t;
-            keeper.addPulse(dt);
-            prev_t = t;
-            next_t = t + keeper.minDt(min_dt);
+            if (min_dt != 0) {
+                uint64_t dt = t - prev_t;
+                keeper.addPulse(dt);
+                prev_t = t;
+                next_t = t + keeper.minDt(min_dt);
+            }
             return;
         }
     }
@@ -815,7 +816,7 @@ class ScheduleState {
     }
 
 public:
-    ScheduleState(Sequence &seq, Writer<Vec> &writer, Time::Constraints t_cons)
+    Scheduler(Sequence &seq, Writer<Vec> &writer, Time::Constraints t_cons)
         : pulses(seq.pulses),
           n_pulses(pulses.size()),
           defaults(seq.defaults),
@@ -898,8 +899,11 @@ public:
                 start_vals[cid] = def_val;
                 cur_vals[cid] = def_val;
                 prev_t = get_next_time(t_cons.prefer_dt * 2);
-                uint64_t min_dt = writer.addPulse(cid, def_val, prev_t, UINT64_MAX);
-                next_t = prev_t + std::max(t_cons.prefer_dt, min_dt);
+                int min_dt = writer.addPulse(cid, def_val, prev_t, UINT64_MAX);
+                next_t = prev_t;
+                if (min_dt > 0) {
+                    next_t += std::max(t_cons.prefer_dt, uint64_t(min_dt));
+                }
             }
         }
 
@@ -966,8 +970,8 @@ public:
             }
         }
         while (next_clock_time != UINT64_MAX) {
-            uint64_t mindt = writer.addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
-                                             next_clock_time + start_t, UINT64_MAX);
+            int mindt = writer.addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
+                                        next_clock_time + start_t, UINT64_MAX);
             next_t = next_clock_time + mindt;
             forward_clock();
         }
@@ -982,7 +986,7 @@ Vec SeqToByteCode(Sequence &seq, uint32_t *ttl_mask)
 {
     // The bytecode is guaranteed to not enable any channel that is not present in the mask.
     Writer<Vec> writer;
-    ScheduleState<Vec> state(seq, writer, {50, 40, 4096});
+    Scheduler<Vec> state(seq, writer, {50, 40, 4096});
     state.init();
     state.schedule();
     if (ttl_mask)
