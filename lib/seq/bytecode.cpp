@@ -510,14 +510,6 @@ class Scheduler {
     // (second parameter). This should be updated whenever a sequence pulse retires,
     // no matter whether the value has been (or will ever be) outputed or not.
     std::map<Channel,Val> start_vals;
-    // This map stores the true current value of the channel.
-    // This is **NOT** what the sequence specifies the value to be but what
-    // the, partially, scheduled sequence will actually output on the channel
-    // at the current time.
-    // In another word, this should always be the value we've set the channel to
-    // with `addPulse` in this function and should be updated
-    // whenever `addPulse` succeeded on a non-clock channel.
-    std::map<Channel,Val> cur_vals;
     // The earliest time we can schedule the next pulse.
     // When we are not hitting the time constraint, this is the time we finish
     // the previous pulse.
@@ -555,24 +547,6 @@ class Scheduler {
     std::map<Channel,size_t> cur_pulses;
     size_t cursor = 0;
 
-    // Returns if the new value is significantly different
-    // from the original value for the channel.
-    static bool filter(Channel cid, Val val1, Val val2)
-    {
-        switch (cid.typ) {
-        case Channel::TTL:
-            return val1.val.i32 != val2.val.i32;
-        case Channel::DDS_FREQ:
-            return fabs(val1.val.f64 - val2.val.f64) > 0.2;
-        case Channel::DDS_AMP:
-            return fabs(val1.val.f64 - val2.val.f64) > 0.00005;
-        case Channel::DAC:
-            return fabs(val1.val.f64 - val2.val.f64) > 0.0002;
-        default:
-            return val1.val.f64 != val2.val.f64;
-        }
-    }
-
     // Helper functions
 
     void forward_clock()
@@ -603,8 +577,6 @@ class Scheduler {
     // before calling this function.
     void output_pulse(Channel cid, Val val, uint64_t t)
     {
-        if (!filter(cid, cur_vals[cid], val))
-            return;
         while (true) {
             uint64_t tlim = next_clock_time;
             if (tlim != UINT64_MAX)
@@ -621,8 +593,7 @@ class Scheduler {
                     t = next_t;
                 continue;
             }
-            cur_vals[cid] = val;
-            if (min_dt != 0) {
+            else if (min_dt != 0) {
                 uint64_t dt = t - prev_t;
                 keeper.addPulse(dt);
                 prev_t = t;
@@ -664,8 +635,6 @@ class Scheduler {
     // * Remove the pulse from `cur_pulses`
     // * Does **NOT** add any output. If the user want to output the final value
     //   of the pulse, it can read the value from the updated `start_val`.
-    //   Similarly, it doesn't update `cur_vals` either since that holds the
-    //   value of the latest pulse.
     auto finalize_chn (Channel cid) -> decltype(cur_pulses.find(cid))
     {
         auto it = cur_pulses.find(cid);
@@ -897,7 +866,6 @@ public:
                 auto it = defaults.find(cid);
                 Val def_val = it == defaults.end() ? Val() : it->second;
                 start_vals[cid] = def_val;
-                cur_vals[cid] = def_val;
                 prev_t = get_next_time(t_cons.prefer_dt * 2);
                 int min_dt = writer.addPulse(cid, def_val, prev_t, UINT64_MAX);
                 next_t = prev_t;
