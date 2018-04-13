@@ -41,6 +41,11 @@
 namespace NaCs {
 
 /**
+ * Debug helper
+ */
+NACS_EXPORT(utils) void breakpoint(const void *p=nullptr);
+
+/**
  * Tell the compiler that \param val is likely to be \param exp.
  */
 template<typename T1, typename T2>
