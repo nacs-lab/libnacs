@@ -641,12 +641,16 @@ class ScheduleState {
         return pulse(rel_t, start);
     }
 
+    // The caller must make sure everything before the new pulse is finalized on the channel.
+    // This usually means `finalized_chn` should be called right before calling this
+    // unless the `cur_pulses` is otherwise known to be empty.
     void record_pulse(size_t id, uint64_t t, Val val)
     {
         // id: pulse index
         // t: current time
         // val: the pulse value at t
         auto &pulse = pulses[id];
+        assert(cur_pulses.find(pulse.chn) == cur_pulses.end());
         if (pulse.t + pulse.len <= t) {
             // As if we called finalize_chn right after this.
             start_vals[pulse.chn] = val;
@@ -772,6 +776,11 @@ class ScheduleState {
             if (new_pulse.t <= next_seq_t) {
                 uint64_t dt = (new_pulse.t > prev_t ? new_pulse.t - prev_t : 0);
                 uint64_t t = get_next_time(dt);
+                // Found a new pulse to output.
+                auto it = cur_copy.find(new_pulse.chn);
+                if (it != cur_copy.end())
+                    cur_copy.erase(it);
+                finalize_chn(new_pulse.chn);
                 auto val = calc_pulse(cursor, t);
                 record_pulse(cursor, t, val);
                 output_pulse(new_pulse.chn, val, t);
