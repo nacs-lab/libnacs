@@ -180,7 +180,8 @@ NACS_INTERNAL bool WavemeterParser::try_parseval_withlim(std::istream &stm, doub
             // If there's no data in range, make sure we return 0 instead of error.
             found_val = true;
         }
-        if (height == 0 || pos == 0)
+        // height in dB could legally be 0
+        if (pos == 0)
             eol = true;
         if (!eol)
             stm.get();
