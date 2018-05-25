@@ -154,7 +154,7 @@ NACS_INTERNAL bool WavemeterParser::try_parseval_withlim(std::istream &stm, doub
 {
     bool found_val = false;
     double max_pos = 0;
-    double max_height = 0;
+    double max_height = std::numeric_limits<double>::lowest();
 
     bool eol;
     auto parsenum = [&] (double &val) { return try_parsenumber(stm, val, eol); };
