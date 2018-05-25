@@ -45,6 +45,8 @@ class WavemeterParser {
         bool eol;
         return try_parsenumber(stm, val, eol);
     }
+    bool try_parseval_nolim(std::istream &stm, double tsf);
+    bool try_parseval_withlim(std::istream &stm, double tsf, double lo, double hi);
     bool try_parseline(std::istream &stm);
     bool do_parse(std::istream &stm, bool inc);
     bool match_cache(std::istream &stm) const;
@@ -53,12 +55,15 @@ public:
     std::pair<const double*,const double*> parse(std::istream &stm, size_t *sz,
                                                  bool allow_cache);
     WavemeterParser();
+    WavemeterParser(double lo, double hi);
 
 private:
     std::vector<double> m_time;
     std::vector<double> m_data;
     pos_type m_last_pos = 0;
     std::string m_last_line;
+    double m_lo = 0;
+    double m_hi = 0;
 };
 
 }
@@ -66,6 +71,7 @@ private:
 extern "C" {
 
 void *nacs_seq_new_wavemeter_parser(void);
+void *nacs_seq_new_wavemeter_parser_withlim(double lo, double hi);
 size_t nacs_seq_wavemeter_parse(void *parser, const char *name, const double **ts,
                                 const double **data, int cache);
 void nacs_seq_free_wavemeter_parser(void *parser);

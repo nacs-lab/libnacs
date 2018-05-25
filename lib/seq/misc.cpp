@@ -139,17 +139,74 @@ NACS_INTERNAL bool WavemeterParser::try_parsenumber(std::istream &stm, double &v
     return true;
 }
 
+NACS_INTERNAL bool WavemeterParser::try_parseval_nolim(std::istream &stm, double tsf)
+{
+    double val;
+    if (!try_parsenumber(stm, val))
+        return false;
+    m_time.push_back(tsf);
+    m_data.push_back(val);
+    return true;
+}
+
+NACS_INTERNAL bool WavemeterParser::try_parseval_withlim(std::istream &stm, double tsf,
+                                                         double lo, double hi)
+{
+    bool found_val = false;
+    double max_pos = 0;
+    double max_height = 0;
+
+    bool eol;
+    auto parsenum = [&] (double &val) { return try_parsenumber(stm, val, eol); };
+    auto getpair = [&] {
+        double pos;
+        double height;
+        if (!parsenum(pos))
+            return false;
+        if (eol)
+            return false;
+        stm.get();
+        if (!parsenum(height))
+            return false;
+        if (lo <= pos && pos <= hi) {
+            if (!found_val || max_height < height) {
+                max_height = height;
+                max_pos = pos;
+                found_val = true;
+            }
+        }
+        else if (!found_val) {
+            // The line is valid.
+            // If there's no data in range, make sure we return 0 instead of error.
+            found_val = true;
+        }
+        if (height == 0 || pos == 0)
+            eol = true;
+        if (!eol)
+            stm.get();
+        return true;
+    };
+    while (getpair()) {
+        if (eol) {
+            break;
+        }
+    }
+    if (!found_val)
+        return false;
+    m_time.push_back(tsf);
+    m_data.push_back(max_pos);
+    return true;
+}
+
 bool WavemeterParser::try_parseline(std::istream &stm)
 {
     double tsf;
     if (!try_parsetime(stm, tsf))
         return false;
-    double val;
-    if (!try_parsenumber(stm, val))
-        return false;
-    m_time.push_back(tsf / 86400 + 719529);
-    m_data.push_back(val);
-    return true;
+    tsf = tsf / 86400 + 719529;
+    if (m_lo < m_hi)
+        return try_parseval_withlim(stm, tsf, m_lo, m_hi);
+    return try_parseval_nolim(stm, tsf);
 }
 
 bool WavemeterParser::match_cache(std::istream &stm) const
@@ -189,6 +246,11 @@ NACS_EXPORT() WavemeterParser::WavemeterParser()
 {
 }
 
+NACS_EXPORT() WavemeterParser::WavemeterParser(double lo, double hi)
+: m_lo(lo), m_hi(hi)
+{
+}
+
 }
 
 extern "C" {
@@ -198,6 +260,11 @@ using namespace NaCs;
 NACS_EXPORT() void *nacs_seq_new_wavemeter_parser(void)
 {
     return new WavemeterParser;
+}
+
+NACS_EXPORT() void *nacs_seq_new_wavemeter_parser_withlim(double lo, double hi)
+{
+    return new WavemeterParser(lo, hi);
 }
 
 NACS_EXPORT() size_t nacs_seq_wavemeter_parse(void *_parser, const char *name,
