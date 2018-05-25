@@ -160,11 +160,12 @@
 #  define NACS_EXPORT(lib...)                                           \
     NACS_SWITCH(lib, NACS_EXPORT_SWITCH(lib), __declspec(dllexport))
 #  define NACS_PROTECTED(lib...) NACS_EXPORT(lib)
+#  define NACS_INTERNAL __attribute__((visibility("hidden")))
 #else
 #  define NACS_EXPORT(...) __attribute__((visibility("default")))
 #  define NACS_PROTECTED(...) __attribute__((visibility("protected")))
+#  define NACS_INTERNAL __attribute__((visibility("internal")))
 #endif
-#define NACS_INTERNAL __attribute__((visibility("internal")))
 
 /**
  * \def NACS_BEGIN_DECLS
