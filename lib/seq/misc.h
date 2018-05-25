@@ -38,6 +38,13 @@ namespace NaCs {
 class WavemeterParser {
     using pos_type = std::istream::pos_type;
 
+    bool try_parsetime(std::istream &stm, double &tsf);
+    bool try_parsenumber(std::istream &stm, double &val, bool &eol);
+    inline bool try_parsenumber(std::istream &stm, double &val)
+    {
+        bool eol;
+        return try_parsenumber(stm, val, eol);
+    }
     bool try_parseline(std::istream &stm);
     bool do_parse(std::istream &stm, bool inc);
     bool match_cache(std::istream &stm) const;

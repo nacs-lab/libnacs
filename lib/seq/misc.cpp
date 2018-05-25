@@ -87,7 +87,7 @@ bool WavemeterParser::do_parse(std::istream &stm, bool inc)
     }
 }
 
-bool WavemeterParser::try_parseline(std::istream &stm)
+NACS_INTERNAL bool WavemeterParser::try_parsetime(std::istream &stm, double &tsf)
 {
     std::tm timedate;
     memset(&timedate, 0, sizeof(timedate));
@@ -104,7 +104,7 @@ bool WavemeterParser::try_parseline(std::istream &stm)
     // Convert time failed
     if (ts == -1)
         return false;
-    auto tsf = (double)ts;
+    tsf = (double)ts;
     if (stm.peek() == '.') {
         double f = 0;
         stm >> f;
@@ -118,15 +118,34 @@ bool WavemeterParser::try_parseline(std::istream &stm)
     if (stm.peek() != ',')
         return false;
     stm.get();
-    double val = 0;
+    return true;
+}
+
+NACS_INTERNAL bool WavemeterParser::try_parsenumber(std::istream &stm, double &val, bool &eol)
+{
     stm >> val;
     // Read value failed
     if (stm.fail())
         return false;
     stm >> ignore_space;
     auto nc = stm.peek();
-    // Not the end of current record
-    if (nc != ',' && nc != '\n' && nc != eofc)
+    if (nc == '\n' || nc == eofc) {
+        eol = true;
+    }
+    else if (nc != ',') {
+        // Not the end of current record
+        return false;
+    }
+    return true;
+}
+
+bool WavemeterParser::try_parseline(std::istream &stm)
+{
+    double tsf;
+    if (!try_parsetime(stm, tsf))
+        return false;
+    double val;
+    if (!try_parsenumber(stm, val))
         return false;
     m_time.push_back(tsf / 86400 + 719529);
     m_data.push_back(val);
