@@ -22,6 +22,9 @@ set(nacs_utils_SRCS
   timer.cpp
   utils.cpp)
 set(nacs_utils_LINKS m pthread)
+if(ENABLE_LLVM)
+  set(nacs_utils_HDRS ${nacs_utils_HDRS} llvm/utils.h)
+endif()
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 if(ENABLE_LLVM)
