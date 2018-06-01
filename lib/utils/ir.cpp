@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "ir.h"
+#include "ir_p.h"
 #include "interp_p.h"
 #include "mem.h"
 
@@ -26,8 +26,6 @@
 namespace NaCs {
 namespace IR {
 
-typedef double (*fptr_t)(double);
-
 #ifndef NACS_HAS_EXP10
 // This is apparently missing on windows.
 double exp10(double x)
@@ -36,7 +34,7 @@ double exp10(double x)
 }
 #endif
 
-static fptr_t getBuiltinPtr(Builtins id)
+fptr_t getBuiltinPtr(Builtins id)
 {
     switch (id) {
         // f(f)
@@ -274,16 +272,7 @@ static const char *builtinName(Builtins id)
     }
 }
 
-enum class BuiltinType : uint8_t {
-    Invalid,
-    F64_F64,
-    F64_F64F64,
-    F64_F64F64F64,
-    F64_F64I32,
-    F64_I32F64,
-};
-
-static BuiltinType getBuiltinType(Builtins id)
+BuiltinType getBuiltinType(Builtins id)
 {
     switch (id) {
         // f(f)
