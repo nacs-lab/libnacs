@@ -560,7 +560,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
             auto vlo = builder.CreateLoad(builder.CreateInBoundsGEP(T_f64, ldatap, idx));
             auto idxhi = builder.CreateAdd(idx, ConstantInt::get(T_i32, 1));
             auto vhi = builder.CreateLoad(builder.CreateInBoundsGEP(T_f64, ldatap, idxhi));
-            auto frac_lo = builder.CreateSub(ConstantFP::get(T_f64, 1), frac);
+            auto frac_lo = builder.CreateFSub(ConstantFP::get(T_f64, 1), frac);
             auto v = builder.CreateFAdd(builder.CreateFMul(vlo, frac_lo),
                                         builder.CreateFMul(vhi, frac));
             builder.CreateStore(emit_convert(builder, func.vals[res], v), slots[res]);
