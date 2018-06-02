@@ -347,21 +347,20 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
             pc++;
             const auto args = pc;
             pc += 2 * nargs;
-            auto def_bb = BasicBlock::Create(m_ctx, "undef", f);
-            auto switch_inst = builder.CreateSwitch(prev_bb_num, def_bb);
-            BasicBlock *post_bb = BasicBlock::Create(m_ctx, "post", f);
-            for (int i = 0;i < nargs;i++) {
-                BasicBlock *case_bb = BasicBlock::Create(m_ctx, "case", f);
-                builder.SetInsertPoint(case_bb);
-                switch_inst->addCase(ConstantInt::get(T_i32, args[2 * i]), case_bb);
-                auto val = emit_val(args[2 * i + 1]);
-                builder.CreateStore(emit_convert(builder, func.vals[res], val), slots[res]);
-                builder.CreateBr(post_bb);
+            if (nargs == 0) {
+                lres = UndefValue::get(llvm_ty(func.vals[res]));
+                break;
             }
-            builder.SetInsertPoint(def_bb);
-            builder.CreateBr(post_bb);
-            builder.SetInsertPoint(post_bb);
-            continue;
+            lres = emit_val(args[1]);
+            lres = emit_convert(builder, func.vals[res], lres);
+            for (int i = 1;i < nargs;i++) {
+                auto cmp = builder.CreateICmpEQ(prev_bb_num,
+                                                ConstantInt::get(T_i32, args[2 * i]));
+                auto newval = emit_val(args[2 * i + 1]);
+                lres = builder.CreateSelect(cmp, emit_convert(builder, func.vals[res],
+                                                              newval), lres);
+            }
+            break;
         }
         case IR::Opcode::Call: {
             auto id = IR::Builtins(*pc);
