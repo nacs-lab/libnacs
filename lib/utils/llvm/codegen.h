@@ -48,7 +48,6 @@ private:
     LLVMContext &m_ctx;
     IntegerType *T_bool;
     IntegerType *T_i32;
-    IntegerType *T_isz;
     Type *T_f64;
     FunctionType *F_f64_f64;
     FunctionType *F_f64_f64f64;

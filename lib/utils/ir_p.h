@@ -35,8 +35,12 @@ enum class BuiltinType : uint8_t {
     F64_I32F64,
 };
 
-fptr_t getBuiltinPtr(Builtins id);
+const char *getBuiltinSymbol(Builtins id);
 BuiltinType getBuiltinType(Builtins id);
+
+#ifndef NACS_HAS_EXP10
+NACS_EXPORT() double nacs_exp10(double x);
+#endif
 
 }
 }

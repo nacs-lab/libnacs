@@ -38,7 +38,6 @@ Context::Context(Module *mod)
       m_ctx(mod->getContext()),
       T_bool(Type::getInt1Ty(m_ctx)),
       T_i32(Type::getInt32Ty(m_ctx)),
-      T_isz(sizeof(void*) == 8 ? Type::getInt64Ty(m_ctx) : T_i32),
       T_f64(Type::getDoubleTy(m_ctx)),
       F_f64_f64(FunctionType::get(T_f64, {T_f64}, false)),
       F_f64_f64f64(FunctionType::get(T_f64, {T_f64, T_f64}, false)),
@@ -454,22 +453,22 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
                 emit_intrinsic_f64(Intrinsic::round);
                 break;
             default: {
-                auto fptr = IR::getBuiltinPtr(id);
+                auto sym = IR::getBuiltinSymbol(id);
+                if (!sym) {
+                    lres = UndefValue::get(llvm_ty(func.vals[res]));
+                    break;
+                }
                 switch (IR::getBuiltinType(id)) {
                 case IR::BuiltinType::F64_F64: {
                     assert(nargs == 1);
-                    auto callee = ConstantExpr::getIntToPtr(
-                        ConstantInt::get(T_isz, (uintptr_t)fptr),
-                        F_f64_f64->getPointerTo());
+                    auto callee = m_mod->getOrInsertFunction(sym, F_f64_f64);
                     auto arg = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
                     lres = builder.CreateCall(callee, arg);
                     break;
                 }
                 case IR::BuiltinType::F64_F64F64: {
                     assert(nargs == 2);
-                    auto callee = ConstantExpr::getIntToPtr(
-                        ConstantInt::get(T_isz, (uintptr_t)fptr),
-                        F_f64_f64f64->getPointerTo());
+                    auto callee = m_mod->getOrInsertFunction(sym, F_f64_f64f64);
                     auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
                     auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
                     lres = builder.CreateCall(callee, {arg1, arg2});
@@ -477,9 +476,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
                 }
                 case IR::BuiltinType::F64_F64F64F64: {
                     assert(nargs == 3);
-                    auto callee = ConstantExpr::getIntToPtr(
-                        ConstantInt::get(T_isz, (uintptr_t)fptr),
-                        F_f64_f64f64f64->getPointerTo());
+                    auto callee = m_mod->getOrInsertFunction(sym, F_f64_f64f64f64);
                     auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
                     auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
                     auto arg3 = emit_convert(builder, IR::Type::Float64, emit_val(args[2]));
@@ -488,9 +485,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
                 }
                 case IR::BuiltinType::F64_F64I32: {
                     assert(nargs == 2);
-                    auto callee = ConstantExpr::getIntToPtr(
-                        ConstantInt::get(T_isz, (uintptr_t)fptr),
-                        F_f64_f64i32->getPointerTo());
+                    auto callee = m_mod->getOrInsertFunction(sym, F_f64_f64i32);
                     auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
                     auto arg2 = emit_convert(builder, IR::Type::Int32, emit_val(args[1]));
                     lres = builder.CreateCall(callee, {arg1, arg2});
@@ -498,9 +493,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
                 }
                 case IR::BuiltinType::F64_I32F64: {
                     assert(nargs == 2);
-                    auto callee = ConstantExpr::getIntToPtr(
-                        ConstantInt::get(T_isz, (uintptr_t)fptr),
-                        F_f64_i32f64->getPointerTo());
+                    auto callee = m_mod->getOrInsertFunction(sym, F_f64_i32f64);
                     auto arg1 = emit_convert(builder, IR::Type::Int32, emit_val(args[0]));
                     auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
                     lres = builder.CreateCall(callee, {arg1, arg2});
