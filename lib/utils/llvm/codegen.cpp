@@ -26,6 +26,7 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
 
 namespace NaCs {
 namespace LLVM {
@@ -596,6 +597,48 @@ NACS_EXPORT() Function *optimize(Function *f)
     pm.add(createMergePhiPass());
     pm.add(createDeadInstEliminationPass());
     pm.add(createInstructionCombiningPass());
+
+    pm.add(createInstructionCombiningPass()); // Cleanup for scalarrepl.
+    pm.add(createSROAPass());                 // Break up aggregate allocas
+    pm.add(createInstructionCombiningPass()); // Cleanup for scalarrepl.
+    pm.add(createJumpThreadingPass());        // Thread jumps.
+    pm.add(createInstructionCombiningPass()); // Combine silly seq's
+    pm.add(createReassociatePass());          // Reassociate expressions
+    pm.add(createEarlyCSEPass()); //// ****
+
+    pm.add(createLoopIdiomPass()); //// ****
+    pm.add(createLoopRotatePass());           // Rotate loops.
+    pm.add(createLICMPass());                 // Hoist loop invariants
+    pm.add(createLoopUnswitchPass());         // Unswitch loops.
+    pm.add(createInstructionCombiningPass());
+    pm.add(createIndVarSimplifyPass());       // Canonicalize indvars
+    pm.add(createLoopDeletionPass());         // Delete dead loops
+    pm.add(createSimpleLoopUnrollPass());     // Unroll small loops
+
+    pm.add(createSROAPass());                 // Break up aggregate allocas
+    pm.add(createInstructionCombiningPass()); // Clean up after the unroller
+    pm.add(createGVNPass());                  // Remove redundancies
+    pm.add(createSCCPPass());                 // Constant prop with SCCP
+
+    pm.add(createSinkingPass()); ////////////// ****
+    pm.add(createInstructionSimplifierPass());///////// ****
+    pm.add(createInstructionCombiningPass());
+    pm.add(createJumpThreadingPass());         // Thread jumps
+    pm.add(createDeadStoreEliminationPass());  // Delete dead stores
+
+    // see if all of the constant folding has exposed more loops
+    // to simplification and deletion
+    // this helps significantly with cleaning up iteration
+    pm.add(createCFGSimplificationPass());     // Merge & remove BBs
+    pm.add(createLoopIdiomPass());
+    pm.add(createLoopDeletionPass());          // Delete dead loops
+    pm.add(createJumpThreadingPass());         // Thread jumps
+
+    // pm.add(createSLPVectorizerPass());     // Vectorize straight-line code
+
+    pm.add(createAggressiveDCEPass());         // Delete dead instructions
+    // pm.add(createInstructionCombiningPass());   // Clean up after SLP loop vectorizer
+    pm.add(createInstructionCombiningPass());  // Clean up after loop vectorizer
     pm.doInitialization();
     pm.run(*f);
     return f;
@@ -612,6 +655,49 @@ NACS_EXPORT() Module *optimize(Module *mod)
     pm.add(createMergePhiPass());
     pm.add(createDeadInstEliminationPass());
     pm.add(createInstructionCombiningPass());
+
+    pm.add(createInstructionCombiningPass()); // Cleanup for scalarrepl.
+    pm.add(createSROAPass());                 // Break up aggregate allocas
+    pm.add(createInstructionCombiningPass()); // Cleanup for scalarrepl.
+    pm.add(createJumpThreadingPass());        // Thread jumps.
+    pm.add(createInstructionCombiningPass()); // Combine silly seq's
+    pm.add(createReassociatePass());          // Reassociate expressions
+    pm.add(createEarlyCSEPass()); //// ****
+
+    pm.add(createLoopIdiomPass()); //// ****
+    pm.add(createLoopRotatePass());           // Rotate loops.
+    pm.add(createLICMPass());                 // Hoist loop invariants
+    pm.add(createLoopUnswitchPass());         // Unswitch loops.
+    pm.add(createInstructionCombiningPass());
+    pm.add(createIndVarSimplifyPass());       // Canonicalize indvars
+    pm.add(createLoopDeletionPass());         // Delete dead loops
+    pm.add(createSimpleLoopUnrollPass());     // Unroll small loops
+
+    pm.add(createSROAPass());                 // Break up aggregate allocas
+    pm.add(createInstructionCombiningPass()); // Clean up after the unroller
+    pm.add(createGVNPass());                  // Remove redundancies
+    pm.add(createSCCPPass());                 // Constant prop with SCCP
+
+    pm.add(createSinkingPass()); ////////////// ****
+    pm.add(createInstructionSimplifierPass());///////// ****
+    pm.add(createInstructionCombiningPass());
+    pm.add(createJumpThreadingPass());         // Thread jumps
+    pm.add(createDeadStoreEliminationPass());  // Delete dead stores
+
+    // see if all of the constant folding has exposed more loops
+    // to simplification and deletion
+    // this helps significantly with cleaning up iteration
+    pm.add(createCFGSimplificationPass());     // Merge & remove BBs
+    pm.add(createLoopIdiomPass());
+    pm.add(createLoopDeletionPass());          // Delete dead loops
+    pm.add(createJumpThreadingPass());         // Thread jumps
+
+    // pm.add(createSLPVectorizerPass());     // Vectorize straight-line code
+
+    pm.add(createAggressiveDCEPass());         // Delete dead instructions
+    // pm.add(createInstructionCombiningPass());   // Clean up after SLP loop vectorizer
+    pm.add(createInstructionCombiningPass());  // Clean up after loop vectorizer
+
     pm.run(*mod);
     return mod;
 }
