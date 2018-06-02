@@ -22,8 +22,11 @@ set(nacs_utils_SRCS
   timer.cpp
   utils.cpp)
 set(nacs_utils_LINKS m pthread)
+set(nacs_utils_llvm_HDRS
+  llvm/utils.h
+  llvm/codegen.h)
 if(ENABLE_LLVM)
-  set(nacs_utils_HDRS ${nacs_utils_HDRS} llvm/utils.h)
+  set(nacs_utils_SRCS ${nacs_utils_SRCS} llvm/codegen.cpp)
 endif()
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
@@ -57,6 +60,10 @@ if(ENABLE_INSTALL_NONLIB)
     DESTINATION ${INSTALL_PKGCONFIG_DIR})
   install(FILES ${nacs_utils_HDRS}
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-utils")
+  if(ENABLE_LLVM)
+    install(FILES ${nacs_utils_llvm_HDRS}
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-utils/llvm")
+  endif()
 endif()
 
 install(TARGETS nacs-utils
