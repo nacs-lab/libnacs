@@ -55,6 +55,8 @@ private:
     bool processPhiCmp(PHINode *phi, Instruction *first_non_phi) const;
     bool mergePhiCmp(BasicBlock &bb) const;
 
+    bool mergePhiPhi(BasicBlock &bb) const;
+
     Type *T_bool;
     Constant *V_true;
     Constant *V_false;
@@ -225,10 +227,30 @@ bool MergePhi::mergePhiCmp(BasicBlock &bb) const
     return changed;
 }
 
+bool MergePhi::mergePhiPhi(BasicBlock &bb) const
+{
+    bool changed = false;
+    for (auto &I: bb) {
+        auto phi = dyn_cast<PHINode>(&I);
+        if (!phi)
+            break;
+        auto nincoming = phi->getNumIncomingValues();
+        for (unsigned i = 0; i < nincoming; i++) {
+            auto iv = dyn_cast<PHINode>(phi->getIncomingValue(i));
+            if (!iv || iv->getParent() != phi->getParent())
+                continue;
+            phi->setIncomingValue(i, iv->getIncomingValueForBlock(phi->getIncomingBlock(i)));
+        }
+    }
+    return changed;
+}
+
 bool MergePhi::runOnBasicBlock(BasicBlock &bb)
 {
     bool changed = mergePhiCmp(bb);
-    return mergePhiSelect(bb) | changed;
+    changed = mergePhiSelect(bb) | changed;
+    changed = mergePhiPhi(bb) | changed;
+    return changed;
 }
 
 char MergePhi::ID = 0;
