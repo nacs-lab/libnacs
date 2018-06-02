@@ -211,6 +211,9 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
 
     BasicBlock *b0 = BasicBlock::Create(m_ctx, "top", f);
     IRBuilder<> builder(b0);
+    FastMathFlags fmf;
+    fmf.setAllowContract(true);
+    builder.setFastMathFlags(fmf);
 
     // 2.1. Create global data
     Constant *float_table = nullptr;
