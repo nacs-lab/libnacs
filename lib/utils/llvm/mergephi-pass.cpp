@@ -238,9 +238,8 @@ bool MergePhi::processPhiCmp(PHINode *phi, Instruction *first_non_phi) const
             continue;
         const bool isfp = cmp->isFPPredicate();
         auto create_cmp = [&] (CmpInst::Predicate pred, Constant *op1, Constant *op2) {
-            if (isfp) {
+            if (isfp)
                 return m_folder.CreateFCmp(pred, op1, op2);
-            }
             return m_folder.CreateICmp(pred, op1, op2);
         };
         auto opno = use.getOperandNo();
