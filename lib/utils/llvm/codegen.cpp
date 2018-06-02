@@ -589,9 +589,12 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
 NACS_EXPORT() Function *optimize(Function *f)
 {
     legacy::FunctionPassManager pm(f->getParent());
+    pm.add(createDeadInstEliminationPass());
     pm.add(createPromoteMemoryToRegisterPass());
-    pm.add(createInstructionCombiningPass());
+    pm.add(createEarlyCSEPass());
     pm.add(createMergePhiPass());
+    pm.add(createDeadInstEliminationPass());
+    pm.add(createInstructionCombiningPass());
     pm.doInitialization();
     pm.run(*f);
     return f;
@@ -601,9 +604,12 @@ NACS_EXPORT() Function *optimize(Function *f)
 NACS_EXPORT() Module *optimize(Module *mod)
 {
     legacy::PassManager pm;
+    pm.add(createDeadInstEliminationPass());
     pm.add(createPromoteMemoryToRegisterPass());
-    pm.add(createInstructionCombiningPass());
+    pm.add(createEarlyCSEPass());
     pm.add(createMergePhiPass());
+    pm.add(createDeadInstEliminationPass());
+    pm.add(createInstructionCombiningPass());
     pm.run(*mod);
     return mod;
 }
