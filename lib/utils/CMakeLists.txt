@@ -26,7 +26,9 @@ set(nacs_utils_llvm_HDRS
   llvm/utils.h
   llvm/codegen.h)
 if(ENABLE_LLVM)
-  set(nacs_utils_SRCS ${nacs_utils_SRCS} llvm/codegen.cpp)
+  set(nacs_utils_SRCS ${nacs_utils_SRCS}
+    llvm/codegen.cpp
+    llvm/mergephi-pass.cpp)
 endif()
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")

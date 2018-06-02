@@ -18,6 +18,7 @@
 
 #include "codegen.h"
 #include "utils.h"
+#include "codegen_p.h"
 
 #include "../ir_p.h"
 
@@ -589,6 +590,8 @@ NACS_EXPORT() Function *optimize(Function *f)
 {
     legacy::FunctionPassManager pm(f->getParent());
     pm.add(createPromoteMemoryToRegisterPass());
+    pm.add(createInstructionCombiningPass());
+    pm.add(createMergePhiPass());
     pm.doInitialization();
     pm.run(*f);
     return f;
@@ -599,6 +602,8 @@ NACS_EXPORT() Module *optimize(Module *mod)
 {
     legacy::PassManager pm;
     pm.add(createPromoteMemoryToRegisterPass());
+    pm.add(createInstructionCombiningPass());
+    pm.add(createMergePhiPass());
     pm.run(*mod);
     return mod;
 }
