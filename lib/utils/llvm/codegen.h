@@ -17,9 +17,12 @@
  *************************************************************************/
 
 #include "../utils.h"
+#include "../ir.h"
 
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
+#include <llvm/IR/Value.h>
+#include <llvm/IR/IRBuilder.h>
 
 namespace NaCs {
 namespace LLVM {
@@ -31,6 +34,15 @@ class NACS_EXPORT(utils) Context {
 public:
     Context(Module *mod);
 private:
+    Type *llvm_ty(IR::Type ty) const;
+    Value *emit_const(IR::TagVal c) const;
+    Value *emit_convert(IRBuilder<> &builder, IR::Type ty, Value *val) const;
+    Value *emit_add(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const;
+    Value *emit_sub(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const;
+    Value *emit_mul(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const;
+    Value *emit_fdiv(IRBuilder<> &builder, Value *val1, Value *val2) const;
+    Value *emit_cmp(IRBuilder<> &builder, IR::CmpType cmptyp, Value *val1, Value *val2) const;
+
     Module *m_mod;
     LLVMContext &m_ctx;
     IntegerType *T_bool;
