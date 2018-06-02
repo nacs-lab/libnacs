@@ -58,16 +58,12 @@ private:
     bool mergePhiPhi(BasicBlock &bb) const;
 
     Type *T_bool;
-    Constant *V_true;
-    Constant *V_false;
     ConstantFolder m_folder;
 };
 
 bool MergePhi::doInitialization(Function &F)
 {
     T_bool = Type::getInt1Ty(F.getContext());
-    V_true = ConstantInt::get(T_bool, 1);
-    V_false = ConstantInt::get(T_bool, 0);
     return false;
 }
 
