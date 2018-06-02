@@ -57,6 +57,9 @@ private:
     FunctionType *F_f64_i32f64;
 };
 
+Function *optimize(Function *f);
+Module *optimize(Module *mod);
+
 }
 }
 }

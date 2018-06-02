@@ -23,6 +23,8 @@
 
 #include <llvm/ADT/SetVector.h>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/Scalar.h>
 
 namespace NaCs {
 namespace LLVM {
@@ -580,6 +582,25 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
     // LLVM::dump(m_mod);
     // LLVM::dump(f);
     return f;
+}
+
+// tmp
+NACS_EXPORT() Function *optimize(Function *f)
+{
+    legacy::FunctionPassManager pm(f->getParent());
+    pm.add(createPromoteMemoryToRegisterPass());
+    pm.doInitialization();
+    pm.run(*f);
+    return f;
+}
+
+// tmp
+NACS_EXPORT() Module *optimize(Module *mod)
+{
+    legacy::PassManager pm;
+    pm.add(createPromoteMemoryToRegisterPass());
+    pm.run(*mod);
+    return mod;
 }
 
 }
