@@ -30,9 +30,10 @@ namespace Codegen {
 
 using namespace llvm;
 
-class NACS_EXPORT(utils) Context {
+class Context {
 public:
-    Context(Module *mod);
+    NACS_EXPORT(utils) Context(Module *mod);
+    NACS_EXPORT(utils) Function *emit_function(const IR::Function &func, uint64_t func_id) const;
 private:
     Type *llvm_ty(IR::Type ty) const;
     Value *emit_const(IR::TagVal c) const;
