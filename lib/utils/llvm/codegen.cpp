@@ -201,7 +201,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
 
     // 2. Create function
     auto f = Function::Create(ftype, GlobalVariable::ExternalLinkage,
-                              "nacs." + std::to_string(func_id), m_mod);
+                              "f." + std::to_string(func_id), m_mod);
     f->addFnAttr(Attribute::NoRecurse);
     f->addFnAttr(Attribute::NoUnwind);
     f->addFnAttr(Attribute::ReadOnly);
@@ -218,7 +218,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
         auto table = ConstantDataArray::get(m_ctx, func.float_table);
         float_table = new GlobalVariable(*m_mod, table->getType(), true,
                                          GlobalVariable::InternalLinkage, table,
-                                         "nacs.table." + std::to_string(func_id));
+                                         "t." + std::to_string(func_id));
         cast<GlobalVariable>(float_table)->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
         float_table = ConstantExpr::getBitCast(float_table, T_f64->getPointerTo());
     }
@@ -519,8 +519,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
             auto ndata = *pc;
             pc++;
 
-            auto interp_f = m_mod->getOrInsertFunction("nacs.lininterp",
-                                                       F_f64_f64f64f64i32pf64);
+            auto interp_f = m_mod->getOrInsertFunction("interp", F_f64_f64f64f64i32pf64);
             lres = builder.CreateCall(interp_f, {input, x0, dx,
                         ConstantInt::get(T_i32, ndata), datap});
             continue;
