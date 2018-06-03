@@ -193,7 +193,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
     // 1. Create function signature
     auto rt = llvm_ty(func.ret);
     SmallVector<Type*, 8> fsig(nargs);
-    for (unsigned i = 0; i < nargs; i++)
+    for (int i = 0; i < nargs; i++)
         fsig[i] = llvm_ty(func.vals[i]);
     auto ftype = FunctionType::get(rt, fsig, false);
 
@@ -226,7 +226,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
     for (unsigned i = 0; i < nslots; i++)
         slots[i] = builder.CreateAlloca(llvm_ty(func.vals[i]));
     auto argit = f->arg_begin();
-    for (unsigned i = 0; i < nargs; i++)
+    for (int i = 0; i < nargs; i++)
         builder.CreateStore(&*argit++, slots[i]);
     auto prev_bb_var = builder.CreateAlloca(T_i32);
 
