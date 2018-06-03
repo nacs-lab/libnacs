@@ -22,6 +22,7 @@
 
 #include <nacs-utils/llvm/codegen.h>
 #include <nacs-utils/llvm/compile.h>
+#include <nacs-utils/llvm/execute.h>
 #include <nacs-utils/llvm/utils.h>
 #include <nacs-utils/number.h>
 #include <nacs-utils/timer.h>
@@ -29,6 +30,12 @@
 #include <iostream>
 #include <sstream>
 #include <math.h>
+
+#include <llvm/Support/CodeGen.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/ObjectMemoryBuffer.h>
 
 using namespace NaCs;
 
@@ -52,20 +59,60 @@ static void test_str_eq(T &&v, std::string val)
     abort();
 }
 
-int
-main()
-{
-    auto exectx = IR::ExeContext::get();
-    llvm::LLVMContext llvm_ctx;
-    llvm::Module mod("mod", llvm_ctx);
-    LLVM::Codegen::Context ctx(&mod);
-    uint64_t func_id = 0;
-    auto print_llvm = [&] (const IR::Function &func, bool opt=true) {
-        auto f = ctx.emit_function(func, func_id++);
-        if (opt)
-            f = LLVM::Compile::optimize(f);
+struct LLVMTest {
+    LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func)
+        : mod(new llvm::Module("", ll_ctx)),
+          engine(engine)
+    {
+        LLVM::Codegen::Context ctx(mod.get());
+        f = ctx.emit_function(func, 0);
+    }
+    LLVMTest(LLVMTest&&) = default;
+    LLVMTest &operator=(LLVMTest&&) = default;
+    LLVMTest &opt()
+    {
+        f = LLVM::Compile::optimize(f);
+        return *this;
+    }
+    LLVMTest &print()
+    {
         LLVM::dump(f);
+        return *this;
+    }
+    void *get_ptr()
+    {
+        llvm::SmallVector<char,0> vec;
+        llvm::raw_svector_ostream stm(vec);
+        auto tgt = llvm::EngineBuilder().selectTarget();
+        tgt->setOptLevel(llvm::CodeGenOpt::Aggressive);
+        auto res = LLVM::Compile::emit_objfile(stm, tgt, mod.get());
+        assert(res);
+        llvm::ObjectMemoryBuffer buff(std::move(vec));
+        auto obj = llvm::object::ObjectFile::createObjectFile(buff.getMemBufferRef());
+        assert(obj);
+        auto res2 = engine.load(*(*obj));
+        assert(res2);
+        return engine.get_symbol("0");
+    }
+    std::unique_ptr<llvm::Module> mod;
+    LLVM::Exe::Engine &engine;
+    llvm::Function *f = nullptr;
+};
+
+int main()
+{
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
+
+    LLVM::Exe::Engine engine;
+    llvm::LLVMContext llvm_ctx;
+
+    auto gettest = [&] (const IR::Function &func) {
+        return LLVMTest(llvm_ctx, engine, func);
     };
+
+    auto exectx = IR::ExeContext::get();
 
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
@@ -78,7 +125,9 @@ main()
         auto f = exectx->getFunc<double(double)>(builder.get());
         assert(f(1.2) == 1.2);
         assert(f(4.2) == 4.2);
-        print_llvm(builder.get());
+        auto f2 = (double(*)(double))gettest(builder.get()).opt().get_ptr();
+        assert(f2(1.2) == 1.2);
+        assert(f2(4.2) == 4.2);
     }
 
     {
@@ -90,7 +139,8 @@ main()
                     "}");
         auto f = exectx->getFunc<bool()>(builder.get());
         assert(f() == false);
-        print_llvm(builder.get());
+        auto f2 = (bool(*)())gettest(builder.get()).opt().get_ptr();
+        assert(f2() == false);
     }
 
     {
@@ -102,7 +152,8 @@ main()
                     "}");
         auto f = exectx->getFunc<double()>(builder.get());
         assert(f() == 1.1);
-        print_llvm(builder.get());
+        auto f2 = (double(*)())gettest(builder.get()).opt().get_ptr();
+        assert(f2() == 1.1);
     }
 
     {
@@ -114,7 +165,8 @@ main()
                     "}");
         auto f = exectx->getFunc<int()>(builder.get());
         assert(f() == 42);
-        print_llvm(builder.get());
+        auto f2 = (int(*)())gettest(builder.get()).opt().get_ptr();
+        assert(f2() == 42);
     }
 
     {
@@ -138,7 +190,9 @@ main()
         auto f = exectx->getFunc<double(bool, double)>(builder.get());
         assert(f(true, 1.3) == 1.3);
         assert(f(false, 1.3) == 3.4);
-        print_llvm(builder.get());
+        auto f2 = (double(*)(bool, double))gettest(builder.get()).opt().get_ptr();
+        assert(f2(true, 1.3) == 1.3);
+        assert(f2(false, 1.3) == 3.4);
     }
 
     {
@@ -157,7 +211,8 @@ main()
                     "}");
         auto f = exectx->getFunc<double(double, double)>(builder.get());
         assert(f(2.3, 1.3) == -1.71);
-        print_llvm(builder.get());
+        auto f2 = (double(*)(double, double))gettest(builder.get()).opt().get_ptr();
+        assert(f2(2.3, 1.3) == -1.71);
     }
 
     {
@@ -172,7 +227,8 @@ main()
                     "}");
         auto f = exectx->getFunc<double(int, int)>(builder.get());
         assert(f(3, 2) == 1.5);
-        print_llvm(builder.get());
+        auto f2 = (double(*)(int, int))gettest(builder.get()).opt().get_ptr();
+        assert(f2(3, 2) == 1.5);
     }
 
     {
@@ -198,7 +254,9 @@ main()
         auto f = exectx->getFunc<double(int, double)>(builder.get());
         assert(f(20, 1.3) == 1.3);
         assert(f(-10, 1.3) == -10);
-        print_llvm(builder.get());
+        auto f2 = (double(*)(int, double))gettest(builder.get()).opt().get_ptr();
+        assert(f2(20, 1.3) == 1.3);
+        assert(f2(-10, 1.3) == -10);
     }
 
     {
@@ -235,8 +293,14 @@ main()
                     "}");
         auto f = exectx->getFunc<int(int, int)>(builder.get());
         assert(f(1, 3) == 6);
+        Timer timer;
         assert(f(2, 1000) == 500499);
-        print_llvm(builder.get());
+        timer.print();
+        auto f2 = (int(*)(int, int))gettest(builder.get()).opt().get_ptr();
+        assert(f2(1, 3) == 6);
+        timer.restart();
+        assert(f2(2, 1000) == 500499);
+        timer.print();
     }
 
     {
@@ -256,11 +320,15 @@ main()
         auto f1 = exectx->getFunc<double(int)>(builder.get());
         assert(f1(1) == sin(1) + sin(2));
         assert(f1(2) == sin(4) + sin(2));
-        print_llvm(builder.get());
 
         Timer timer;
         for (int i = 0;i < 1000000;i++)
             f1(1);
+        timer.print();
+        auto f2 = (double(*)(int))gettest(builder.get()).opt().get_ptr();
+        timer.restart();
+        for (int i = 0;i < 1000000;i++)
+            f2(1);
         timer.print();
     }
 
@@ -280,7 +348,7 @@ main()
                     "  Float64 %2 = fdiv Float64 %3, Float64 1\n"
                     "  ret Float64 %2\n"
                     "}");
-        print_llvm(newfunc);
+        gettest(newfunc).opt().get_ptr();
     }
 
     {
@@ -298,7 +366,10 @@ main()
         assert(fabs(f(2.3) - linearInterpolate(2.3, 2, 3, 4, points)) < 1e-10);
         assert(fabs(f(3.5) - linearInterpolate(3.5, 2, 3, 4, points)) < 1e-10);
         assert(fabs(f(4.4) - linearInterpolate(4.4, 2, 3, 4, points)) < 1e-10);
-        print_llvm(builder.get());
+        auto f2 = (double(*)(double))gettest(builder.get()).opt().get_ptr();
+        assert(fabs(f2(2.3) - linearInterpolate(2.3, 2, 3, 4, points)) < 1e-10);
+        assert(fabs(f2(3.5) - linearInterpolate(3.5, 2, 3, 4, points)) < 1e-10);
+        assert(fabs(f2(4.4) - linearInterpolate(4.4, 2, 3, 4, points)) < 1e-10);
     }
 
     {
@@ -313,7 +384,12 @@ main()
                     "  Float64 %2 = add Float64 %3, Float64 %1\n"
                     "  ret Float64 %2\n"
                     "}");
-        print_llvm(newfunc);
+        auto f = (double(*)(double, double))gettest(newfunc)
+            // .print()
+            .opt()
+            // .print()
+            .get_ptr();
+        assert(f(1.5, 2) == 4.25);
     }
 
     return 0;
