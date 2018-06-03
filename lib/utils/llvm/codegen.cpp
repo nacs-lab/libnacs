@@ -221,6 +221,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
         float_table = new GlobalVariable(*m_mod, table->getType(), true,
                                          GlobalVariable::InternalLinkage, table,
                                          "nacs.table." + std::to_string(func_id));
+        cast<GlobalVariable>(float_table)->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
         float_table = ConstantExpr::getBitCast(float_table, T_f64->getPointerTo());
     }
 
