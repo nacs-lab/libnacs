@@ -39,7 +39,9 @@ Context::Context(Module *mod)
       F_f64_f64f64(FunctionType::get(T_f64, {T_f64, T_f64}, false)),
       F_f64_f64f64f64(FunctionType::get(T_f64, {T_f64, T_f64, T_f64}, false)),
       F_f64_f64i32(FunctionType::get(T_f64, {T_f64, T_i32}, false)),
-      F_f64_i32f64(FunctionType::get(T_f64, {T_i32, T_f64}, false))
+      F_f64_i32f64(FunctionType::get(T_f64, {T_i32, T_f64}, false)),
+      F_f64_f64f64f64i32pf64(FunctionType::get(T_f64, {T_f64, T_f64, T_f64,
+                      T_i32, T_f64->getPointerTo()}, false))
 {
 }
 
@@ -511,54 +513,16 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
             pc++;
             auto dx = emit_convert(builder, IR::Type::Float64, emit_val(*pc));
             pc++;
-            auto datap = &func.float_table[*pc];
-            auto ldatap = ConstantExpr::getGetElementPtr(T_f64, float_table,
-                                                         ConstantInt::get(T_i32, *pc), true);
+            auto datap = ConstantExpr::getGetElementPtr(T_f64, float_table,
+                                                        ConstantInt::get(T_i32, *pc), true);
             pc++;
             auto ndata = *pc;
             pc++;
 
-            // input -= x0;
-            input = builder.CreateFSub(input, x0);
-            auto underflow_bb = BasicBlock::Create(m_ctx, "underflow", f);
-            auto ufpass_bb = BasicBlock::Create(m_ctx, "ufpass", f);
-            auto overflow_bb = BasicBlock::Create(m_ctx, "overflow", f);
-            auto ofpass_bb = BasicBlock::Create(m_ctx, "ofpass", f);
-            auto end_bb = BasicBlock::Create(m_ctx, "interp_end", f);
-            // if (!input > 0)
-            //     return datap[0];
-            builder.CreateCondBr(builder.CreateFCmpOGT(input, ConstantFP::get(T_f64, 0)),
-                                 ufpass_bb, underflow_bb);
-            builder.SetInsertPoint(underflow_bb);
-            builder.CreateStore(emit_convert(builder, func.vals[res],
-                                             ConstantFP::get(T_f64, datap[0])), slots[res]);
-            builder.CreateBr(end_bb);
-            builder.SetInsertPoint(ufpass_bb);
-            // if (!input < dx)
-            //     return datap[ndata - 1];
-            builder.CreateCondBr(builder.CreateFCmpOLT(input, dx),
-                                 ofpass_bb, overflow_bb);
-            builder.SetInsertPoint(overflow_bb);
-            builder.CreateStore(emit_convert(builder, func.vals[res],
-                                             ConstantFP::get(T_f64, datap[ndata - 1])),
-                                slots[res]);
-            builder.CreateBr(end_bb);
-            builder.SetInsertPoint(ofpass_bb);
-            // input = input * ((npoints - 1) / dx)
-            input = builder.CreateFMul(input,
-                                       builder.CreateFDiv(ConstantFP::get(T_f64,
-                                                                          ndata - 1), dx));
-            auto frac = builder.CreateFRem(input, ConstantFP::get(T_f64, 0));
-            auto idx = builder.CreateFPToSI(builder.CreateFSub(input, frac), T_i32);
-            auto vlo = builder.CreateLoad(builder.CreateInBoundsGEP(T_f64, ldatap, idx));
-            auto idxhi = builder.CreateAdd(idx, ConstantInt::get(T_i32, 1));
-            auto vhi = builder.CreateLoad(builder.CreateInBoundsGEP(T_f64, ldatap, idxhi));
-            auto frac_lo = builder.CreateFSub(ConstantFP::get(T_f64, 1), frac);
-            auto v = builder.CreateFAdd(builder.CreateFMul(vlo, frac_lo),
-                                        builder.CreateFMul(vhi, frac));
-            builder.CreateStore(emit_convert(builder, func.vals[res], v), slots[res]);
-            builder.CreateBr(end_bb);
-            builder.SetInsertPoint(end_bb);
+            auto interp_f = m_mod->getOrInsertFunction("nacs.lininterp",
+                                                       F_f64_f64f64f64i32pf64);
+            lres = builder.CreateCall(interp_f, {input, x0, dx,
+                        ConstantInt::get(T_i32, ndata), datap});
             continue;
         }
         default:

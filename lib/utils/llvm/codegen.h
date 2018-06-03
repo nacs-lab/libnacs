@@ -54,6 +54,7 @@ private:
     FunctionType *F_f64_f64f64f64;
     FunctionType *F_f64_f64i32;
     FunctionType *F_f64_i32f64;
+    FunctionType *F_f64_f64f64f64i32pf64;
 };
 
 }
