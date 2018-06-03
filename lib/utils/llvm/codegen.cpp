@@ -217,8 +217,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
     if (func.float_table.size()) {
         auto table = ConstantDataArray::get(m_ctx, func.float_table);
         float_table = new GlobalVariable(*m_mod, table->getType(), true,
-                                         GlobalVariable::InternalLinkage, table,
-                                         "t." + std::to_string(func_id));
+                                         GlobalVariable::InternalLinkage, table);
         cast<GlobalVariable>(float_table)->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
         float_table = ConstantExpr::getBitCast(float_table, T_f64->getPointerTo());
     }
