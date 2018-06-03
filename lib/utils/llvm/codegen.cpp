@@ -522,7 +522,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
             auto interp_f = m_mod->getOrInsertFunction("interp", F_f64_f64f64f64i32pf64);
             lres = builder.CreateCall(interp_f, {input, x0, dx,
                         ConstantInt::get(T_i32, ndata), datap});
-            continue;
+            break;
         }
         default:
             lres = UndefValue::get(llvm_ty(func.vals[res]));
