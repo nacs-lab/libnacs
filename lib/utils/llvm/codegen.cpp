@@ -45,6 +45,27 @@ Context::Context(Module *mod)
 {
 }
 
+Constant *Context::ensurePureFunc(StringRef name, FunctionType *ft, bool canread) const
+{
+    if (auto f = m_mod->getNamedValue(name)) {
+        auto pft = ft->getPointerTo();
+        if (f->getType() != pft)
+            return ConstantExpr::getBitCast(f, pft);
+        return f;
+    }
+    Function *f = Function::Create(ft, GlobalVariable::ExternalLinkage, name, m_mod);
+    f->addFnAttr(Attribute::NoRecurse);
+    f->addFnAttr(Attribute::NoUnwind);
+    if (canread) {
+        f->addFnAttr(Attribute::ReadOnly);
+        f->addFnAttr(Attribute::ArgMemOnly);
+    }
+    else {
+        f->addFnAttr(Attribute::ReadNone);
+    }
+    return f;
+}
+
 Type *Context::llvm_ty(IR::Type ty) const
 {
     switch (ty) {
@@ -460,14 +481,14 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
                 switch (IR::getBuiltinType(id)) {
                 case IR::BuiltinType::F64_F64: {
                     assert(nargs == 1);
-                    auto callee = m_mod->getOrInsertFunction(sym, F_f64_f64);
+                    auto callee = ensurePureFunc(sym, F_f64_f64);
                     auto arg = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
                     lres = builder.CreateCall(callee, arg);
                     break;
                 }
                 case IR::BuiltinType::F64_F64F64: {
                     assert(nargs == 2);
-                    auto callee = m_mod->getOrInsertFunction(sym, F_f64_f64f64);
+                    auto callee = ensurePureFunc(sym, F_f64_f64f64);
                     auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
                     auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
                     lres = builder.CreateCall(callee, {arg1, arg2});
@@ -475,7 +496,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
                 }
                 case IR::BuiltinType::F64_F64F64F64: {
                     assert(nargs == 3);
-                    auto callee = m_mod->getOrInsertFunction(sym, F_f64_f64f64f64);
+                    auto callee = ensurePureFunc(sym, F_f64_f64f64f64);
                     auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
                     auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
                     auto arg3 = emit_convert(builder, IR::Type::Float64, emit_val(args[2]));
@@ -484,7 +505,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
                 }
                 case IR::BuiltinType::F64_F64I32: {
                     assert(nargs == 2);
-                    auto callee = m_mod->getOrInsertFunction(sym, F_f64_f64i32);
+                    auto callee = ensurePureFunc(sym, F_f64_f64i32);
                     auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
                     auto arg2 = emit_convert(builder, IR::Type::Int32, emit_val(args[1]));
                     lres = builder.CreateCall(callee, {arg1, arg2});
@@ -492,7 +513,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
                 }
                 case IR::BuiltinType::F64_I32F64: {
                     assert(nargs == 2);
-                    auto callee = m_mod->getOrInsertFunction(sym, F_f64_i32f64);
+                    auto callee = ensurePureFunc(sym, F_f64_i32f64);
                     auto arg1 = emit_convert(builder, IR::Type::Int32, emit_val(args[0]));
                     auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
                     lres = builder.CreateCall(callee, {arg1, arg2});
@@ -519,7 +540,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
             auto ndata = *pc;
             pc++;
 
-            auto interp_f = m_mod->getOrInsertFunction("interp", F_f64_f64f64f64i32pf64);
+            auto interp_f = ensurePureFunc("interp", F_f64_f64f64f64i32pf64, true);
             lres = builder.CreateCall(interp_f, {input, x0, dx,
                         ConstantInt::get(T_i32, ndata), datap});
             break;
