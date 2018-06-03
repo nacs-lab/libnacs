@@ -233,17 +233,6 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
     fmf.setAllowContract(true);
     builder.setFastMathFlags(fmf);
 
-    // 2.1. Create global data
-    Constant *float_table = nullptr;
-    if (func.float_table.size()) {
-        auto table = ConstantDataArray::get(m_ctx, func.float_table);
-        float_table = new GlobalVariable(*m_mod, table->getType(), true,
-                                         GlobalVariable::InternalLinkage, table,
-                                         ".L.nacs." + std::to_string(m_counter++));
-        cast<GlobalVariable>(float_table)->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-        float_table = ConstantExpr::getBitCast(float_table, T_f64->getPointerTo());
-    }
-
     // 3. Create variable slots
     SmallVector<AllocaInst*, 16> slots(nslots);
     for (unsigned i = 0; i < nslots; i++)
@@ -534,11 +523,18 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
             pc++;
             auto dx = emit_convert(builder, IR::Type::Float64, emit_val(*pc));
             pc++;
-            auto datap = ConstantExpr::getGetElementPtr(T_f64, float_table,
-                                                        ConstantInt::get(T_i32, *pc), true);
+            auto data_offset = *pc;
             pc++;
             auto ndata = *pc;
             pc++;
+
+            ArrayRef<double> dataref(&func.float_table[data_offset], ndata);
+            auto table = ConstantDataArray::get(m_ctx, dataref);
+            Constant *datap = new GlobalVariable(*m_mod, table->getType(), true,
+                                                 GlobalVariable::InternalLinkage, table,
+                                                 ".L.nacs." + std::to_string(m_counter++));
+            cast<GlobalVariable>(datap)->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+            datap = ConstantExpr::getBitCast(datap, T_f64->getPointerTo());
 
             auto interp_f = ensurePureFunc("interp", F_f64_f64f64f64i32pf64, true);
             lres = builder.CreateCall(interp_f, {input, x0, dx,
