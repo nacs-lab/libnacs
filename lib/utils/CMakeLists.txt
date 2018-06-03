@@ -18,6 +18,7 @@ set(nacs_utils_SRCS
   ir-interp-shim.S
   log.cpp
   mem.cpp
+  number.cpp
   term.cpp
   timer.cpp
   utils.cpp)

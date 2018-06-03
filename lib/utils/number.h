@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2013 - 2015 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2013 - 2018 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -165,28 +165,8 @@ struct _SumSingle<std::tuple<Args...> > {
     }
 };
 
-static inline double linearInterpolate(double x, double x0, double dx,
-                                       uint32_t npoints, const double *points)
-{
-    // Offset
-    x -= x0;
-    // Scale
-    if (unlikely(x <= 0)) {
-        return points[0];
-    }
-    else if (unlikely(x >= dx)) {
-        return points[npoints - 1];
-    }
-    x = x * (npoints - 1) / dx;
-    double lof = 0.0;
-    x = modf(x, &lof);
-    uint32_t lo = (uint32_t)lof;
-    double vlo = points[lo];
-    if (x == 0)
-        return vlo;
-    double vhi = points[lo + 1];
-    return x * vhi + (1 - x) * vlo;
-}
+NACS_EXPORT(utils) double linearInterpolate(double x, double x0, double dx,
+                                            uint32_t npoints, const double *points);
 
 }
 
