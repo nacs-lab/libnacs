@@ -18,7 +18,7 @@
 
 #define DEBUG_TYPE "merge_phi"
 
-#include "codegen_p.h"
+#include "compile_p.h"
 #include "utils.h"
 
 #include <llvm/ADT/SmallVector.h>

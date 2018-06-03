@@ -23,11 +23,13 @@ set(nacs_utils_SRCS
   utils.cpp)
 set(nacs_utils_LINKS m pthread)
 set(nacs_utils_llvm_HDRS
-  llvm/utils.h
-  llvm/codegen.h)
+  llvm/codegen.h
+  llvm/compile.h
+  llvm/utils.h)
 if(ENABLE_LLVM)
   set(nacs_utils_SRCS ${nacs_utils_SRCS}
     llvm/codegen.cpp
+    llvm/compile.cpp
     llvm/mergephi-pass.cpp)
 endif()
 

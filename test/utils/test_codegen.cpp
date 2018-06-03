@@ -21,6 +21,7 @@
 #endif
 
 #include <nacs-utils/llvm/codegen.h>
+#include <nacs-utils/llvm/compile.h>
 #include <nacs-utils/llvm/utils.h>
 #include <nacs-utils/number.h>
 #include <nacs-utils/timer.h>
@@ -62,7 +63,7 @@ main()
     auto print_llvm = [&] (const IR::Function &func, bool opt=true) {
         auto f = ctx.emit_function(func, func_id++);
         if (opt)
-            f = LLVM::Codegen::optimize(f);
+            f = LLVM::Compile::optimize(f);
         LLVM::dump(f);
     };
 

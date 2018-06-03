@@ -19,42 +19,17 @@
 #include "../utils.h"
 #include "../ir.h"
 
+#include <llvm/IR/Function.h>
 #include <llvm/IR/Module.h>
-#include <llvm/IR/Type.h>
-#include <llvm/IR/Value.h>
-#include <llvm/IR/IRBuilder.h>
 
 namespace NaCs {
 namespace LLVM {
-namespace Codegen {
+namespace Compile {
 
 using namespace llvm;
 
-class Context {
-public:
-    NACS_EXPORT(utils) Context(Module *mod);
-    NACS_EXPORT(utils) Function *emit_function(const IR::Function &func, uint64_t func_id) const;
-private:
-    Type *llvm_ty(IR::Type ty) const;
-    Value *emit_const(IR::TagVal c) const;
-    Value *emit_convert(IRBuilder<> &builder, IR::Type ty, Value *val) const;
-    Value *emit_add(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const;
-    Value *emit_sub(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const;
-    Value *emit_mul(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const;
-    Value *emit_fdiv(IRBuilder<> &builder, Value *val1, Value *val2) const;
-    Value *emit_cmp(IRBuilder<> &builder, IR::CmpType cmptyp, Value *val1, Value *val2) const;
-
-    Module *m_mod;
-    LLVMContext &m_ctx;
-    IntegerType *T_bool;
-    IntegerType *T_i32;
-    Type *T_f64;
-    FunctionType *F_f64_f64;
-    FunctionType *F_f64_f64f64;
-    FunctionType *F_f64_f64f64f64;
-    FunctionType *F_f64_f64i32;
-    FunctionType *F_f64_i32f64;
-};
+Function *optimize(Function *f);
+Module *optimize(Module *mod);
 
 }
 }
