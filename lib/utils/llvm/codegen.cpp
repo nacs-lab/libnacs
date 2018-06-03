@@ -188,7 +188,7 @@ Value *Context::emit_cmp(IRBuilder<> &builder, IR::CmpType cmptyp,
     }
 }
 
-Function *Context::emit_function(const IR::Function &func, uint64_t func_id) const
+Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
 {
     auto nargs = func.nargs;
     auto nslots = func.vals.size();
@@ -217,7 +217,8 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id) con
     if (func.float_table.size()) {
         auto table = ConstantDataArray::get(m_ctx, func.float_table);
         float_table = new GlobalVariable(*m_mod, table->getType(), true,
-                                         GlobalVariable::InternalLinkage, table);
+                                         GlobalVariable::InternalLinkage, table,
+                                         ".L.nacs." + std::to_string(m_counter++));
         cast<GlobalVariable>(float_table)->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
         float_table = ConstantExpr::getBitCast(float_table, T_f64->getPointerTo());
     }

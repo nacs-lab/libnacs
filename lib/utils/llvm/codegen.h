@@ -33,7 +33,7 @@ using namespace llvm;
 class Context {
 public:
     NACS_EXPORT(utils) Context(Module *mod);
-    NACS_EXPORT(utils) Function *emit_function(const IR::Function &func, uint64_t func_id) const;
+    NACS_EXPORT(utils) Function *emit_function(const IR::Function &func, uint64_t func_id);
 private:
     Type *llvm_ty(IR::Type ty) const;
     Value *emit_const(IR::TagVal c) const;
@@ -55,6 +55,7 @@ private:
     FunctionType *F_f64_f64i32;
     FunctionType *F_f64_i32f64;
     FunctionType *F_f64_f64f64f64i32pf64;
+    uint64_t m_counter = 0;
 };
 
 }
