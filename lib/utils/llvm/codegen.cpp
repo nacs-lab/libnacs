@@ -29,6 +29,13 @@ namespace NaCs {
 namespace LLVM {
 namespace Codegen {
 
+// TODO:
+// * Enable/test data table merging
+// * Enable function merging
+// * Implement object file loader
+// * Implement memory manager that support small code model
+// * no pic, no plt
+
 Context::Context(Module *mod)
     : m_mod(mod),
       m_ctx(mod->getContext()),
