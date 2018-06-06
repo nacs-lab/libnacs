@@ -222,7 +222,7 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
 
     // 2. Create function
     auto f = Function::Create(ftype, GlobalVariable::ExternalLinkage,
-                              "f." + std::to_string(func_id), m_mod);
+                              std::to_string(func_id), m_mod);
     f->addFnAttr(Attribute::NoRecurse);
     f->addFnAttr(Attribute::NoUnwind);
     f->addFnAttr(Attribute::ReadOnly);
