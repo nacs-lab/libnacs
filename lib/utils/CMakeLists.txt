@@ -31,6 +31,7 @@ if(ENABLE_LLVM)
   set(nacs_utils_SRCS ${nacs_utils_SRCS}
     llvm/codegen.cpp
     llvm/compile.cpp
+    llvm/execute.cpp
     llvm/mergephi-pass.cpp)
 endif()
 
@@ -50,6 +51,9 @@ if(ENABLE_LLVM)
   execute_process(COMMAND llvm-config --libs --link-shared OUTPUT_VARIABLE llvm_libs)
   string(STRIP "${llvm_libs}" llvm_libs)
   target_link_libraries(nacs-utils ${llvm_libs})
+  if(IS_UNIX)
+    target_link_libraries(nacs-utils dl)
+  endif()
 endif()
 target_link_libraries(nacs-utils ${nacs_utils_LINKS})
 
