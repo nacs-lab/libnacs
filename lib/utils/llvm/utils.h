@@ -24,6 +24,9 @@
 #include <llvm/IR/Value.h>
 #include <llvm/Support/Debug.h>
 
+#define NACS_LLVM_VER (LLVM_VERSION_MAJOR * 10000 + LLVM_VERSION_MINOR * 100 \
+                       + LLVM_VERSION_PATCH)
+
 namespace NaCs {
 namespace LLVM {
 
