@@ -43,6 +43,8 @@ class Engine {
 public:
     Engine();
     ~Engine();
+    bool load(const object::ObjectFile &O);
+    void *get_symbol(StringRef name);
 private:
     void reset_dyld();
     MemMgr m_memmgr;

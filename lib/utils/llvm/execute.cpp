@@ -87,6 +87,19 @@ void Engine::reset_dyld()
     m_dyld.reset(new RuntimeDyld(m_memmgr, m_resolver));
 }
 
+NACS_EXPORT() bool Engine::load(const object::ObjectFile &obj)
+{
+    if (!m_dyld->loadObject(obj))
+        return false;
+    m_dyld->finalizeWithMemoryManagerLocking();
+    return true;
+}
+
+NACS_EXPORT() void *Engine::get_symbol(StringRef name)
+{
+    return (void*)(uintptr_t)m_dyld->getSymbol(name).getAddress();
+}
+
 }
 }
 }
