@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include <llvm/ExecutionEngine/RuntimeDyld.h>
+#include <llvm/ExecutionEngine/SectionMemoryManager.h>
 
 #include <memory>
 
@@ -35,11 +36,16 @@ private:
     uintptr_t find_extern(const std::string &name);
 };
 
+class MemMgr : public SectionMemoryManager {
+};
+
 class Engine {
 public:
     Engine();
+    ~Engine();
 private:
-    std::unique_ptr<RuntimeDyld::MemoryManager> m_memmgr;
+    void reset_dyld();
+    MemMgr m_memmgr;
     Resolver m_resolver;
     std::unique_ptr<RuntimeDyld> m_dyld;
 };
