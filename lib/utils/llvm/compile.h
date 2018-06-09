@@ -21,6 +21,8 @@
 
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Target/TargetMachine.h>
 
 namespace NaCs {
 namespace LLVM {
@@ -30,6 +32,7 @@ using namespace llvm;
 
 Function *optimize(Function *f);
 Module *optimize(Module *mod);
+bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M);
 
 }
 }

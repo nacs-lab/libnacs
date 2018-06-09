@@ -23,7 +23,6 @@
 
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/MC/MCContext.h>
-#include <llvm/Target/TargetMachine.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Vectorize.h>
@@ -32,11 +31,11 @@ namespace NaCs {
 namespace LLVM {
 namespace Compile {
 
-NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine &tgt, Module *M)
+NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M)
 {
     legacy::PassManager pm;
     MCContext *ctx;
-    if (tgt.addPassesToEmitMC(pm, ctx, stm))
+    if (tgt->addPassesToEmitMC(pm, ctx, stm))
         return false;
     pm.run(*M);
     return true;
