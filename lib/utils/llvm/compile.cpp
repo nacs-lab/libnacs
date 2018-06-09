@@ -23,6 +23,7 @@
 
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/MC/MCContext.h>
+#include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Vectorize.h>
@@ -30,16 +31,6 @@
 namespace NaCs {
 namespace LLVM {
 namespace Compile {
-
-NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M)
-{
-    legacy::PassManager pm;
-    MCContext *ctx;
-    if (tgt->addPassesToEmitMC(pm, ctx, stm))
-        return false;
-    pm.run(*M);
-    return true;
-}
 
 void addOptimization(legacy::PassManagerBase &pm)
 {
@@ -89,21 +80,24 @@ void addOptimization(legacy::PassManagerBase &pm)
     pm.add(createInstructionCombiningPass());   // Clean up after SLP loop vectorizer
 
     pm.add(createAggressiveDCEPass());         // Delete dead instructions
+    pm.add(createGlobalDCEPass());
+    pm.add(createConstantMergePass());
+    pm.add(createMergeFunctionsPass());
 }
 
-/**
- * Tmp
- */
-
-NACS_EXPORT() Function *optimize(Function *f)
+NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M, bool opt)
 {
-    legacy::FunctionPassManager pm(f->getParent());
-    addOptimization(pm);
-    pm.doInitialization();
-    pm.run(*f);
-    return f;
+    legacy::PassManager pm;
+    if (opt)
+        addOptimization(pm);
+    MCContext *ctx;
+    if (tgt->addPassesToEmitMC(pm, ctx, stm))
+        return false;
+    pm.run(*M);
+    return true;
 }
 
+// For testing only
 NACS_EXPORT() Module *optimize(Module *mod)
 {
     legacy::PassManager pm;
