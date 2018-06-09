@@ -33,8 +33,6 @@
 
 #include <llvm/Support/CodeGen.h>
 #include <llvm/Support/FileSystem.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/ObjectMemoryBuffer.h>
 
 using namespace NaCs;
@@ -83,9 +81,7 @@ struct LLVMTest {
     {
         llvm::SmallVector<char,0> vec;
         llvm::raw_svector_ostream stm(vec);
-        auto tgt = llvm::EngineBuilder().selectTarget();
-        tgt->setOptLevel(llvm::CodeGenOpt::Aggressive);
-        auto res = LLVM::Compile::emit_objfile(stm, tgt, mod.get());
+        auto res = LLVM::Compile::emit_objfile(stm, LLVM::Compile::get_native_target(), mod.get());
         assert(res);
         llvm::ObjectMemoryBuffer buff(std::move(vec));
         auto obj = llvm::object::ObjectFile::createObjectFile(buff.getMemBufferRef());
@@ -101,10 +97,6 @@ struct LLVMTest {
 
 int main()
 {
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-    llvm::InitializeNativeTargetAsmParser();
-
     LLVM::Exe::Engine engine;
     llvm::LLVMContext llvm_ctx;
 

@@ -22,8 +22,10 @@
 #include "../utils.h"
 
 #include <llvm/Analysis/TargetTransformInfo.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/MC/MCContext.h>
+#include <llvm/Support/TargetSelect.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
@@ -107,6 +109,46 @@ NACS_EXPORT() Module *optimize(Module *mod)
     addOptimization(pm);
     pm.run(*mod);
     return mod;
+}
+
+static TargetMachine *create_native_target()
+{
+    InitializeNativeTarget();
+    InitializeNativeTargetAsmPrinter();
+    InitializeNativeTargetAsmParser();
+
+    TargetOptions options;
+    EngineBuilder eb;
+    eb.setEngineKind(EngineKind::JIT)
+        .setTargetOptions(options)
+        .setRelocationModel(Reloc::Static)
+        .setOptLevel(CodeGenOpt::Aggressive);
+    if (sizeof(void*) > 4)
+        eb.setCodeModel(CodeModel::Large);
+    Triple TheTriple(sys::getProcessTriple());
+    StringMap<bool> HostFeatures;
+    sys::getHostCPUFeatures(HostFeatures);
+    SmallVector<std::string,10> attr;
+    for (auto it = HostFeatures.begin(); it != HostFeatures.end(); it++) {
+        if (it->getValue()) {
+            attr.append(1, it->getKey().str());
+        }
+    }
+    // Explicitly disabled features need to be added at the end so that
+    // they are not reenabled by other features that implies them by default.
+    for (auto it = HostFeatures.begin(); it != HostFeatures.end(); it++) {
+        if (!it->getValue()) {
+            attr.append(1, std::string("-") + it->getKey().str());
+        }
+    }
+    std::string cpu = sys::getHostCPUName();
+    return eb.selectTarget(TheTriple, "", cpu, attr);
+}
+
+NACS_EXPORT() TargetMachine *get_native_target()
+{
+    static std::unique_ptr<TargetMachine> tgt(create_native_target());
+    return tgt.get();
 }
 
 }

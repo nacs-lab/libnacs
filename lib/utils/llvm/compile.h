@@ -31,6 +31,7 @@ using namespace llvm;
 
 Module *optimize(Module *mod);
 bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M, bool opt=true);
+TargetMachine *get_native_target();
 
 }
 }
