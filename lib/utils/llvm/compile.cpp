@@ -21,6 +21,7 @@
 
 #include "../utils.h"
 
+#include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/MC/MCContext.h>
 #include <llvm/Transforms/IPO.h>
@@ -88,6 +89,8 @@ void addOptimization(legacy::PassManagerBase &pm)
 NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M, bool opt)
 {
     legacy::PassManager pm;
+    pm.add(new TargetLibraryInfoWrapperPass(Triple(tgt->getTargetTriple())));
+    pm.add(createTargetTransformInfoWrapperPass(tgt->getTargetIRAnalysis()));
     if (opt)
         addOptimization(pm);
     MCContext *ctx;
