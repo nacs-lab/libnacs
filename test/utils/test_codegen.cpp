@@ -76,8 +76,8 @@ struct LLVMTest {
     void *get_ptr()
     {
         llvm::SmallVector<char,0> vec;
-        llvm::raw_svector_ostream stm(vec);
-        auto res = LLVM::Compile::emit_objfile(stm, LLVM::Compile::get_native_target(), mod.get());
+        auto res = LLVM::Compile::emit_objfile(vec, LLVM::Compile::get_native_target(),
+                                               mod.get());
         assert(res);
         auto res2 = engine.load(&vec[0], vec.size());
         assert(res2);
