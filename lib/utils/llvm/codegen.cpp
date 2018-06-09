@@ -40,6 +40,7 @@ Context::Context(Module *mod)
     : m_mod(mod),
       m_ctx(mod->getContext()),
       T_bool(Type::getInt1Ty(m_ctx)),
+      T_i8(Type::getInt8Ty(m_ctx)),
       T_i32(Type::getInt32Ty(m_ctx)),
       T_f64(Type::getDoubleTy(m_ctx)),
       F_f64_f64(FunctionType::get(T_f64, {T_f64}, false)),
@@ -78,6 +79,20 @@ Type *Context::llvm_ty(IR::Type ty) const
     switch (ty) {
     case IR::Type::Bool:
         return T_bool;
+    case IR::Type::Int32:
+        return T_i32;
+    case IR::Type::Float64:
+        return T_f64;
+    default:
+        abort();
+    }
+}
+
+Type *Context::llvm_argty(IR::Type ty) const
+{
+    switch (ty) {
+    case IR::Type::Bool:
+        return T_i8;
     case IR::Type::Int32:
         return T_i32;
     case IR::Type::Float64:
@@ -221,10 +236,10 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
     auto nargs = func.nargs;
     auto nslots = func.vals.size();
     // 1. Create function signature
-    auto rt = llvm_ty(func.ret);
+    auto rt = llvm_argty(func.ret);
     SmallVector<Type*, 8> fsig(nargs);
     for (int i = 0; i < nargs; i++)
-        fsig[i] = llvm_ty(func.vals[i]);
+        fsig[i] = llvm_argty(func.vals[i]);
     auto ftype = FunctionType::get(rt, fsig, false);
 
     // 2. Create function
@@ -245,8 +260,12 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
     for (unsigned i = 0; i < nslots; i++)
         slots[i] = builder.CreateAlloca(llvm_ty(func.vals[i]));
     auto argit = f->arg_begin();
-    for (int i = 0; i < nargs; i++)
-        builder.CreateStore(&*argit++, slots[i]);
+    for (int i = 0; i < nargs; i++) {
+        Value *argv = &*argit++;
+        if (func.vals[i] == IR::Type::Bool)
+            argv = builder.CreateTrunc(argv, T_bool);
+        builder.CreateStore(argv, slots[i]);
+    }
     auto prev_bb_var = builder.CreateAlloca(T_i32);
 
     // 4. Initialize BB info
@@ -307,6 +326,8 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
         case IR::Opcode::Ret: {
             auto val = emit_val(res);
             val = emit_convert(builder, func.ret, val);
+            if (func.ret == IR::Type::Bool)
+                val = builder.CreateZExt(val, T_i8);
             builder.CreateRet(val);
             enter_or_pop(-1);
             continue;

@@ -36,6 +36,7 @@ public:
     NACS_EXPORT(utils) Function *emit_function(const IR::Function &func, uint64_t func_id);
 private:
     Type *llvm_ty(IR::Type ty) const;
+    Type *llvm_argty(IR::Type ty) const;
     Value *emit_const(IR::TagVal c) const;
     Value *emit_convert(IRBuilder<> &builder, IR::Type ty, Value *val) const;
     Value *emit_add(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const;
@@ -48,6 +49,7 @@ private:
     Module *m_mod;
     LLVMContext &m_ctx;
     IntegerType *T_bool;
+    IntegerType *T_i8;
     IntegerType *T_i32;
     Type *T_f64;
     FunctionType *F_f64_f64;
