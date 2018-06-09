@@ -44,6 +44,7 @@ public:
     Engine();
     ~Engine();
     bool load(const object::ObjectFile &O);
+    bool load(const char *p, size_t len);
     void *get_symbol(StringRef name);
 private:
     void reset_dyld();

@@ -31,10 +31,6 @@
 #include <sstream>
 #include <math.h>
 
-#include <llvm/Support/CodeGen.h>
-#include <llvm/Support/FileSystem.h>
-#include <llvm/ExecutionEngine/ObjectMemoryBuffer.h>
-
 using namespace NaCs;
 
 template<typename T>
@@ -83,10 +79,7 @@ struct LLVMTest {
         llvm::raw_svector_ostream stm(vec);
         auto res = LLVM::Compile::emit_objfile(stm, LLVM::Compile::get_native_target(), mod.get());
         assert(res);
-        llvm::ObjectMemoryBuffer buff(std::move(vec));
-        auto obj = llvm::object::ObjectFile::createObjectFile(buff.getMemBufferRef());
-        assert(obj);
-        auto res2 = engine.load(*(*obj));
+        auto res2 = engine.load(&vec[0], vec.size());
         assert(res2);
         return engine.get_symbol("0");
     }

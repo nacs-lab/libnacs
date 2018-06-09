@@ -25,6 +25,8 @@
 #  include <dlfcn.h>
 #endif
 
+#include <llvm/Support/MemoryBuffer.h>
+
 namespace NaCs {
 namespace LLVM {
 namespace Exe {
@@ -93,6 +95,15 @@ NACS_EXPORT() bool Engine::load(const object::ObjectFile &obj)
         return false;
     m_dyld->finalizeWithMemoryManagerLocking();
     return true;
+}
+
+NACS_EXPORT() bool Engine::load(const char *p, size_t len)
+{
+    MemoryBufferRef buff(StringRef(p, len), "");
+    auto obj = object::ObjectFile::createObjectFile(buff);
+    if (!obj)
+        return false;
+    return load(*(*obj));
 }
 
 NACS_EXPORT() void *Engine::get_symbol(StringRef name)
