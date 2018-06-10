@@ -54,6 +54,7 @@ write(volatile void *addr, T2 val, size_t idx=0)
 }
 }
 
+NACS_EXPORT(utils) extern const size_t page_size;
 void *mapPhyAddr(void*, size_t);
 void *getPhyAddr(void*);
 

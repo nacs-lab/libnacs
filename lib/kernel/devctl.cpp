@@ -20,6 +20,7 @@
 #include "device_p.h"
 
 #include <nacs-utils/utils.h>
+#include <nacs-utils/mem.h>
 #include <nacs-utils/fd_utils.h>
 
 #include <stropts.h>
@@ -27,8 +28,6 @@
 
 namespace NaCs {
 namespace Kernel {
-
-static const auto page_size = sysconf(_SC_PAGESIZE);
 
 NACS_EXPORT() knacs_version_t
 getDriverVersion()

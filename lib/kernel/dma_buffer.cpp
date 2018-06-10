@@ -20,6 +20,7 @@
 #include "devctl_p.h"
 
 #include <nacs-utils/utils.h>
+#include <nacs-utils/mem.h>
 #include <nacs-utils/number.h>
 
 namespace NaCs {
@@ -27,8 +28,6 @@ namespace NaCs {
 using namespace NaCs;
 
 namespace Kernel {
-
-static const auto page_size = sysconf(_SC_PAGESIZE);
 
 NACS_EXPORT()
 DMABufferBase::DMABufferBase(size_t size)

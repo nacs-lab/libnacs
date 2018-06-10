@@ -19,9 +19,25 @@
 #include "mem.h"
 #include "fd_utils.h"
 
-#include <unistd.h>
+#if NACS_OS_WINDOWS
+#  include <windows.h>
+#else
+#  include <unistd.h>
+#endif
 
 namespace NaCs {
+
+#if NACS_OS_WINDOWS
+static size_t win_get_pagesz()
+{
+    SYSTEM_INFO systemInfo;
+    GetSystemInfo(&systemInfo);
+    return systemInfo.dwPageSize;
+}
+NACS_EXPORT() extern const size_t page_size = win_get_pagesz();
+#else
+NACS_EXPORT() extern const size_t page_size = sysconf(_SC_PAGESIZE);
+#endif
 
 NACS_EXPORT() void*
 mapPhyAddr(void *phy_addr, size_t len)

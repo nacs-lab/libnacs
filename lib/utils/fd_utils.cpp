@@ -18,8 +18,9 @@
 
 #include "fd_utils.h"
 #include "log.h"
-#include "number.h"
 #include "macros.h"
+#include "mem.h"
+#include "number.h"
 
 #if !NACS_OS_WINDOWS
 #  include <sys/socket.h>
@@ -34,7 +35,6 @@ NACS_EXPORT() void*
 mapFile(int fd, off_t offset, size_t len)
 {
 #if !NACS_OS_WINDOWS
-    static const auto page_size = sysconf(_SC_PAGESIZE);
     NACS_RET_IF_FAIL(fd >= 0, nullptr);
     off_t start = offset - offset % page_size;
     off_t end = alignTo(offset + len, page_size);
