@@ -31,6 +31,8 @@
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Vectorize.h>
 
+#include <mutex>
+
 namespace NaCs {
 namespace LLVM {
 namespace Compile {
@@ -113,9 +115,12 @@ NACS_EXPORT() Module *optimize(Module *mod)
 
 static TargetMachine *create_native_target()
 {
-    InitializeNativeTarget();
-    InitializeNativeTargetAsmPrinter();
-    InitializeNativeTargetAsmParser();
+    static std::once_flag flag;
+    std::call_once(flag, [] {
+            InitializeNativeTarget();
+            InitializeNativeTargetAsmPrinter();
+            InitializeNativeTargetAsmParser();
+        });
 
     TargetOptions options;
     EngineBuilder eb;
@@ -154,38 +159,21 @@ NACS_EXPORT() TargetMachine *get_native_target()
 NACS_EXPORT() std::unique_ptr<TargetMachine> create_target(StringRef triple,
                                                            StringRef cpu, StringRef features)
 {
-    bool is_64bit = false;
-    bool is_x86 = triple.startswith("x86-");
-    bool is_x64 = triple.startswith("x86_64-");
-    if (is_x86 || is_x64) {
-        is_64bit = is_x64;
-        LLVMInitializeX86Target();
-        LLVMInitializeX86AsmPrinter();
-        LLVMInitializeX86AsmParser();
-    }
-    else if (triple.startswith("arm")) {
-        LLVMInitializeARMTarget();
-        LLVMInitializeARMAsmPrinter();
-        LLVMInitializeARMAsmParser();
-    }
-#if 0
-    // Disable until we need it or I figure out how to enable/detect it at compile time.
-    else if (triple.startswith("aarch64")) {
-        is_64bit = true;
-        LLVMInitializeAArch64Target();
-        LLVMInitializeAArch64AsmPrinter();
-        LLVMInitializeAArch64AsmParser();
-    }
-#endif
+    static std::once_flag flag;
+    std::call_once(flag, [] {
+            LLVMInitializeAllTargets();
+            LLVMInitializeAllAsmPrinters();
+            LLVMInitializeAllAsmParsers();
+        });
+    Triple TheTriple(triple);
     TargetOptions options;
     EngineBuilder eb;
     eb.setEngineKind(EngineKind::JIT)
         .setTargetOptions(options)
         .setRelocationModel(Reloc::Static)
         .setOptLevel(CodeGenOpt::Aggressive);
-    if (is_64bit)
+    if (TheTriple.isArch64Bit())
         eb.setCodeModel(CodeModel::Large);
-    Triple TheTriple(triple);
     SmallVector<StringRef,16> attr_sr;
     features.split(attr_sr, ",", -1, false);
     SmallVector<std::string,16> attr;
