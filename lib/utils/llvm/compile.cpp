@@ -168,12 +168,15 @@ NACS_EXPORT() std::unique_ptr<TargetMachine> create_target(StringRef triple,
         LLVMInitializeARMAsmPrinter();
         LLVMInitializeARMAsmParser();
     }
+#if 0
+    // Disable until we need it or I figure out how to enable/detect it at compile time.
     else if (triple.startswith("aarch64")) {
         is_64bit = true;
         LLVMInitializeAArch64Target();
         LLVMInitializeAArch64AsmPrinter();
         LLVMInitializeAArch64AsmParser();
     }
+#endif
     TargetOptions options;
     EngineBuilder eb;
     eb.setEngineKind(EngineKind::JIT)
