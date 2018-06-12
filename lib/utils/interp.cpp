@@ -20,6 +20,10 @@
 
 using namespace NaCs::IR;
 
+// This is the assembly function defined in `ir-interp-shim.S` that grabs
+// function arguments from the correct location and rearange them into a format
+// that can be understand by the interpreter.
+// This will be used as the function pointer returned by the interpreter execution context.
 extern "C" void nacs_exefunc_cb(void);
 
 namespace NaCs {
@@ -149,16 +153,6 @@ static inline TagVal eval_func(const Function &f, GenVal *vals)
     return TagVal(f.ret);
 }
 
-TagVal EvalContext::evalVal(int32_t id) const
-{
-    return eval_val(m_f, &m_vals[0], id);
-}
-
-TagVal EvalContext::eval(void)
-{
-    return eval_func(m_f, &m_vals[0]);
-}
-
 namespace {
 
 static inline Function *get_interp_func(uint32_t *data, uint32_t nargs)
@@ -198,6 +192,7 @@ static inline void set_args(GenVal *vals, Arg1 arg1, Args... args)
     set_args(vals + 1, args...);
 }
 
+// Template to generate a number of specialized callback functions at compile time.
 template<int n, int max, typename... Args>
 struct Dispatch {
     static_assert(n + sizeof...(Args) == max, "");
@@ -268,6 +263,8 @@ struct InterpExeContext : public ExeContext {
             new (get_interp_func(ptr)) Function(std::move(f));
             return FuncBase(fptr, ptr, exefunc_free);
         }
+        // Now use the generic version.
+        // The format used below has to be synchronized with the assembly function.
 #if defined(__x86_64__) || defined(__x86_64)
 #  if NACS_OS_WINDOWS
         uint32_t nregarg = 0;
@@ -407,6 +404,7 @@ ExeContext *get_interp_context()
 } // IR
 } // NaCs
 
+// This is called from the assembly callback function after rearranging the argument format.
 extern "C" TagVal nacs_exefunc_real(uint32_t *data, GenVal *vals)
 {
     auto v = eval_func(*get_interp_func(data), vals);

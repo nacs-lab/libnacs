@@ -25,6 +25,7 @@
 namespace NaCs {
 namespace IR {
 
+// Functions that are used both by the interpreter as well as for constant propagation.
 static NACS_UNUSED TagVal evalAdd(Type typ, TagVal val1, TagVal val2)
 {
     switch (typ) {

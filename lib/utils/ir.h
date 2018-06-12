@@ -100,6 +100,10 @@ enum class Builtins : uint16_t {
     log10,
     log1p,
     log2,
+    // This is actually the same as `exp10`.
+    // It's kept here to not break the backward compatibility of the IR binaries
+    // None of them should be using this particular function though so we can replace
+    // this with another function.
     pow10,
     rint,
     round,
@@ -133,6 +137,9 @@ enum class Builtins : uint16_t {
     yn,
     };
 
+// Constants are stored as negative numbers.
+// -1 and -2 have special meanings and more negative numbers are (negative and offsetted)
+// indices into the constant table.
 enum Consts : int32_t {
     False = -1,
     True = -2,
@@ -244,6 +251,7 @@ struct Function {
     std::vector<uint32_t> serialize(void) const;
     const Type ret;
     const int nargs;
+    // Types of all slots
     std::vector<Type> vals;
     std::vector<BB> code;
     std::vector<TagVal> consts;
@@ -310,34 +318,10 @@ private:
     std::map<double, int> const_floats;
 };
 
-struct NACS_EXPORT(utils) __attribute__((deprecated)) EvalContext {
-    EvalContext(const Function &f)
-        : m_f(f),
-          m_vals(f.vals.size())
-    {}
-    void reset(const GenVal *args)
-    {
-        memcpy(m_vals.data(), args, m_f.nargs * sizeof(GenVal));
-    }
-    void reset(std::vector<TagVal> tagvals)
-    {
-        std::vector<GenVal> args(m_f.nargs);
-        for (int i = 0;i < m_f.nargs;i++)
-            args[i] = tagvals[i].convert(m_f.vals[i]).val;
-        reset(args.data());
-    }
-    void reset(int idx, const GenVal &arg)
-    {
-        m_vals[idx] = arg;
-    }
-    TagVal evalVal(int32_t id) const;
-    TagVal eval(void);
-
-private:
-    const Function &m_f;
-    std::vector<GenVal> m_vals;
-};
-
+// Execution context
+// This converts an IR function into a function pointer.
+// It's designed such that the function pointer can be backed by either a compiler or
+// interpreter.
 class ExeContext {
     template<typename FT> struct FuncType;
     template<typename R, typename... Args> struct FuncType<R(Args...)> {
