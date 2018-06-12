@@ -35,6 +35,11 @@
 
 namespace NaCs {
 
+/**
+ * Unix only functions that manipulate files
+ */
+
+// offset does **NOT** have to be integer multiple of page size.
 void *mapFile(const char *name, off_t offset, size_t len);
 void *mapFile(int fd, off_t offset, size_t len);
 bool sendFD(int sock, int fd);
@@ -42,36 +47,8 @@ int recvFD(int sock);
 bool fdSetCloexec(int fd, bool cloexec);
 bool fdSetNonBlock(int fd, bool nonblock);
 
-#if !NACS_OS_WINDOWS
-class FLock {
-    int m_fd;
-public:
-    NACS_INLINE
-    FLock(int fd) : m_fd(fd)
-    {
-        if (fd < 0) {
-            throw std::runtime_error("Invalid FD.");
-        }
-    }
-    NACS_INLINE
-    FLock(const char *fname) :
-        FLock(open(fname, O_RDWR | O_CREAT, 0644))
-    {}
-    NACS_INLINE void
-    lock()
-    {
-        if (flock(m_fd, LOCK_EX) == -1) {
-            throw std::runtime_error("Failed to acquire lock.");
-        }
-    }
-    NACS_INLINE void
-    unlock() noexcept
-    {
-        flock(m_fd, LOCK_UN);
-    }
-};
-#endif
-
+// Helper function for C style system calls.
+// (return -1 for error and type of error is in errno)
 template<typename T, typename... Arg>
 static inline T checkErrno(T res, Arg&&... arg)
 {

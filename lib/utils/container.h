@@ -31,6 +31,7 @@
 namespace NaCs {
 
 // Wrapping an arbitrary pointer/object's lifetime
+// This is basically a `unique_ptr` with the type info hidden.
 class AnyPtr : std::unique_ptr<void,void(*)(void*)> {
     // C++20
     template<typename T>
