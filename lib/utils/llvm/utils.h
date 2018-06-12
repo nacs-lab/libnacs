@@ -16,6 +16,9 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#ifndef __NACS_UTILS_LLVM_UTILS_H__
+#define __NACS_UTILS_LLVM_UTILS_H__
+
 #include <llvm/IR/DebugLoc.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Module.h>
@@ -66,3 +69,5 @@ static inline void dump(llvm::DebugLoc *dbg)
 
 }
 }
+
+#endif

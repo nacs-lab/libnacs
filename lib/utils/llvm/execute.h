@@ -16,6 +16,9 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#ifndef __NACS_UTILS_LLVM_EXECUTE_H__
+#define __NACS_UTILS_LLVM_EXECUTE_H__
+
 #include <llvm/ExecutionEngine/RuntimeDyld.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 
@@ -56,3 +59,5 @@ private:
 }
 }
 }
+
+#endif

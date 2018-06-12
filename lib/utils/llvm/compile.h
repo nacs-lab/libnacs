@@ -16,6 +16,9 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#ifndef __NACS_UTILS_LLVM_COMPILE_H__
+#define __NACS_UTILS_LLVM_COMPILE_H__
+
 #include "../utils.h"
 #include "../ir.h"
 
@@ -46,3 +49,5 @@ std::unique_ptr<TargetMachine> create_target(StringRef triple, StringRef cpu,
 }
 }
 }
+
+#endif

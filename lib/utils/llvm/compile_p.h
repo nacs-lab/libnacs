@@ -16,6 +16,9 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#ifndef __NACS_UTILS_LLVM_COMPILE_P_H__
+#define __NACS_UTILS_LLVM_COMPILE_P_H__
+
 #include <llvm/Pass.h>
 
 namespace NaCs {
@@ -27,3 +30,5 @@ Pass *createMergePhiPass();
 
 }
 }
+
+#endif

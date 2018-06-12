@@ -16,6 +16,9 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#ifndef __NACS_UTILS_LLVM_CODEGEN_H__
+#define __NACS_UTILS_LLVM_CODEGEN_H__
+
 #include "../utils.h"
 #include "../ir.h"
 
@@ -64,3 +67,5 @@ private:
 }
 }
 }
+
+#endif
