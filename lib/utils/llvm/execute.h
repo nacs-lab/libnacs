@@ -39,7 +39,20 @@ private:
     uintptr_t find_extern(const std::string &name);
 };
 
-class MemMgr : public SectionMemoryManager {
+class MemMgr : public RuntimeDyld::MemoryManager {
+public:
+    MemMgr();
+    ~MemMgr();
+
+private:
+    virtual uint8_t *allocateCodeSection(uintptr_t sz, unsigned align,
+                                         unsigned sid, StringRef sname) override;
+    virtual uint8_t *allocateDataSection(uintptr_t sz, unsigned align,
+                                         unsigned sid, StringRef sname, bool ro) override;
+    virtual void registerEHFrames(uint8_t *addr, uint64_t load_addr, size_t sz) override;
+    virtual void deregisterEHFrames() override;
+    virtual bool finalizeMemory(std::string *ErrMsg) override;
+    SectionMemoryManager tmp;
 };
 
 class Engine {

@@ -36,6 +36,7 @@ if(ENABLE_LLVM)
     llvm/codegen.cpp
     llvm/compile.cpp
     llvm/execute.cpp
+    llvm/memmgr.cpp
     llvm/mergephi-pass.cpp)
 endif()
 
