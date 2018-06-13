@@ -275,114 +275,17 @@ const char *getBuiltinSymbol(Builtins id)
 static const char *builtinName(Builtins id)
 {
     switch (id) {
-        // f(f)
-    case Builtins::acos:
-        return "acos";
-    case Builtins::acosh:
-        return "acosh";
-    case Builtins::asin:
-        return "asin";
-    case Builtins::asinh:
-        return "asinh";
-    case Builtins::atan:
-        return "atan";
-    case Builtins::atanh:
-        return "atanh";
-    case Builtins::cbrt:
-        return "cbrt";
-    case Builtins::ceil:
-        return "ceil";
-    case Builtins::cos:
-        return "cos";
-    case Builtins::cosh:
-        return "cosh";
-    case Builtins::erf:
-        return "erf";
-    case Builtins::erfc:
-        return "erfc";
-    case Builtins::exp:
-        return "exp";
-    case Builtins::exp10:
-        return "exp10";
-    case Builtins::exp2:
-        return "exp2";
-    case Builtins::expm1:
-        return "expm1";
-    case Builtins::abs:
-        return "abs";
-    case Builtins::floor:
-        return "floor";
     case Builtins::gamma:
         return "gamma";
-    case Builtins::j0:
-        return "j0";
-    case Builtins::j1:
-        return "j1";
-    case Builtins::lgamma:
-        return "lgamma";
-    case Builtins::log:
-        return "log";
-    case Builtins::log10:
-        return "log10";
-    case Builtins::log1p:
-        return "log1p";
-    case Builtins::log2:
-        return "log2";
-    case Builtins::pow10:
-        return "exp10";
-    case Builtins::rint:
-        return "rint";
-    case Builtins::round:
-        return "round";
-    case Builtins::sin:
-        return "sin";
-    case Builtins::sinh:
-        return "sinh";
-    case Builtins::sqrt:
-        return "sqrt";
-    case Builtins::tan:
-        return "tan";
-    case Builtins::tanh:
-        return "tanh";
-    case Builtins::y0:
-        return "y0";
-    case Builtins::y1:
-        return "y1";
-
-        // f(f, f)
-    case Builtins::atan2:
-        return "atan2";
-    case Builtins::copysign:
-        return "copysign";
-    case Builtins::fdim:
-        return "fdim";
-    case Builtins::max: // fmax
+    case Builtins::max:
         return "max";
-    case Builtins::min: // fmax
+    case Builtins::min:
         return "min";
-    case Builtins::mod: // fmod
+    case Builtins::mod:
         return "mod";
-    case Builtins::hypot:
-        return "hypot";
-    case Builtins::pow:
-        return "pow";
-    case Builtins::remainder:
-        return "remainder";
-
-        // f(f, f, f)
-    case Builtins::fma:
-        return "fma";
-
-        // f(f, i)
-    case Builtins::ldexp:
-        return "ldexp";
-
-        // f(i, f)
-    case Builtins::jn:
-        return "jn";
-    case Builtins::yn:
-        return "yn";
     default:
+        if (auto name = getBuiltinSymbol(id))
+            return name;
         return "unknown";
     }
 }
