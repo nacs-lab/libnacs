@@ -18,6 +18,7 @@
 
 #include "execute.h"
 #include "../number.h"
+#include "../ir_p.h"
 
 #if NACS_OS_WINDOWS
 #  include <windows.h>
@@ -58,6 +59,10 @@ uintptr_t Resolver::find_extern(const std::string &name)
 {
     if (name == "interp")
         return (uintptr_t)linearInterpolate;
+#ifndef NACS_HAS_EXP10
+    if (name == "exp10")
+        return (uintptr_t)nacs_exp10;
+#endif
 #if NACS_OS_WINDOWS
     static auto self_hdl = get_self_hdl();
     if (uintptr_t ptr = (uintptr_t)GetProcAddress(self_hdl, name.c_str()))
