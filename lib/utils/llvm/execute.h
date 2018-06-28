@@ -43,6 +43,8 @@ class MemMgr : public RuntimeDyld::MemoryManager {
 public:
     MemMgr();
     ~MemMgr();
+    uint64_t new_group();
+    void free_group(uint64_t id);
 
 private:
     virtual uint8_t *allocateCodeSection(uintptr_t sz, unsigned align,
@@ -53,15 +55,18 @@ private:
     virtual void deregisterEHFrames() override;
     virtual bool finalizeMemory(std::string *ErrMsg) override;
     SectionMemoryManager tmp;
+
+    uint64_t m_grp_cnt = 0;
 };
 
 class Engine {
 public:
     Engine();
     ~Engine();
-    bool load(const object::ObjectFile &O);
-    bool load(const char *p, size_t len);
+    uint64_t load(const object::ObjectFile &O);
+    uint64_t load(const char *p, size_t len);
     void *get_symbol(StringRef name);
+    void free(uint64_t id);
 private:
     void reset_dyld();
     MemMgr m_memmgr;

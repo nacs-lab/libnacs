@@ -79,13 +79,21 @@ struct LLVMTest {
         auto res = LLVM::Compile::emit_objfile(vec, LLVM::Compile::get_native_target(),
                                                mod.get());
         assert(res);
-        auto res2 = engine.load(&vec[0], vec.size());
-        assert(res2);
+        auto obj_id = engine.load(&vec[0], vec.size());
+        obj_ids.push_back(obj_id);
+        assert(obj_id);
         return engine.get_symbol("0");
+    }
+    ~LLVMTest()
+    {
+        for (auto id: obj_ids) {
+            engine.free(id);
+        }
     }
     std::unique_ptr<llvm::Module> mod;
     LLVM::Exe::Engine &engine;
     llvm::Function *f = nullptr;
+    std::vector<uint64_t> obj_ids;
 };
 
 int main()

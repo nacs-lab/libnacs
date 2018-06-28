@@ -94,26 +94,35 @@ void Engine::reset_dyld()
     m_dyld.reset(new RuntimeDyld(m_memmgr, m_resolver));
 }
 
-NACS_EXPORT() bool Engine::load(const object::ObjectFile &obj)
+NACS_EXPORT() uint64_t Engine::load(const object::ObjectFile &obj)
 {
-    if (!m_dyld->loadObject(obj))
-        return false;
+    auto id = m_memmgr.new_group();
+    if (!m_dyld->loadObject(obj)) {
+        m_memmgr.free_group(id);
+        return 0;
+    }
     m_dyld->finalizeWithMemoryManagerLocking();
-    return true;
+    return id;
 }
 
-NACS_EXPORT() bool Engine::load(const char *p, size_t len)
+NACS_EXPORT() uint64_t Engine::load(const char *p, size_t len)
 {
     MemoryBufferRef buff(StringRef(p, len), "");
     auto obj = object::ObjectFile::createObjectFile(buff);
     if (!obj)
-        return false;
+        return 0;
     return load(*(*obj));
 }
 
 NACS_EXPORT() void *Engine::get_symbol(StringRef name)
 {
     return (void*)(uintptr_t)m_dyld->getSymbol(name).getAddress();
+}
+
+NACS_EXPORT() void Engine::free(uint64_t id)
+{
+    // TODO
+    (void)id;
 }
 
 }

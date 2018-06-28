@@ -33,15 +33,29 @@ MemMgr::~MemMgr()
 {
 }
 
+uint64_t MemMgr::new_group()
+{
+    return ++m_grp_cnt;
+}
+
+void MemMgr::free_group(uint64_t id)
+{
+    (void)id;
+}
+
 uint8_t *MemMgr::allocateCodeSection(uintptr_t sz, unsigned align,
                                      unsigned sid, StringRef sname)
 {
+    if (!m_grp_cnt)
+        abort();
     return tmp.allocateCodeSection(sz, align, sid, sname);
 }
 
 uint8_t *MemMgr::allocateDataSection(uintptr_t sz, unsigned align,
                                      unsigned sid, StringRef sname, bool ro)
 {
+    if (!m_grp_cnt)
+        abort();
     return tmp.allocateDataSection(sz, align, sid, sname, ro);
 }
 
@@ -55,6 +69,8 @@ void MemMgr::deregisterEHFrames()
 
 bool MemMgr::finalizeMemory(std::string *ErrMsg)
 {
+    if (!m_grp_cnt)
+        abort();
     return tmp.finalizeMemory(ErrMsg);
 }
 
