@@ -47,13 +47,13 @@ public:
     void free_group(uint64_t id);
 
 private:
-    virtual uint8_t *allocateCodeSection(uintptr_t sz, unsigned align,
-                                         unsigned sid, StringRef sname) override;
-    virtual uint8_t *allocateDataSection(uintptr_t sz, unsigned align,
-                                         unsigned sid, StringRef sname, bool ro) override;
-    virtual void registerEHFrames(uint8_t *addr, uint64_t load_addr, size_t sz) override;
-    virtual void deregisterEHFrames() override;
-    virtual bool finalizeMemory(std::string *ErrMsg) override;
+    uint8_t *allocateCodeSection(uintptr_t sz, unsigned align,
+                                 unsigned sid, StringRef sname) override;
+    uint8_t *allocateDataSection(uintptr_t sz, unsigned align,
+                                 unsigned sid, StringRef sname, bool ro) override;
+    void registerEHFrames(uint8_t *addr, uint64_t load_addr, size_t sz) override;
+    void deregisterEHFrames() override;
+    bool finalizeMemory(std::string *ErrMsg) override;
     SectionMemoryManager tmp;
 
     uint64_t m_grp_cnt = 0;

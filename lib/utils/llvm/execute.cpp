@@ -121,8 +121,7 @@ NACS_EXPORT() void *Engine::get_symbol(StringRef name)
 
 NACS_EXPORT() void Engine::free(uint64_t id)
 {
-    // TODO
-    (void)id;
+    m_memmgr.free_group(id);
 }
 
 }
