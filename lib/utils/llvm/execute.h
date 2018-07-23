@@ -19,6 +19,7 @@
 #ifndef __NACS_UTILS_LLVM_EXECUTE_H__
 #define __NACS_UTILS_LLVM_EXECUTE_H__
 
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/ExecutionEngine/RuntimeDyld.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 
@@ -37,6 +38,27 @@ private:
     JITSymbol findSymbolInLogicalDylib(const std::string&) override;
     JITSymbol findSymbol(const std::string &name) override;
     uintptr_t find_extern(const std::string &name);
+};
+
+class AllocTracker {
+public:
+    AllocTracker(size_t blocksz)
+        : m_blocksz(blocksz)
+    {
+    }
+    template<typename BlockAlloc>
+    void *alloc(size_t sz, BlockAlloc &&block_alloc);
+    template<typename BlockFree>
+    void free(void *ptr, size_t sz, BlockFree &&block_free);
+
+private:
+    template<typename BlockFree>
+    void free_real(void *ptr, size_t sz, BlockFree &&block_free,
+                   SmallVector<std::map<void*,size_t>::iterator,2> replaces={});
+
+    const size_t m_blocksz;
+    std::map<void*,size_t> m_freelist;
+    std::map<void*,size_t> m_blocks;
 };
 
 class MemMgr : public RuntimeDyld::MemoryManager {
