@@ -94,6 +94,7 @@ void AllocTracker::free_real(void *ptr, size_t sz, BlockFree &&block_free,
 {
     // First check if we can free a block
     if (sz >= m_blocksz) {
+        // This can only happen if the memory is large enough.
         auto I = m_blocks.find(ptr);
         if (I != m_blocks.end() && I->second == sz) {
             block_free(ptr, sz);

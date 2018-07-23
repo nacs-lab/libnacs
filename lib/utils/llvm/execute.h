@@ -40,24 +40,45 @@ private:
     uintptr_t find_extern(const std::string &name);
 };
 
+/**
+ * Track small allocations out of bigger blocks.
+ * The minimum block size is configurable at construction time and the size of
+ * each block will be a integer multiple of the min size.
+ */
 class AllocTracker {
 public:
     AllocTracker(size_t blocksz)
         : m_blocksz(blocksz)
     {
     }
+
+    // Allocate a piece of memory of size `sz`. If one cannot be found in the freelist
+    // `block_alloc` will be called with the desired block size to allocate a block of memory.
+    // It is guaranteed that an allocation won't cross multiple blocks even if `block_alloc`
+    // returns two blocks that are adjacent in memory.
     template<typename BlockAlloc>
     void *alloc(size_t sz, BlockAlloc &&block_alloc);
+    // Freeing a piece of memory at `ptr` and size `sz`.
+    // If this frees up a whole block, `block_free` will be called to free the empty block.
     template<typename BlockFree>
     void free(void *ptr, size_t sz, BlockFree &&block_free);
 
 private:
+    // Similar to the public API `free` but `ptr` and `sz` are the address and the size
+    // of the now free'd memory after merging with other free pieces **in the same block**
+    // `replaces` may contain `m_freelist` iterators that should be replaced/removed
+    // since they are merged into a single piece of memory.
     template<typename BlockFree>
     void free_real(void *ptr, size_t sz, BlockFree &&block_free,
                    SmallVector<std::map<void*,size_t>::iterator,2> replaces={});
 
+    // Minimum block size
     const size_t m_blocksz;
+    // Map of free memory pieces.
+    // The address (key of the map) is the **end** address of the free space.
+    // This way we can allocate from the start of the range without changing the key.
     std::map<void*,size_t> m_freelist;
+    // Allocated blocks. The address in this one is the start address.
     std::map<void*,size_t> m_blocks;
 };
 
