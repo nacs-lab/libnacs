@@ -77,6 +77,7 @@ enum class Prot : int {
 // Map anonymous pages of `size`. Guaranteed to be aligned to page size.
 void *mapAnonPage(size_t size, Prot prot);
 void unmapPage(void *ptr, size_t size);
+bool protectPage(void *ptr, size_t size, Prot prot);
 
 // Pre-allocate memory for a number of objects so that they can be allocated quickly.
 template<typename T, size_t n>

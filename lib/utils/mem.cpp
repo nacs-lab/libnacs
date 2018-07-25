@@ -96,4 +96,14 @@ NACS_EXPORT() void unmapPage(void *ptr, size_t size)
 #endif
 }
 
+NACS_EXPORT() bool protectPage(void *ptr, size_t size, Prot prot)
+{
+#if NACS_OS_WINDOWS
+    DWORD old_prot;
+    return VirtualProtect(ptr, size, (DWORD)prot, &old_prot);
+#else
+    return mprotect(ptr, size, (int)prot) == 0;
+#endif
+}
+
 }
