@@ -19,11 +19,8 @@
 #include "mem.h"
 #include "fd_utils.h"
 
-#if NACS_OS_WINDOWS
-#  include <windows.h>
-#else
+#if !NACS_OS_WINDOWS
 #  include <unistd.h>
-#  include <sys/mman.h>
 #  include <sys/stat.h>
 #  include <fcntl.h>
 #  if NACS_OS_DARWIN && !defined(MAP_ANONYMOUS)

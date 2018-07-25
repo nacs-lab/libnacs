@@ -20,7 +20,9 @@
 
 #include <cstring>
 
-#if !NACS_OS_WINDOWS
+#if NACS_OS_WINDOWS
+#  include <windows.h>
+#else
 #  include <sys/mman.h>
 #endif
 
