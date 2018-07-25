@@ -16,8 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include <nacs-utils/number.h>
-#include <nacs-utils/timer.h>
+#include "../../lib/utils/number.h"
+#include "../../lib/utils/timer.h"
 #include <assert.h>
 
 #include <iostream>

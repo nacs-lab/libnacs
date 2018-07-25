@@ -18,8 +18,8 @@
 
 #include "test_helpers.h"
 
-#include <nacs-utils/mem.h>
-#include <nacs-utils/timer.h>
+#include "../../lib/utils/mem.h"
+#include "../../lib/utils/timer.h"
 
 #include <assert.h>
 

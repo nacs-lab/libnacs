@@ -19,9 +19,9 @@
 #include "devctl_p.h"
 #include "device_p.h"
 
-#include <nacs-utils/utils.h>
-#include <nacs-utils/mem.h>
-#include <nacs-utils/fd_utils.h>
+#include "../utils/utils.h"
+#include "../utils/mem.h"
+#include "../utils/fd_utils.h"
 
 #include <stropts.h>
 #include <sys/mman.h>

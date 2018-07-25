@@ -20,8 +20,8 @@
 #  undef NDEBUG
 #endif
 
-#include <nacs-utils/timer.h>
-#include <nacs-seq/bytecode.h>
+#include "../../lib/utils/timer.h"
+#include "../../lib/seq/bytecode.h"
 
 #include <iostream>
 #include <fstream>

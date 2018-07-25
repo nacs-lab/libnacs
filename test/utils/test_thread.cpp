@@ -16,8 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include <nacs-utils/timer.h>
-#include <nacs-utils/thread.h>
+#include "../../lib/utils/timer.h"
+#include "../../lib/utils/thread.h"
 
 #include <mutex>
 #include <shared_mutex>

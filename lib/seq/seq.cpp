@@ -18,7 +18,7 @@
 
 #include "seq.h"
 
-#include <nacs-utils/utils.h>
+#include "../utils/utils.h"
 
 #include <type_traits>
 #include <iomanip>

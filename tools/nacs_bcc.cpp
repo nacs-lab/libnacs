@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include <nacs-seq/bytecode.h>
+#include "../lib/seq/bytecode.h"
 
 #include <iostream>
 #include <fstream>

@@ -20,9 +20,9 @@
 #  undef NDEBUG
 #endif
 
-#include <nacs-utils/ir.h>
-#include <nacs-utils/number.h>
-#include <nacs-utils/timer.h>
+#include "../../lib/utils/ir.h"
+#include "../../lib/utils/number.h"
+#include "../../lib/utils/timer.h"
 #include <assert.h>
 #include <iostream>
 #include <sstream>

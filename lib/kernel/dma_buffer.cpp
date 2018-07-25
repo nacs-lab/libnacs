@@ -19,9 +19,9 @@
 #include "dma_buffer.h"
 #include "devctl_p.h"
 
-#include <nacs-utils/utils.h>
-#include <nacs-utils/mem.h>
-#include <nacs-utils/number.h>
+#include "../utils/utils.h"
+#include "../utils/mem.h"
+#include "../utils/number.h"
 
 namespace NaCs {
 

@@ -18,7 +18,7 @@
 
 #include "test_helpers.h"
 
-#include <nacs-utils/container.h>
+#include "../../lib/utils/container.h"
 
 #include <assert.h>
 

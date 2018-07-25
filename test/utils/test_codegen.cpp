@@ -20,12 +20,12 @@
 #  undef NDEBUG
 #endif
 
-#include <nacs-utils/llvm/codegen.h>
-#include <nacs-utils/llvm/compile.h>
-#include <nacs-utils/llvm/execute.h>
-#include <nacs-utils/llvm/utils.h>
-#include <nacs-utils/number.h>
-#include <nacs-utils/timer.h>
+#include "../../lib/utils/llvm/codegen.h"
+#include "../../lib/utils/llvm/compile.h"
+#include "../../lib/utils/llvm/execute.h"
+#include "../../lib/utils/llvm/utils.h"
+#include "../../lib/utils/number.h"
+#include "../../lib/utils/timer.h"
 #include <assert.h>
 #include <iostream>
 #include <sstream>

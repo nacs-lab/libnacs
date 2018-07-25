@@ -19,7 +19,7 @@
 #include "device.h"
 #include "device_p.h"
 
-#include <nacs-utils/utils.h>
+#include "../utils/utils.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>

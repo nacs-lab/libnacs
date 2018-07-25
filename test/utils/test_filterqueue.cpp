@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include <nacs-utils/container.h>
+#include "../../lib/utils/container.h"
 
 #include <assert.h>
 
