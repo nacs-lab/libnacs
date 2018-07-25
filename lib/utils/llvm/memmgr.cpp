@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "../utils.h"
+#include "../number.h"
 
 #include "execute.h"
 
@@ -28,20 +29,42 @@ namespace Exe {
  */
 
 template<typename BlockAlloc>
-void *AllocTracker::alloc(size_t sz, BlockAlloc &&block_alloc)
+void *AllocTracker::alloc(size_t sz, size_t align, BlockAlloc &&block_alloc)
 {
     // Simple first fit allocator
+    auto fallback = m_freelist.end();
     for (auto I = m_freelist.begin(), E = m_freelist.end(); I != E; I++) {
         auto freesz = I->second;
         if (freesz < sz)
             continue;
         auto start = (void*)((char*)I->first - freesz);
-        if (freesz > sz) {
-            I->second = freesz - sz;
+        auto padding = getPadding((uintptr_t)start, align);
+        if (!padding) {
+            if (freesz > sz) {
+                I->second = freesz - sz;
+                return start;
+            }
+            m_freelist.erase(I);
             return start;
         }
-        m_freelist.erase(I);
-        return start;
+        if (padding + sz < freesz)
+            continue;
+        fallback = I;
+    }
+    if (fallback != m_freelist.end()) {
+        auto freesz = fallback->second;
+        auto start = (void*)((char*)fallback->first - freesz);
+        auto padding = getPadding((uintptr_t)start, align);
+        auto end_pad = freesz - padding - sz;
+        if (end_pad != 0) {
+            fallback->second = end_pad;
+        }
+        else {
+            m_freelist.erase(fallback);
+        }
+        auto res = (void*)((char*)start + padding);
+        m_freelist[res] = padding;
+        return res;
     }
     auto blksz = alignTo(sz, m_blocksz);
     auto ptr = block_alloc(blksz);

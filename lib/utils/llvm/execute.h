@@ -24,6 +24,7 @@
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 
 #include <memory>
+#include <utility>
 
 namespace NaCs {
 namespace LLVM {
@@ -52,12 +53,19 @@ public:
     {
     }
 
-    // Allocate a piece of memory of size `sz`. If one cannot be found in the freelist
-    // `block_alloc` will be called with the desired block size to allocate a block of memory.
+    // Allocate a piece of memory of size `sz` and alignment `align`.
+    // If one cannot be found in the freelist `block_alloc` will be called
+    // with the desired block size to allocate a block of memory.
     // It is guaranteed that an allocation won't cross multiple blocks even if `block_alloc`
     // returns two blocks that are adjacent in memory.
+    // The return value of `block_alloc` is assumed to be properly aligned.
     template<typename BlockAlloc>
-    void *alloc(size_t sz, BlockAlloc &&block_alloc);
+    void *alloc(size_t sz, size_t align, BlockAlloc &&block_alloc);
+    template<typename BlockAlloc>
+    void *alloc(size_t sz, BlockAlloc &&block_alloc)
+    {
+        return alloc(sz, 1, std::forward<BlockAlloc>(block_alloc));
+    }
     // Freeing a piece of memory at `ptr` and size `sz`.
     // If this frees up a whole block, `block_free` will be called to free the empty block.
     template<typename BlockFree>
