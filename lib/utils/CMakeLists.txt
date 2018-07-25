@@ -23,6 +23,10 @@ set(nacs_utils_SRCS
   timer.cpp
   utils.cpp)
 set(nacs_utils_LINKS m pthread)
+if(IS_UNIX)
+  # For shm_*
+  set(nacs_utils_LINKS ${nacs_utils_LINKS} rt)
+endif()
 set(nacs_utils_llvm_HDRS
   llvm/codegen.h
   llvm/compile.h

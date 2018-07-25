@@ -78,6 +78,7 @@ enum class Prot : int {
 void *mapAnonPage(size_t size, Prot prot);
 void unmapPage(void *ptr, size_t size);
 bool protectPage(void *ptr, size_t size, Prot prot);
+int createDualMapHdl(void);
 
 // Pre-allocate memory for a number of objects so that they can be allocated quickly.
 template<typename T, size_t n>
