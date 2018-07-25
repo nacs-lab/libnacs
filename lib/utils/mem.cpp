@@ -115,7 +115,11 @@ NACS_EXPORT() bool protectPage(void *ptr, size_t size, Prot prot)
 #endif
 }
 
-#if !NACS_OS_WINDOWS
+#if NACS_OS_WINDOWS
+NACS_EXPORT() DualMap::DualMap()
+{
+}
+#else
 static bool checkFdOrClose(int fd)
 {
     if (fd == -1)
@@ -135,27 +139,20 @@ static bool checkFdOrClose(int fd)
     munmap(ptr, page_size);
     return true;
 }
-#endif
 
-NACS_EXPORT() int createDualMapHdl(void)
+NACS_EXPORT() DualMap::DualMap()
 {
-#if NACS_OS_WINDOWS
-    // Not needed on windows
-    return 0;
-#else
-    int fd = -1;
-
     // Linux and FreeBSD can create an anonymous fd without touching the
     // file system.
 #  ifdef __NR_memfd_create
-    fd = (int)syscall(__NR_memfd_create, "nacs-utils", 0);
-    if (checkFdOrClose(fd))
-        return fd;
+    m_fd = (int)syscall(__NR_memfd_create, "nacs-utils", 0);
+    if (checkFdOrClose(m_fd))
+        return;
 #  endif
 #  if NACS_OS_FREEBSD
-    fd = shm_open(SHM_ANON, O_RDWR, S_IRWXU);
-    if (checkFdOrClose(fd))
-        return fd;
+    m_fd = shm_open(SHM_ANON, O_RDWR, S_IRWXU);
+    if (checkFdOrClose(m_fd))
+        return;
 #  endif
     char shm_name[] = "nacs-utils-0123456789-0123456789/tmp///";
     pid_t pid = getpid();
@@ -164,29 +161,29 @@ NACS_EXPORT() int createDualMapHdl(void)
     do {
         snprintf(shm_name, sizeof(shm_name),
                  "nacs-utils-%d-%d", (int)pid, rand());
-        fd = shm_open(shm_name, O_RDWR | O_CREAT | O_EXCL, S_IRWXU);
-        if (checkFdOrClose(fd)) {
+        m_fd = shm_open(shm_name, O_RDWR | O_CREAT | O_EXCL, S_IRWXU);
+        if (checkFdOrClose(m_fd)) {
             shm_unlink(shm_name);
-            return fd;
+            return;
         }
     } while (errno == EEXIST);
 #  endif
     FILE *tmpf = tmpfile();
     if (tmpf) {
-        fd = dup(fileno(tmpf));
+        m_fd = dup(fileno(tmpf));
         fclose(tmpf);
-        if (checkFdOrClose(fd)) {
-            return fd;
+        if (checkFdOrClose(m_fd)) {
+            return;
         }
     }
     snprintf(shm_name, sizeof(shm_name), "/tmp/nacs-utils-%d-XXXXXX", (int)pid);
-    fd = mkstemp(shm_name);
-    if (checkFdOrClose(fd)) {
+    m_fd = mkstemp(shm_name);
+    if (checkFdOrClose(m_fd)) {
         unlink(shm_name);
-        return fd;
+        return;
     }
-    return -1;
-#endif
+    throw std::runtime_error("Failed to create anonymous FD.");
 }
+#endif
 
 }
