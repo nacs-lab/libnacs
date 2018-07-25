@@ -87,5 +87,13 @@ NACS_EXPORT() void *mapAnonPage(size_t size, Prot prot)
     return mem;
 }
 
+NACS_EXPORT() void unmapPage(void *ptr, size_t size)
+{
+#if NACS_OS_WINDOWS
+    VirtualFree(ptr, size, MEM_DECOMMIT);
+#else
+    munmap(ptr, size);
+#endif
+}
 
 }
