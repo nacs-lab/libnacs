@@ -20,6 +20,10 @@
 
 #include <cstring>
 
+#if !NACS_OS_WINDOWS
+#  include <sys/mman.h>
+#endif
+
 #ifndef __NACS_UTILS_MEM_H__
 #define __NACS_UTILS_MEM_H__
 
@@ -57,6 +61,21 @@ write(volatile void *addr, T2 val, size_t idx=0)
 NACS_EXPORT(utils) extern const size_t page_size;
 void *mapPhyAddr(void*, size_t);
 void *getPhyAddr(void*);
+#if NACS_OS_WINDOWS
+enum class Prot : int {
+    RW = PAGE_READWRITE,
+    RX = PAGE_EXECUTE,
+    RO = PAGE_READONLY
+};
+#else
+enum class Prot : int {
+    RW = PROT_READ | PROT_WRITE,
+    RX = PROT_READ | PROT_EXEC,
+    RO = PROT_READ
+};
+#endif
+// Map anonymous pages of `size`. Guaranteed to be aligned to page size.
+void *mapAnonPage(size_t size, Prot prot);
 
 // Pre-allocate memory for a number of objects so that they can be allocated quickly.
 template<typename T, size_t n>

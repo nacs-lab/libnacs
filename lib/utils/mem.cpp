@@ -74,4 +74,18 @@ getPhyAddr(void *virt_addr)
 #endif
 }
 
+NACS_EXPORT() void *mapAnonPage(size_t size, Prot prot)
+{
+#if NACS_OS_WINDOWS
+    void *mem = VirtualAlloc(NULL, size, MEM_COMMIT, (int)prot);
+#else
+    void *mem = mmap(nullptr, size, (int)prot,
+                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (mem == MAP_FAILED)
+        mem = nullptr;
+#endif
+    return mem;
+}
+
+
 }
