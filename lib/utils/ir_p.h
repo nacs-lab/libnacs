@@ -38,11 +38,11 @@ enum class BuiltinType : uint8_t {
 const char *getBuiltinSymbol(Builtins id);
 BuiltinType getBuiltinType(Builtins id);
 
+}
+}
+
 #ifndef NACS_HAS_EXP10
 NACS_EXPORT() double nacs_exp10(double x);
 #endif
-
-}
-}
 
 #endif
