@@ -94,7 +94,13 @@ bool recommitPage(void *ptr, size_t size, Prot prot);
 
 class DualMap {
 public:
-    DualMap();
+    DualMap(bool do_init)
+    {
+        if (do_init) {
+            init();
+        }
+    }
+    void init();
 private:
 #if !NACS_OS_WINDOWS
     int m_fd = -1;

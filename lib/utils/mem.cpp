@@ -134,7 +134,7 @@ bool recommitPage(void *ptr, size_t size, Prot prot)
 }
 
 #if NACS_OS_WINDOWS
-NACS_EXPORT() DualMap::DualMap()
+NACS_EXPORT() void DualMap::init()
 {
 }
 #else
@@ -158,8 +158,10 @@ static bool checkFdOrClose(int fd)
     return true;
 }
 
-NACS_EXPORT() DualMap::DualMap()
+NACS_EXPORT() void DualMap::init()
 {
+    if (m_fd != -1)
+        return;
     // Linux and FreeBSD can create an anonymous fd without touching the
     // file system.
 #  ifdef __NR_memfd_create
@@ -200,6 +202,7 @@ NACS_EXPORT() DualMap::DualMap()
         unlink(shm_name);
         return;
     }
+    m_fd = -1;
     throw std::runtime_error("Failed to create anonymous FD.");
 }
 #endif
