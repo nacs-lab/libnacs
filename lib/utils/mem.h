@@ -78,8 +78,19 @@ enum class Prot : int {
 #endif
 // Map anonymous pages of `size`. Guaranteed to be aligned to page size.
 void *mapAnonPage(size_t size, Prot prot);
+// Unmap pages.
+// Windows does not support partially unmap a previously allocated region.
+// If partially freeing the memory is needed, use `decommitPage` instead.
 void unmapPage(void *ptr, size_t size);
+// Change the protection on the page
 bool protectPage(void *ptr, size_t size, Prot prot);
+
+// Mark the page as unused. This does not free the address range but allows the OS
+// to reused the physical memory. On Unix, the page is still accessible after the call.
+void decommitPage(void *ptr, size_t size);
+// Recommit a previously decommited page and set the page protection to `prot`.
+// This is required on windows after a page is decommited.
+bool recommitPage(void *ptr, size_t size, Prot prot);
 
 class DualMap {
 public:

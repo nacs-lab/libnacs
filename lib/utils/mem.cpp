@@ -29,7 +29,6 @@
 #endif
 #if NACS_OS_LINUX
 #  include <sys/syscall.h>
-#  include <sys/utsname.h>
 #elif NACS_OS_FREEBSD
 #  include <sys/types.h>
 #endif
@@ -99,7 +98,8 @@ NACS_EXPORT() void *mapAnonPage(size_t size, Prot prot)
 NACS_EXPORT() void unmapPage(void *ptr, size_t size)
 {
 #if NACS_OS_WINDOWS
-    VirtualFree(ptr, size, MEM_DECOMMIT);
+    (void)size;
+    VirtualFree(ptr, 0, MEM_RELEASE);
 #else
     munmap(ptr, size);
 #endif
@@ -110,6 +110,24 @@ NACS_EXPORT() bool protectPage(void *ptr, size_t size, Prot prot)
 #if NACS_OS_WINDOWS
     DWORD old_prot;
     return VirtualProtect(ptr, size, (DWORD)prot, &old_prot);
+#else
+    return mprotect(ptr, size, (int)prot) == 0;
+#endif
+}
+
+void decommitPage(void *ptr, size_t size)
+{
+#if NACS_OS_WINDOWS
+    VirtualFree(ptr, size, MEM_DECOMMIT);
+#else
+    madvise(ptr, size, MADV_DONTNEED);
+#endif
+}
+
+bool recommitPage(void *ptr, size_t size, Prot prot)
+{
+#if NACS_OS_WINDOWS
+    return VirtualAlloc(ptr, size, MEM_COMMIT, (int)prot);
 #else
     return mprotect(ptr, size, (int)prot) == 0;
 #endif
