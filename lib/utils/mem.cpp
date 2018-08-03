@@ -30,6 +30,7 @@
 #endif
 #if NACS_OS_LINUX
 #  include <sys/syscall.h>
+#  include <sys/utsname.h>
 #elif NACS_OS_FREEBSD
 #  include <sys/types.h>
 #endif
@@ -336,6 +337,113 @@ free_mem:
 #  else
     return;
 #  endif
+}
+#endif
+
+#if NACS_OS_LINUX
+NACS_INTERNAL int MemWriter::open_self_mem()
+{
+    struct utsname kernel;
+    uname(&kernel);
+    int major, minor;
+    if (-1 == sscanf(kernel.release, "%d.%d", &major, &minor))
+        return -1;
+    // Can't risk getting a memory block backed by transparent huge pages,
+    // which cause the kernel to freeze on systems that have the DirtyCOW
+    // mitigation patch, but are < 4.10.
+    if (!(major > 4 || (major == 4 && minor >= 10)))
+        return -1;
+#ifdef O_CLOEXEC
+    int fd = open("/proc/self/mem", O_RDWR | O_SYNC | O_CLOEXEC);
+    if (fd == -1)
+        return -1;
+#else
+    int fd = open("/proc/self/mem", O_RDWR | O_SYNC);
+    if (fd == -1)
+        return -1;
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
+#endif
+
+    // Check if we can write to a RX page
+    void *test_pg = mmap(nullptr, page_size, PROT_READ | PROT_EXEC,
+                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    // We can ignore this though failure to allocate executable memory would be a bigger problem.
+    if (test_pg == MAP_FAILED) {
+        close(fd);
+        return -1;
+    }
+
+    const uint64_t v = 0xffff000012345678u;
+    auto ret = pwrite(fd, (const void*)&v, sizeof(uint64_t), (uintptr_t)test_pg);
+    if (ret != sizeof(uint64_t) || *(volatile uint64_t*)test_pg != v) {
+        munmap(test_pg, page_size);
+        close(fd);
+        return -1;
+    }
+    munmap(test_pg, page_size);
+    return fd;
+}
+
+NACS_INTERNAL ssize_t MemWriter::pwrite(int fd, const void *buf, size_t nbyte, uintptr_t addr)
+{
+    static_assert(sizeof(off_t) >= 8, "off_t is smaller than 64bits");
+#if __SIZEOF_POINTER__ == 8
+    const uintptr_t sign_bit = uintptr_t(1) << 63;
+    if (unlikely(sign_bit & addr)) {
+        // This case should not happen with default kernel on 64bit since the address belongs
+        // to kernel space (linear mapping).
+        // However, it seems possible to change this at kernel compile time.
+
+        // pwrite doesn't support offset with sign bit set but lseek does.
+        // This is obviously not thread safe but none of the mem manager does anyway...
+        // From the kernel code, `lseek` with `SEEK_SET` can't fail.
+        // However, this can possibly confuse the glibc wrapper to think that
+        // we have invalid input value. Use syscall directly to be sure.
+        syscall(SYS_lseek, (long)fd, addr, (long)SEEK_SET);
+        // The return value can be -1 when the glibc syscall function
+        // think we have an error return with and `addr` that's too large.
+        // Ignore the return value for now.
+        return ::write(fd, buf, nbyte);
+    }
+#endif
+    return ::pwrite(fd, buf, nbyte, (off_t)addr);
+}
+
+NACS_EXPORT() bool MemWriter::init()
+{
+    if (m_fd != -1)
+        return true;
+    int fd = open_self_mem();
+    if (fd < 0)
+        return false;
+    m_fd = fd;
+    return true;
+}
+
+NACS_EXPORT() void MemWriter::write(void *dest, void *ptr, size_t size)
+{
+    while (size > 0) {
+        ssize_t ret = pwrite(m_fd, ptr, size, (uintptr_t)dest);
+        if ((size_t)ret == size)
+            return;
+        if (ret == -1 && (errno == EAGAIN || errno == EINTR))
+            continue;
+        checkErrno(ret);
+        assert((size_t)ret < size);
+        size -= ret;
+        ptr = (char*)ptr + ret;
+        dest = (char*)dest + ret;
+    }
+}
+#else
+NACS_EXPORT() bool MemWriter::init()
+{
+    return false;
+}
+
+NACS_EXPORT() void MemWriter::write(void*, void*, size_t)
+{
+    throw std::runtime_error("Not implemented.");
 }
 #endif
 

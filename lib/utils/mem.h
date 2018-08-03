@@ -136,6 +136,27 @@ private:
 #endif
 };
 
+/**
+ * Write to memory by-passing memory protection.
+ */
+class MemWriter {
+public:
+    MemWriter(bool do_init)
+    {
+        if (do_init && !init()) {
+            throw std::runtime_error("Failed to initialize MemWriter.");
+        }
+    }
+    bool init();
+    void write(void *dest, void *ptr, size_t size);
+private:
+#if NACS_OS_LINUX
+    static int open_self_mem();
+    static ssize_t pwrite(int fd, const void *buf, size_t nbyte, uintptr_t addr);
+    int m_fd{-1};
+#endif
+};
+
 // Pre-allocate memory for a number of objects so that they can be allocated quickly.
 template<typename T, size_t n>
 class SmallAllocator {
