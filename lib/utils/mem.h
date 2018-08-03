@@ -19,6 +19,8 @@
 #include "utils.h"
 
 #include <cstring>
+#include <map>
+#include <utility>
 
 #if NACS_OS_WINDOWS
 #  include <windows.h>
@@ -92,6 +94,12 @@ void decommitPage(void *ptr, size_t size);
 // This is required on windows after a page is decommited.
 bool recommitPage(void *ptr, size_t size, Prot prot);
 
+/**
+ * This is a helper class to create pages that are mapped twice,
+ * once as writable and once as read only or read and executable.
+ * This can be used in an efficient memory manager for runtime loading of code without
+ * relaying on RWX page or changing page protection on allocated pages.
+ */
 class DualMap {
 public:
     DualMap(bool do_init)
@@ -101,11 +109,30 @@ public:
         }
     }
     void init();
+    // Allocate a new page(s).
+    // The address returned in the first element is writable at first
+    // and can be changed to read only or executable later.
+    // The ID returned in the second element can be used later to create shared writable map
+    // of the same memory region later.
+    std::pair<void*,uintptr_t> alloc(size_t size, bool exec);
+    // Create a writable map for the allocation determined by `id`.
+    // Only one such map should be created for each allocation.
+    void *remap_wraddr(uintptr_t id, size_t size);
+    // Free the allocation and associated writable address.
+    void free(void *ptr, uintptr_t id, size_t size, void *wraddr=nullptr);
 private:
 #if !NACS_OS_WINDOWS
+    static bool checkFdOrClose(int fd);
+    // Multiple of 128MB.
+    // Hopefully no one will set a ulimit for this to be a problem...
+    static constexpr size_t m_region_sz = 128 * 1024 * 1024;
     int m_fd = -1;
-    size_t m_offset = 0;
-    size_t m_size = 0;
+    // Free regions before the last region. The key is the end of the free region
+    std::map<size_t,size_t> m_freeregions;
+    // Maximum allocated offset (this is the end of the last allocated region)
+    size_t m_maxoffset = 0;
+    // Size of the file (the last ftruncate value)
+    size_t m_filesize = m_region_sz;
 #endif
 };
 

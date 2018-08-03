@@ -16,8 +16,9 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "mem.h"
 #include "fd_utils.h"
+#include "mem.h"
+#include "number.h"
 
 #if !NACS_OS_WINDOWS
 #  include <unistd.h>
@@ -137,14 +138,18 @@ bool recommitPage(void *ptr, size_t size, Prot prot)
 NACS_EXPORT() void DualMap::init()
 {
 }
+
+// NACS_EXPORT() std::pair<void*,uintptr_t> DualMap::alloc(size_t size, bool exec);
+// NACS_EXPORT() void *DualMap::remap_wraddr(uintptr_t id, size_t size);
+// NACS_EXPORT() void DualMap::free(void *ptr, uintptr_t id, size_t size, void *wraddr);
 #else
-static bool checkFdOrClose(int fd)
+bool DualMap::checkFdOrClose(int fd)
 {
     if (fd == -1)
         return false;
     fcntl(fd, F_SETFD, FD_CLOEXEC);
     fchmod(fd, S_IRWXU);
-    if (ftruncate(fd, page_size) != 0) {
+    if (ftruncate(fd, m_region_sz) != 0) {
         close(fd);
         return false;
     }
@@ -204,6 +209,98 @@ NACS_EXPORT() void DualMap::init()
     }
     m_fd = -1;
     throw std::runtime_error("Failed to create anonymous FD.");
+}
+
+NACS_EXPORT() std::pair<void*,uintptr_t> DualMap::alloc(size_t size, bool)
+{
+    // Find an free region first
+    for (auto it = m_freeregions.begin(), end = m_freeregions.end(); it != end; ++it) {
+        auto rsz = it->second;
+        if (unlikely(rsz < size))
+            continue;
+        auto offset = it->first - rsz;
+        if (rsz == size) {
+            m_freeregions.erase(it);
+        }
+        else {
+            it->second = rsz - size;
+        }
+        return std::make_pair(remap_wraddr(offset, size), offset);
+    }
+    // Allocate from the end and make sure the file is large enough.
+    auto offset = m_maxoffset;
+    m_maxoffset += size;
+    if (unlikely(m_maxoffset > m_filesize)) {
+        m_filesize = alignTo(m_maxoffset, m_region_sz);
+        checkErrno(ftruncate(m_fd, m_filesize));
+    }
+    return std::make_pair(remap_wraddr(offset, size), offset);
+}
+
+NACS_EXPORT() void *DualMap::remap_wraddr(uintptr_t id, size_t size)
+{
+    void *addr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, m_fd, id);
+    if (addr == MAP_FAILED)
+        throw std::runtime_error("Failed to map RW view.");
+    return addr;
+}
+
+NACS_EXPORT() void DualMap::free(void *ptr, uintptr_t id, size_t size, void *wraddr)
+{
+    // We don't need anything from the pointers so just free them directly.
+    if (wraddr)
+        munmap(wraddr, size);
+    munmap(ptr, size);
+    // Now record that the offset region is free.
+    auto it = m_freeregions.lower_bound(id);
+    auto end = id + size;
+    if (it == m_freeregions.end()) {
+        // Cannot merge with any free regions in the list.
+        // Check if it can be merged with the free region at the end.
+        if (end == m_maxoffset)
+            goto free_end;
+        m_freeregions.insert(it, std::make_pair(end, size));
+        goto free_mem;
+    }
+    if (it->first == id) {
+        // We found a previous one to merge with.
+        id = id - it->second;
+        size = it->second + size;
+        it = m_freeregions.erase(it);
+        if (it == m_freeregions.end()) {
+            // Check if it can be merged with the free region at the end.
+            if (end == m_maxoffset)
+                goto free_end;
+            m_freeregions.insert(it, std::make_pair(end, size));
+            goto free_mem;
+        }
+    }
+    // Now `it->first` is guaranteed to be greater than id,
+    // meaning that we definitely won't merge with the empty region at the end.
+    if (it->first - it->second == end) {
+        it->second += size;
+    }
+    else {
+        m_freeregions.insert(it, std::make_pair(end, size));
+    }
+    goto free_mem;
+free_end:
+    m_maxoffset = id;
+    if (m_filesize - m_maxoffset > m_region_sz) {
+        m_filesize = alignTo(m_maxoffset, m_region_sz);
+        ftruncate(m_fd, m_filesize);
+        return;
+    }
+free_mem:
+#  if NACS_OS_LINUX
+    // Free up the memory
+    if (fallocate(m_fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, id, size) == -1) {
+        // ignore error
+        fallocate(m_fd, FALLOC_FL_ZERO_RANGE | FALLOC_FL_KEEP_SIZE, id, size);
+    }
+#  else
+    return;
+#  endif
 }
 #endif
 
