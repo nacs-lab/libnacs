@@ -104,11 +104,11 @@ class DualMap {
 public:
     DualMap(bool do_init)
     {
-        if (do_init) {
-            init();
+        if (do_init && !init()) {
+            throw std::runtime_error("Failed to initialize DualMap.");
         }
     }
-    void init();
+    bool init();
     // Allocate a new page(s).
     // The address returned in the first element is writable at first
     // and can be changed to read only or executable later.

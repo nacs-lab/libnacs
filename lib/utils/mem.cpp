@@ -135,8 +135,9 @@ bool recommitPage(void *ptr, size_t size, Prot prot)
 }
 
 #if NACS_OS_WINDOWS
-NACS_EXPORT() void DualMap::init()
+NACS_EXPORT() bool DualMap::init()
 {
+    return true;
 }
 
 NACS_EXPORT() std::pair<void*,uintptr_t> DualMap::alloc(size_t size, bool exec)
@@ -197,21 +198,21 @@ bool DualMap::checkFdOrClose(int fd)
     return true;
 }
 
-NACS_EXPORT() void DualMap::init()
+NACS_EXPORT() bool DualMap::init()
 {
     if (m_fd != -1)
-        return;
+        return true;
     // Linux and FreeBSD can create an anonymous fd without touching the
     // file system.
 #  ifdef __NR_memfd_create
     m_fd = (int)syscall(__NR_memfd_create, "nacs-utils", 0);
     if (checkFdOrClose(m_fd))
-        return;
+        return true;
 #  endif
 #  if NACS_OS_FREEBSD
     m_fd = shm_open(SHM_ANON, O_RDWR, S_IRWXU);
     if (checkFdOrClose(m_fd))
-        return;
+        return true;
 #  endif
     char shm_name[] = "nacs-utils-0123456789-0123456789/tmp///";
     pid_t pid = getpid();
@@ -223,7 +224,7 @@ NACS_EXPORT() void DualMap::init()
         m_fd = shm_open(shm_name, O_RDWR | O_CREAT | O_EXCL, S_IRWXU);
         if (checkFdOrClose(m_fd)) {
             shm_unlink(shm_name);
-            return;
+            return true;
         }
     } while (errno == EEXIST);
 #  endif
@@ -232,17 +233,17 @@ NACS_EXPORT() void DualMap::init()
         m_fd = dup(fileno(tmpf));
         fclose(tmpf);
         if (checkFdOrClose(m_fd)) {
-            return;
+            return true;
         }
     }
     snprintf(shm_name, sizeof(shm_name), "/tmp/nacs-utils-%d-XXXXXX", (int)pid);
     m_fd = mkstemp(shm_name);
     if (checkFdOrClose(m_fd)) {
         unlink(shm_name);
-        return;
+        return true;
     }
     m_fd = -1;
-    throw std::runtime_error("Failed to create anonymous FD.");
+    return false;
 }
 
 NACS_EXPORT() std::pair<void*,uintptr_t> DualMap::alloc(size_t size, bool)
