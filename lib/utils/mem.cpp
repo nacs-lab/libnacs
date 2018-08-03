@@ -116,7 +116,7 @@ NACS_EXPORT() bool protectPage(void *ptr, size_t size, Prot prot)
 #endif
 }
 
-void decommitPage(void *ptr, size_t size)
+NACS_EXPORT() void decommitPage(void *ptr, size_t size)
 {
 #if NACS_OS_WINDOWS
     VirtualFree(ptr, size, MEM_DECOMMIT);
@@ -125,7 +125,7 @@ void decommitPage(void *ptr, size_t size)
 #endif
 }
 
-bool recommitPage(void *ptr, size_t size, Prot prot)
+NACS_EXPORT() bool recommitPage(void *ptr, size_t size, Prot prot)
 {
 #if NACS_OS_WINDOWS
     return VirtualAlloc(ptr, size, MEM_COMMIT, (int)prot);
@@ -178,7 +178,7 @@ NACS_EXPORT() void DualMap::free(void *ptr, uintptr_t id, size_t, void *wraddr)
     CloseHandle((HANDLE)id);
 }
 #else
-bool DualMap::checkFdOrClose(int fd)
+NACS_INTERNAL bool DualMap::checkFdOrClose(int fd)
 {
     if (fd == -1)
         return false;
