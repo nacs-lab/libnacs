@@ -139,9 +139,43 @@ NACS_EXPORT() void DualMap::init()
 {
 }
 
-// NACS_EXPORT() std::pair<void*,uintptr_t> DualMap::alloc(size_t size, bool exec);
-// NACS_EXPORT() void *DualMap::remap_wraddr(uintptr_t id, size_t size);
-// NACS_EXPORT() void DualMap::free(void *ptr, uintptr_t id, size_t size, void *wraddr);
+NACS_EXPORT() std::pair<void*,uintptr_t> DualMap::alloc(size_t size, bool exec)
+{
+    // As far as I can tell `CreateFileMapping` cannot be resized on windows.
+    // Also, creating big file mapping and then map pieces of it seems to
+    // consume too much global resources. Therefore, we use each file mapping
+    // as a block on windows
+    DWORD file_mode = exec ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE;
+    HANDLE hdl = CreateFileMapping(INVALID_HANDLE_VALUE, NULL,
+                                   file_mode, 0, size, NULL);
+    // We set the maximum permissions for this to the maximum for this file, and then
+    // VirtualProtect, such that the debugger can still access these
+    // pages and set breakpoints if it wants to.
+    DWORD map_mode = FILE_MAP_ALL_ACCESS | (exec ? FILE_MAP_EXECUTE : 0);
+    void *addr = MapViewOfFile(hdl, map_mode, 0, 0, size);
+    if (!addr)
+        throw std::runtime_error("Cannot map initial view.");
+    // Return the initially read-write page.
+    VirtualProtect(addr, size, PAGE_READWRITE, &file_mode);
+    return std::make_pair(addr, (uintptr_t)hdl);
+}
+
+NACS_EXPORT() void *DualMap::remap_wraddr(uintptr_t id, size_t size)
+{
+    void *addr = MapViewOfFile((HANDLE)id, FILE_MAP_ALL_ACCESS,
+                               0, 0, size);
+    if (!addr)
+        throw std::runtime_error("Cannot map RW view.");
+    return addr;
+}
+
+NACS_EXPORT() void DualMap::free(void *ptr, uintptr_t id, size_t, void *wraddr)
+{
+    if (wraddr)
+        UnmapViewOfFile(wraddr);
+    UnmapViewOfFile(ptr);
+    CloseHandle((HANDLE)id);
+}
 #else
 bool DualMap::checkFdOrClose(int fd)
 {
