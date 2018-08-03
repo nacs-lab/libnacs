@@ -57,7 +57,8 @@ if(ENABLE_LLVM)
 endif()
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden
-  -fno-math-errno -Wconversion -Wno-sign-conversion)
+  -fno-math-errno -Wconversion -Wno-sign-conversion
+  -D_FILE_OFFSET_BITS=64)
 
 cmake_c_fix_include_path(lib/utils nacs-utils)
 cmake_c_fix_include_path(lib/kernel nacs-kernel)

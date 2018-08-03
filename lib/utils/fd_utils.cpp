@@ -39,7 +39,7 @@ mapFile(int fd, off_t offset, size_t len)
     off_t start = offset - offset % page_size;
     off_t end = alignTo(offset + len, page_size);
 
-    void *base = mmap(nullptr, end - start, PROT_READ | PROT_WRITE,
+    void *base = mmap(nullptr, (size_t)(end - start), PROT_READ | PROT_WRITE,
                       MAP_SHARED, fd, start);
     NACS_RET_IF_FAIL(base != (void*)-1, nullptr);
 

@@ -9,4 +9,4 @@ Version: @MAJOR_VERSION@.@MINOR_VERSION@.@PATCH_VERSION@
 
 Requires:
 Libs: -L${libdir} -lnacs-utils
-Cflags: -I${includedir}
+Cflags: -I${includedir} -D_FILE_OFFSET_BITS=64
