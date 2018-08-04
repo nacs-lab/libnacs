@@ -18,6 +18,7 @@
 
 #include "../utils.h"
 #include "../number.h"
+#include "../mem.h"
 
 #include "execute.h"
 
@@ -140,6 +141,34 @@ void AllocTracker::free_real(void *ptr, size_t sz, BlockFree &&block_free,
     if (!found) {
         m_freelist[endptr] = sz;
     }
+}
+
+inline RWAllocator::RWAllocator(size_t block_size)
+    : m_tracker(block_size)
+{
+}
+
+void *RWAllocator::alloc(size_t size, size_t align)
+{
+    return m_tracker.alloc(size, align, [&] (size_t bsize) {
+            if (m_lastptr && bsize == m_tracker.block_size()) {
+                auto ptr = m_lastptr;
+                m_lastptr = nullptr;
+                return ptr;
+            }
+            return mapAnonPage(bsize, Prot::RW);
+        });
+}
+
+void RWAllocator::free(void *ptr, size_t size)
+{
+    m_tracker.free(ptr, size, [&] (void *ptr, size_t bsize) {
+            if (!m_lastptr && bsize == m_tracker.block_size()) {
+                m_lastptr = ptr;
+                return;
+            }
+            return unmapPage(ptr, bsize);
+        });
 }
 
 MemMgr::MemMgr()

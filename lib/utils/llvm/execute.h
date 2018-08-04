@@ -70,6 +70,10 @@ public:
     // If this frees up a whole block, `block_free` will be called to free the empty block.
     template<typename BlockFree>
     void free(void *ptr, size_t sz, BlockFree &&block_free);
+    size_t block_size() const
+    {
+        return m_blocksz;
+    }
 
 private:
     // Similar to the public API `free` but `ptr` and `sz` are the address and the size
@@ -90,6 +94,18 @@ private:
     std::map<void*,size_t> m_blocks;
 };
 
+class RWAllocator {
+public:
+    RWAllocator(size_t block_size);
+    void *alloc(size_t size, size_t align);
+    void free(void *ptr, size_t size);
+
+private:
+    AllocTracker m_tracker;
+    // Possibly cache one block of the minimum size.
+    void *m_lastptr{nullptr};
+};
+
 class MemMgr : public RuntimeDyld::MemoryManager {
 public:
     MemMgr();
@@ -106,6 +122,7 @@ private:
     void registerEHFrames(uint8_t *addr, uint64_t load_addr, size_t sz) override;
     void deregisterEHFrames() override;
     bool finalizeMemory(std::string *ErrMsg) override;
+
     SectionMemoryManager tmp;
 
     uint64_t m_grp_cnt = 0;
