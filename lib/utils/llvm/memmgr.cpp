@@ -199,7 +199,9 @@ MemMgr::~MemMgr()
 
 uint64_t MemMgr::new_group()
 {
-    return ++m_grp_cnt;
+    auto gid = ++m_grp_cnt;
+    m_cur_allocs = &m_allocs[gid];
+    return gid;
 }
 
 void MemMgr::free_group(uint64_t id)
@@ -217,7 +219,10 @@ void MemMgr::free_group(uint64_t id)
 uint8_t *MemMgr::allocateCodeSection(uintptr_t sz, unsigned align,
                                      unsigned sid, StringRef sname)
 {
-    if (!m_grp_cnt)
+    assert(m_cur_allocs);
+
+    // TODO
+    if (!m_cur_allocs)
         abort();
     return tmp.allocateCodeSection(sz, align, sid, sname);
 }
@@ -225,11 +230,10 @@ uint8_t *MemMgr::allocateCodeSection(uintptr_t sz, unsigned align,
 uint8_t *MemMgr::allocateDataSection(uintptr_t sz, unsigned align,
                                      unsigned sid, StringRef sname, bool ro)
 {
-    if (!m_grp_cnt)
-        abort();
+    assert(m_cur_allocs);
     if (!ro) {
         auto ptr = m_rwalloc.alloc(sz, align);
-        m_allocs[m_grp_cnt].push_back(Alloc{ptr, sz, Alloc::RW});
+        m_cur_allocs->push_back(Alloc{ptr, sz, Alloc::RW});
         return (uint8_t*)ptr;
     }
     return tmp.allocateDataSection(sz, align, sid, sname, ro);
@@ -245,7 +249,10 @@ void MemMgr::deregisterEHFrames()
 
 bool MemMgr::finalizeMemory(std::string *ErrMsg)
 {
-    if (!m_grp_cnt)
+    assert(m_cur_allocs);
+
+    // TODO
+    if (!m_cur_allocs)
         abort();
     return tmp.finalizeMemory(ErrMsg);
 }

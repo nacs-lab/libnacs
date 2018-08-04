@@ -139,6 +139,7 @@ private:
     size_t m_blocksz;
     RWAllocator m_rwalloc;
 
+    SmallVector<Alloc,4> *m_cur_allocs = nullptr;
     std::map<uint64_t,SmallVector<Alloc,4>> m_allocs;
 
     SectionMemoryManager tmp;
