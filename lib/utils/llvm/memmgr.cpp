@@ -200,13 +200,14 @@ public:
     }
     ROAlloc alloc(size_t size, size_t align) override
     {
-        BlockInfo *new_block = nullptr;
+        bool new_block = false;
         auto rtptr = m_tracker.alloc(size, align, [&] (size_t bsize) {
                 if (m_lastblock && bsize == m_tracker.block_size()) {
                     auto ptr = m_lastblock;
                     m_lastblock = nullptr;
                     return ptr;
                 }
+                new_block = true;
                 auto new_alloc = m_dualmap.alloc(bsize, exec);
                 auto res = m_block_infos.insert({bsize + (char*)new_alloc.first,
                             BlockInfo{bsize, new_alloc.second, nullptr}});
