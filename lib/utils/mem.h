@@ -148,6 +148,7 @@ public:
             throw std::runtime_error("Failed to initialize MemWriter.");
         }
     }
+    ~MemWriter();
     bool init();
     void write(void *dest, void *ptr, size_t size);
 private:

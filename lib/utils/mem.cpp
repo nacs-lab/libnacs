@@ -252,7 +252,7 @@ NACS_EXPORT() bool DualMap::init()
 
 NACS_EXPORT() DualMap::~DualMap()
 {
-    if (m_fd) {
+    if (m_fd != -1) {
         close(m_fd);
     }
 }
@@ -430,6 +430,13 @@ NACS_EXPORT() bool MemWriter::init()
     return true;
 }
 
+NACS_EXPORT() MemWriter::~MemWriter()
+{
+    if (m_fd != -1) {
+        close(m_fd);
+    }
+}
+
 NACS_EXPORT() void MemWriter::write(void *dest, void *ptr, size_t size)
 {
     while (size > 0) {
@@ -449,6 +456,9 @@ NACS_EXPORT() void MemWriter::write(void *dest, void *ptr, size_t size)
 NACS_EXPORT() bool MemWriter::init()
 {
     return false;
+}
+NACS_EXPORT() MemWriter::~MemWriter()
+{
 }
 
 NACS_EXPORT() void MemWriter::write(void*, void*, size_t)
