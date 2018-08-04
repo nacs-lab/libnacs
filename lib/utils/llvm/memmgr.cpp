@@ -191,6 +191,12 @@ bool MemMgr::finalizeMemory(std::string *ErrMsg)
     return tmp.finalizeMemory(ErrMsg);
 }
 
+void MemMgr::notifyObjectLoaded(RuntimeDyld &dyld, const object::ObjectFile &obj)
+{
+    (void)dyld;
+    (void)obj;
+}
+
 }
 }
 }

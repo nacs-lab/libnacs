@@ -102,6 +102,7 @@ private:
                                  unsigned sid, StringRef sname) override;
     uint8_t *allocateDataSection(uintptr_t sz, unsigned align,
                                  unsigned sid, StringRef sname, bool ro) override;
+    void notifyObjectLoaded(RuntimeDyld &dyld, const object::ObjectFile &obj) override;
     void registerEHFrames(uint8_t *addr, uint64_t load_addr, size_t sz) override;
     void deregisterEHFrames() override;
     bool finalizeMemory(std::string *ErrMsg) override;
