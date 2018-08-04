@@ -96,6 +96,8 @@ void Engine::reset_dyld()
 
 NACS_EXPORT() uint64_t Engine::load(const object::ObjectFile &obj)
 {
+    if (!m_dyld)
+        reset_dyld();
     auto id = m_memmgr.new_group();
     if (!m_dyld->loadObject(obj)) {
         m_memmgr.free_group(id);
@@ -122,6 +124,9 @@ NACS_EXPORT() void *Engine::get_symbol(StringRef name)
 NACS_EXPORT() void Engine::free(uint64_t id)
 {
     m_memmgr.free_group(id);
+    // Reusing the memory could really confuse the relocator so we need to reset the dyld
+    // when we free any memory.
+    m_dyld.reset(nullptr);
 }
 
 }

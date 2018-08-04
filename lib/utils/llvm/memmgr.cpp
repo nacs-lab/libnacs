@@ -202,7 +202,7 @@ public:
     {
         BlockInfo *new_block = nullptr;
         auto rtptr = m_tracker.alloc(size, align, [&] (size_t bsize) {
-                if (bsize == m_tracker.block_size()) {
+                if (m_lastblock && bsize == m_tracker.block_size()) {
                     auto ptr = m_lastblock;
                     m_lastblock = nullptr;
                     return ptr;
@@ -219,22 +219,24 @@ public:
         auto info_it = m_block_infos.upper_bound(rtptr);
         assert(info_it != m_block_infos.end());
         auto &info = info_it->second;
-        assert((char*)info_it->first - info_it->second.size <= (char*)rtptr);
+        auto offset = (char*)rtptr - ((char*)info_it->first - info_it->second.size);
+        assert(offset >= 0);
         if (!info.wraddr)
             return {rtptr, rtptr};
         if (info.wraddr == (void*)-1)
             info.wraddr = m_dualmap.remap_wraddr(info.id, info.size);
-        return {info.wraddr, rtptr};
+        return {(char*)info.wraddr + offset, rtptr};
     }
     void finalize() override
     {
         for (auto info_it: m_cur_blocks) {
             auto &info = info_it->second;
-            // already handled
             assert(!info.wraddr || info.wraddr == (void*)-1);
+            // already handled
             if (info.wraddr)
                 continue;
-            if (!protectPage(info_it->first, info.size, exec ? Prot::RX : Prot::RO))
+            if (!protectPage((char*)info_it->first - info.size, info.size,
+                             exec ? Prot::RX : Prot::RO))
                 throw checkErrno(-1, "Cannot set page protection");
             info.wraddr = (void*)-1;
         }
