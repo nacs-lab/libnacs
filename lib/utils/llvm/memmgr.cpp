@@ -190,7 +190,6 @@ RWAllocator::~RWAllocator()
 template<bool exec>
 class DualMapAllocator : public ROAllocator<exec> {
 public:
-    using ROAlloc = typename ROAllocator<exec>::ROAlloc;
     DualMapAllocator(DualMap &dual_map, size_t block_size)
         : m_dualmap(dual_map),
           m_tracker(block_size)
@@ -295,6 +294,8 @@ MemMgr::MemMgr()
     : m_blocksz(alignTo(8 * 1024 * 1024, page_size)),
       m_rwalloc(m_blocksz)
 {
+    m_roalloc.reset(new DualMapAllocator<false>(m_dualmap, m_blocksz));
+    m_rxalloc.reset(new DualMapAllocator<true>(m_dualmap, m_blocksz));
 }
 
 MemMgr::~MemMgr()
@@ -314,25 +315,33 @@ void MemMgr::free_group(uint64_t id)
     if (it == m_allocs.end())
         return;
     for (auto alloc: it->second) {
-        assert(alloc.type == Alloc::RW);
-        m_rwalloc.free(alloc.ptr, alloc.size);
+        switch (alloc.type) {
+        case Alloc::RW:
+            m_rwalloc.free(alloc.ptr, alloc.size);
+            break;
+        case Alloc::RO:
+            m_roalloc->free({alloc.wrptr, alloc.ptr}, alloc.size);
+            break;
+        case Alloc::RX:
+            m_rxalloc->free({alloc.wrptr, alloc.ptr}, alloc.size);
+            break;
+        default:
+            abort();
+        }
     }
     m_allocs.erase(it);
 }
 
-uint8_t *MemMgr::allocateCodeSection(uintptr_t sz, unsigned align,
-                                     unsigned sid, StringRef sname)
+uint8_t *MemMgr::allocateCodeSection(uintptr_t sz, unsigned align, unsigned, StringRef)
 {
     assert(m_cur_allocs);
-
-    // TODO
-    if (!m_cur_allocs)
-        abort();
-    return tmp.allocateCodeSection(sz, align, sid, sname);
+    auto res = m_rxalloc->alloc(sz, align);
+    m_cur_allocs->push_back(Alloc{res.rtptr, sz, Alloc::RX, res.wrptr});
+    return (uint8_t*)res.wrptr;
 }
 
 uint8_t *MemMgr::allocateDataSection(uintptr_t sz, unsigned align,
-                                     unsigned sid, StringRef sname, bool ro)
+                                     unsigned, StringRef, bool ro)
 {
     assert(m_cur_allocs);
     if (!ro) {
@@ -340,7 +349,9 @@ uint8_t *MemMgr::allocateDataSection(uintptr_t sz, unsigned align,
         m_cur_allocs->push_back(Alloc{ptr, sz, Alloc::RW});
         return (uint8_t*)ptr;
     }
-    return tmp.allocateDataSection(sz, align, sid, sname, ro);
+    auto res = m_roalloc->alloc(sz, align);
+    m_cur_allocs->push_back(Alloc{res.rtptr, sz, Alloc::RO, res.wrptr});
+    return (uint8_t*)res.wrptr;
 }
 
 void MemMgr::registerEHFrames(uint8_t*, uint64_t, size_t)
@@ -351,20 +362,29 @@ void MemMgr::deregisterEHFrames()
 {
 }
 
-bool MemMgr::finalizeMemory(std::string *ErrMsg)
+bool MemMgr::finalizeMemory(std::string*)
 {
     assert(m_cur_allocs);
+    m_roalloc->finalize();
+    m_rxalloc->finalize();
 
-    // TODO
-    if (!m_cur_allocs)
-        abort();
-    return tmp.finalizeMemory(ErrMsg);
+    for (auto &alloc: *m_cur_allocs) {
+        // ensure the mapped pages are consistent
+        sys::Memory::InvalidateInstructionCache(alloc.ptr, alloc.size);
+        if (alloc.ptr != alloc.wrptr && alloc.wrptr) {
+            sys::Memory::InvalidateInstructionCache(alloc.wrptr, alloc.size);
+        }
+    }
+    return false;
 }
 
-void MemMgr::notifyObjectLoaded(RuntimeDyld &dyld, const object::ObjectFile &obj)
+void MemMgr::notifyObjectLoaded(RuntimeDyld &dyld, const object::ObjectFile&)
 {
-    (void)dyld;
-    (void)obj;
+    for (auto &alloc: *m_cur_allocs) {
+        if (alloc.ptr == alloc.wrptr || !alloc.wrptr)
+            continue;
+        dyld.mapSectionAddress(alloc.wrptr, (uintptr_t)alloc.ptr);
+    }
 }
 
 }

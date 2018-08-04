@@ -111,13 +111,13 @@ private:
     void *m_lastptr{nullptr};
 };
 
+struct ROAlloc {
+    void *wrptr;
+    void *rtptr;
+};
 template<bool exec>
 class ROAllocator {
 public:
-    struct ROAlloc {
-        void *wrptr;
-        void *rtptr;
-    };
     virtual ROAlloc alloc(size_t size, size_t align) = 0;
     virtual void finalize() = 0;
     virtual void free(ROAlloc alloc, size_t size) = 0;
@@ -142,6 +142,7 @@ private:
         void *ptr;
         size_t size;
         Type type;
+        void *wrptr = nullptr;
     };
     uint8_t *allocateCodeSection(uintptr_t sz, unsigned align,
                                  unsigned sid, StringRef sname) override;
@@ -153,12 +154,13 @@ private:
     bool finalizeMemory(std::string *ErrMsg) override;
 
     size_t m_blocksz;
+    DualMap m_dualmap{false};
     RWAllocator m_rwalloc;
+    std::unique_ptr<ROAllocator<false>> m_roalloc;
+    std::unique_ptr<ROAllocator<true>> m_rxalloc;
 
     SmallVector<Alloc,4> *m_cur_allocs = nullptr;
     std::map<uint64_t,SmallVector<Alloc,4>> m_allocs;
-
-    SectionMemoryManager tmp;
 
     uint64_t m_grp_cnt = 0;
 };
