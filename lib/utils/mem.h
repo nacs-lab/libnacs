@@ -149,7 +149,14 @@ public:
         }
     }
     ~MemWriter();
+#if NACS_OS_LINUX
     bool init();
+#else
+    bool init()
+    {
+        return false;
+    }
+#endif
     void write(void *dest, void *ptr, size_t size);
 private:
 #if NACS_OS_LINUX

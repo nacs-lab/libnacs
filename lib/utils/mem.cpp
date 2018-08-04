@@ -460,10 +460,6 @@ NACS_EXPORT() void MemWriter::write(void *dest, void *ptr, size_t size)
     }
 }
 #else
-NACS_EXPORT() bool MemWriter::init()
-{
-    return false;
-}
 NACS_EXPORT() MemWriter::~MemWriter()
 {
 }
