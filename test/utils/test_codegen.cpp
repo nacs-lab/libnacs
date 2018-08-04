@@ -118,7 +118,8 @@ int main()
         auto f = exectx->getFunc<double(double)>(builder.get());
         assert(f(1.2) == 1.2);
         assert(f(4.2) == 4.2);
-        auto f2 = (double(*)(double))gettest(builder.get()).get_ptr();
+        auto test = gettest(builder.get());
+        auto f2 = (double(*)(double))test.get_ptr();
         assert(f2(1.2) == 1.2);
         assert(f2(4.2) == 4.2);
     }
@@ -132,7 +133,8 @@ int main()
                     "}");
         auto f = exectx->getFunc<bool()>(builder.get());
         assert(f() == false);
-        auto f2 = (bool(*)())gettest(builder.get()).get_ptr();
+        auto test = gettest(builder.get());
+        auto f2 = (bool(*)())test.get_ptr();
         assert(f2() == false);
     }
 
@@ -145,7 +147,8 @@ int main()
                     "}");
         auto f = exectx->getFunc<double()>(builder.get());
         assert(f() == 1.1);
-        auto f2 = (double(*)())gettest(builder.get()).get_ptr();
+        auto test = gettest(builder.get());
+        auto f2 = (double(*)())test.get_ptr();
         assert(f2() == 1.1);
     }
 
@@ -158,7 +161,8 @@ int main()
                     "}");
         auto f = exectx->getFunc<int()>(builder.get());
         assert(f() == 42);
-        auto f2 = (int(*)())gettest(builder.get()).get_ptr();
+        auto test = gettest(builder.get());
+        auto f2 = (int(*)())test.get_ptr();
         assert(f2() == 42);
     }
 
@@ -183,7 +187,8 @@ int main()
         auto f = exectx->getFunc<double(bool, double)>(builder.get());
         assert(f(true, 1.3) == 1.3);
         assert(f(false, 1.3) == 3.4);
-        auto f2 = (double(*)(bool, double))gettest(builder.get()).get_ptr();
+        auto test = gettest(builder.get());
+        auto f2 = (double(*)(bool, double))test.get_ptr();
         assert(f2(true, 1.3) == 1.3);
         assert(f2(false, 1.3) == 3.4);
     }
@@ -204,7 +209,8 @@ int main()
                     "}");
         auto f = exectx->getFunc<double(double, double)>(builder.get());
         assert(f(2.3, 1.3) == -1.71);
-        auto f2 = (double(*)(double, double))gettest(builder.get()).get_ptr();
+        auto test = gettest(builder.get());
+        auto f2 = (double(*)(double, double))test.get_ptr();
         assert(f2(2.3, 1.3) == -1.71);
     }
 
@@ -220,7 +226,8 @@ int main()
                     "}");
         auto f = exectx->getFunc<double(int, int)>(builder.get());
         assert(f(3, 2) == 1.5);
-        auto f2 = (double(*)(int, int))gettest(builder.get()).get_ptr();
+        auto test = gettest(builder.get());
+        auto f2 = (double(*)(int, int))test.get_ptr();
         assert(f2(3, 2) == 1.5);
     }
 
@@ -247,7 +254,8 @@ int main()
         auto f = exectx->getFunc<double(int, double)>(builder.get());
         assert(f(20, 1.3) == 1.3);
         assert(f(-10, 1.3) == -10);
-        auto f2 = (double(*)(int, double))gettest(builder.get()).get_ptr();
+        auto test = gettest(builder.get());
+        auto f2 = (double(*)(int, double))test.get_ptr();
         assert(f2(20, 1.3) == 1.3);
         assert(f2(-10, 1.3) == -10);
     }
@@ -289,7 +297,8 @@ int main()
         Timer timer;
         assert(f(2, 1000) == 500499);
         timer.print();
-        auto f2 = (int(*)(int, int))gettest(builder.get()).get_ptr();
+        auto test = gettest(builder.get());
+        auto f2 = (int(*)(int, int))test.get_ptr();
         assert(f2(1, 3) == 6);
         timer.restart();
         assert(f2(2, 1000) == 500499);
@@ -318,7 +327,8 @@ int main()
         for (int i = 0;i < 1000000;i++)
             f1(1);
         timer.print();
-        auto f2 = (double(*)(int))gettest(builder.get()).get_ptr();
+        auto test = gettest(builder.get());
+        auto f2 = (double(*)(int))test.get_ptr();
         timer.restart();
         for (int i = 0;i < 1000000;i++)
             f2(1);
@@ -341,7 +351,8 @@ int main()
                     "  Float64 %2 = fdiv Float64 %3, Float64 1\n"
                     "  ret Float64 %2\n"
                     "}");
-        gettest(newfunc).get_ptr();
+        auto test = gettest(newfunc);
+        test.get_ptr();
     }
 
     {
@@ -358,7 +369,8 @@ int main()
         assert(fabs(f(2.3) - linearInterpolate(2.3, 2, 3, 4, data)) < 1e-10);
         assert(fabs(f(3.5) - linearInterpolate(3.5, 2, 3, 4, data)) < 1e-10);
         assert(fabs(f(4.4) - linearInterpolate(4.4, 2, 3, 4, data)) < 1e-10);
-        auto f2 = (double(*)(double))gettest(builder.get()).get_ptr();
+        auto test = gettest(builder.get());
+        auto f2 = (double(*)(double))test.get_ptr();
         assert(fabs(f2(2.3) - linearInterpolate(2.3, 2, 3, 4, data)) < 1e-10);
         assert(fabs(f2(3.5) - linearInterpolate(3.5, 2, 3, 4, data)) < 1e-10);
         assert(fabs(f2(4.4) - linearInterpolate(4.4, 2, 3, 4, data)) < 1e-10);
@@ -376,7 +388,8 @@ int main()
                     "  Float64 %2 = add Float64 %3, Float64 %1\n"
                     "  ret Float64 %2\n"
                     "}");
-        auto f = (double(*)(double, double))gettest(newfunc)
+        auto test = gettest(newfunc);
+        auto f = (double(*)(double, double))test
             // .print()
             // .opt()
             // .print()
