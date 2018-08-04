@@ -143,6 +143,15 @@ void AllocTracker::free_real(void *ptr, size_t sz, BlockFree &&block_free,
     }
 }
 
+template<typename BlockFree>
+void AllocTracker::free_all(BlockFree &&block_free)
+{
+    for (auto block: m_blocks)
+        block_free(block.first, block.second);
+    m_blocks.clear();
+    m_freelist.clear();
+}
+
 inline RWAllocator::RWAllocator(size_t block_size)
     : m_tracker(block_size)
 {
@@ -169,6 +178,13 @@ void RWAllocator::free(void *ptr, size_t size)
             }
             return unmapPage(ptr, bsize);
         });
+}
+
+RWAllocator::~RWAllocator()
+{
+    if (m_lastptr)
+        unmapPage(m_lastptr, m_tracker.block_size());
+    m_tracker.free_all(unmapPage);
 }
 
 MemMgr::MemMgr()

@@ -74,6 +74,8 @@ public:
     {
         return m_blocksz;
     }
+    template<typename BlockFree>
+    void free_all(BlockFree &&block_free);
 
 private:
     // Similar to the public API `free` but `ptr` and `sz` are the address and the size
@@ -99,6 +101,7 @@ public:
     RWAllocator(size_t block_size);
     void *alloc(size_t size, size_t align);
     void free(void *ptr, size_t size);
+    ~RWAllocator();
 
 private:
     AllocTracker m_tracker;
