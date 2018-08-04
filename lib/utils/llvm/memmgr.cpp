@@ -172,6 +172,8 @@ void RWAllocator::free(void *ptr, size_t size)
 }
 
 MemMgr::MemMgr()
+    : m_blocksz(alignTo(8 * 1024 * 1024, page_size)),
+      m_rwalloc(m_blocksz)
 {
 }
 
@@ -186,7 +188,14 @@ uint64_t MemMgr::new_group()
 
 void MemMgr::free_group(uint64_t id)
 {
-    (void)id;
+    auto it = m_allocs.find(id);
+    if (it == m_allocs.end())
+        return;
+    for (auto alloc: it->second) {
+        assert(alloc.type == Alloc::RW);
+        m_rwalloc.free(alloc.ptr, alloc.size);
+    }
+    m_allocs.erase(it);
 }
 
 uint8_t *MemMgr::allocateCodeSection(uintptr_t sz, unsigned align,
@@ -202,6 +211,11 @@ uint8_t *MemMgr::allocateDataSection(uintptr_t sz, unsigned align,
 {
     if (!m_grp_cnt)
         abort();
+    if (!ro) {
+        auto ptr = m_rwalloc.alloc(sz, align);
+        m_allocs[m_grp_cnt].push_back(Alloc{ptr, sz, Alloc::RW});
+        return (uint8_t*)ptr;
+    }
     return tmp.allocateDataSection(sz, align, sid, sname, ro);
 }
 

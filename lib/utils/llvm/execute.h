@@ -114,6 +114,16 @@ public:
     void free_group(uint64_t id);
 
 private:
+    struct Alloc {
+        enum Type : uint8_t {
+            RW,
+            RO,
+            RX
+        };
+        void *ptr;
+        size_t size;
+        Type type;
+    };
     uint8_t *allocateCodeSection(uintptr_t sz, unsigned align,
                                  unsigned sid, StringRef sname) override;
     uint8_t *allocateDataSection(uintptr_t sz, unsigned align,
@@ -122,6 +132,11 @@ private:
     void registerEHFrames(uint8_t *addr, uint64_t load_addr, size_t sz) override;
     void deregisterEHFrames() override;
     bool finalizeMemory(std::string *ErrMsg) override;
+
+    size_t m_blocksz;
+    RWAllocator m_rwalloc;
+
+    std::map<uint64_t,SmallVector<Alloc,4>> m_allocs;
 
     SectionMemoryManager tmp;
 
