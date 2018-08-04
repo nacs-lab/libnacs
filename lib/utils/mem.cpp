@@ -151,8 +151,15 @@ NACS_EXPORT() std::pair<void*,uintptr_t> DualMap::alloc(size_t size, bool exec)
     // consume too much global resources. Therefore, we use each file mapping
     // as a block on windows
     DWORD file_mode = exec ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE;
-    HANDLE hdl = CreateFileMapping(INVALID_HANDLE_VALUE, NULL,
-                                   file_mode, 0, size, NULL);
+    HANDLE hdl;
+    if (sizeof(size_t) > 4) {
+        hdl = CreateFileMapping(INVALID_HANDLE_VALUE, NULL,
+                                file_mode, (DWORD)(size >> 32), (DWORD)size, NULL);
+    }
+    else {
+        hdl = CreateFileMapping(INVALID_HANDLE_VALUE, NULL,
+                                file_mode, 0, (DWORD)size, NULL);
+    }
     // We set the maximum permissions for this to the maximum for this file, and then
     // VirtualProtect, such that the debugger can still access these
     // pages and set breakpoints if it wants to.
