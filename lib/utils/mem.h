@@ -108,6 +108,7 @@ public:
             throw std::runtime_error("Failed to initialize DualMap.");
         }
     }
+    ~DualMap();
     bool init();
     // Allocate a new page(s).
     // The address returned in the first element is writable at first

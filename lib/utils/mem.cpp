@@ -140,6 +140,9 @@ NACS_EXPORT() bool DualMap::init()
 {
     return true;
 }
+NACS_EXPORT() DualMap::~DualMap()
+{
+}
 
 NACS_EXPORT() std::pair<void*,uintptr_t> DualMap::alloc(size_t size, bool exec)
 {
@@ -245,6 +248,13 @@ NACS_EXPORT() bool DualMap::init()
     }
     m_fd = -1;
     return false;
+}
+
+NACS_EXPORT() DualMap::~DualMap()
+{
+    if (m_fd) {
+        close(m_fd);
+    }
 }
 
 NACS_EXPORT() std::pair<void*,uintptr_t> DualMap::alloc(size_t size, bool)
