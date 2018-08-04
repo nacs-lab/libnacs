@@ -18,7 +18,7 @@
 
 #include "../utils.h"
 #include "../number.h"
-#include "../mem.h"
+#include "../fd_utils.h"
 
 #include "execute.h"
 
@@ -186,6 +186,110 @@ RWAllocator::~RWAllocator()
         unmapPage(m_lastptr, m_tracker.block_size());
     m_tracker.free_all(unmapPage);
 }
+
+template<bool exec>
+class DualMapAllocator : public ROAllocator<exec> {
+public:
+    using ROAlloc = typename ROAllocator<exec>::ROAlloc;
+    DualMapAllocator(DualMap &dual_map, size_t block_size)
+        : m_dualmap(dual_map),
+          m_tracker(block_size)
+    {
+        if (!m_dualmap.init()) {
+            throw std::runtime_error("Failed to initialize DualMap.");
+        }
+    }
+    ROAlloc alloc(size_t size, size_t align) override
+    {
+        BlockInfo *new_block = nullptr;
+        auto rtptr = m_tracker.alloc(size, align, [&] (size_t bsize) {
+                if (bsize == m_tracker.block_size()) {
+                    auto ptr = m_lastblock;
+                    m_lastblock = nullptr;
+                    return ptr;
+                }
+                auto new_alloc = m_dualmap.alloc(bsize, exec);
+                auto res = m_block_infos.insert({bsize + (char*)new_alloc.first,
+                            BlockInfo{bsize, new_alloc.second, nullptr}});
+                assert(res.second);
+                m_cur_blocks.push_back(res.first);
+                return new_alloc.first;
+            });
+        if (new_block)
+            return {rtptr, rtptr};
+        auto info_it = m_block_infos.upper_bound(rtptr);
+        assert(info_it != m_block_infos.end());
+        auto &info = info_it->second;
+        assert((char*)info_it->first - info_it->second.size <= (char*)rtptr);
+        if (!info.wraddr)
+            return {rtptr, rtptr};
+        if (info.wraddr == (void*)-1)
+            info.wraddr = m_dualmap.remap_wraddr(info.id, info.size);
+        return {info.wraddr, rtptr};
+    }
+    void finalize() override
+    {
+        for (auto info_it: m_cur_blocks) {
+            auto &info = info_it->second;
+            // already handled
+            assert(!info.wraddr || info.wraddr == (void*)-1);
+            if (info.wraddr)
+                continue;
+            if (!protectPage(info_it->first, info.size, exec ? Prot::RX : Prot::RO))
+                throw checkErrno(-1, "Cannot set page protection");
+            info.wraddr = (void*)-1;
+        }
+        m_cur_blocks.clear();
+    }
+    void free(ROAlloc alloc, size_t size) override
+    {
+        m_tracker.free(alloc.rtptr, size, [&] (void *ptr, size_t bsize) {
+                if (!m_lastblock && bsize == m_tracker.block_size()) {
+                    m_lastblock = ptr;
+                    return;
+                }
+                auto it = free_block(ptr, bsize);
+                m_block_infos.erase(it);
+            });
+    }
+    ~DualMapAllocator() override
+    {
+        if (m_lastblock)
+            free_block(m_lastblock, m_tracker.block_size());
+        m_tracker.free_all([&] (void *ptr, size_t bsize) {
+                free_block(ptr, bsize);
+            });
+    }
+
+private:
+    struct BlockInfo {
+        // Block size
+        size_t size;
+        // ID for dual map allocation
+        uintptr_t id;
+        // Writeable address
+        // 0 means that this is a new allocation and the runtime address is still writable
+        // -1 means that the runtime address is not writable anymore but the writable
+        // address haven't be allocated yet.
+        void *wraddr;
+    };
+    typename std::map<void*,BlockInfo>::iterator free_block(void *ptr, size_t bsize)
+    {
+        void *key = (char*)ptr + bsize;
+        auto it = m_block_infos.find(key);
+        assert(it != m_block_infos.end());
+        auto wraddr = it->second.wraddr;
+        if (wraddr == (void*)-1)
+            wraddr = nullptr;
+        m_dualmap.free(ptr, it->second.id, bsize, wraddr);
+        return it;
+    }
+    DualMap &m_dualmap;
+    AllocTracker m_tracker;
+    std::map<void*,BlockInfo> m_block_infos; // keys are the end addresses
+    SmallVector<typename std::map<void*,BlockInfo>::iterator,3> m_cur_blocks;
+    void *m_lastblock = nullptr;
+};
 
 MemMgr::MemMgr()
     : m_blocksz(alignTo(8 * 1024 * 1024, page_size)),

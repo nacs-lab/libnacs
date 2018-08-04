@@ -19,6 +19,8 @@
 #ifndef __NACS_UTILS_LLVM_EXECUTE_H__
 #define __NACS_UTILS_LLVM_EXECUTE_H__
 
+#include "../mem.h"
+
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ExecutionEngine/RuntimeDyld.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
@@ -107,6 +109,20 @@ private:
     AllocTracker m_tracker;
     // Possibly cache one block of the minimum size.
     void *m_lastptr{nullptr};
+};
+
+template<bool exec>
+class ROAllocator {
+public:
+    struct ROAlloc {
+        void *wrptr;
+        void *rtptr;
+    };
+    virtual ROAlloc alloc(size_t size, size_t align) = 0;
+    virtual void finalize() = 0;
+    virtual void free(ROAlloc alloc, size_t size) = 0;
+    virtual ~ROAllocator()
+    {}
 };
 
 class MemMgr : public RuntimeDyld::MemoryManager {
