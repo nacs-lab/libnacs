@@ -224,15 +224,32 @@ Value *Context::emit_cmp(IRBuilder<> &builder, IR::CmpType cmptyp,
     }
 }
 
-Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
+Function *Context::_emit_function(const IR::Function &func, uint64_t func_id,
+                                  const std::map<uint32_t,uint32_t> &closure_args,
+                                  bool has_closure)
 {
     auto nargs = func.nargs;
     auto nslots = func.vals.size();
     // 1. Create function signature
     auto rt = llvm_argty(func.ret);
-    SmallVector<Type*, 8> fsig(nargs);
-    for (int i = 0; i < nargs; i++)
-        fsig[i] = llvm_argty(func.vals[i]);
+    auto nargs_llvm = nargs;
+    if (has_closure) {
+        nargs_llvm = nargs - (int)closure_args.size() + 1;
+    }
+    SmallVector<Type*, 8> fsig(nargs_llvm);
+    auto clit = closure_args.begin();
+    for (int i = 0, j = 0; i < nargs; i++) {
+        if (has_closure && clit != closure_args.end() && (int)clit->first == i) {
+            ++clit;
+            continue;
+        }
+        fsig[j] = llvm_argty(func.vals[i]);
+        j++;
+    }
+    if (has_closure) {
+        assert(clit == closure_args.end());
+        fsig[nargs_llvm - 1] = T_i8->getPointerTo();
+    }
     auto ftype = FunctionType::get(rt, fsig, false);
 
     // 2. Create function
@@ -253,11 +270,31 @@ Function *Context::emit_function(const IR::Function &func, uint64_t func_id)
     for (unsigned i = 0; i < nslots; i++)
         slots[i] = builder.CreateAlloca(llvm_ty(func.vals[i]));
     auto argit = f->arg_begin();
+    clit = closure_args.begin();
     for (int i = 0; i < nargs; i++) {
+        if (has_closure && clit != closure_args.end() && (int)clit->first == i) {
+            ++clit;
+            continue;
+        }
         Value *argv = &*argit++;
         if (func.vals[i] == IR::Type::Bool)
             argv = builder.CreateTrunc(argv, T_bool);
         builder.CreateStore(argv, slots[i]);
+    }
+    if (has_closure) {
+        Value *argv = &*argit++;
+        for (auto cl: closure_args) {
+            auto slot = slots[cl.first];
+            auto ty = func.vals[cl.first];
+            auto lty = llvm_argty(ty);
+            auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(T_i8, argv,
+                                                                        cl.second * 8),
+                                             lty->getPointerTo());
+            Value *val = builder.CreateLoad(lty, ptr);
+            if (ty == IR::Type::Bool)
+                val = builder.CreateTrunc(val, T_bool);
+            builder.CreateStore(val, slot);
+        }
     }
     auto prev_bb_var = builder.CreateAlloca(T_i32);
 

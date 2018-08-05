@@ -36,8 +36,20 @@ using namespace llvm;
 class Context {
 public:
     NACS_EXPORT(utils) Context(Module *mod);
-    NACS_EXPORT(utils) Function *emit_function(const IR::Function &func, uint64_t func_id);
+    Function *emit_function(const IR::Function &func, uint64_t func_id,
+                            const std::map<uint32_t,uint32_t> &closure_args)
+    {
+        return _emit_function(func, func_id, closure_args, true);
+    }
+    Function *emit_function(const IR::Function &func, uint64_t func_id)
+    {
+        return _emit_function(func, func_id, {}, true);
+    }
 private:
+    NACS_EXPORT(utils)
+    Function *_emit_function(const IR::Function &func, uint64_t func_id,
+                             const std::map<uint32_t,uint32_t> &closure_args,
+                             bool has_closure);
     Type *llvm_ty(IR::Type ty) const;
     Type *llvm_argty(IR::Type ty) const;
     Value *emit_const(IR::TagVal c) const;
