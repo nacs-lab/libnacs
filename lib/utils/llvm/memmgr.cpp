@@ -367,8 +367,14 @@ MemMgr::MemMgr()
     : m_blocksz(alignTo(8 * 1024 * 1024, page_size)),
       m_rwalloc(m_blocksz)
 {
-    m_roalloc.reset(new DualMapAllocator<false>(m_dualmap, m_blocksz));
-    m_rxalloc.reset(new DualMapAllocator<true>(m_dualmap, m_blocksz));
+    if (m_memwriter.init()) {
+        m_roalloc.reset(new MemWriterAllocator<false>(m_memwriter, m_blocksz));
+        m_rxalloc.reset(new MemWriterAllocator<true>(m_memwriter, m_blocksz));
+    }
+    else {
+        m_roalloc.reset(new DualMapAllocator<false>(m_dualmap, m_blocksz));
+        m_rxalloc.reset(new DualMapAllocator<true>(m_dualmap, m_blocksz));
+    }
 }
 
 MemMgr::~MemMgr()

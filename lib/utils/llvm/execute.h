@@ -155,6 +155,7 @@ private:
 
     size_t m_blocksz;
     DualMap m_dualmap{false};
+    MemWriter m_memwriter{false};
     RWAllocator m_rwalloc;
     std::unique_ptr<ROAllocator<false>> m_roalloc;
     std::unique_ptr<ROAllocator<true>> m_rxalloc;
