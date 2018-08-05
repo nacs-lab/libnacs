@@ -163,9 +163,11 @@ NACS_EXPORT() std::unique_ptr<TargetMachine> create_target(StringRef triple,
 {
     static std::once_flag flag;
     std::call_once(flag, [] {
-            LLVMInitializeAllTargets();
-            LLVMInitializeAllAsmPrinters();
-            LLVMInitializeAllAsmParsers();
+            InitializeAllTargets();
+            InitializeAllTargetInfos();
+            InitializeAllTargetMCs();
+            InitializeAllAsmPrinters();
+            InitializeAllAsmParsers();
         });
     Triple TheTriple(triple);
     TargetOptions options;
@@ -181,7 +183,12 @@ NACS_EXPORT() std::unique_ptr<TargetMachine> create_target(StringRef triple,
     SmallVector<std::string,16> attr;
     for (auto a : attr_sr)
         attr.push_back(a.str());
-    return std::unique_ptr<TargetMachine>(eb.selectTarget(TheTriple, "", cpu, attr));
+    std::string ec;
+    eb.setErrorStr(&ec);
+    auto tgt = eb.selectTarget(TheTriple, "", cpu, attr);
+    if (!tgt)
+        throw std::runtime_error(ec);
+    return std::unique_ptr<TargetMachine>(tgt);
 }
 
 }
