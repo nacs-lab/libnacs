@@ -68,7 +68,14 @@ void *AllocTracker::alloc(size_t sz, size_t align, BlockAlloc &&block_alloc)
         return res;
     }
     auto blksz = alignTo(sz, m_blocksz);
-    auto ptr = block_alloc(blksz);
+    void *ptr;
+    if (likely(blksz == m_blocksz) && m_lastblock) {
+        ptr = m_lastblock;
+        m_lastblock = nullptr;
+    }
+    else {
+        ptr = block_alloc(blksz);
+    }
     m_blocks[ptr] = blksz;
     auto szleft = blksz - sz;
     if (likely(szleft > 0)) {
@@ -121,7 +128,12 @@ void AllocTracker::free_real(void *ptr, size_t sz, BlockFree &&block_free,
         // This can only happen if the memory is large enough.
         auto I = m_blocks.find(ptr);
         if (I != m_blocks.end() && I->second == sz) {
-            block_free(ptr, sz);
+            if (likely(sz == m_blocksz) && !m_lastblock) {
+                m_lastblock = ptr;
+            }
+            else {
+                block_free(ptr, sz);
+            }
             m_blocks.erase(I);
             for (auto fi: replaces)
                 m_freelist.erase(fi);
@@ -146,6 +158,10 @@ void AllocTracker::free_real(void *ptr, size_t sz, BlockFree &&block_free,
 template<typename BlockFree>
 void AllocTracker::free_all(BlockFree &&block_free)
 {
+    if (m_lastblock) {
+        block_free(m_lastblock, m_blocksz);
+        m_lastblock = nullptr;
+    }
     for (auto block: m_blocks)
         block_free(block.first, block.second);
     m_blocks.clear();
@@ -160,11 +176,6 @@ inline RWAllocator::RWAllocator(size_t block_size)
 void *RWAllocator::alloc(size_t size, size_t align)
 {
     return m_tracker.alloc(size, align, [&] (size_t bsize) {
-            if (m_lastptr && bsize == m_tracker.block_size()) {
-                auto ptr = m_lastptr;
-                m_lastptr = nullptr;
-                return ptr;
-            }
             return mapAnonPage(bsize, Prot::RW);
         });
 }
@@ -172,18 +183,12 @@ void *RWAllocator::alloc(size_t size, size_t align)
 void RWAllocator::free(void *ptr, size_t size)
 {
     m_tracker.free(ptr, size, [&] (void *ptr, size_t bsize) {
-            if (!m_lastptr && bsize == m_tracker.block_size()) {
-                m_lastptr = ptr;
-                return;
-            }
             return unmapPage(ptr, bsize);
         });
 }
 
 RWAllocator::~RWAllocator()
 {
-    if (m_lastptr)
-        unmapPage(m_lastptr, m_tracker.block_size());
     m_tracker.free_all(unmapPage);
 }
 
@@ -202,11 +207,6 @@ public:
     {
         bool new_block = false;
         auto rtptr = m_tracker.alloc(size, align, [&] (size_t bsize) {
-                if (m_lastblock && bsize == m_tracker.block_size()) {
-                    auto ptr = m_lastblock;
-                    m_lastblock = nullptr;
-                    return ptr;
-                }
                 new_block = true;
                 auto new_alloc = m_dualmap.alloc(bsize, exec);
                 auto res = m_block_infos.insert({bsize + (char*)new_alloc.first,
@@ -246,18 +246,12 @@ public:
     void free(ROAlloc alloc, size_t size) override
     {
         m_tracker.free(alloc.rtptr, size, [&] (void *ptr, size_t bsize) {
-                if (!m_lastblock && bsize == m_tracker.block_size()) {
-                    m_lastblock = ptr;
-                    return;
-                }
                 auto it = free_block(ptr, bsize);
                 m_block_infos.erase(it);
             });
     }
     ~DualMapAllocator() override
     {
-        if (m_lastblock)
-            free_block(m_lastblock, m_tracker.block_size());
         m_tracker.free_all([&] (void *ptr, size_t bsize) {
                 free_block(ptr, bsize);
             });
@@ -290,7 +284,6 @@ private:
     AllocTracker m_tracker;
     std::map<void*,BlockInfo> m_block_infos; // keys are the end addresses
     SmallVector<typename std::map<void*,BlockInfo>::iterator,3> m_cur_blocks;
-    void *m_lastblock = nullptr;
 };
 
 MemMgr::MemMgr()

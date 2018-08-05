@@ -96,6 +96,8 @@ private:
     std::map<void*,size_t> m_freelist;
     // Allocated blocks. The address in this one is the start address.
     std::map<void*,size_t> m_blocks;
+    // Possibly cache one block of the minimum size.
+    void *m_lastblock = nullptr;
 };
 
 class RWAllocator {
@@ -107,8 +109,6 @@ public:
 
 private:
     AllocTracker m_tracker;
-    // Possibly cache one block of the minimum size.
-    void *m_lastptr{nullptr};
 };
 
 struct ROAlloc {
