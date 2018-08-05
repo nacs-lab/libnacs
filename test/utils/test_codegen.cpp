@@ -61,6 +61,14 @@ struct LLVMTest {
         LLVM::Codegen::Context ctx(mod.get());
         f = ctx.emit_function(func, 0);
     }
+    LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func,
+             const std::map<uint32_t,uint32_t> &closure_args)
+        : mod(new llvm::Module("", ll_ctx)),
+          engine(engine)
+    {
+        LLVM::Codegen::Context ctx(mod.get());
+        f = ctx.emit_function(func, 0, closure_args);
+    }
     LLVMTest(LLVMTest&&) = default;
     LLVMTest &operator=(LLVMTest&&) = default;
     LLVMTest &opt()
@@ -101,8 +109,8 @@ int main()
     LLVM::Exe::Engine engine;
     llvm::LLVMContext llvm_ctx;
 
-    auto gettest = [&] (const IR::Function &func) {
-        return LLVMTest(llvm_ctx, engine, func);
+    auto gettest = [&] (auto ...args) {
+        return LLVMTest(llvm_ctx, engine, args...);
     };
 
     auto exectx = IR::ExeContext::get();
@@ -395,6 +403,64 @@ int main()
             // .print()
             .get_ptr();
         assert(f(1.5, 2) == 4.25);
+    }
+
+    {
+        IR::Builder builder(IR::Type::Float64,
+                            {IR::Type::Float64, IR::Type::Float64});
+        auto val1 = builder.createAdd(builder.getConstFloat(3.4), 0);
+        auto val2 = builder.createMul(val1, 1);
+        auto val3 = builder.createSub(val1, val2);
+        builder.createRet(val3);
+        test_str_eq(builder.get(), "Float64 (Float64 %0, Float64 %1) {\n"
+                    "L0:\n"
+                    "  Float64 %2 = add Float64 3.4, Float64 %0\n"
+                    "  Float64 %3 = mul Float64 %2, Float64 %1\n"
+                    "  Float64 %4 = sub Float64 %2, Float64 %3\n"
+                    "  ret Float64 %4\n"
+                    "}");
+        auto fi = exectx->getFunc<double(double, double)>(builder.get());
+        assert(fi(2.3, 1.3) == -1.71);
+
+        auto test = gettest(builder.get());
+        auto f = (double(*)(double, double))test.get_ptr();
+        assert(f(2.3, 1.3) == -1.71);
+
+        auto test0 = gettest(builder.get(), std::map<uint32_t,uint32_t>{});
+        auto f0 = (double(*)(double, double, IR::GenVal*))test0.get_ptr();
+        assert(f0(2.3, 1.3, nullptr) == -1.71);
+        assert(f0(2.3, 10.0, nullptr) == -51.3);
+        assert(f0(1.3, 1.0, nullptr) == 0.0);
+
+        IR::GenVal vals[2];
+
+        auto test11 = gettest(builder.get(), std::map<uint32_t,uint32_t>{{0, 0}});
+        auto f11 = (double(*)(double, IR::GenVal*))test11.get_ptr();
+        vals[0] = IR::TagVal(2.3).val;
+        assert(f11(1.3, vals) == -1.71);
+        assert(f11(10.0, vals) == -51.3);
+        vals[0] = IR::TagVal(1.3).val;
+        assert(f11(1.0, vals) == 0.0);
+
+        auto test12 = gettest(builder.get(), std::map<uint32_t,uint32_t>{{1, 0}});
+        auto f12 = (double(*)(double, IR::GenVal*))test12.get_ptr();
+        vals[0] = IR::TagVal(1.3).val;
+        assert(f12(2.3, vals) == -1.71);
+        vals[0] = IR::TagVal(10.0).val;
+        assert(f12(2.3, vals) == -51.3);
+        vals[0] = IR::TagVal(1.0).val;
+        assert(f12(1.3, vals) == 0.0);
+
+        auto test2 = gettest(builder.get(), std::map<uint32_t,uint32_t>{{1, 0}, {0, 1}});
+        auto f2 = (double(*)(IR::GenVal*))test2.get_ptr();
+        vals[0] = IR::TagVal(1.3).val;
+        vals[1] = IR::TagVal(2.3).val;
+        assert(f2(vals) == -1.71);
+        vals[0] = IR::TagVal(10.0).val;
+        assert(f2(vals) == -51.3);
+        vals[0] = IR::TagVal(1.0).val;
+        vals[1] = IR::TagVal(1.3).val;
+        assert(f2(vals) == 0.0);
     }
 
     return 0;
