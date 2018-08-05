@@ -77,7 +77,7 @@ public:
         return m_blocksz;
     }
     template<typename BlockFree>
-    void free_all(BlockFree &&block_free);
+    void free_all(BlockFree &&block_free, bool free_cache=true);
 
 private:
     // Similar to the public API `free` but `ptr` and `sz` are the address and the size

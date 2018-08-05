@@ -156,9 +156,9 @@ void AllocTracker::free_real(void *ptr, size_t sz, BlockFree &&block_free,
 }
 
 template<typename BlockFree>
-void AllocTracker::free_all(BlockFree &&block_free)
+void AllocTracker::free_all(BlockFree &&block_free, bool free_cache)
 {
-    if (m_lastblock) {
+    if (free_cache && m_lastblock) {
         block_free(m_lastblock, m_blocksz);
         m_lastblock = nullptr;
     }
@@ -284,6 +284,83 @@ private:
     AllocTracker m_tracker;
     std::map<void*,BlockInfo> m_block_infos; // keys are the end addresses
     SmallVector<typename std::map<void*,BlockInfo>::iterator,3> m_cur_blocks;
+};
+
+template<bool exec>
+class MemWriterAllocator : public ROAllocator<exec> {
+public:
+    MemWriterAllocator(MemWriter &mem_writer, size_t block_size)
+        : m_writer(mem_writer),
+          m_tracker(block_size),
+          m_wrtracker(block_size)
+    {
+        if (!m_writer.init()) {
+            throw std::runtime_error("Failed to initialize MemWriter.");
+        }
+    }
+    ROAlloc alloc(size_t size, size_t align) override
+    {
+        bool new_block = false;
+        auto rtptr = m_tracker.alloc(size, align, [&] (size_t bsize) {
+                new_block = true;
+                auto ptr = mapAnonPage(bsize, Prot::RW);
+                m_new_blocks.emplace_back(ptr, bsize);
+                return ptr;
+            });
+        if (new_block)
+            return {rtptr, rtptr};
+        for (auto nb: m_new_blocks) {
+            if (nb.first <= rtptr && (char*)nb.first + nb.second > (char*)rtptr) {
+                return {rtptr, rtptr};
+            }
+        }
+        auto wrptr = alloc_wraddr(size, align);
+        m_allocs.push_back({wrptr, rtptr, size});
+        return {wrptr, rtptr};
+    }
+    void finalize() override
+    {
+        for (auto nb: m_new_blocks) {
+            if (!protectPage(nb.first, nb.second, exec ? Prot::RX : Prot::RO)) {
+                throw checkErrno(-1, "Cannot set page protection");
+            }
+        }
+        m_new_blocks.clear();
+        for (auto alloc: m_allocs)
+            m_writer.write(alloc.rtptr, alloc.wrptr, alloc.size);
+        m_allocs.clear();
+    }
+    void free(ROAlloc alloc, size_t size) override
+    {
+        m_tracker.free(alloc.rtptr, size, unmapPage);
+    }
+    ~MemWriterAllocator() override
+    {
+        m_tracker.free_all(unmapPage);
+        m_wrtracker.free_all(unmapPage);
+    }
+
+private:
+    void *alloc_wraddr(size_t size, size_t align)
+    {
+        return m_wrtracker.alloc(size, align, [&] (size_t size) {
+                return mapAnonPage(size, Prot::RW);
+            });
+    }
+    void *reset_wraddr()
+    {
+        return m_wrtracker.free_all(unmapPage, false);
+    }
+    struct Alloc {
+        void *wrptr;
+        void *rtptr;
+        size_t size;
+    };
+    MemWriter &m_writer;
+    AllocTracker m_tracker;
+    AllocTracker m_wrtracker;
+    SmallVector<std::pair<void*,size_t>,2> m_new_blocks;
+    SmallVector<Alloc,3> m_allocs;
 };
 
 MemMgr::MemMgr()
