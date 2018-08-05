@@ -29,9 +29,6 @@ namespace NaCs {
 namespace LLVM {
 namespace Codegen {
 
-// TODO:
-// * Implement memory manager that support code freeing.
-
 Context::Context(Module *mod)
     : m_mod(mod),
       m_ctx(mod->getContext()),
