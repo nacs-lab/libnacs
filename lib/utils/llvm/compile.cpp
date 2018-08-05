@@ -92,6 +92,8 @@ void addOptimization(legacy::PassManagerBase &pm)
 
 NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M, bool opt)
 {
+    M->setTargetTriple(tgt->getTargetTriple().getTriple());
+    M->setDataLayout(tgt->createDataLayout());
     legacy::PassManager pm;
     pm.add(new TargetLibraryInfoWrapperPass(Triple(tgt->getTargetTriple())));
     pm.add(createTargetTransformInfoWrapperPass(tgt->getTargetIRAnalysis()));
