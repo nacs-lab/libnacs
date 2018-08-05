@@ -22,10 +22,11 @@
 #include "../utils.h"
 #include "../ir.h"
 
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/MDBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Value.h>
-#include <llvm/IR/IRBuilder.h>
 
 namespace NaCs {
 namespace LLVM {
@@ -73,6 +74,9 @@ private:
     FunctionType *F_f64_f64i32;
     FunctionType *F_f64_i32f64;
     FunctionType *F_f64_f64f64f64i32pf64;
+    MDBuilder m_mdbuilder;
+    MDNode *tbaa_root;
+    MDNode *tbaa_const;
     uint64_t m_counter = 0;
 };
 

@@ -43,8 +43,12 @@ Context::Context(Module *mod)
       F_f64_f64i32(FunctionType::get(T_f64, {T_f64, T_i32}, false)),
       F_f64_i32f64(FunctionType::get(T_f64, {T_i32, T_f64}, false)),
       F_f64_f64f64f64i32pf64(FunctionType::get(T_f64, {T_f64, T_f64, T_f64,
-                      T_i32, T_f64->getPointerTo()}, false))
+                      T_i32, T_f64->getPointerTo()}, false)),
+      m_mdbuilder(m_ctx),
+      tbaa_root(m_mdbuilder.createTBAARoot("nacs_tbaa"))
 {
+    MDNode *const_s = m_mdbuilder.createTBAAScalarTypeNode("nacs_tbaa_const", tbaa_root);
+    tbaa_const = m_mdbuilder.createTBAAStructTagNode(const_s, const_s, 0, true);
 }
 
 Constant *Context::ensurePureFunc(StringRef name, FunctionType *ft, bool canread) const
@@ -292,8 +296,10 @@ Function *Context::_emit_function(const IR::Function &func, uint64_t func_id,
                                                                         cl.second * 8),
                                              lty->getPointerTo());
             max_offset = max(max_offset, cl.second + 1);
-            Value *val = builder.CreateLoad(lty, ptr);
-            cast<LoadInst>(val)->setAlignment(8);
+            auto load = builder.CreateLoad(lty, ptr);
+            load->setAlignment(8);
+            load->setMetadata(LLVMContext::MD_tbaa, tbaa_const);
+            Value *val = load;
             if (ty == IR::Type::Bool)
                 val = builder.CreateTrunc(val, T_bool);
             builder.CreateStore(val, slot);
