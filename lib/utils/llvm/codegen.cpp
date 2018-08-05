@@ -21,6 +21,7 @@
 #include "compile_p.h"
 
 #include "../ir_p.h"
+#include "../number.h"
 
 #include <llvm/ADT/SetVector.h>
 #include <llvm/ADT/SmallVector.h>
@@ -233,9 +234,8 @@ Function *Context::_emit_function(const IR::Function &func, uint64_t func_id,
     // 1. Create function signature
     auto rt = llvm_argty(func.ret);
     auto nargs_llvm = nargs;
-    if (has_closure) {
+    if (has_closure)
         nargs_llvm = nargs - (int)closure_args.size() + 1;
-    }
     SmallVector<Type*, 8> fsig(nargs_llvm);
     auto clit = closure_args.begin();
     for (int i = 0, j = 0; i < nargs; i++) {
@@ -282,7 +282,8 @@ Function *Context::_emit_function(const IR::Function &func, uint64_t func_id,
         builder.CreateStore(argv, slots[i]);
     }
     if (has_closure) {
-        Value *argv = &*argit++;
+        Argument *argv = &*argit++;
+        uint32_t max_offset = 0;
         for (auto cl: closure_args) {
             auto slot = slots[cl.first];
             auto ty = func.vals[cl.first];
@@ -290,11 +291,16 @@ Function *Context::_emit_function(const IR::Function &func, uint64_t func_id,
             auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(T_i8, argv,
                                                                         cl.second * 8),
                                              lty->getPointerTo());
+            max_offset = max(max_offset, cl.second + 1);
             Value *val = builder.CreateLoad(lty, ptr);
+            cast<LoadInst>(val)->setAlignment(8);
             if (ty == IR::Type::Bool)
                 val = builder.CreateTrunc(val, T_bool);
             builder.CreateStore(val, slot);
         }
+        if (max_offset)
+            argv->addAttr(Attribute::NonNull);
+        f->addDereferenceableParamAttr(nargs_llvm - 1, max_offset * 8);
     }
     auto prev_bb_var = builder.CreateAlloca(T_i32);
 
