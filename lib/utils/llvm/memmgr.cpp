@@ -206,7 +206,7 @@ public:
     ROAlloc alloc(size_t size, size_t align) override
     {
         bool new_block = false;
-        auto rtptr = m_tracker.alloc(size, align, [&] (size_t bsize) {
+        auto rtaddr = m_tracker.alloc(size, align, [&] (size_t bsize) {
                 new_block = true;
                 auto new_alloc = m_dualmap.alloc(bsize, exec);
                 auto res = m_block_infos.insert({bsize + (char*)new_alloc.first,
@@ -216,17 +216,17 @@ public:
                 return new_alloc.first;
             });
         if (new_block)
-            return {rtptr, rtptr};
-        auto info_it = m_block_infos.upper_bound(rtptr);
+            return {rtaddr, rtaddr};
+        auto info_it = m_block_infos.upper_bound(rtaddr);
         assert(info_it != m_block_infos.end());
         auto &info = info_it->second;
-        auto offset = (char*)rtptr - ((char*)info_it->first - info_it->second.size);
+        auto offset = (char*)rtaddr - ((char*)info_it->first - info_it->second.size);
         assert(offset >= 0);
         if (!info.wraddr)
-            return {rtptr, rtptr};
+            return {rtaddr, rtaddr};
         if (info.wraddr == (void*)-1)
             info.wraddr = m_dualmap.remap_wraddr(info.id, info.size);
-        return {(char*)info.wraddr + offset, rtptr};
+        return {(char*)info.wraddr + offset, rtaddr};
     }
     void finalize() override
     {
@@ -245,7 +245,7 @@ public:
     }
     void free(ROAlloc alloc, size_t size) override
     {
-        m_tracker.free(alloc.rtptr, size, [&] (void *ptr, size_t bsize) {
+        m_tracker.free(alloc.rtaddr, size, [&] (void *ptr, size_t bsize) {
                 auto it = free_block(ptr, bsize);
                 m_block_infos.erase(it);
             });
@@ -301,22 +301,22 @@ public:
     ROAlloc alloc(size_t size, size_t align) override
     {
         bool new_block = false;
-        auto rtptr = m_tracker.alloc(size, align, [&] (size_t bsize) {
+        auto rtaddr = m_tracker.alloc(size, align, [&] (size_t bsize) {
                 new_block = true;
                 auto ptr = mapAnonPage(bsize, Prot::RW);
                 m_new_blocks.emplace_back(ptr, bsize);
                 return ptr;
             });
         if (new_block)
-            return {rtptr, rtptr};
+            return {rtaddr, rtaddr};
         for (auto nb: m_new_blocks) {
-            if (nb.first <= rtptr && (char*)nb.first + nb.second > (char*)rtptr) {
-                return {rtptr, rtptr};
+            if (nb.first <= rtaddr && (char*)nb.first + nb.second > (char*)rtaddr) {
+                return {rtaddr, rtaddr};
             }
         }
-        auto wrptr = alloc_wraddr(size, align);
-        m_allocs.push_back({wrptr, rtptr, size});
-        return {wrptr, rtptr};
+        auto wraddr = alloc_wraddr(size, align);
+        m_allocs.push_back({wraddr, rtaddr, size});
+        return {wraddr, rtaddr};
     }
     void finalize() override
     {
@@ -327,12 +327,12 @@ public:
         }
         m_new_blocks.clear();
         for (auto alloc: m_allocs)
-            m_writer.write(alloc.rtptr, alloc.wrptr, alloc.size);
+            m_writer.write(alloc.rtaddr, alloc.wraddr, alloc.size);
         m_allocs.clear();
     }
     void free(ROAlloc alloc, size_t size) override
     {
-        m_tracker.free(alloc.rtptr, size, unmapPage);
+        m_tracker.free(alloc.rtaddr, size, unmapPage);
     }
     ~MemWriterAllocator() override
     {
@@ -352,8 +352,8 @@ private:
         return m_wrtracker.free_all(unmapPage, false);
     }
     struct Alloc {
-        void *wrptr;
-        void *rtptr;
+        void *wraddr;
+        void *rtaddr;
         size_t size;
     };
     MemWriter &m_writer;
@@ -396,13 +396,13 @@ void MemMgr::free_group(uint64_t id)
     for (auto alloc: it->second) {
         switch (alloc.type) {
         case Alloc::RW:
-            m_rwalloc.free(alloc.ptr, alloc.size);
+            m_rwalloc.free(alloc.rtaddr, alloc.size);
             break;
         case Alloc::RO:
-            m_roalloc->free({alloc.wrptr, alloc.ptr}, alloc.size);
+            m_roalloc->free({alloc.wraddr, alloc.rtaddr}, alloc.size);
             break;
         case Alloc::RX:
-            m_rxalloc->free({alloc.wrptr, alloc.ptr}, alloc.size);
+            m_rxalloc->free({alloc.wraddr, alloc.rtaddr}, alloc.size);
             break;
         default:
             abort();
@@ -415,8 +415,8 @@ uint8_t *MemMgr::allocateCodeSection(uintptr_t sz, unsigned align, unsigned, Str
 {
     assert(m_cur_allocs);
     auto res = m_rxalloc->alloc(sz, align);
-    m_cur_allocs->push_back(Alloc{res.rtptr, sz, Alloc::RX, res.wrptr});
-    return (uint8_t*)res.wrptr;
+    m_cur_allocs->push_back(Alloc{res.rtaddr, sz, Alloc::RX, res.wraddr});
+    return (uint8_t*)res.wraddr;
 }
 
 uint8_t *MemMgr::allocateDataSection(uintptr_t sz, unsigned align,
@@ -429,8 +429,8 @@ uint8_t *MemMgr::allocateDataSection(uintptr_t sz, unsigned align,
         return (uint8_t*)ptr;
     }
     auto res = m_roalloc->alloc(sz, align);
-    m_cur_allocs->push_back(Alloc{res.rtptr, sz, Alloc::RO, res.wrptr});
-    return (uint8_t*)res.wrptr;
+    m_cur_allocs->push_back(Alloc{res.rtaddr, sz, Alloc::RO, res.wraddr});
+    return (uint8_t*)res.wraddr;
 }
 
 void MemMgr::registerEHFrames(uint8_t*, uint64_t, size_t)
@@ -449,9 +449,9 @@ bool MemMgr::finalizeMemory(std::string*)
 
     for (auto &alloc: *m_cur_allocs) {
         // ensure the mapped pages are consistent
-        sys::Memory::InvalidateInstructionCache(alloc.ptr, alloc.size);
-        if (alloc.ptr != alloc.wrptr && alloc.wrptr) {
-            sys::Memory::InvalidateInstructionCache(alloc.wrptr, alloc.size);
+        sys::Memory::InvalidateInstructionCache(alloc.rtaddr, alloc.size);
+        if (alloc.rtaddr != alloc.wraddr && alloc.wraddr) {
+            sys::Memory::InvalidateInstructionCache(alloc.wraddr, alloc.size);
         }
     }
     return false;
@@ -460,9 +460,9 @@ bool MemMgr::finalizeMemory(std::string*)
 void MemMgr::notifyObjectLoaded(RuntimeDyld &dyld, const object::ObjectFile&)
 {
     for (auto &alloc: *m_cur_allocs) {
-        if (alloc.ptr == alloc.wrptr || !alloc.wrptr)
+        if (alloc.rtaddr == alloc.wraddr || !alloc.wraddr)
             continue;
-        dyld.mapSectionAddress(alloc.wrptr, (uintptr_t)alloc.ptr);
+        dyld.mapSectionAddress(alloc.wraddr, (uintptr_t)alloc.rtaddr);
     }
 }
 

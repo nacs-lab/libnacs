@@ -112,8 +112,8 @@ private:
 };
 
 struct ROAlloc {
-    void *wrptr;
-    void *rtptr;
+    void *wraddr;
+    void *rtaddr;
 };
 template<bool exec>
 class ROAllocator {
@@ -139,10 +139,10 @@ private:
             RO,
             RX
         };
-        void *ptr;
+        void *rtaddr;
         size_t size;
         Type type;
-        void *wrptr = nullptr;
+        void *wraddr = nullptr;
     };
     uint8_t *allocateCodeSection(uintptr_t sz, unsigned align,
                                  unsigned sid, StringRef sname) override;
