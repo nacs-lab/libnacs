@@ -347,10 +347,6 @@ private:
                 return mapAnonPage(size, Prot::RW);
             });
     }
-    void *reset_wraddr()
-    {
-        return m_wrtracker.free_all(unmapPage, false);
-    }
     struct Alloc {
         void *wraddr;
         void *rtaddr;

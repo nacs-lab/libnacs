@@ -54,10 +54,12 @@ if(ENABLE_LLVM)
 
   message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+else()
+  add_definitions(-Wconversion)
 endif()
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden
-  -fno-math-errno -Wconversion -Wno-sign-conversion
+  -fno-math-errno -Wno-sign-conversion
   -D_FILE_OFFSET_BITS=64)
 
 cmake_c_fix_include_path(lib/utils nacs-utils)
