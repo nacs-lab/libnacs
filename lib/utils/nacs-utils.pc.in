@@ -8,5 +8,5 @@ Description: Utility library for NaCs lab
 Version: @MAJOR_VERSION@.@MINOR_VERSION@.@PATCH_VERSION@
 
 Requires:
-Libs: -L${libdir} -lnacs-utils
+Libs: -L${libdir} -lnacs-utils @nacs_utils_LINKS_FLAGS@
 Cflags: -I${includedir} -D_FILE_OFFSET_BITS=64

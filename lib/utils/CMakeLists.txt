@@ -27,6 +27,10 @@ if(IS_UNIX)
   # For shm_*
   set(nacs_utils_LINKS ${nacs_utils_LINKS} rt)
 endif()
+set(nacs_utils_LINKS_FLAGS)
+foreach(link IN LISTS nacs_utils_LINKS)
+  set(nacs_utils_LINKS_FLAGS "${nacs_utils_LINKS_FLAGS} -l${link}")
+endforeach()
 set(nacs_utils_llvm_HDRS
   llvm/codegen.h
   llvm/compile.h
