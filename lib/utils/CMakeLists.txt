@@ -27,6 +27,9 @@ if(IS_UNIX)
   # For shm_*
   set(nacs_utils_LINKS ${nacs_utils_LINKS} rt)
 endif()
+# Include the dependencies in the link flags as well since otherwise
+# some dependent libraries couldn't be found.
+# Ref https://sysprogs.com/w/fixing-rpath-link-issues-with-cross-compilers/
 set(nacs_utils_LINKS_FLAGS)
 foreach(link IN LISTS nacs_utils_LINKS)
   set(nacs_utils_LINKS_FLAGS "${nacs_utils_LINKS_FLAGS} -l${link}")
