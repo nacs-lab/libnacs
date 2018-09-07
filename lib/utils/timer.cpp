@@ -32,15 +32,28 @@ getTime()
     return uint64_t(t.tv_sec) * 1000 * 1000 * 1000 + t.tv_nsec;
 }
 
+NACS_EXPORT() uint64_t getRes()
+{
+    timespec t;
+    clock_getres(CLOCK_MONOTONIC, &t);
+    return uint64_t(t.tv_sec) * 1000 * 1000 * 1000 + t.tv_nsec;
+}
+
 #ifndef CLOCK_MONOTONIC_COARSE
 #  define CLOCK_MONOTONIC_COARSE CLOCK_MONOTONIC
 #endif
 
-NACS_EXPORT() uint64_t
-getCoarseTime()
+NACS_EXPORT() uint64_t getCoarseTime()
 {
     timespec t;
     clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
+    return uint64_t(t.tv_sec) * 1000 * 1000 * 1000 + t.tv_nsec;
+}
+
+NACS_EXPORT() uint64_t getCourseRes()
+{
+    timespec t;
+    clock_getres(CLOCK_MONOTONIC_COARSE, &t);
     return uint64_t(t.tv_sec) * 1000 * 1000 * 1000 + t.tv_nsec;
 }
 

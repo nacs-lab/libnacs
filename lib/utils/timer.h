@@ -40,7 +40,9 @@
 namespace NaCs {
 
 uint64_t getTime();
+uint64_t getRes();
 uint64_t getCoarseTime();
+uint64_t getCoarseRes();
 uint64_t getElapse(uint64_t prev);
 
 static inline void
