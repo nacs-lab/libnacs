@@ -50,7 +50,7 @@ NACS_EXPORT() uint64_t getCoarseTime()
     return uint64_t(t.tv_sec) * 1000 * 1000 * 1000 + t.tv_nsec;
 }
 
-NACS_EXPORT() uint64_t getCourseRes()
+NACS_EXPORT() uint64_t getCoarseRes()
 {
     timespec t;
     clock_getres(CLOCK_MONOTONIC_COARSE, &t);
