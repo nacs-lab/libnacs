@@ -121,37 +121,37 @@ static fptr_t getBuiltinPtr(Builtins id)
 
         // f(f, f)
     case Builtins::atan2:
-        return fptr_t(static_cast<double(*)(double, double)>(::atan2));
+        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::atan2));
     case Builtins::copysign:
-        return fptr_t(static_cast<double(*)(double, double)>(::copysign));
+        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::copysign));
     case Builtins::fdim:
-        return fptr_t(static_cast<double(*)(double, double)>(::fdim));
+        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::fdim));
     case Builtins::max: // fmax
-        return fptr_t(static_cast<double(*)(double, double)>(::fmax));
+        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::fmax));
     case Builtins::min: // fmax
-        return fptr_t(static_cast<double(*)(double, double)>(::fmin));
+        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::fmin));
     case Builtins::mod: // fmod
-        return fptr_t(static_cast<double(*)(double, double)>(::fmod));
+        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::fmod));
     case Builtins::hypot:
-        return fptr_t(static_cast<double(*)(double, double)>(::hypot));
+        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::hypot));
     case Builtins::pow:
-        return fptr_t(static_cast<double(*)(double, double)>(::pow));
+        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::pow));
     case Builtins::remainder:
-        return fptr_t(static_cast<double(*)(double, double)>(::remainder));
+        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::remainder));
 
         // f(f, f, f)
     case Builtins::fma:
-        return fptr_t(static_cast<double(*)(double, double, double)>(::fma));
+        return fptr_t((uintptr_t)static_cast<double(*)(double, double, double)>(::fma));
 
         // f(f, i)
     case Builtins::ldexp:
-        return fptr_t(static_cast<double(*)(double, int)>(::ldexp));
+        return fptr_t((uintptr_t)static_cast<double(*)(double, int)>(::ldexp));
 
         // f(i, f)
     case Builtins::jn:
-        return fptr_t(static_cast<double(*)(int, double)>(::jn));
+        return fptr_t((uintptr_t)static_cast<double(*)(int, double)>(::jn));
     case Builtins::yn:
-        return fptr_t(static_cast<double(*)(int, double)>(::yn));
+        return fptr_t((uintptr_t)static_cast<double(*)(int, double)>(::yn));
     default:
         return nullptr;
     }
@@ -387,20 +387,20 @@ NACS_EXPORT() double evalBuiltin(Builtins id, TagVal *args)
     case BuiltinType::F64_F64:
         return _fptr(args[0].get<double>());
     case BuiltinType::F64_F64F64: {
-        auto fptr = (double(*)(double, double))_fptr;
+        auto fptr = (double(*)(double, double))(uintptr_t)_fptr;
         return fptr(args[0].get<double>(), args[1].get<double>());
     }
     case BuiltinType::F64_F64F64F64: {
-        auto fptr = (double(*)(double, double, double))_fptr;
+        auto fptr = (double(*)(double, double, double))(uintptr_t)_fptr;
         return fptr(args[0].get<double>(), args[1].get<double>(),
                     args[2].get<double>());
     }
     case BuiltinType::F64_F64I32: {
-        auto fptr = (double(*)(double, int))_fptr;
+        auto fptr = (double(*)(double, int))(uintptr_t)_fptr;
         return fptr(args[0].get<double>(), args[1].get<int32_t>());
     }
     case BuiltinType::F64_I32F64: {
-        auto fptr = (double(*)(int, double))_fptr;
+        auto fptr = (double(*)(int, double))(uintptr_t)_fptr;
         return fptr(args[0].get<int32_t>(), args[1].get<double>());
     }
     default:
