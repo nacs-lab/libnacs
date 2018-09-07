@@ -59,7 +59,7 @@ else()
 endif()
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden
-  -fno-math-errno -Wno-sign-conversion
+  -fno-math-errno -Wno-sign-conversion -Wno-psabi -Wno-unknown-warning-option
   -D_FILE_OFFSET_BITS=64)
 
 cmake_c_fix_include_path(lib/utils nacs-utils)
