@@ -24,16 +24,16 @@ using namespace NaCs;
 
 int main()
 {
-    FixedQueue<int, 8> queue;
+    FixedQueue<unsigned, 8> queue;
 
     assert(!queue.full() && queue.empty());
-    for (int i = 0; i < 8; i++) {
+    for (unsigned i = 0; i < 8; i++) {
         assert(queue.size() == i);
         queue.push(i);
         assert(queue.size() == i + 1);
     }
     assert(queue.full() && !queue.empty());
-    for (int i = 0; i < 5; i++) {
+    for (unsigned i = 0; i < 5; i++) {
         assert(queue.size() == 8 - i);
         assert(queue.front() == i);
         auto v = queue.pop();
@@ -41,13 +41,13 @@ int main()
         assert(queue.size() == 7 - i);
     }
     assert(!queue.full() && !queue.empty());
-    for (int i = 0; i < 5; i++) {
+    for (unsigned i = 0; i < 5; i++) {
         assert(queue.size() == 3 + i);
         queue.push(i);
         assert(queue.size() == 4 + i);
     }
     assert(queue.full() && !queue.empty());
-    for (int i = 5; i < 8; i++) {
+    for (unsigned i = 5; i < 8; i++) {
         assert(queue.size() == 13 - i);
         assert(queue.front() == i);
         auto v = queue.pop();
@@ -55,7 +55,7 @@ int main()
         assert(queue.size() == 12 - i);
     }
     assert(!queue.full() && !queue.empty());
-    for (int i = 0; i < 5; i++) {
+    for (unsigned i = 0; i < 5; i++) {
         assert(queue.size() == 5 - i);
         assert(queue.front() == i);
         auto v = queue.pop();
