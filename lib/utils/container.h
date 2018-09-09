@@ -25,6 +25,7 @@
 
 #include <memory>
 #include <type_traits>
+#include <utility>
 
 #include <assert.h>
 
@@ -236,6 +237,57 @@ private:
     atomic_ptr m_mid __attribute__ ((aligned(64)));
     // Accessed by filter thread only
     Item *m_mid_cache __attribute__ ((aligned(64))) = nullptr; // for filter
+};
+
+// A fixed size queue of maximum size `n`
+template<typename T, uint32_t n>
+class FixedQueue {
+    struct alignas(T) Ceil {
+        char buff[sizeof(T)];
+    };
+public:
+    template<typename T2>
+    void push(T2 &&v)
+    {
+        auto idx = (m_ptr + m_sz) % n;
+        m_sz++;
+        assert(m_sz <= n);
+        auto ptr = &m_buf[idx];
+        new (&ptr->buff) T(std::forward<T2>(v));
+    }
+    T pop()
+    {
+        auto ptr = &front();
+        T v(std::move(*ptr));
+        ptr->~T();
+        m_ptr = (m_ptr + 1) % n;
+        m_sz -= 1;
+        return v;
+    }
+    const T &front() const
+    {
+        return *reinterpret_cast<const T*>(&m_buf[m_ptr]);
+    }
+    T &front()
+    {
+        return *reinterpret_cast<T*>(&m_buf[m_ptr]);
+    }
+    uint32_t size() const
+    {
+        return m_sz;
+    }
+    bool empty() const
+    {
+        return m_sz == 0;
+    }
+    bool full() const
+    {
+        return m_sz == n;
+    }
+private:
+    Ceil m_buf[n];
+    uint32_t m_ptr{0};
+    uint32_t m_sz{0};
 };
 
 }

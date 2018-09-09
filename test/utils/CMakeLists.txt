@@ -14,6 +14,10 @@ set(test_filterqueue_SOURCES test_filterqueue.cpp)
 add_executable(test-filterqueue ${test_filterqueue_SOURCES})
 target_link_libraries(test-filterqueue nacs-utils)
 
+set(test_fixedqueue_SOURCES test_fixedqueue.cpp)
+add_executable(test-fixedqueue ${test_fixedqueue_SOURCES})
+target_link_libraries(test-fixedqueue nacs-utils)
+
 set(test_ir_SOURCES test_ir.cpp)
 add_executable(test-ir ${test_ir_SOURCES})
 target_link_libraries(test-ir nacs-utils)
