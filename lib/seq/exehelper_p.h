@@ -26,47 +26,47 @@ namespace {
 struct Printer {
     void ttl(uint32_t ttl, uint64_t t)
     {
-        stm << "TTL: val=" << std::hex << ttl << std::dec << " t=" << t << std::endl;
+        stm << "ttl=0x" << std::hex << ttl << std::dec << " t=" << t << std::endl;
     }
     void ttl1(uint8_t chn, bool val, uint64_t t)
     {
-        stm << "TTL1: chn=" << int(chn) << " val=" << int(val) << " t=" << t << std::endl;
+        stm << "ttl(" << int(chn) << ")=" << int(val) << " t=" << t << std::endl;
     }
     void dds_freq(uint8_t chn, uint32_t freq)
     {
-        stm << "DDS Freq: chn=" << int(chn)
-            << " freq=" << std::hex << freq << std::dec << std::endl;
+        stm << "freq(" << int(chn) << ")=0x"
+            << std::hex << freq << std::dec << std::endl;
     }
     void dds_amp(uint8_t chn, uint16_t amp)
     {
-        stm << "DDS Amp: chn=" << int(chn)
-            << " amp=" << std::hex << amp << std::dec << std::endl;
+        stm << "amp(" << int(chn) << ")=0x"
+            << std::hex << amp << std::dec << std::endl;
     }
     void dds_phase(uint8_t chn, uint16_t phase)
     {
-        stm << "DDS Phase: chn=" << int(chn)
-            << " phase=" << std::hex << phase << std::dec << std::endl;
+        stm << "phase(" << int(chn) << ")=0x"
+            << std::hex << phase << std::dec << std::endl;
     }
     void dds_detphase(uint8_t chn, uint16_t detphase)
     {
-        stm << "DDS Det Phase: chn=" << int(chn)
-            << " detphase=" << std::hex << detphase << std::dec << std::endl;
+        stm << "phase(" << int(chn) << ")+=0x"
+            << std::hex << detphase << std::dec << std::endl;
     }
     void dds_reset(uint8_t chn)
     {
-        stm << "DDS Reset: chn=" << int(chn) << std::endl;
+        stm << "reset(" << int(chn) << ")" << std::endl;
     }
     void dac(uint8_t chn, uint16_t V)
     {
-        stm << "DAC: chn=" << int(chn) << " V=" << std::hex << V << std::dec << std::endl;
+        stm << "dac(" << int(chn) << ")=" << std::hex << V << std::dec << std::endl;
     }
     void wait(uint64_t t)
     {
-        stm << "Wait: t=" << t << std::endl;
+        stm << "wait(" << t << ")" << std::endl;
     }
     void clock(uint8_t period)
     {
-        stm << "Clock: period=" << int(period) << std::endl;
+        stm << "clock(" << int(period) << ")" << std::endl;
     }
     std::ostream &stm;
 };
