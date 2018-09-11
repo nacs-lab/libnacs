@@ -140,6 +140,46 @@ class FilterQueue {
     }
 public:
     // For producer thread
+    class iterator {
+    public:
+        iterator &operator++()
+        {
+            m_item = m_item->next.load(std::memory_order_relaxed);
+            return *this;
+        }
+        bool operator==(const iterator &other) const
+        {
+            return m_item == other.m_item;
+        }
+        bool operator!=(const iterator &other) const
+        {
+            return m_item != other.m_item;
+        }
+        T *operator*() const
+        {
+            return m_item->obj;
+        }
+
+    private:
+        iterator(Item *item)
+            : m_item(item)
+        {}
+        friend class FilterQueue<T>;
+        Item *m_item;
+    };
+    iterator begin() const
+    {
+        auto head = m_head;
+        iterator it(head);
+        if (head->obj)
+            return it;
+        ++it;
+        return it;
+    }
+    iterator end() const
+    {
+        return iterator(nullptr);
+    }
     /**
      * Remove a filtered element from the head of the list.
      * If there isn't any filtered element left, return NULL.
@@ -151,16 +191,20 @@ public:
         auto head = m_head;
         auto res = head->obj;
         if (head == mid) {
-            // Empty
+            // No need to forward head (filter thread haven't moved yet)
             head->obj = nullptr;
             return res;
         }
         head = forward_head(head);
+        // The original head could be already popped, (i.e. `res == nullptr`)
+        // in which case we should find the next object to pop.
         if (res)
             return res;
         res = head->obj;
         assert(res);
         if (head != mid) {
+            // Not doing `forward_head` here should not affect the correctness
+            // since there will still only be on `NULL` item from the head.
             forward_head(head);
         }
         else {
@@ -234,8 +278,10 @@ private:
     Item *m_head;
     Item *m_tail;
     // Accessed by both threads
+    // Never NULL and points to the last filtered item.
     atomic_ptr m_mid __attribute__ ((aligned(64)));
     // Accessed by filter thread only
+    // If non-null, this is the valid current object to filter on.
     Item *m_mid_cache __attribute__ ((aligned(64))) = nullptr; // for filter
 };
 

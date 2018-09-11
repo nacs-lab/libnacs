@@ -30,21 +30,29 @@ std::uniform_int_distribution<int> dist{0, 10};
 
 void test(int n)
 {
-    FilterQueue<int> queue;
+    FilterQueue<std::atomic<int>> queue;
     std::thread tfilter([&] {
             for (int i = 0; i < n; i++) {
-                int *p;
+                std::atomic<int> *p;
                 while ((p = queue.get_filter()) == nullptr)
                     CPU::pause();
                 assert(p == queue.get_filter());
-                assert(*p == i);
-                *p = i * 2 + 1;
+                assert(p->load(std::memory_order_relaxed) == i);
+                p->store(i * 2 + 1, std::memory_order_relaxed);
                 queue.forward_filter();
                 CPU::wake();
             }
         });
     int nwrite = 0;
     int nread = 0;
+    auto check_it = [&] () {
+        int i0 = nread;
+        for (auto p: queue) {
+            int i = i0++;
+            int v = p->load(std::memory_order_relaxed);
+            assert(v == (i * 2 + 1) || v == i);
+        }
+    };
     while (nread < n) {
         bool do_read = true;
         int det = nwrite - nread;
@@ -54,8 +62,9 @@ void test(int n)
         else if (nwrite < n && det <= 10) {
             do_read = dist(rng) < det;
         }
+        check_it();
         if (do_read) {
-            int *p;
+            std::atomic<int> *p;
             auto exp = queue.peak();
             assert(exp.first);
             if (exp.second) {
@@ -68,14 +77,14 @@ void test(int n)
                 }
             }
             assert(exp.first == p);
-            assert(*p == 2 * nread + 1);
+            assert(p->load(std::memory_order_relaxed) == 2 * nread + 1);
             delete p;
             nread++;
         }
         else {
             if (det)
                 assert(queue.peak().first);
-            queue.push(new int(nwrite));
+            queue.push(new std::atomic<int>(nwrite));
             CPU::wake();
             nwrite++;
         }
