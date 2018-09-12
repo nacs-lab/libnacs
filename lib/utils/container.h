@@ -104,7 +104,7 @@ public:
  * Producer:
  * * Push element
  * * Remove element (assumed to be before mid point)
- * * Peak at the head
+ * * Peek at the head
  *
  * Filter:
  * * Read filter(mid) point
@@ -224,10 +224,10 @@ public:
         tail->next.store(item, std::memory_order_release);
     }
     /**
-     * Peak at the head of the list. Return the element and whether the element is already
+     * Peek at the head of the list. Return the element and whether the element is already
      * processed (filtered). If the list is empty, return `{NULL, false}`.
      */
-    std::pair<T*,bool> peak()
+    std::pair<T*,bool> peek()
     {
         auto head = m_head;
         if (auto res = head->obj)

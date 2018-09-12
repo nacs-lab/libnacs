@@ -65,7 +65,7 @@ void test(int n)
         check_it();
         if (do_read) {
             std::atomic<int> *p;
-            auto exp = queue.peak();
+            auto exp = queue.peek();
             assert(exp.first);
             if (exp.second) {
                 p = queue.pop();
@@ -83,7 +83,7 @@ void test(int n)
         }
         else {
             if (det)
-                assert(queue.peak().first);
+                assert(queue.peek().first);
             queue.push(new std::atomic<int>(nwrite));
             CPU::wake();
             nwrite++;
