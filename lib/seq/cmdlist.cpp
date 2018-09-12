@@ -40,6 +40,14 @@ NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
 
 NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len)
 {
+    print(stm, code, code_len, 0);
+}
+
+NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len,
+                         uint32_t ttl_mask)
+{
+    if (ttl_mask)
+        stm << "ttl_mask=0x" << std::hex << ttl_mask << std::dec << std::endl;
     Printer printer{stm};
     ExeState state;
     state.run(printer, code, code_len);
