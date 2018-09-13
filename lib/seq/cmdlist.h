@@ -76,7 +76,7 @@ struct NACS_PACKED TTL1 {
     OpCode op; // 1
     uint8_t t: 2; // Total time is `t + 3`
     uint8_t val: 1;
-    uint16_t chn: 5;
+    uint8_t chn: 5;
 };
 static_assert(sizeof(TTL1) == 2, "");
 
