@@ -16,63 +16,43 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../../lib/utils/streams.h"
-
-#include <string>
-#include <sstream>
-
-#include <iostream>
+#include "../../lib/utils/errors.h"
 
 #include <assert.h>
 
+#include <iostream>
+#include <sstream>
+
 using namespace NaCs;
 
-void test_print(std::ostream &stm)
+static std::pair<std::string,std::string> get_strings(const SyntaxError &err)
 {
-    stm << 12345 << " abcde " << 1.23;
+    std::stringstream stm;
+    stm << err;
+    return {err.what(), stm.str()};
 }
 
-void test_seek(std::ostream &stm)
+static void check_err_strings(const SyntaxError &err, const std::string &what,
+                              const std::string &printmsg)
 {
-    stm << 12345 << " abcde " << 1.23 << "asdfjkl;";
-    auto n0 = stm.tellp();
-    stm << 12345 << " abcde " << 1.23 << "asdfjkl;";
-    stm << 12345 << " abcde " << 1.23 << "asdfjkl;";
-    auto n = stm.tellp();
-    stm.seekp(-5, std::ios_base::cur);
-    stm << 1;
-    stm.seekp(-30, std::ios_base::end);
-    stm << 'o';
-    stm.seekp(n0);
-    stm << ',';
-    stm.seekp(n);
-}
-
-template<typename F>
-void test_streams(F &&f)
-{
-    std::stringstream sstm;
-    f(sstm);
-    auto const res = sstm.str();
-
-    malloc_ostream mstm;
-    f(mstm);
-    size_t sz;
-    auto p = mstm.get_buf(sz);
-    assert(sz == res.size());
-    assert(memcmp(p, &res[0], res.size()) == 0);
-    free(p);
-
-    vector_ostream vstm;
-    f(vstm);
-    auto v = vstm.get_buf();
-    assert(v.size() == res.size());
-    assert(memcmp(&v[0], &res[0], res.size()) == 0);
+    auto res = get_strings(err);
+    assert(res.first == what);
+    assert(res.second == printmsg);
 }
 
 int main()
 {
-    test_streams(test_print);
-    test_streams(test_seek);
+    check_err_strings(SyntaxError("Missing `)`", "a = f(1, 2) + g(12];", 10, 19, 16, 20),
+                      "SyntaxError: Missing `)`\nL10:19 a = f(1, 2) + g(12];",
+                      "SyntaxError: Missing `)`\n"
+                      "Line: 10, Column: 19\n"
+                      "a = f(1, 2) + g(12];\n"
+                      "               ~~~^~\n");
+    check_err_strings(SyntaxError("Literal too long", "a = 12345678901234567890;", 3, -1, 5, 24),
+                      "SyntaxError: Literal too long\nL3 a = 12345678901234567890;",
+                      "SyntaxError: Literal too long\n"
+                      "Line: 3\n"
+                      "a = 12345678901234567890;\n"
+                      "    ~~~~~~~~~~~~~~~~~~~~\n");
     return 0;
 }

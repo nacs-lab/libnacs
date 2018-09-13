@@ -44,6 +44,10 @@ set(test_small_alloc_SOURCES test_small_alloc.cpp)
 add_executable(test-small_alloc ${test_small_alloc_SOURCES})
 target_link_libraries(test-small_alloc nacs-utils)
 
+set(test_syntax_error_SOURCES test_syntax_error.cpp)
+add_executable(test-syntax_error ${test_syntax_error_SOURCES})
+target_link_libraries(test-syntax_error nacs-utils)
+
 set(test_term_SOURCES test_term.cpp)
 add_executable(test-term ${test_term_SOURCES})
 target_link_libraries(test-term nacs-utils)

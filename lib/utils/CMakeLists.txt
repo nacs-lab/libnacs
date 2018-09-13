@@ -14,6 +14,7 @@ set(nacs_utils_HDRS
   utils.h
   zmq_utils.h)
 set(nacs_utils_SRCS
+  errors.cpp
   fd_utils.cpp
   interp.cpp
   ir.cpp

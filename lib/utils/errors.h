@@ -21,6 +21,7 @@
 
 #include "utils.h"
 
+#include <ostream>
 #include <system_error>
 
 namespace NaCs {
@@ -34,6 +35,43 @@ static inline T checkErrno(T res, Arg&&... arg)
         throw std::system_error(errno, std::system_category(), std::forward<Arg>(arg)...);
     return res;
 }
+
+class NACS_EXPORT(utils) SyntaxError : public std::runtime_error {
+public:
+    SyntaxError(std::string what, std::string line, int lineno,
+                int colnum=-1, int colstart=-1, int colend=-1);
+    ~SyntaxError() override;
+    const std::string &msg() const
+    {
+        return m_msg;
+    }
+    const std::string &line() const
+    {
+        return m_line;
+    }
+    int lineno() const
+    {
+        return m_lineno;
+    }
+    int columns(int *colstart=nullptr, int *colend=nullptr) const
+    {
+        if (colstart)
+            *colstart = m_colstart;
+        if (colend)
+            *colend = m_colend;
+        return m_colnum;
+    }
+
+private:
+    std::string m_msg;
+    std::string m_line;
+    int m_lineno;
+    int m_colnum;
+    int m_colstart;
+    int m_colend;
+};
+
+std::ostream &operator<<(std::ostream &stm, const SyntaxError &err);
 
 }
 
