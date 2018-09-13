@@ -20,6 +20,8 @@
 
 #include "bytecode.h"
 
+#include "../utils/streams.h"
+
 #include <math.h>
 
 namespace NaCs {
@@ -121,7 +123,6 @@ void Keeper::reset(void)
 /**
  * The writer class maintains all the states for bytecode generation.
  */
-template<typename Vec>
 class Writer {
     // Hard coded start trigger TTL channel.
     static constexpr int start_ttl = 0;
@@ -149,12 +150,13 @@ class Writer {
     uint8_t max_time_left = 0;
     size_t last_timed_inst = 0;
 
+    buff_ostream &stm;
+
     template<typename Inst>
     size_t addInst(Inst inst)
     {
-        auto len = code.size();
-        code.resize(len + sizeof(inst));
-        memcpy(&code[len], &inst, sizeof(inst));
+        auto len = stm.tellg();
+        stm.write((char*)&inst, sizeof(inst));
         max_time_left = 0;
         return len;
     }
@@ -166,7 +168,7 @@ class Writer {
     {
         assert(t <= max_time_left);
         max_time_left = uint8_t(max_time_left - t);
-        uint8_t b = code[last_timed_inst];
+        uint8_t b = stm[last_timed_inst];
         uint8_t op = b & 0xf;
         uint8_t tmask = 0xf0;
         switch (op) {
@@ -182,7 +184,7 @@ class Writer {
             abort();
         }
         t = uint8_t(t + ((b & tmask) >> 4));
-        code[last_timed_inst] = uint8_t((b & ~tmask) | ((t << 4) & tmask));
+        stm[last_timed_inst] = uint8_t((b & ~tmask) | ((t << 4) & tmask));
     }
 
     // The `add***` functions below provides an abstraction to the bytecode and hides
@@ -426,7 +428,9 @@ class Writer {
     }
 
 public:
-    Vec code;
+    Writer(buff_ostream &stm)
+        : stm(stm)
+    {}
 
     uint32_t get_ttl_mask() const
     {
@@ -493,13 +497,12 @@ public:
 static constexpr Channel clock_chn{Channel::Type::CLOCK, 0};
 static constexpr int default_clock_div = 100;
 
-template<typename Vec>
 class Scheduler {
     std::vector<Sequence::Pulse> &pulses;
     size_t n_pulses;
     std::map<Channel,Val> &defaults;
     std::vector<Sequence::Clock> &clocks;
-    Writer<Vec> &writer;
+    Writer writer;
 
     Time::Constraints t_cons;
     Time::Keeper keeper;
@@ -813,12 +816,12 @@ class Scheduler {
     }
 
 public:
-    Scheduler(Sequence &seq, Writer<Vec> &writer, Time::Constraints t_cons)
+    Scheduler(Sequence &seq, buff_ostream &stm, Time::Constraints t_cons)
         : pulses(seq.pulses),
           n_pulses(pulses.size()),
           defaults(seq.defaults),
           clocks(seq.clocks),
-          writer(writer),
+          writer(stm),
           t_cons(t_cons),
           keeper(t_cons),
           start_vals(n_pulses),
@@ -886,7 +889,7 @@ public:
 
     // Complexity O(nchannel * npulse)
     // Assume pulses are sorted according to start time.
-    void schedule()
+    uint32_t schedule()
     {
         // Initialize channels
         for (auto it: init_vals) {
@@ -967,36 +970,38 @@ public:
             forward_clock();
         }
         writer.end(next_t + start_t);
+        return writer.get_ttl_mask();
     }
 };
 
 } // anonymous
 
-template<typename Vec>
-Vec SeqToByteCode(Sequence &seq, uint32_t *ttl_mask)
+static uint32_t SeqToByteCode(buff_ostream &stm, Sequence &seq)
 {
     // The bytecode is guaranteed to not enable any channel that is not present in the mask.
-    Writer<Vec> writer;
-    Scheduler<Vec> state(seq, writer, {50, 40, 4096});
+    Scheduler state(seq, stm, {50, 40, 4096});
     state.init();
-    state.schedule();
-    if (ttl_mask)
-        *ttl_mask = writer.get_ttl_mask();
-    return writer.code;
+    return state.schedule();
 }
 
 } // ByteCode
 
 NACS_EXPORT() std::vector<uint8_t> Sequence::toByteCode(uint32_t *ttl_mask)
 {
-    return ByteCode::SeqToByteCode<std::vector<uint8_t>>(*this, ttl_mask);
+    basic_vector_ostream<uint8_t> stm;
+    auto tm = ByteCode::SeqToByteCode(stm, *this);
+    if (ttl_mask)
+        *ttl_mask = tm;
+    return stm.get_buf();
 }
 
 NACS_EXPORT() uint8_t *Sequence::toByteCode(size_t *sz, uint32_t *ttl_mask)
 {
-    auto vec = ByteCode::SeqToByteCode<MallocVector<uint8_t>>(*this, ttl_mask);
-    *sz = vec.size();
-    return &vec[0];
+    malloc_ostream stm;
+    auto tm = ByteCode::SeqToByteCode(stm, *this);
+    if (ttl_mask)
+        *ttl_mask = tm;
+    return (uint8_t*)stm.get_buf(*sz);
 }
 
 }

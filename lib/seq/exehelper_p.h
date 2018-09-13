@@ -115,36 +115,4 @@ struct TimeKeeper {
     uint64_t total_t = 0;
 };
 
-// Simple wrapper around malloc for C interop.
-// Implement an API close enough to `std::vector` for our purpose.
-// Note that the destructor of this type does **NOT** free the memory.
-template<typename ET>
-struct MallocVector {
-    MallocVector()
-        : m_data(nullptr),
-          m_len(0)
-    {}
-    static_assert(std::is_trivial<ET>::value, "");
-    ET &operator[](size_t i)
-    {
-        return m_data[i];
-    }
-    const ET &operator[](size_t i) const
-    {
-        return m_data[i];
-    }
-    size_t size() const
-    {
-        return m_len;
-    }
-    void resize(size_t sz)
-    {
-        m_data = (ET*)realloc(m_data, sizeof(ET) * sz);
-        m_len = sz;
-    }
-private:
-    ET *m_data;
-    size_t m_len;
-};
-
 }
