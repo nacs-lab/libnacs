@@ -6,6 +6,7 @@ set(nacs_utils_HDRS
   macros.h
   mem.h
   number.h
+  streams.h
   term.h
   thread.h
   timer.h
@@ -19,6 +20,7 @@ set(nacs_utils_SRCS
   log.cpp
   mem.cpp
   number.cpp
+  streams.cpp
   term.cpp
   timer.cpp
   utils.cpp)

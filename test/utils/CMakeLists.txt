@@ -10,6 +10,10 @@ set(test_bits_SOURCES test_bits.cpp)
 add_executable(test-bits ${test_bits_SOURCES})
 target_link_libraries(test-bits nacs-utils)
 
+set(test_buff_streams_SOURCES test_buff_streams.cpp)
+add_executable(test-buff_streams ${test_buff_streams_SOURCES})
+target_link_libraries(test-buff_streams nacs-utils)
+
 set(test_filterqueue_SOURCES test_filterqueue.cpp)
 add_executable(test-filterqueue ${test_filterqueue_SOURCES})
 target_link_libraries(test-filterqueue nacs-utils)
