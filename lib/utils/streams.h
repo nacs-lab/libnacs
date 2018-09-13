@@ -62,21 +62,29 @@ protected:
     ssize_t m_end;
 };
 
-class NACS_EXPORT() vector_streambuf : public buff_streambuf {
+template<typename charT>
+class NACS_EXPORT() basic_vector_streambuf : public buff_streambuf {
+    static_assert(sizeof(charT) == 1);
 public:
-    vector_streambuf(std::vector<char> &&buf, size_t offset);
-    vector_streambuf(std::vector<char> &&buf=std::vector<char>())
-        : vector_streambuf(std::move(buf), buf.size())
+    basic_vector_streambuf(std::vector<charT> &&buf, size_t offset);
+    basic_vector_streambuf(std::vector<charT> &&buf=std::vector<charT>())
+        : basic_vector_streambuf(std::move(buf), buf.size())
     {}
-    ~vector_streambuf() override;
+    ~basic_vector_streambuf() override;
 
-    std::vector<char> get_buf();
+    std::vector<charT> get_buf();
 
 private:
     char *extend(size_t sz) override;
 
-    std::vector<char> m_buf;
+    std::vector<charT> m_buf;
 };
+
+extern template class basic_vector_streambuf<char>;
+extern template class basic_vector_streambuf<unsigned char>;
+
+using vector_streambuf = basic_vector_streambuf<char>;
+using uvector_streambuf = basic_vector_streambuf<unsigned char>;
 
 class NACS_EXPORT() malloc_streambuf : public buff_streambuf {
 public:
@@ -110,23 +118,30 @@ public:
     }
 };
 
-class NACS_EXPORT() vector_ostream : public buff_ostream {
+template<typename charT>
+class NACS_EXPORT() basic_vector_ostream : public buff_ostream {
 public:
-    vector_ostream(std::vector<char> &&buf, size_t offset);
-    vector_ostream(std::vector<char> &&buf=std::vector<char>())
-        : vector_ostream(std::move(buf), buf.size())
+    basic_vector_ostream(std::vector<charT> &&buf, size_t offset);
+    basic_vector_ostream(std::vector<charT> &&buf=std::vector<charT>())
+        : basic_vector_ostream(std::move(buf), buf.size())
     {}
-    ~vector_ostream();
+    ~basic_vector_ostream();
 
-    std::vector<char> get_buf()
+    std::vector<charT> get_buf()
     {
         flush();
         return m_buf.get_buf();
     }
 
 private:
-    vector_streambuf m_buf;
+    basic_vector_streambuf<charT> m_buf;
 };
+
+extern template class basic_vector_ostream<char>;
+extern template class basic_vector_ostream<unsigned char>;
+
+using vector_ostream = basic_vector_ostream<char>;
+using uvector_ostream = basic_vector_ostream<unsigned char>;
 
 class NACS_EXPORT() malloc_ostream : public buff_ostream {
 public:
