@@ -75,11 +75,11 @@ inline auto buff_streambuf::_seekpos(pos_type pos) -> pos_type
         return pos_type(-1);
     auto base = pbase();
     auto end = epptr();
-    if (unlikely(base + pos > end)) {
-        extend(base + pos - end);
+    if (unlikely(base + (off_type)pos > end)) {
+        extend(base + (off_type)pos - end);
         base = pbase();
     }
-    pbump(pos - (pptr() - base));
+    pbump(int((off_type)pos - (pptr() - base)));
     update_size();
     return pos;
 }

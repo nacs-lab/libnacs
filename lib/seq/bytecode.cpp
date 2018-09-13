@@ -148,17 +148,17 @@ class Writer {
 
     uint64_t cur_t = 0;
     uint8_t max_time_left = 0;
-    size_t last_timed_inst = 0;
+    ssize_t last_timed_inst = 0;
 
     buff_ostream &stm;
 
     template<typename Inst>
-    size_t addInst(Inst inst)
+    ssize_t addInst(Inst inst)
     {
         auto len = stm.tellg();
         stm.write((char*)&inst, sizeof(inst));
         max_time_left = 0;
-        return len;
+        return (ssize_t)len;
     }
 
     // Increase the wait time encoded in the last instruction by `t`.
