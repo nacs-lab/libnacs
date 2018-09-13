@@ -189,7 +189,7 @@ char *malloc_streambuf::extend(size_t sz)
 }
 
 vector_ostream::vector_ostream(std::vector<char> &&buf, size_t offset)
-    : std::ostream(&m_buf), m_buf(std::move(buf), offset)
+    : buff_ostream(&m_buf), m_buf(std::move(buf), offset)
 {
 }
 
@@ -198,7 +198,7 @@ vector_ostream::~vector_ostream()
 }
 
 malloc_ostream::malloc_ostream()
-    : std::ostream(&m_buf), m_buf()
+    : buff_ostream(&m_buf), m_buf()
 {
 }
 

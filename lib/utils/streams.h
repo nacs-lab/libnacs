@@ -33,6 +33,18 @@ public:
     buff_streambuf(size_t sz=0)
         : m_end(sz)
     {}
+    pos_type tellg() const
+    {
+        return pptr() - pbase();
+    }
+    const char &operator[](size_t i) const
+    {
+        return pbase()[i];
+    }
+    char &operator[](size_t i)
+    {
+        return pbase()[i];
+    }
 
 private:
     std::streamsize xsputn(const char* s, std::streamsize count) override;
@@ -79,7 +91,26 @@ private:
     std::unique_ptr<char, CDeleter> m_buf;
 };
 
-class NACS_EXPORT() vector_ostream : public std::ostream {
+class buff_ostream : public std::ostream {
+public:
+    buff_ostream(buff_streambuf *buf)
+        : std::ostream(buf)
+    {}
+    pos_type tellg()
+    {
+        return static_cast<buff_streambuf*>(rdbuf())->tellg();
+    }
+    const char &operator[](size_t i) const
+    {
+        return (*static_cast<const buff_streambuf*>(rdbuf()))[i];
+    }
+    char &operator[](size_t i)
+    {
+        return (*static_cast<buff_streambuf*>(rdbuf()))[i];
+    }
+};
+
+class NACS_EXPORT() vector_ostream : public buff_ostream {
 public:
     vector_ostream(std::vector<char> &&buf, size_t offset);
     vector_ostream(std::vector<char> &&buf=std::vector<char>())
@@ -97,7 +128,7 @@ private:
     vector_streambuf m_buf;
 };
 
-class NACS_EXPORT() malloc_ostream : public std::ostream {
+class NACS_EXPORT() malloc_ostream : public buff_ostream {
 public:
     malloc_ostream();
     ~malloc_ostream();
