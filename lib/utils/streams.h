@@ -21,6 +21,8 @@
 
 #include "utils.h"
 
+#include <istream>
+#include <limits>
 #include <memory>
 #include <ostream>
 #include <streambuf>
@@ -157,6 +159,33 @@ public:
 private:
     malloc_streambuf m_buf;
 };
+
+constexpr auto eofc = std::istream::traits_type::eof();
+
+static inline std::istream &ignore_line(std::istream &stm, char c)
+{
+    stm.ignore(std::numeric_limits<std::streamsize>::max(), c);
+    return stm;
+}
+
+static inline std::istream &ignore_line(std::istream &stm)
+{
+    // Use a separate signature so that `stm >> ignore_line` could work.
+    return ignore_line(stm, '\n');
+}
+
+static inline std::istream &ignore_space(std::istream &stm)
+{
+    while (true) {
+        auto c = stm.peek();
+        if (c == eofc)
+            break;
+        if (c != ' ' && c != '\t')
+            break;
+        stm.get();
+    }
+    return stm;
+}
 
 }
 

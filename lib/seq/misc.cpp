@@ -18,37 +18,14 @@
 
 #include "misc.h"
 
+#include "../utils/streams.h"
+
 #include <ctime>
 #include <iomanip>
 #include <limits>
 #include <fstream>
 
 namespace NaCs {
-
-namespace {
-
-constexpr auto eofc = std::istream::traits_type::eof();
-
-static std::istream &ignore_line(std::istream &stm)
-{
-    stm.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    return stm;
-}
-
-static std::istream &ignore_space(std::istream &stm)
-{
-    while (true) {
-        auto c = stm.peek();
-        if (c == eofc)
-            break;
-        if (c != ' ' && c != '\t')
-            break;
-        stm.get();
-    }
-    return stm;
-}
-
-}
 
 bool WavemeterParser::do_parse(std::istream &stm, bool inc)
 {
