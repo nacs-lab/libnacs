@@ -1,5 +1,6 @@
 set(nacs_utils_HDRS
   container.h
+  errors.h
   fd_utils.h
   ir.h
   log.h

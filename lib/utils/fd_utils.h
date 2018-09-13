@@ -20,7 +20,7 @@
 #define _NACS_UTILS_FD_UTILS_H_
 
 #include "utils.h"
-#include "macros.h"
+#include "errors.h"
 
 #include <sys/stat.h>
 #include <sys/file.h>
@@ -29,9 +29,6 @@
 #if NACS_OS_LINUX
 #  include <sys/eventfd.h>
 #endif
-
-#include <stdexcept>
-#include <system_error>
 
 namespace NaCs {
 
@@ -46,16 +43,6 @@ bool sendFD(int sock, int fd);
 int recvFD(int sock);
 bool fdSetCloexec(int fd, bool cloexec);
 bool fdSetNonBlock(int fd, bool nonblock);
-
-// Helper function for C style system calls.
-// (return -1 for error and type of error is in errno)
-template<typename T, typename... Arg>
-static inline T checkErrno(T res, Arg&&... arg)
-{
-    if (res == -1)
-        throw std::system_error(errno, std::system_category(), std::forward<Arg>(arg)...);
-    return res;
-}
 
 #if NACS_OS_LINUX
 // Helper functions for event fd.
