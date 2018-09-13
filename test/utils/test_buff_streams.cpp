@@ -21,6 +21,8 @@
 #include <string>
 #include <sstream>
 
+#include <iostream>
+
 #include <assert.h>
 
 using namespace NaCs;
@@ -30,14 +32,31 @@ void test_print(std::ostream &stm)
     stm << 12345 << " abcde " << 1.23;
 }
 
-int main()
+void test_seek(std::ostream &stm)
+{
+    stm << 12345 << " abcde " << 1.23 << "asdfjkl;";
+    auto n0 = stm.tellp();
+    stm << 12345 << " abcde " << 1.23 << "asdfjkl;";
+    stm << 12345 << " abcde " << 1.23 << "asdfjkl;";
+    auto n = stm.tellp();
+    stm.seekp(-5, std::ios_base::cur);
+    stm << 1;
+    stm.seekp(-30, std::ios_base::end);
+    stm << 'o';
+    stm.seekp(n0);
+    stm << ',';
+    stm.seekp(n);
+}
+
+template<typename F>
+void test_streams(F &&f)
 {
     std::stringstream sstm;
-    test_print(sstm);
+    f(sstm);
     auto const res = sstm.str();
 
     malloc_ostream mstm;
-    test_print(mstm);
+    f(mstm);
     size_t sz;
     auto p = mstm.get_buf(sz);
     assert(sz == res.size());
@@ -45,10 +64,15 @@ int main()
     free(p);
 
     vector_ostream vstm;
-    test_print(vstm);
+    f(vstm);
     auto v = vstm.get_buf();
     assert(v.size() == res.size());
     assert(memcmp(&v[0], &res[0], res.size()) == 0);
+}
 
+int main()
+{
+    test_streams(test_print);
+    test_streams(test_seek);
     return 0;
 }

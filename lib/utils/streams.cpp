@@ -22,26 +22,16 @@
 
 namespace NaCs {
 
-vector_streambuf::vector_streambuf(std::vector<char> &&buf, size_t offset)
-    : m_buf(std::move(buf))
-{
-    setp(&m_buf[0], &m_buf[m_buf.size()]);
-    pbump(offset);
-}
-
-vector_streambuf::~vector_streambuf()
-{
-}
-
-std::streamsize vector_streambuf::xsputn(const char *s, std::streamsize count)
+std::streamsize buff_streambuf::xsputn(const char *s, std::streamsize count)
 {
     auto p = extend(count);
     memcpy(p, s, count);
     pbump(count);
+    update_size();
     return count;
 }
 
-auto vector_streambuf::overflow(int_type ch) -> int_type
+auto buff_streambuf::overflow(int_type ch) -> int_type
 {
     // The document on this function is really confusing.
     // In terms of what it should do when `ch` is `eof` and
@@ -68,15 +58,84 @@ auto vector_streambuf::overflow(int_type ch) -> int_type
         return traits_type::not_eof(ch);
     *extend(1) = (char)ch;
     pbump(1);
+    update_size();
     return traits_type::not_eof(ch);
+}
+
+auto buff_streambuf::seekpos(pos_type pos, std::ios_base::openmode which) -> pos_type
+{
+    if (which != std::ios_base::out)
+        return pos_type(-1);
+    return _seekpos(pos);
+}
+
+inline auto buff_streambuf::_seekpos(pos_type pos) -> pos_type
+{
+    if (pos < 0)
+        return pos_type(-1);
+    auto base = pbase();
+    auto end = epptr();
+    if (unlikely(base + pos > end)) {
+        extend(base + pos - end);
+        base = pbase();
+    }
+    pbump(pos - (pptr() - base));
+    update_size();
+    return pos;
+}
+
+auto buff_streambuf::seekoff(off_type off, std::ios_base::seekdir dir,
+                             std::ios_base::openmode which) -> pos_type
+{
+    if (which != std::ios_base::out)
+        return pos_type(-1);
+    pos_type pos;
+    if (dir == std::ios_base::beg) {
+        pos = off;
+    }
+    else if (dir == std::ios_base::cur) {
+        pos = pptr() - pbase();
+        if (off == 0)
+            return pos;
+        pos = pos + off;
+    }
+    else if (dir == std::ios_base::end) {
+        if (off > 0)
+            return pos_type(-1);
+        pos = m_end + off;
+    }
+    else {
+        return pos_type(-1);
+    }
+    return _seekpos(pos);
+}
+
+inline void buff_streambuf::update_size()
+{
+    auto sz = pptr() - pbase();
+    if (sz > m_end) {
+        m_end = sz;
+    }
+}
+
+vector_streambuf::vector_streambuf(std::vector<char> &&buf, size_t offset)
+    : buff_streambuf(offset),
+      m_buf(std::move(buf))
+{
+    setp(&m_buf[0], &m_buf[m_buf.size()]);
+    pbump(offset);
+}
+
+vector_streambuf::~vector_streambuf()
+{
 }
 
 std::vector<char> vector_streambuf::get_buf()
 {
     m_buf.resize(pptr() - pbase());
     auto res = std::move(m_buf);
-    auto p = &m_buf[m_buf.size()];
-    setp(p, p);
+    setp(&m_buf[0], &m_buf[m_buf.size()]);
+    m_end = m_buf.size();
     return res;
 }
 
@@ -85,8 +144,11 @@ char *vector_streambuf::extend(size_t sz)
     auto oldbase = pbase();
     auto oldptr = pptr();
     auto oldsz = oldptr - oldbase;
+    auto newsz = (oldsz + sz) * 3 / 2;
+    if (newsz <= m_buf.size())
+        return oldptr;
     // overallocate.
-    m_buf.resize((oldsz + sz) * 3 / 2);
+    m_buf.resize(newsz);
     setp(&m_buf[0], &m_buf[m_buf.size()]);
     pbump(oldsz);
     return &m_buf[oldsz];
@@ -101,29 +163,12 @@ malloc_streambuf::~malloc_streambuf()
 {
 }
 
-std::streamsize malloc_streambuf::xsputn(const char *s, std::streamsize count)
-{
-    auto p = extend(count);
-    memcpy(p, s, count);
-    pbump(count);
-    return count;
-}
-
-auto malloc_streambuf::overflow(int_type ch) -> int_type
-{
-    // See also `vector_streambuf::overflow`
-    if (traits_type::eq_int_type(ch, traits_type::eof()))
-        return traits_type::not_eof(ch);
-    *extend(1) = (char)ch;
-    pbump(1);
-    return traits_type::not_eof(ch);
-}
-
 char *malloc_streambuf::get_buf(size_t &sz)
 {
     sz = pptr() - pbase();
     auto buf = m_buf.release();
     setp(nullptr, nullptr);
+    m_end = 0;
     return buf;
 }
 
@@ -134,6 +179,8 @@ char *malloc_streambuf::extend(size_t sz)
     auto oldsz = oldptr - oldbase;
     // overallocate.
     auto new_sz = (oldsz + sz) * 3 / 2;
+    if (oldbase + new_sz <= epptr())
+        return &m_buf.get()[oldsz];
     auto buf = (char*)realloc(m_buf.release(), new_sz);
     m_buf.reset(buf);
     setp(buf, &buf[new_sz]);

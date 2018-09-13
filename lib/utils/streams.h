@@ -28,37 +28,53 @@
 
 namespace NaCs {
 
-class NACS_EXPORT() vector_streambuf : public std::streambuf {
+class NACS_EXPORT() buff_streambuf : public std::streambuf {
+public:
+    buff_streambuf(size_t sz=0)
+        : m_end(sz)
+    {}
+
+private:
+    std::streamsize xsputn(const char* s, std::streamsize count) override;
+    int_type overflow(int_type ch) override;
+    pos_type seekoff(off_type off, std::ios_base::seekdir dir,
+                     std::ios_base::openmode which) override;
+    pos_type seekpos(pos_type pos, std::ios_base::openmode which) override;
+
+    pos_type _seekpos(pos_type pos);
+    void update_size();
+
+    virtual char *extend(size_t sz) = 0;
+
+protected:
+    ssize_t m_end;
+};
+
+class NACS_EXPORT() vector_streambuf : public buff_streambuf {
 public:
     vector_streambuf(std::vector<char> &&buf, size_t offset);
     vector_streambuf(std::vector<char> &&buf=std::vector<char>())
         : vector_streambuf(std::move(buf), buf.size())
     {}
-    ~vector_streambuf();
+    ~vector_streambuf() override;
 
     std::vector<char> get_buf();
 
 private:
-    std::streamsize xsputn(const char* s, std::streamsize count) override;
-    int_type overflow(int_type ch) override;
-
-    char *extend(size_t sz);
+    char *extend(size_t sz) override;
 
     std::vector<char> m_buf;
 };
 
-class NACS_EXPORT() malloc_streambuf : public std::streambuf {
+class NACS_EXPORT() malloc_streambuf : public buff_streambuf {
 public:
     malloc_streambuf();
-    ~malloc_streambuf();
+    ~malloc_streambuf() override;
 
     char *get_buf(size_t &sz);
 
 private:
-    std::streamsize xsputn(const char* s, std::streamsize count) override;
-    int_type overflow(int_type ch) override;
-
-    char *extend(size_t sz);
+    char *extend(size_t sz) override;
 
     std::unique_ptr<char, CDeleter> m_buf;
 };
