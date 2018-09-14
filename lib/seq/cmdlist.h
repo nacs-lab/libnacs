@@ -31,7 +31,12 @@
 
 #include "seq.h"
 
+#include <istream>
+
 namespace NaCs {
+
+class buff_ostream;
+
 namespace Seq {
 namespace CmdList {
 
@@ -324,6 +329,8 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
         }
     }
 }
+
+uint32_t parse(buff_ostream &output, std::istream &input);
 
 }
 

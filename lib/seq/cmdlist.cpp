@@ -21,6 +21,11 @@
 #include "cmdlist.h"
 
 #include "../utils/streams.h"
+#include "../utils/errors.h"
+
+#include <cctype>
+#include <iomanip>
+#include <limits>
 
 namespace NaCs {
 namespace Seq {
@@ -195,6 +200,170 @@ public:
     }
 };
 
+struct Parser {
+    std::istream &istm;
+    std::string line;
+    std::string buff;
+    int lineno = 0;
+    int colno = 0;
+
+    template<typename T>
+    static std::string to_hexstring(T v)
+    {
+        std::ostringstream stm;
+        stm << "0x" << std::hex << v;
+        return stm.str();
+    }
+
+    Parser(std::istream &istm)
+        : istm(istm)
+    {
+        next_line();
+    }
+    bool next_line()
+    {
+        std::getline(istm, line);
+        lineno++;
+        colno = 0;
+        return istm.good();
+    }
+    void syntax_error(std::string msg, int colnum, int colstart=-1, int colend=-1)
+    {
+        throw SyntaxError(std::move(msg), line, lineno, colnum, colstart, colend);
+    }
+    void skip_whitespace()
+    {
+        int linelen = (int)line.size();
+        for (; colno < linelen; colno++) {
+            if (!std::isspace(line[colno])) {
+                return;
+            }
+        }
+    }
+    bool skip_comments()
+    {
+        while (true) {
+            skip_whitespace();
+            if (colno < (int)line.size() && line[colno] != '#')
+                return true;
+            if (!next_line()) {
+                return false;
+            }
+        }
+    }
+    char peek(int idx=0)
+    {
+        if (colno + idx >= (int)line.size())
+            return 0;
+        return line[colno + idx];
+    }
+    std::pair<const std::string&,int> read_name()
+    {
+        buff.clear();
+
+        skip_whitespace();
+
+        int startcol = colno;
+
+        int linelen = (int)line.size();
+        if (colno >= linelen)
+            return {buff, -1};
+        auto c0 = line[colno];
+        if (!(c0 >= 'a' && c0 <= 'z') && !(c0 >= 'A' && c0 <= 'Z') && c0 != '_')
+            return {buff, -1};
+        buff.push_back(c0);
+        colno++;
+        for (; colno < linelen; colno++) {
+            auto c = line[colno];
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                (c >= '0' && c <= '9') || c == '_') {
+                buff.push_back(c);
+            }
+            else {
+                break;
+            }
+        }
+        return {buff, startcol};
+    }
+    std::pair<uint64_t,int> read_hex(uint64_t lo=0, uint64_t hi=UINT64_MAX)
+    {
+        skip_whitespace();
+        int startcol = colno;
+        auto c0 = peek();
+        auto c1 = (char)std::tolower(peek(1));
+        if (c0 != '0' || c1 != 'x')
+            return {0, -1};
+        auto startptr = &line[startcol];
+        char *endptr;
+        auto res = strtoull(startptr, &endptr, 16);
+        if (endptr <= startptr + 2)
+            syntax_error("Empty or invalid hex literal", startcol + 3,
+                         startcol + 1, startcol + 3);
+        if (res < lo || res > hi ||
+            (res == std::numeric_limits<decltype(res)>::max() && errno == ERANGE))
+            syntax_error("Hex literal out of range [" + to_hexstring(lo) + ", " +
+                         to_hexstring(hi) + "]", -1,
+                         startcol + 1, startcol + int(endptr - startptr));
+        colno = startcol + (endptr - startptr);
+        return {res, startcol};
+    }
+    std::pair<uint64_t,int> read_dec(uint64_t lo=0, uint64_t hi=UINT64_MAX)
+    {
+        skip_whitespace();
+        int startcol = colno;
+        auto startptr = &line[startcol];
+        char *endptr;
+        auto res = strtoull(startptr, &endptr, 10);
+        if (endptr == startptr)
+            return {0, -1};
+        if (res < lo || res > hi ||
+            (res == std::numeric_limits<decltype(res)>::max() && errno == ERANGE))
+            syntax_error("Number literal out of range [" + std::to_string(lo) + ", " +
+                         std::to_string(hi) + "]", -1,
+                         startcol + 1, startcol + int(endptr - startptr));
+        colno = startcol + (endptr - startptr);
+        return {res, startcol};
+    }
+    bool checked_next_line()
+    {
+        skip_whitespace();
+        auto c = peek();
+        if (c && c != '#')
+            syntax_error("Unexpected charater at the end of line", colno + 1);
+        return next_line();
+    }
+};
+
+}
+
+NACS_EXPORT() uint32_t parse(buff_ostream &ostm, std::istream &istm)
+{
+    Parser parser(istm);
+    if (!parser.skip_comments())
+        return 0;
+    auto res = parser.read_name();
+    uint32_t ttl_mask = 0;
+    if (res.first == "ttl_mask") {
+        parser.skip_whitespace();
+        if (parser.peek() != '=')
+            parser.syntax_error("Expecting `=` after `ttl_mask`", parser.colno + 1);
+        parser.colno++;
+        parser.skip_whitespace();
+        int oldcol;
+        std::tie(ttl_mask, oldcol) = parser.read_hex(0, UINT32_MAX);
+        if (oldcol < 0)
+            parser.syntax_error("Expecting hex literal", parser.colno + 1);
+        if (!parser.checked_next_line() || !parser.skip_comments()) {
+            return ttl_mask;
+        }
+    }
+    else {
+        parser.colno = res.second;
+    }
+
+    Writer writer(ostm, ttl_mask);
+
+    return writer.get_ttl_mask();
 }
 
 }
