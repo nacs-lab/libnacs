@@ -79,7 +79,7 @@ NACS_EXPORT() std::ostream &operator<<(std::ostream &stm, const SyntaxError &err
     const auto &line = err.line();
     stm << line << std::endl;
     if (colstart > 0 && colend > 0 && colstart <= colend &&
-        colstart <= line.size() && colend <= line.size()) {
+        colstart <= line.size() && colend <= line.size() + 1) {
         for (int i = 1; i < colstart; i++)
             stm.put(' ');
         stm << Term::magenta;
@@ -87,7 +87,7 @@ NACS_EXPORT() std::ostream &operator<<(std::ostream &stm, const SyntaxError &err
             stm.put(i == colnum ? '^' : '~');
         stm << Term::reset << std::endl;
     }
-    else if (colnum > 0 && colnum <= line.size()) {
+    else if (colnum > 0 && colnum <= line.size() + 1) {
         for (int i = 1; i < colnum; i++)
             stm.put(' ');
         stm << Term::magenta(true) << '^' << Term::reset << std::endl;
