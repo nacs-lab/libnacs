@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "errors.h"
+#include "term.h"
 
 namespace NaCs {
 
@@ -60,7 +61,8 @@ SyntaxError::~SyntaxError()
 NACS_EXPORT() std::ostream &operator<<(std::ostream &stm, const SyntaxError &err)
 {
     // This is not unicode aware but is good enough for now........
-    stm << "SyntaxError: " << err.msg() << std::endl;
+    stm << Term::red(true) << "SyntaxError: "
+        << Term::reset << Term::red << err.msg() << Term::reset << std::endl;
     auto lineno = err.lineno();
     int colstart, colend;
     int colnum = err.columns(&colstart, &colend);
@@ -80,14 +82,15 @@ NACS_EXPORT() std::ostream &operator<<(std::ostream &stm, const SyntaxError &err
         colstart <= line.size() && colend <= line.size()) {
         for (int i = 1; i < colstart; i++)
             stm.put(' ');
+        stm << Term::magenta;
         for (int i = colstart; i <= colend; i++)
             stm.put(i == colnum ? '^' : '~');
-        stm << std::endl;
+        stm << Term::reset << std::endl;
     }
     else if (colnum > 0 && colnum <= line.size()) {
         for (int i = 1; i < colnum; i++)
             stm.put(' ');
-        stm << '^' << std::endl;
+        stm << Term::magenta(true) << '^' << Term::reset << std::endl;
     }
     return stm;
 }
