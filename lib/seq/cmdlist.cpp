@@ -24,8 +24,10 @@
 #include "../utils/errors.h"
 
 #include <cctype>
+#include <cmath>
 #include <iomanip>
 #include <limits>
+#include <type_traits>
 
 namespace NaCs {
 namespace Seq {
@@ -289,9 +291,7 @@ struct Parser {
     {
         skip_whitespace();
         int startcol = colno;
-        auto c0 = peek();
-        auto c1 = (char)std::tolower(peek(1));
-        if (c0 != '0' || c1 != 'x')
+        if (peek() != '0' || std::tolower(peek(1)) != 'x')
             return {0, -1};
         auto startptr = &line[startcol];
         char *endptr;
@@ -307,18 +307,55 @@ struct Parser {
         colno = startcol + (endptr - startptr);
         return {res, startcol};
     }
-    std::pair<uint64_t,int> read_dec(uint64_t lo=0, uint64_t hi=UINT64_MAX)
+    template<typename T>
+    std::pair<T,int> read_dec(T lo=std::numeric_limits<T>::min(),
+                              T hi=std::numeric_limits<T>::max())
     {
         skip_whitespace();
         int startcol = colno;
         auto startptr = &line[startcol];
         char *endptr;
-        auto res = strtoull(startptr, &endptr, 10);
+        T res;
+        if (std::is_signed<T>::value) {
+            res = strtoll(startptr, &endptr, 10);
+        }
+        else {
+            res = strtoull(startptr, &endptr, 10);
+        }
         if (endptr == startptr)
             return {0, -1};
         if (res < lo || res > hi ||
-            (res == std::numeric_limits<decltype(res)>::max() && errno == ERANGE))
+            (res == std::numeric_limits<T>::max() && errno == ERANGE))
             syntax_error("Number literal out of range [" + std::to_string(lo) + ", " +
+                         std::to_string(hi) + "]", -1,
+                         startcol + 1, startcol + int(endptr - startptr));
+        // `strtoull` allows `-`, which may give surprising result for us.
+        if (lo >= 0 && peek() == '-')
+            syntax_error("Unexpected negative number", startcol + 1,
+                         startcol + 1, startcol + int(endptr - startptr));
+        colno = startcol + (endptr - startptr);
+        return {res, startcol};
+    }
+    std::pair<double,int> read_float(double lo=-INFINITY, double hi=INFINITY)
+    {
+        skip_whitespace();
+        int startcol = colno;
+        auto startptr = &line[startcol];
+        int hassign = peek() == '+' || peek() == '-';
+        // Disallow parsing of hex floating point numbers.
+        // This is not a nice way to do it but I couldn't find another function
+        // that's easy to use...
+        if (peek(hassign) == '0' && std::tolower(peek(hassign + 1)) == 'x')
+            return {0, -1};
+        char *endptr;
+        auto res = strtod(startptr, &endptr);
+        if (endptr == startptr)
+            return {0, -1};
+        if (errno == ERANGE)
+            syntax_error("Floating point literal overflow", -1,
+                         startcol + 1, startcol + int(endptr - startptr));
+        if (res < lo || res > hi)
+            syntax_error("Floating point literal out of range [" + std::to_string(lo) + ", " +
                          std::to_string(hi) + "]", -1,
                          startcol + 1, startcol + int(endptr - startptr));
         colno = startcol + (endptr - startptr);
