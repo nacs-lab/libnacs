@@ -572,6 +572,67 @@ struct Parser {
         writer.addDDSAmp(chn, amp);
     }
 
+    void parse_phase(Writer &writer)
+    {
+        if (peek() != '(')
+            syntax_error("Invalid phase command: expecting `(`", colno + 1);
+        colno++;
+        uint8_t chn = (uint8_t)read_dec(0, 21).first;
+        skip_whitespace();
+        if (peek() != ')')
+            syntax_error("Expecting `)` after DDS channel", colno + 1);
+        colno++;
+        skip_whitespace();
+        bool det = false;
+        if (peek() == '+') {
+            if (peek(1) != '=')
+                syntax_error("Expecting `=` or `+=` before phase value", colno + 1);
+            colno += 1;
+        }
+        else if (peek() != '=') {
+            syntax_error("Expecting `=` or `+=` before phase value", colno + 1);
+        }
+        colno++;
+        uint16_t phase;
+        int phase_start;
+        std::tie(phase, phase_start) = read_hex(0, UINT16_MAX);
+        if (phase_start == -1) {
+            double phase_deg;
+            int phase_deg_start;
+            std::tie(phase_deg, phase_deg_start) = read_float();
+            if (phase_deg_start == -1)
+                syntax_error("Invalid phase", colno + 1);
+            auto unit = read_name();
+            if (unit.second == -1) {
+                if (peek() != '%')
+                    syntax_error("Missing phase unit", colno + 1);
+                phase_deg = phase_deg * 3.60;
+            }
+            else if (unit.first == "deg") {
+            }
+            else if (unit.first == "pi") {
+                phase_deg = phase_deg * 180;
+            }
+            else if (unit.first == "rad") {
+                phase_deg = phase_deg * (180 / M_PI);
+            }
+            else {
+                syntax_error("Unknown phase unit", -1, unit.second + 1, colno);
+            }
+            if (!(abs(phase_deg) <= 360 * 10))
+                syntax_error("Phase too high (max +-1000%)", -1, phase_start + 1, colno);
+            phase_deg = fmod(phase_deg, 360);
+            static constexpr double phase_factor = (1 << 14) / 90.0;
+            phase = uint16_t(0.5 + phase_deg * phase_factor);
+        }
+        if (det) {
+            writer.addDDSDetPhase(chn, phase);
+        }
+        else {
+            writer.addDDSPhase(chn, phase);
+        }
+    }
+
     bool parse_cmd(Writer &writer)
     {
         skip_whitespace();
@@ -589,6 +650,9 @@ struct Parser {
         }
         else if (nres.first == "amp") {
             parse_amp(writer);
+        }
+        else if (nres.first == "phase") {
+            parse_phase(writer);
         }
         else {
             syntax_error("Unknown command name", -1, nres.second + 1, colno);
