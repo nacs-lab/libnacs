@@ -189,6 +189,14 @@
  */
 #define NACS_UNUSED __attribute__((unused))
 
+#ifdef __GNUC__
+#  define NACS_NORETURN __attribute__((noreturn))
+#elif defined(_MSC_VER)
+#  define NACS_NORETURN __declspec(noreturn)
+#else
+#  define NACS_NORETURN
+#endif
+
 /**
  * cast the \param member pointer \param ptr of a structure \param type to
  * the containing structure.
