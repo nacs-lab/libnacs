@@ -129,6 +129,24 @@ using vector_streambuf = basic_vector_streambuf<std::vector<char>>;
 using uvector_streambuf = basic_vector_streambuf<std::vector<unsigned char>>;
 using string_streambuf = basic_vector_streambuf<std::string>;
 
+class NACS_EXPORT() const_streambuf : public std::streambuf {
+    // Based on http://www.voidcn.com/article/p-vjnlygmc-gy.html
+public:
+    const_streambuf(const void *begin, const void *end);
+    ~const_streambuf() override;
+
+private:
+    int_type underflow() override;
+    int_type uflow() override;
+    int_type pbackfail(int_type ch) override;
+    std::streamsize showmanyc() override;
+
+    const char *const m_begin;
+    const char *const m_end;
+    const char *m_current;
+};
+
+
 class NACS_EXPORT() malloc_streambuf : public buff_streambuf {
 public:
     malloc_streambuf();
@@ -211,6 +229,22 @@ public:
 
 private:
     malloc_streambuf m_buf;
+};
+
+class NACS_EXPORT() const_istream : public std::istream {
+public:
+    const_istream(const void *begin, const void *end);
+    const_istream(const std::string &str)
+        : const_istream(&str[0], &str[0] + str.size())
+    {}
+    template<typename T>
+    const_istream(const std::vector<T> &vec)
+        : const_istream(&vec[0], &vec[0] + vec.size())
+    {}
+    ~const_istream() override;
+
+private:
+    const_streambuf m_buf;
 };
 
 constexpr auto eofc = std::istream::traits_type::eof();

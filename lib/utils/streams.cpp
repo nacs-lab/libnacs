@@ -20,6 +20,8 @@
 
 #include <utility>
 
+#include <assert.h>
+
 namespace NaCs {
 
 std::streamsize buff_streambuf::xsputn(const char *s, std::streamsize count)
@@ -156,6 +158,49 @@ char *malloc_streambuf::extend(size_t sz)
     return &buf[oldsz];
 }
 
+
+const_streambuf::const_streambuf(const void *begin, const void *end)
+    : m_begin((const char*)begin),
+      m_end((const char*)end),
+      m_current((const char*)begin)
+{
+    assert(m_begin <= m_end);
+}
+
+const_streambuf::~const_streambuf()
+{
+}
+
+auto const_streambuf::underflow() -> int_type
+{
+    if (m_current == m_end)
+        return traits_type::eof();
+
+    return traits_type::to_int_type(*m_current);
+}
+
+auto const_streambuf::uflow() -> int_type
+{
+    if (m_current == m_end)
+        return traits_type::eof();
+
+    return traits_type::to_int_type(*m_current++);
+}
+
+auto const_streambuf::pbackfail(int_type ch) -> int_type
+{
+    if (m_current == m_begin || (ch != traits_type::eof() && ch != m_current[-1]))
+        return traits_type::eof();
+
+    return traits_type::to_int_type(*--m_current);
+}
+
+std::streamsize const_streambuf::showmanyc()
+{
+    assert(m_current <= m_end);
+    return m_end - m_current;
+}
+
 template class basic_vector_ostream<std::vector<char>>;
 template class basic_vector_ostream<std::vector<unsigned char>>;
 template class basic_vector_ostream<std::string>;
@@ -168,5 +213,13 @@ malloc_ostream::malloc_ostream()
 malloc_ostream::~malloc_ostream()
 {
 }
+
+const_istream::const_istream(const void *begin, const void *end)
+    : std::istream(&m_buf),
+    m_buf(begin, end)
+{}
+
+const_istream::~const_istream()
+{}
 
 }
