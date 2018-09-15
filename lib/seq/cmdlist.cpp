@@ -259,7 +259,7 @@ struct Parser {
             return 0;
         return line[colno + idx];
     }
-    std::pair<const std::string&,int> read_name()
+    std::pair<const std::string&,int> read_name(bool allow_num0=false)
     {
         buff.clear();
 
@@ -270,15 +270,24 @@ struct Parser {
         int linelen = (int)line.size();
         if (colno >= linelen)
             return {buff, -1};
+        auto isalphanum = [] (char c, bool num=true) {
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
+                return true;
+            }
+            else if (!num) {
+                return false;
+            }
+            return c >= '0' && c <= '9';
+        };
+
         auto c0 = line[colno];
-        if (!(c0 >= 'a' && c0 <= 'z') && !(c0 >= 'A' && c0 <= 'Z') && c0 != '_')
+        if (!isalphanum(c0, allow_num0))
             return {buff, -1};
         buff.push_back(c0);
         colno++;
         for (; colno < linelen; colno++) {
             auto c = line[colno];
-            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                (c >= '0' && c <= '9') || c == '_') {
+            if (isalphanum(c)) {
                 buff.push_back(c);
             }
             else {
@@ -369,6 +378,82 @@ struct Parser {
             syntax_error("Unexpected charater at the end of line", colno + 1);
         return next_line();
     }
+
+    void parse_ttlall(Writer &writer)
+    {
+        assert(peek() == '=');
+        colno++;
+        writer.addTTL((uint32_t)read_hex(0, UINT32_MAX).first);
+    }
+
+    void parse_ttl1(Writer &writer)
+    {
+        assert(peek() == '(');
+        colno++;
+        int chn = (int)read_dec(0, 21).first;
+        skip_whitespace();
+        if (peek() != ')')
+            syntax_error("Expecting `)` after TTL channel", colno + 1);
+        colno++;
+        skip_whitespace();
+        if (peek() != '=')
+            syntax_error("Expecting `=` before TTL value", colno + 1);
+        colno++;
+        bool val;
+        auto rres = read_name(true);
+        if (rres.first == "true" || rres.first == "True" || rres.first == "TRUE" ||
+            rres.first == "on" || rres.first == "On" || rres.first == "ON" ||
+            rres.first == "1") {
+            val = true;
+        }
+        else if (rres.first == "false" || rres.first == "False" || rres.first == "FALSE" ||
+                 rres.first == "off" || rres.first == "Off" || rres.first == "OFF" ||
+                 rres.first == "0") {
+            val = false;
+        }
+        else if (rres.second == -1) {
+            syntax_error("Expecting TTL value after `=`", colno + 1);
+        }
+        else {
+            syntax_error("Invalid TTL value", -1, rres.second + 1, colno);
+        }
+        writer.addTTL1(chn, val);
+    }
+
+    void parse_waittime(Writer &writer, bool isttl=false)
+    {
+    }
+
+    void parse_ttl(Writer &writer)
+    {
+        skip_whitespace();
+        auto c0 = peek();
+        if (c0 == '=') {
+            parse_ttlall(writer);
+        }
+        else if (c0 == '(') {
+            parse_ttl1(writer);
+        }
+        else {
+            syntax_error("Invalid ttl command: expecting `(` or `=`", colno + 1);
+        }
+        c0 = peek();
+        if (!c0 || c0 == '#')
+            return;
+        if (!std::isspace(c0))
+            syntax_error("Expecting space after TTL value", colno + 1);
+        auto tres = read_name();
+        if (tres.first != "t") {
+            if (tres.second != -1)
+                colno = tres.second;
+            return;
+        }
+        skip_whitespace();
+        if (peek() != '=')
+            syntax_error("Invalid ttl time: expecting `=`", colno + 1);
+        colno++;
+        parse_waittime(writer, true);
+    }
 };
 
 }
@@ -394,7 +479,7 @@ NACS_EXPORT() uint32_t parse(buff_ostream &ostm, std::istream &istm)
             return ttl_mask;
         }
     }
-    else {
+    else if (res.second != -1) {
         parser.colno = res.second;
     }
 
