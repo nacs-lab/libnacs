@@ -1,0 +1,4 @@
+SyntaxError: Missing time unit
+Line: 3, Column: 8
+wait(10)
+       ^

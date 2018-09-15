@@ -1,0 +1,3 @@
+# Test
+ttl_mask = 0xffffffff
+ttl(2)=true t=0.01us

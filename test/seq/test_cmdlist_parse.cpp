@@ -68,5 +68,25 @@ int main(int argc, char **argv)
     test(dir + "ttl_mask_err2");
     test(dir + "ttl_mask_err3");
 
+    test(dir + "invalid_cmd");
+    test(dir + "invalid_cmd2");
+
+    test(dir + "invalid_ttl");
+    test(dir + "invalid_ttl1_space");
+    test(dir + "invalid_ttlall_space");
+
+    test(dir + "invalid_ttl1_1");
+    test(dir + "invalid_ttl1_2");
+    test(dir + "invalid_ttl1_3");
+    test(dir + "invalid_ttl1_4");
+
+    test(dir + "invalid_ttl_t1");
+    test(dir + "invalid_ttl_t2");
+    test(dir + "invalid_ttl_t3");
+
+    test(dir + "invalid_wait");
+    test(dir + "invalid_wait2");
+    test(dir + "invalid_wait3");
+
     return 0;
 }

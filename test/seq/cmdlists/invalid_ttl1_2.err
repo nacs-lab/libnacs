@@ -1,0 +1,4 @@
+SyntaxError: Expecting `=` before TTL value
+Line: 3, Column: 7
+ttl(2)
+      ^

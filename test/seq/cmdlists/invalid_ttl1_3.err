@@ -1,0 +1,4 @@
+SyntaxError: Invalid TTL value
+Line: 3
+ttl(2)=no
+       ~~

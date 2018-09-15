@@ -1,0 +1,4 @@
+SyntaxError: Time too short (min 30ns)
+Line: 3
+ttl(2)=true t=0.01us
+              ~~~~~~

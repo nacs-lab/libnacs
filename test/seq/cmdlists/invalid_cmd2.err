@@ -1,0 +1,4 @@
+SyntaxError: Expecting command name
+Line: 3, Column: 1
++123
+^

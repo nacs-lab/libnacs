@@ -1,0 +1,4 @@
+SyntaxError: Invalid wait command: expecting `)`
+Line: 3, Column: 11
+wait(10 us
+          ^

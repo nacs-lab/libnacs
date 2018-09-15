@@ -1,0 +1,4 @@
+SyntaxError: Expecting space after TTL value
+Line: 3, Column: 9
+ttl(2)=1-
+        ^
