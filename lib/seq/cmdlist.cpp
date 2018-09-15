@@ -390,7 +390,7 @@ struct Parser {
     {
         assert(peek() == '(');
         colno++;
-        int chn = (int)read_dec(0, 21).first;
+        int chn = (int)read_dec(0, 31).first;
         skip_whitespace();
         if (peek() != ')')
             syntax_error("Expecting `)` after TTL channel", colno + 1);
