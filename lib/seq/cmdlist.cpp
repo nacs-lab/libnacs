@@ -585,13 +585,22 @@ struct Parser {
     {
         auto chn = read_ddschn("phase");
         bool det = false;
+        bool neg = false;
         if (peek() == '+') {
             if (peek(1) != '=')
-                syntax_error("Expecting `=` or `+=` before phase value", colno + 1);
+                syntax_error("Expecting `=`, `-=` or `+=` before phase value", colno + 1);
+            det = true;
+            colno += 1;
+        }
+        else if (peek() == '-') {
+            if (peek(1) != '=')
+                syntax_error("Expecting `=`, `-=` or `+=` before phase value", colno + 1);
+            det = true;
+            neg = true;
             colno += 1;
         }
         else if (peek() != '=') {
-            syntax_error("Expecting `=` or `+=` before phase value", colno + 1);
+            syntax_error("Expecting `=`, `-=` or `+=` before phase value", colno + 1);
         }
         colno++;
         uint16_t phase;
@@ -607,6 +616,7 @@ struct Parser {
             if (unit.second == -1) {
                 if (peek() != '%')
                     syntax_error("Missing phase unit", colno + 1);
+                colno++;
                 phase_deg = phase_deg * 3.60;
             }
             else if (unit.first == "deg") {
@@ -626,6 +636,8 @@ struct Parser {
             constexpr double phase_factor = (1 << 14) / 90.0;
             phase = uint16_t(0.5 + phase_deg * phase_factor);
         }
+        if (neg)
+            phase = -phase;
         if (det) {
             writer.addDDSDetPhase(chn, phase);
         }
