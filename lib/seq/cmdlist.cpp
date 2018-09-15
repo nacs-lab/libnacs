@@ -538,7 +538,7 @@ struct Parser {
             }
             if (freq_hz > 1.75e9)
                 syntax_error("Frequency too high (max 1.75GHz)", -1, freq_start + 1, colno);
-            static constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
+            constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
             freq = uint32_t(0.5 + freq_hz * freq_factor);
         }
         writer.addDDSFreq(chn, freq);
@@ -622,7 +622,7 @@ struct Parser {
             if (!(abs(phase_deg) <= 360 * 10))
                 syntax_error("Phase too high (max +-1000%)", -1, phase_start + 1, colno);
             phase_deg = fmod(phase_deg, 360);
-            static constexpr double phase_factor = (1 << 14) / 90.0;
+            constexpr double phase_factor = (1 << 14) / 90.0;
             phase = uint16_t(0.5 + phase_deg * phase_factor);
         }
         if (det) {
@@ -631,6 +631,63 @@ struct Parser {
         else {
             writer.addDDSPhase(chn, phase);
         }
+    }
+
+    void parse_reset(Writer &writer)
+    {
+        if (peek() != '(')
+            syntax_error("Invalid reset command: expecting `(`", colno + 1);
+        colno++;
+        uint8_t chn = (uint8_t)read_dec(0, 21).first;
+        skip_whitespace();
+        if (peek() != ')')
+            syntax_error("Expecting `)` after DDS channel", colno + 1);
+        colno++;
+        writer.addDDSReset(chn);
+    }
+
+    void parse_dac(Writer &writer)
+    {
+        if (peek() != '(')
+            syntax_error("Invalid dac command: expecting `(`", colno + 1);
+        colno++;
+        uint8_t chn = (uint8_t)read_dec(0, 4).first;
+        skip_whitespace();
+        if (peek() != ')')
+            syntax_error("Expecting `)` after DAC channel", colno + 1);
+        colno++;
+        skip_whitespace();
+        if (peek() != '=')
+            syntax_error("Expecting `=` before DAC value", colno + 1);
+        colno++;
+        uint16_t dac;
+        int dac_start;
+        std::tie(dac, dac_start) = read_hex(0, UINT16_MAX);
+        if (dac_start == -1) {
+            double dac_mv;
+            int dac_mv_start;
+            std::tie(dac_mv, dac_mv_start) = read_float();
+            if (dac_mv_start == -1)
+                syntax_error("Invalid DAC voltage", colno + 1);
+            auto unit = read_name();
+            if (unit.second == -1)
+                syntax_error("Missing voltage unit", colno + 1);
+            if (unit.first == "mV") {
+            }
+            else if (unit.first == "V") {
+                dac_mv = dac_mv * 1000;
+            }
+            else {
+                syntax_error("Unknown voltage unit", -1, unit.second + 1, colno);
+            }
+            if (!(abs(dac_mv) <= 10000))
+                syntax_error("DAC voltage too high (max +-10V)", -1, dac_start + 1, colno);
+            // this is for the DAC8814 chip in SPI0
+            constexpr double scale = 65535 / 20000.0;
+            constexpr double offset = 10000.0;
+            dac = uint16_t(((offset - dac_mv) * scale) + 0.5);
+        }
+        writer.addDAC(chn, dac);
     }
 
     bool parse_cmd(Writer &writer)
@@ -653,6 +710,12 @@ struct Parser {
         }
         else if (nres.first == "phase") {
             parse_phase(writer);
+        }
+        else if (nres.first == "reset") {
+            parse_reset(writer);
+        }
+        else if (nres.first == "dac") {
+            parse_dac(writer);
         }
         else {
             syntax_error("Unknown command name", -1, nres.second + 1, colno);
