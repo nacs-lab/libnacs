@@ -202,336 +202,21 @@ public:
 struct Parser : ParserBase {
     using ParserBase::ParserBase;
 
-    void parse_ttlall(Writer &writer)
-    {
-        assert(peek() == '=');
-        colno++;
-        auto res = read_hex(0, UINT32_MAX);
-        if (res.second == -1)
-            syntax_error("Missing TTL value", colno + 1);
-        writer.addTTL((uint32_t)res.first);
-    }
-
-    void parse_ttl1(Writer &writer)
-    {
-        assert(peek() == '(');
-        colno++;
-        uint8_t chn;
-        int chn_start;
-        std::tie(chn, chn_start) = read_dec(0, 31);
-        if (chn_start == -1)
-            syntax_error("Missing TTL channel", colno + 1);
-        skip_whitespace();
-        if (peek() != ')')
-            syntax_error("Expecting `)` after TTL channel", colno + 1);
-        colno++;
-        skip_whitespace();
-        if (peek() != '=')
-            syntax_error("Expecting `=` before TTL value", colno + 1);
-        colno++;
-        bool val;
-        auto rres = read_name(true);
-        if (rres.first == "true" || rres.first == "True" || rres.first == "TRUE" ||
-            rres.first == "on" || rres.first == "On" || rres.first == "ON" ||
-            rres.first == "1") {
-            val = true;
-        }
-        else if (rres.first == "false" || rres.first == "False" || rres.first == "FALSE" ||
-                 rres.first == "off" || rres.first == "Off" || rres.first == "OFF" ||
-                 rres.first == "0") {
-            val = false;
-        }
-        else if (rres.second == -1) {
-            syntax_error("Expecting TTL value after `=`", colno + 1);
-        }
-        else {
-            syntax_error("Invalid TTL value", -1, rres.second + 1, colno);
-        }
-        writer.addTTL1(chn, val);
-    }
-
-    void parse_waittime(Writer &writer, bool isttl=false)
-    {
-        auto t_hex = read_hex(3);
-        if (t_hex.second != -1) {
-            assert(t_hex.first >= 3);
-            writer.addWait(t_hex.first - (isttl ? 3 : 0));
-            return;
-        }
-        auto t_flt = read_float();
-        if (t_flt.second == -1)
-            syntax_error("Invalid time", colno + 1);
-        skip_whitespace();
-        auto unit = read_name();
-        if (unit.second == -1)
-            syntax_error("Missing time unit", colno + 1);
-        double t_ns = t_flt.first;
-        if (unit.first == "ns") {
-        }
-        else if (unit.first == "us") {
-            t_ns = t_ns * 1000.0;
-        }
-        else if (unit.first == "ms") {
-            t_ns = t_ns * 1000000.0;
-        }
-        else if (unit.first == "s") {
-            t_ns = t_ns * 1000000000.0;
-        }
-        else {
-            syntax_error("Unknown time unit", -1, unit.second + 1, colno);
-        }
-        if (t_ns < 30)
-            syntax_error("Time too short (min 30ns)", -1, t_flt.second + 1, colno);
-        writer.addWait(((uint64_t)t_ns) / 10 - (isttl ? 3 : 0));
-    }
-
     void parse_ttl(Writer &writer)
     {
         skip_whitespace();
         auto c0 = peek();
         if (c0 == '=') {
-            parse_ttlall(writer);
+            writer.addTTL(read_ttlall());
         }
         else if (c0 == '(') {
-            parse_ttl1(writer);
+            auto res = read_ttl1();
+            writer.addTTL1(res.first, res.second);
         }
         else {
             syntax_error("Invalid ttl command: expecting `(` or `=`", colno + 1);
         }
-        c0 = peek();
-        if (!c0 || c0 == '#')
-            return;
-        if (!std::isspace(c0))
-            syntax_error("Expecting space after TTL value", colno + 1);
-        auto tres = read_name();
-        if (tres.first != "t") {
-            if (tres.second != -1)
-                colno = tres.second;
-            return;
-        }
-        skip_whitespace();
-        if (peek() != '=')
-            syntax_error("Invalid ttl time: expecting `=`", colno + 1);
-        colno++;
-        parse_waittime(writer, true);
-    }
-
-    void parse_wait(Writer &writer)
-    {
-        skip_whitespace();
-        if (peek() != '(')
-            syntax_error("Invalid wait command: expecting `(`", colno + 1);
-        colno++;
-        parse_waittime(writer);
-        skip_whitespace();
-        if (peek() != ')')
-            syntax_error("Invalid wait command: expecting `)`", colno + 1);
-        colno++;
-    }
-
-    void parse_freq(Writer &writer)
-    {
-        auto chn = read_ddschn("freq");
-        if (peek() != '=')
-            syntax_error("Expecting `=` before frequency value", colno + 1);
-        colno++;
-        uint32_t freq;
-        int freq_start;
-        std::tie(freq, freq_start) = read_hex(0, 0x7fffffff);
-        if (freq_start == -1) {
-            double freq_hz;
-            int freq_hz_start;
-            std::tie(freq_hz, freq_hz_start) = read_float(0);
-            if (freq_hz_start == -1)
-                syntax_error("Invalid frequency", colno + 1);
-            auto unit = read_name();
-            if (unit.second == -1)
-                syntax_error("Missing frequency unit", colno + 1);
-            if (unit.first == "Hz") {
-            }
-            else if (unit.first == "kHz") {
-                freq_hz = freq_hz * 1000.0;
-            }
-            else if (unit.first == "MHz") {
-                freq_hz = freq_hz * 1000000.0;
-            }
-            else if (unit.first == "GHz") {
-                freq_hz = freq_hz * 1000000000.0;
-            }
-            else {
-                syntax_error("Unknown frequency unit", -1, unit.second + 1, colno);
-            }
-            if (freq_hz > 1.75e9)
-                syntax_error("Frequency too high (max 1.75GHz)", -1, freq_start + 1, colno);
-            constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
-            freq = uint32_t(0.5 + freq_hz * freq_factor);
-        }
-        writer.addDDSFreq(chn, freq);
-    }
-
-    void parse_amp(Writer &writer)
-    {
-        auto chn = read_ddschn("amp");
-        if (peek() != '=')
-            syntax_error("Expecting `=` before amplitude value", colno + 1);
-        colno++;
-        uint16_t amp;
-        int amp_start;
-        std::tie(amp, amp_start) = read_hex(0, 4095);
-        if (amp_start == -1) {
-            double ampf;
-            int ampf_start;
-            std::tie(ampf, ampf_start) = read_float(0, 1);
-            if (ampf_start == -1)
-                syntax_error("Invalid amplitude", colno + 1);
-            amp = uint16_t(ampf * 4095.0 + 0.5);
-        }
-        writer.addDDSAmp(chn, amp);
-    }
-
-    void parse_phase(Writer &writer)
-    {
-        auto chn = read_ddschn("phase");
-        bool det = false;
-        bool neg = false;
-        if (peek() == '+') {
-            if (peek(1) != '=')
-                syntax_error("Expecting `=`, `-=` or `+=` before phase value", colno + 1);
-            det = true;
-            colno += 1;
-        }
-        else if (peek() == '-') {
-            if (peek(1) != '=')
-                syntax_error("Expecting `=`, `-=` or `+=` before phase value", colno + 1);
-            det = true;
-            neg = true;
-            colno += 1;
-        }
-        else if (peek() != '=') {
-            syntax_error("Expecting `=`, `-=` or `+=` before phase value", colno + 1);
-        }
-        colno++;
-        uint16_t phase;
-        int phase_start;
-        std::tie(phase, phase_start) = read_hex(0, UINT16_MAX);
-        if (phase_start == -1) {
-            double phase_deg;
-            int phase_deg_start;
-            std::tie(phase_deg, phase_deg_start) = read_float();
-            if (phase_deg_start == -1)
-                syntax_error("Invalid phase", colno + 1);
-            auto unit = read_name();
-            if (unit.second == -1) {
-                if (peek() != '%')
-                    syntax_error("Missing phase unit", colno + 1);
-                colno++;
-                phase_deg = phase_deg * 3.60;
-            }
-            else if (unit.first == "deg") {
-            }
-            else if (unit.first == "pi") {
-                phase_deg = phase_deg * 180;
-            }
-            else if (unit.first == "rad") {
-                phase_deg = phase_deg * (180 / M_PI);
-            }
-            else {
-                syntax_error("Unknown phase unit", -1, unit.second + 1, colno);
-            }
-            if (!(abs(phase_deg) <= 360 * 10))
-                syntax_error("Phase too high (max +-1000%)", -1, phase_start + 1, colno);
-            phase_deg = fmod(phase_deg, 360);
-            constexpr double phase_factor = (1 << 14) / 90.0;
-            phase = uint16_t(0.5 + phase_deg * phase_factor);
-        }
-        if (neg)
-            phase = -phase;
-        if (det) {
-            writer.addDDSDetPhase(chn, phase);
-        }
-        else {
-            writer.addDDSPhase(chn, phase);
-        }
-    }
-
-    void parse_reset(Writer &writer)
-    {
-        auto chn = read_ddschn("reset");
-        writer.addDDSReset(chn);
-    }
-
-    void parse_dac(Writer &writer)
-    {
-        if (peek() != '(')
-            syntax_error("Invalid dac command: expecting `(`", colno + 1);
-        colno++;
-        uint8_t chn;
-        int chn_start;
-        std::tie(chn, chn_start) = read_dec(0, 4);
-        if (chn_start == -1)
-            syntax_error("Missing DAC channel", colno + 1);
-        skip_whitespace();
-        if (peek() != ')')
-            syntax_error("Expecting `)` after DAC channel", colno + 1);
-        colno++;
-        skip_whitespace();
-        if (peek() != '=')
-            syntax_error("Expecting `=` before DAC value", colno + 1);
-        colno++;
-        uint16_t dac;
-        int dac_start;
-        std::tie(dac, dac_start) = read_hex(0, UINT16_MAX);
-        if (dac_start == -1) {
-            double dac_mv;
-            int dac_mv_start;
-            std::tie(dac_mv, dac_mv_start) = read_float();
-            if (dac_mv_start == -1)
-                syntax_error("Invalid DAC voltage", colno + 1);
-            auto unit = read_name();
-            if (unit.second == -1)
-                syntax_error("Missing voltage unit", colno + 1);
-            if (unit.first == "mV") {
-            }
-            else if (unit.first == "V") {
-                dac_mv = dac_mv * 1000;
-            }
-            else {
-                syntax_error("Unknown voltage unit", -1, unit.second + 1, colno);
-            }
-            if (!(abs(dac_mv) <= 10000))
-                syntax_error("DAC voltage too high (max +-10V)", -1, dac_start + 1, colno);
-            // this is for the DAC8814 chip in SPI0
-            constexpr double scale = 65535 / 20000.0;
-            constexpr double offset = 10000.0;
-            dac = uint16_t(((offset - dac_mv) * scale) + 0.5);
-        }
-        writer.addDAC(chn, dac);
-    }
-
-    void parse_clock(Writer &writer)
-    {
-        if (peek() != '(')
-            syntax_error("Invalid clock command: expecting `(`", colno + 1);
-        colno++;
-        uint8_t clock;
-        auto state = read_name();
-        if (state.second != -1) {
-            if (state.first != "off")
-                syntax_error("Invalid clock state", -1, state.second + 1, colno);
-            clock = 255;
-        }
-        else {
-            int clock_start;
-            std::tie(clock, clock_start) = read_dec(0, 255);
-            if (clock_start == -1) {
-                syntax_error("Missing clock state", colno + 1);
-            }
-        }
-        skip_whitespace();
-        if (peek() != ')')
-            syntax_error("Expecting `)` after clock state", colno + 1);
-        colno++;
-        writer.addClock(clock);
+        writer.addWait(read_ttlwait());
     }
 
     bool parse_cmd(Writer &writer)
@@ -544,25 +229,34 @@ struct Parser : ParserBase {
             parse_ttl(writer);
         }
         else if (nres.first == "wait") {
-            parse_wait(writer);
+            writer.addWait(read_waitcmd());
         }
         else if (nres.first == "freq") {
-            parse_freq(writer);
+            auto res = read_freqcmd();
+            writer.addDDSFreq(res.first, res.second);
         }
         else if (nres.first == "amp") {
-            parse_amp(writer);
+            auto res = read_ampcmd();
+            writer.addDDSAmp(res.first, res.second);
         }
         else if (nres.first == "phase") {
-            parse_phase(writer);
+            auto res = read_phasecmd();
+            if (res.second.first) {
+                writer.addDDSDetPhase(res.first, res.second.second);
+            }
+            else {
+                writer.addDDSPhase(res.first, res.second.second);
+            }
         }
         else if (nres.first == "reset") {
-            parse_reset(writer);
+            writer.addDDSReset(read_ddschn("reset"));
         }
         else if (nres.first == "dac") {
-            parse_dac(writer);
+            auto res = read_daccmd();
+            writer.addDAC(res.first, res.second);
         }
         else if (nres.first == "clock") {
-            parse_clock(writer);
+            writer.addClock(read_clockcmd());
         }
         else {
             syntax_error("Unknown command name", -1, nres.second + 1, colno);
@@ -578,28 +272,11 @@ struct Parser : ParserBase {
 NACS_EXPORT() uint32_t parse(buff_ostream &ostm, std::istream &istm)
 {
     Parser parser(istm);
-    if (!parser.skip_comments())
-        return 0;
-    auto res = parser.read_name();
-    uint32_t ttl_mask = 0;
-    if (res.first == "ttl_mask") {
-        parser.skip_whitespace();
-        if (parser.peek() != '=')
-            parser.syntax_error("Expecting `=` after `ttl_mask`", parser.colno + 1);
-        parser.colno++;
-        parser.skip_whitespace();
-        int oldcol;
-        std::tie(ttl_mask, oldcol) = parser.read_hex(0, UINT32_MAX);
-        if (oldcol < 0)
-            parser.syntax_error("Expecting hex literal", parser.colno + 1);
-        if (!parser.checked_next_line() || !parser.skip_comments()) {
-            return ttl_mask;
-        }
-    }
-    else if (res.second != -1) {
-        parser.colno = res.second;
-    }
-
+    bool cont;
+    uint32_t ttl_mask;
+    std::tie(cont, ttl_mask) = parser.read_ttlmask();
+    if (!cont)
+        return ttl_mask;
     Writer writer(ostm, ttl_mask);
     while (parser.parse_cmd(writer)) {
     }

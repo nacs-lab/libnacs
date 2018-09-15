@@ -26,6 +26,7 @@
 #include <limits>
 #include <sstream>
 #include <string>
+#include <utility>
 
 namespace NaCs {
 namespace Seq {
@@ -65,6 +66,22 @@ struct ParserBase {
     bool checked_next_line();
 
     uint8_t read_ddschn(const char *name);
+
+    uint64_t read_waittime();
+    uint64_t read_waitcmd();
+    uint64_t read_ttlwait();
+
+    uint32_t read_ttlall();
+    std::pair<uint8_t,bool> read_ttl1();
+
+    std::pair<uint8_t,uint32_t> read_freqcmd();
+    std::pair<uint8_t,uint16_t> read_ampcmd();
+    std::pair<uint8_t,std::pair<bool,uint16_t>> read_phasecmd();
+
+    std::pair<uint8_t,uint16_t> read_daccmd();
+    uint8_t read_clockcmd();
+
+    std::pair<bool,uint32_t> read_ttlmask();
 };
 
 template<typename T>
