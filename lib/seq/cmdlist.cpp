@@ -16,17 +16,15 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "exehelper_p.h"
-
 #include "cmdlist.h"
 
+#include "exehelper_p.h"
+#include "parser_p.h"
+
 #include "../utils/streams.h"
-#include "../utils/errors.h"
 
 #include <cctype>
-#include <cmath>
 #include <iomanip>
-#include <limits>
 #include <type_traits>
 
 namespace NaCs {
@@ -201,180 +199,8 @@ public:
     }
 };
 
-struct Parser {
-    std::istream &istm;
-    std::string line;
-    std::string buff;
-    int lineno = 0;
-    int colno = 0;
-
-    template<typename T>
-    static std::string to_hexstring(T v)
-    {
-        std::ostringstream stm;
-        stm << "0x" << std::hex << v;
-        return stm.str();
-    }
-
-    Parser(std::istream &istm)
-        : istm(istm)
-    {
-        next_line();
-    }
-    bool next_line()
-    {
-        std::getline(istm, line);
-        lineno++;
-        colno = 0;
-        return istm.good();
-    }
-    void syntax_error(std::string msg, int colnum, int colstart=-1, int colend=-1)
-    {
-        throw SyntaxError(std::move(msg), line, lineno, colnum, colstart, colend);
-    }
-    void skip_whitespace()
-    {
-        int linelen = (int)line.size();
-        for (; colno < linelen; colno++) {
-            if (!std::isspace(line[colno])) {
-                return;
-            }
-        }
-    }
-    bool skip_comments()
-    {
-        while (true) {
-            skip_whitespace();
-            if (colno < (int)line.size() && line[colno] != '#')
-                return true;
-            if (!next_line()) {
-                return false;
-            }
-        }
-    }
-    char peek(int idx=0)
-    {
-        if (colno + idx >= (int)line.size())
-            return 0;
-        return line[colno + idx];
-    }
-    std::pair<const std::string&,int> read_name(bool allow_num0=false)
-    {
-        buff.clear();
-
-        skip_whitespace();
-
-        int startcol = colno;
-
-        int linelen = (int)line.size();
-        if (colno >= linelen)
-            return {buff, -1};
-        auto isalphanum = [] (char c, bool num=true) {
-            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
-                return true;
-            }
-            else if (!num) {
-                return false;
-            }
-            return c >= '0' && c <= '9';
-        };
-
-        auto c0 = line[colno];
-        if (!isalphanum(c0, allow_num0))
-            return {buff, -1};
-        buff.push_back(c0);
-        colno++;
-        for (; colno < linelen; colno++) {
-            auto c = line[colno];
-            if (isalphanum(c)) {
-                buff.push_back(c);
-            }
-            else {
-                break;
-            }
-        }
-        return {buff, startcol};
-    }
-    std::pair<uint64_t,int> read_hex(uint64_t lo=0, uint64_t hi=UINT64_MAX)
-    {
-        skip_whitespace();
-        int startcol = colno;
-        if (peek() != '0' || std::tolower(peek(1)) != 'x')
-            return {0, -1};
-        auto startptr = &line[startcol];
-        char *endptr;
-        auto res = strtoull(startptr, &endptr, 16);
-        if (endptr <= startptr + 2)
-            syntax_error("Empty or invalid hex literal", startcol + 3,
-                         startcol + 1, startcol + 3);
-        if (res < lo || res > hi || errno == ERANGE)
-            syntax_error("Hex literal out of range [" + to_hexstring(lo) + ", " +
-                         to_hexstring(hi) + "]", -1,
-                         startcol + 1, startcol + int(endptr - startptr));
-        colno = startcol + (endptr - startptr);
-        return {res, startcol};
-    }
-    template<typename T>
-    std::pair<T,int> read_dec(T lo=std::numeric_limits<T>::min(),
-                              T hi=std::numeric_limits<T>::max())
-    {
-        skip_whitespace();
-        int startcol = colno;
-        auto startptr = &line[startcol];
-        char *endptr;
-        T res;
-        if (std::is_signed<T>::value) {
-            res = (T)strtoll(startptr, &endptr, 10);
-        }
-        else {
-            res = (T)strtoull(startptr, &endptr, 10);
-        }
-        if (endptr == startptr)
-            return {0, -1};
-        if (res < lo || res > hi || errno == ERANGE)
-            syntax_error("Number literal out of range [" + std::to_string(lo) + ", " +
-                         std::to_string(hi) + "]", -1,
-                         startcol + 1, startcol + int(endptr - startptr));
-        // `strtoull` allows `-`, which may give surprising result for us.
-        if (lo >= 0 && peek() == '-')
-            syntax_error("Unexpected negative number", startcol + 1,
-                         startcol + 1, startcol + int(endptr - startptr));
-        colno = startcol + (endptr - startptr);
-        return {res, startcol};
-    }
-    std::pair<double,int> read_float(double lo=-INFINITY, double hi=INFINITY)
-    {
-        skip_whitespace();
-        int startcol = colno;
-        auto startptr = &line[startcol];
-        int hassign = peek() == '+' || peek() == '-';
-        // Disallow parsing of hex floating point numbers.
-        // This is not a nice way to do it but I couldn't find another function
-        // that's easy to use...
-        if (peek(hassign) == '0' && std::tolower(peek(hassign + 1)) == 'x')
-            return {0, -1};
-        char *endptr;
-        auto res = strtod(startptr, &endptr);
-        if (endptr == startptr)
-            return {0, -1};
-        if (errno == ERANGE)
-            syntax_error("Floating point literal overflow", -1,
-                         startcol + 1, startcol + int(endptr - startptr));
-        if (res < lo || res > hi)
-            syntax_error("Floating point literal out of range [" + std::to_string(lo) + ", " +
-                         std::to_string(hi) + "]", -1,
-                         startcol + 1, startcol + int(endptr - startptr));
-        colno = startcol + (endptr - startptr);
-        return {res, startcol};
-    }
-    bool checked_next_line()
-    {
-        skip_whitespace();
-        auto c = peek();
-        if (c && c != '#')
-            syntax_error("Unexpected charater at the end of line", colno + 1);
-        return next_line();
-    }
+struct Parser : ParserBase {
+    using ParserBase::ParserBase;
 
     void parse_ttlall(Writer &writer)
     {
@@ -501,24 +327,6 @@ struct Parser {
         if (peek() != ')')
             syntax_error("Invalid wait command: expecting `)`", colno + 1);
         colno++;
-    }
-
-    uint8_t read_ddschn(const char *name)
-    {
-        if (peek() != '(')
-            syntax_error(std::string("Invalid ") + name + " command: expecting `(`", colno + 1);
-        colno++;
-        uint8_t chn;
-        int chn_start;
-        std::tie(chn, chn_start) = read_dec(0, 21);
-        if (chn_start == -1)
-            syntax_error("Missing DDS channel", colno + 1);
-        skip_whitespace();
-        if (peek() != ')')
-            syntax_error("Expecting `)` after DDS channel", colno + 1);
-        colno++;
-        skip_whitespace();
-        return chn;
     }
 
     void parse_freq(Writer &writer)

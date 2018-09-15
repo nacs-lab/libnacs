@@ -16,6 +16,9 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#ifndef __NACS_SEQ_EXEHELPER_P_H__
+#define __NACS_SEQ_EXEHELPER_P_H__
+
 #include <ostream>
 
 // This file contains a few classes/functions that are useful for both bytecode
@@ -117,3 +120,5 @@ struct TimeKeeper {
 };
 
 }
+
+#endif // __NACS_SEQ_EXEHELPER_P_H__
