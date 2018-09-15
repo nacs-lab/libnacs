@@ -422,6 +422,7 @@ struct Parser {
 
     void parse_waittime(Writer &writer, bool isttl=false)
     {
+        // TODO
     }
 
     void parse_ttl(Writer &writer)
@@ -454,6 +455,21 @@ struct Parser {
         colno++;
         parse_waittime(writer, true);
     }
+
+    bool parse_cmd(Writer &writer)
+    {
+        skip_whitespace();
+        auto nres = read_name();
+        if (nres.second == -1)
+            syntax_error("Expecting command name", colno + 1);
+        if (nres.first == "ttl") {
+            parse_ttl(writer);
+        }
+        else {
+            syntax_error("Unknown command name", -1, nres.second + 1, colno);
+        }
+        return skip_comments();
+    }
 };
 
 }
@@ -484,7 +500,8 @@ NACS_EXPORT() uint32_t parse(buff_ostream &ostm, std::istream &istm)
     }
 
     Writer writer(ostm, ttl_mask);
-
+    while (parser.parse_cmd(writer)) {
+    }
     return writer.get_ttl_mask();
 }
 
