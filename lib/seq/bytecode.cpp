@@ -594,7 +594,16 @@ class Scheduler {
     // pulse.
     uint64_t get_next_time(uint64_t dt)
     {
-        return std::max(prev_t + dt, next_t);
+        // Hardcoded for now.
+        // The minimum wait time we support is 3 so if the pulse does not happen exactly
+        // after the last one it need to happen at least 3 cycles later...
+        static constexpr uint8_t deadtime = 3;
+        auto req_t = prev_t + dt;
+        if (next_t > req_t)
+            return next_t;
+        if (req_t >= next_t + deadtime)
+            return req_t;
+        return next_t + deadtime;
     }
 
     // Add a pulse at `t`. The caller is expected to check the time limit
