@@ -544,6 +544,34 @@ struct Parser {
         writer.addDDSFreq(chn, freq);
     }
 
+    void parse_amp(Writer &writer)
+    {
+        if (peek() != '(')
+            syntax_error("Invalid amp command: expecting `(`", colno + 1);
+        colno++;
+        uint8_t chn = (uint8_t)read_dec(0, 21).first;
+        skip_whitespace();
+        if (peek() != ')')
+            syntax_error("Expecting `)` after DDS channel", colno + 1);
+        colno++;
+        skip_whitespace();
+        if (peek() != '=')
+            syntax_error("Expecting `=` before amplitude value", colno + 1);
+        colno++;
+        uint16_t amp;
+        int amp_start;
+        std::tie(amp, amp_start) = read_hex(0, 4095);
+        if (amp_start == -1) {
+            double ampf;
+            int ampf_start;
+            std::tie(ampf, ampf_start) = read_float(0, 1);
+            if (ampf_start == -1)
+                syntax_error("Invalid amplitude", colno + 1);
+            amp = uint16_t(ampf * 4095.0 + 0.5);
+        }
+        writer.addDDSAmp(chn, amp);
+    }
+
     bool parse_cmd(Writer &writer)
     {
         skip_whitespace();
@@ -558,6 +586,9 @@ struct Parser {
         }
         else if (nres.first == "freq") {
             parse_freq(writer);
+        }
+        else if (nres.first == "amp") {
+            parse_amp(writer);
         }
         else {
             syntax_error("Unknown command name", -1, nres.second + 1, colno);
