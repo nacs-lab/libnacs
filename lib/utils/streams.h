@@ -211,6 +211,7 @@ basic_vector_ostream<T>::~basic_vector_ostream()
 
 extern template class basic_vector_ostream<std::vector<char>>;
 extern template class basic_vector_ostream<std::vector<unsigned char>>;
+extern template class basic_vector_ostream<std::string>;
 
 using vector_ostream = basic_vector_ostream<std::vector<char>>;
 using uvector_ostream = basic_vector_ostream<std::vector<unsigned char>>;
