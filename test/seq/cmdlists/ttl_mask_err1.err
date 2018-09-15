@@ -1,0 +1,4 @@
+SyntaxError: Expecting `=` after `ttl_mask`
+Line: 2, Column: 10
+ttl_mask -= 0x1ffffffff
+         ^

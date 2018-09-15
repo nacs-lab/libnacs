@@ -1,3 +1,5 @@
+add_definitions(-UNDEBUG)
+
 add_subdirectory(utils)
 add_subdirectory(seq)
 if(ENABLE_KNACS)

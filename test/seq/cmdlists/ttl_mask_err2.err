@@ -1,0 +1,4 @@
+SyntaxError: Hex literal out of range [0x0, 0xffffffff]
+Line: 2
+ttl_mask = 0x1ffffffff
+           ~~~~~~~~~~~

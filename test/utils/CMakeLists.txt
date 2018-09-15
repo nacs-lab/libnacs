@@ -1,7 +1,5 @@
 #
 
-add_definitions(-UNDEBUG)
-
 set(test_anyptr_SOURCES test_anyptr.cpp)
 add_executable(test-anyptr ${test_anyptr_SOURCES})
 target_link_libraries(test-anyptr nacs-utils)

@@ -1,0 +1,4 @@
+SyntaxError: Expecting hex literal
+Line: 2, Column: 12
+ttl_mask = k0x1ffffffff
+           ^
