@@ -422,7 +422,37 @@ struct Parser {
 
     void parse_waittime(Writer &writer, bool isttl=false)
     {
-        // TODO
+        auto t_hex = read_hex(3);
+        if (t_hex.second != -1) {
+            assert(t_hex.first >= 3);
+            writer.addWait(t_hex.first - (isttl ? 3 : 0));
+            return;
+        }
+        auto t_flt = read_float();
+        if (t_flt.second == -1)
+            syntax_error("Invalid time", colno + 1);
+        skip_whitespace();
+        auto unit = read_name();
+        if (unit.second == -1)
+            syntax_error("Missing time unit", colno + 1);
+        double t_ns = t_flt.first;
+        if (unit.first == "ns") {
+        }
+        else if (unit.first == "us") {
+            t_ns = t_ns * 1000.0;
+        }
+        else if (unit.first == "ms") {
+            t_ns = t_ns * 1000000.0;
+        }
+        else if (unit.first == "s") {
+            t_ns = t_ns * 1000000000.0;
+        }
+        else {
+            syntax_error("Unknown time unit", -1, unit.second + 1, colno);
+        }
+        if (t_ns < 30)
+            syntax_error("Time too short (min 30ns)", -1, t_flt.second + 1, colno);
+        writer.addWait(((uint64_t)t_ns) / 10 - (isttl ? 3 : 0));
     }
 
     void parse_ttl(Writer &writer)
@@ -456,6 +486,19 @@ struct Parser {
         parse_waittime(writer, true);
     }
 
+    void parse_wait(Writer &writer)
+    {
+        skip_whitespace();
+        if (peek() != '(')
+            syntax_error("Invalid wait command: expecting `(`", colno + 1);
+        colno++;
+        parse_waittime(writer);
+        skip_whitespace();
+        if (peek() != ')')
+            syntax_error("Invalid wait command: expecting `)`", colno + 1);
+        colno++;
+    }
+
     bool parse_cmd(Writer &writer)
     {
         skip_whitespace();
@@ -465,9 +508,14 @@ struct Parser {
         if (nres.first == "ttl") {
             parse_ttl(writer);
         }
+        else if (nres.first == "wait") {
+            parse_wait(writer);
+        }
         else {
             syntax_error("Unknown command name", -1, nres.second + 1, colno);
         }
+        if (!checked_next_line())
+            return false;
         return skip_comments();
     }
 };
