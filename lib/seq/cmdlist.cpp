@@ -690,6 +690,32 @@ struct Parser {
         writer.addDAC(chn, dac);
     }
 
+    void parse_clock(Writer &writer)
+    {
+        if (peek() != '(')
+            syntax_error("Invalid clock command: expecting `(`", colno + 1);
+        colno++;
+        uint8_t clock;
+        auto state = read_name();
+        if (state.second != -1) {
+            if (state.first != "off")
+                syntax_error("Invalid clock state", -1, state.second + 1, colno);
+            clock = 255;
+        }
+        else {
+            int clock_start;
+            std::tie(clock, clock_start) = read_dec(0, 255);
+            if (clock_start == -1) {
+                syntax_error("Missing clock state", colno + 1);
+            }
+        }
+        skip_whitespace();
+        if (peek() != ')')
+            syntax_error("Expecting `)` after clock state", colno + 1);
+        colno++;
+        writer.addClock(clock);
+    }
+
     bool parse_cmd(Writer &writer)
     {
         skip_whitespace();
@@ -716,6 +742,9 @@ struct Parser {
         }
         else if (nres.first == "dac") {
             parse_dac(writer);
+        }
+        else if (nres.first == "clock") {
+            parse_clock(writer);
         }
         else {
             syntax_error("Unknown command name", -1, nres.second + 1, colno);
