@@ -131,9 +131,8 @@ public:
 
     void addTTL1(uint8_t chn, bool val)
     {
-        chn = chn & 0x1f;
         all_ttl_mask = all_ttl_mask | (1 << chn);
-        last_timed_inst = addInst(Inst::TTL1{OpCode::TTL1, 0, val, chn});
+        last_timed_inst = addInst(Inst::TTL1{OpCode::TTL1, 0, val, uint8_t(chn & 0x1f)});
         max_time_left = 3;
     }
 
@@ -308,8 +307,7 @@ struct Parser {
         if (endptr <= startptr + 2)
             syntax_error("Empty or invalid hex literal", startcol + 3,
                          startcol + 1, startcol + 3);
-        if (res < lo || res > hi ||
-            (res == std::numeric_limits<decltype(res)>::max() && errno == ERANGE))
+        if (res < lo || res > hi || errno == ERANGE)
             syntax_error("Hex literal out of range [" + to_hexstring(lo) + ", " +
                          to_hexstring(hi) + "]", -1,
                          startcol + 1, startcol + int(endptr - startptr));
@@ -326,15 +324,14 @@ struct Parser {
         char *endptr;
         T res;
         if (std::is_signed<T>::value) {
-            res = strtoll(startptr, &endptr, 10);
+            res = (T)strtoll(startptr, &endptr, 10);
         }
         else {
-            res = strtoull(startptr, &endptr, 10);
+            res = (T)strtoull(startptr, &endptr, 10);
         }
         if (endptr == startptr)
             return {0, -1};
-        if (res < lo || res > hi ||
-            (res == std::numeric_limits<T>::max() && errno == ERANGE))
+        if (res < lo || res > hi || errno == ERANGE)
             syntax_error("Number literal out of range [" + std::to_string(lo) + ", " +
                          std::to_string(hi) + "]", -1,
                          startcol + 1, startcol + int(endptr - startptr));
@@ -390,7 +387,7 @@ struct Parser {
     {
         assert(peek() == '(');
         colno++;
-        int chn = (int)read_dec(0, 31).first;
+        uint8_t chn = (uint8_t)read_dec(0, 31).first;
         skip_whitespace();
         if (peek() != ')')
             syntax_error("Expecting `)` after TTL channel", colno + 1);
@@ -499,6 +496,54 @@ struct Parser {
         colno++;
     }
 
+    void parse_freq(Writer &writer)
+    {
+        if (peek() != '(')
+            syntax_error("Invalid freq command: expecting `(`", colno + 1);
+        colno++;
+        uint8_t chn = (uint8_t)read_dec(0, 21).first;
+        skip_whitespace();
+        if (peek() != ')')
+            syntax_error("Expecting `)` after DDS channel", colno + 1);
+        colno++;
+        skip_whitespace();
+        if (peek() != '=')
+            syntax_error("Expecting `=` before frequency value", colno + 1);
+        colno++;
+        uint32_t freq;
+        int freq_start;
+        std::tie(freq, freq_start) = read_hex(0, 0x7fffffff);
+        if (freq_start == -1) {
+            double freq_hz;
+            int freq_hz_start;
+            std::tie(freq_hz, freq_hz_start) = read_float(0);
+            if (freq_hz_start == -1)
+                syntax_error("Invalid frequency", colno + 1);
+            auto unit = read_name();
+            if (unit.second == -1)
+                syntax_error("Missing frequency unit", colno + 1);
+            if (unit.first == "Hz") {
+            }
+            else if (unit.first == "kHz") {
+                freq_hz = freq_hz * 1000.0;
+            }
+            else if (unit.first == "MHz") {
+                freq_hz = freq_hz * 1000000.0;
+            }
+            else if (unit.first == "GHz") {
+                freq_hz = freq_hz * 1000000000.0;
+            }
+            else {
+                syntax_error("Unknown frequency unit", -1, unit.second + 1, colno);
+            }
+            if (freq_hz > 1.75e9)
+                syntax_error("Frequency too high (max 1.75GHz)", -1, freq_start + 1, colno);
+            static constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
+            freq = uint32_t(0.5 + freq_hz * freq_factor);
+        }
+        writer.addDDSFreq(chn, freq);
+    }
+
     bool parse_cmd(Writer &writer)
     {
         skip_whitespace();
@@ -510,6 +555,9 @@ struct Parser {
         }
         else if (nres.first == "wait") {
             parse_wait(writer);
+        }
+        else if (nres.first == "freq") {
+            parse_freq(writer);
         }
         else {
             syntax_error("Unknown command name", -1, nres.second + 1, colno);
