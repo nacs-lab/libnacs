@@ -408,7 +408,7 @@ std::pair<uint8_t,std::pair<bool,uint16_t>> ParserBase::read_phasecmd()
         phase = uint16_t(0.5 + phase_deg * phase_factor);
     }
     if (neg)
-        phase = -phase;
+        phase = uint16_t(-phase);
     return {chn, {det, phase}};
 }
 
