@@ -26,11 +26,12 @@ namespace {
 struct Printer {
     void ttl(uint32_t ttl, uint64_t t)
     {
-        stm << "ttl=0x" << std::hex << ttl << std::dec << " t=" << t << std::endl;
+        stm << "ttl=0x" << std::hex << ttl << " t=0x" << t << std::dec << std::endl;
     }
     void ttl1(uint8_t chn, bool val, uint64_t t)
     {
-        stm << "ttl(" << int(chn) << ")=" << int(val) << " t=" << t << std::endl;
+        stm << "ttl(" << int(chn) << ")=" << int(val)
+            << " t=0x" << std::hex << t << std::dec << std::endl;
     }
     void dds_freq(uint8_t chn, uint32_t freq)
     {
@@ -58,11 +59,11 @@ struct Printer {
     }
     void dac(uint8_t chn, uint16_t V)
     {
-        stm << "dac(" << int(chn) << ")=" << std::hex << V << std::dec << std::endl;
+        stm << "dac(" << int(chn) << ")=0x" << std::hex << V << std::dec << std::endl;
     }
     void wait(uint64_t t)
     {
-        stm << "wait(" << t << ")" << std::endl;
+        stm << "wait(0x" << std::hex << t << ")" << std::dec << std::endl;
     }
     void clock(uint8_t period)
     {
