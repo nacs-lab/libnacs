@@ -380,14 +380,21 @@ struct Parser {
     {
         assert(peek() == '=');
         colno++;
-        writer.addTTL((uint32_t)read_hex(0, UINT32_MAX).first);
+        auto res = read_hex(0, UINT32_MAX);
+        if (res.second == -1)
+            syntax_error("Missing TTL value", colno + 1);
+        writer.addTTL((uint32_t)res.first);
     }
 
     void parse_ttl1(Writer &writer)
     {
         assert(peek() == '(');
         colno++;
-        uint8_t chn = (uint8_t)read_dec(0, 31).first;
+        uint8_t chn;
+        int chn_start;
+        std::tie(chn, chn_start) = read_dec(0, 31);
+        if (chn_start == -1)
+            syntax_error("Missing TTL channel", colno + 1);
         skip_whitespace();
         if (peek() != ')')
             syntax_error("Expecting `)` after TTL channel", colno + 1);
@@ -496,17 +503,27 @@ struct Parser {
         colno++;
     }
 
-    void parse_freq(Writer &writer)
+    uint8_t read_ddschn(const char *name)
     {
         if (peek() != '(')
-            syntax_error("Invalid freq command: expecting `(`", colno + 1);
+            syntax_error(std::string("Invalid ") + name + " command: expecting `(`", colno + 1);
         colno++;
-        uint8_t chn = (uint8_t)read_dec(0, 21).first;
+        uint8_t chn;
+        int chn_start;
+        std::tie(chn, chn_start) = read_dec(0, 21);
+        if (chn_start == -1)
+            syntax_error("Missing DDS channel", colno + 1);
         skip_whitespace();
         if (peek() != ')')
             syntax_error("Expecting `)` after DDS channel", colno + 1);
         colno++;
         skip_whitespace();
+        return chn;
+    }
+
+    void parse_freq(Writer &writer)
+    {
+        auto chn = read_ddschn("freq");
         if (peek() != '=')
             syntax_error("Expecting `=` before frequency value", colno + 1);
         colno++;
@@ -546,15 +563,7 @@ struct Parser {
 
     void parse_amp(Writer &writer)
     {
-        if (peek() != '(')
-            syntax_error("Invalid amp command: expecting `(`", colno + 1);
-        colno++;
-        uint8_t chn = (uint8_t)read_dec(0, 21).first;
-        skip_whitespace();
-        if (peek() != ')')
-            syntax_error("Expecting `)` after DDS channel", colno + 1);
-        colno++;
-        skip_whitespace();
+        auto chn = read_ddschn("amp");
         if (peek() != '=')
             syntax_error("Expecting `=` before amplitude value", colno + 1);
         colno++;
@@ -574,15 +583,7 @@ struct Parser {
 
     void parse_phase(Writer &writer)
     {
-        if (peek() != '(')
-            syntax_error("Invalid phase command: expecting `(`", colno + 1);
-        colno++;
-        uint8_t chn = (uint8_t)read_dec(0, 21).first;
-        skip_whitespace();
-        if (peek() != ')')
-            syntax_error("Expecting `)` after DDS channel", colno + 1);
-        colno++;
-        skip_whitespace();
+        auto chn = read_ddschn("phase");
         bool det = false;
         if (peek() == '+') {
             if (peek(1) != '=')
@@ -635,14 +636,7 @@ struct Parser {
 
     void parse_reset(Writer &writer)
     {
-        if (peek() != '(')
-            syntax_error("Invalid reset command: expecting `(`", colno + 1);
-        colno++;
-        uint8_t chn = (uint8_t)read_dec(0, 21).first;
-        skip_whitespace();
-        if (peek() != ')')
-            syntax_error("Expecting `)` after DDS channel", colno + 1);
-        colno++;
+        auto chn = read_ddschn("reset");
         writer.addDDSReset(chn);
     }
 
@@ -651,7 +645,11 @@ struct Parser {
         if (peek() != '(')
             syntax_error("Invalid dac command: expecting `(`", colno + 1);
         colno++;
-        uint8_t chn = (uint8_t)read_dec(0, 4).first;
+        uint8_t chn;
+        int chn_start;
+        std::tie(chn, chn_start) = read_dec(0, 4);
+        if (chn_start == -1)
+            syntax_error("Missing DAC channel", colno + 1);
         skip_whitespace();
         if (peek() != ')')
             syntax_error("Expecting `)` after DAC channel", colno + 1);
