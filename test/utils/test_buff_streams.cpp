@@ -68,6 +68,11 @@ void test_streams(F &&f)
     auto v = vstm.get_buf();
     assert(v.size() == res.size());
     assert(memcmp(&v[0], &res[0], res.size()) == 0);
+
+    string_ostream sstm2;
+    f(sstm2);
+    auto s = sstm2.get_buf();
+    assert(s == res);
 }
 
 int main()

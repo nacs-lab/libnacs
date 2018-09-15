@@ -118,48 +118,9 @@ inline void buff_streambuf::update_size()
     }
 }
 
-template<typename charT>
-basic_vector_streambuf<charT>::basic_vector_streambuf(std::vector<charT> &&buf, size_t offset)
-    : buff_streambuf(offset),
-      m_buf(std::move(buf))
-{
-    setp((char*)&m_buf[0], (char*)&m_buf[m_buf.size()]);
-    pbump(offset);
-}
-
-template<typename charT>
-basic_vector_streambuf<charT>::~basic_vector_streambuf()
-{
-}
-
-template<typename charT>
-std::vector<charT> basic_vector_streambuf<charT>::get_buf()
-{
-    m_buf.resize(pptr() - pbase());
-    auto res = std::move(m_buf);
-    setp((char*)&m_buf[0], (char*)&m_buf[m_buf.size()]);
-    m_end = m_buf.size();
-    return res;
-}
-
-template<typename charT>
-char *basic_vector_streambuf<charT>::extend(size_t sz)
-{
-    auto oldbase = pbase();
-    auto oldptr = pptr();
-    auto oldsz = oldptr - oldbase;
-    auto newsz = (oldsz + sz) * 3 / 2;
-    if (newsz <= m_buf.size())
-        return oldptr;
-    // overallocate.
-    m_buf.resize(newsz);
-    setp((char*)&m_buf[0], (char*)&m_buf[m_buf.size()]);
-    pbump(oldsz);
-    return (char*)&m_buf[oldsz];
-}
-
-template class basic_vector_streambuf<char>;
-template class basic_vector_streambuf<unsigned char>;
+template class basic_vector_streambuf<std::vector<char>>;
+template class basic_vector_streambuf<std::vector<unsigned char>>;
+template class basic_vector_streambuf<std::string>;
 
 malloc_streambuf::malloc_streambuf()
 {
@@ -195,19 +156,9 @@ char *malloc_streambuf::extend(size_t sz)
     return &buf[oldsz];
 }
 
-template<typename charT>
-basic_vector_ostream<charT>::basic_vector_ostream(std::vector<charT> &&buf, size_t offset)
-    : buff_ostream(&m_buf), m_buf(std::move(buf), offset)
-{
-}
-
-template<typename charT>
-basic_vector_ostream<charT>::~basic_vector_ostream()
-{
-}
-
-template class basic_vector_ostream<char>;
-template class basic_vector_ostream<unsigned char>;
+template class basic_vector_ostream<std::vector<char>>;
+template class basic_vector_ostream<std::vector<unsigned char>>;
+template class basic_vector_ostream<std::string>;
 
 malloc_ostream::malloc_ostream()
     : buff_ostream(&m_buf), m_buf()

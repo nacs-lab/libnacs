@@ -1005,7 +1005,7 @@ static uint32_t SeqToByteCode(buff_ostream &stm, Sequence &seq)
 
 NACS_EXPORT() std::vector<uint8_t> Sequence::toByteCode(uint32_t *ttl_mask)
 {
-    basic_vector_ostream<uint8_t> stm;
+    basic_vector_ostream<std::vector<uint8_t>> stm;
     auto tm = ByteCode::SeqToByteCode(stm, *this);
     if (ttl_mask)
         *ttl_mask = tm;

@@ -64,29 +64,70 @@ protected:
     ssize_t m_end;
 };
 
-template<typename charT>
+template<typename T>
 class NACS_EXPORT() basic_vector_streambuf : public buff_streambuf {
-    static_assert(sizeof(charT) == 1);
 public:
-    basic_vector_streambuf(std::vector<charT> &&buf, size_t offset);
-    basic_vector_streambuf(std::vector<charT> &&buf=std::vector<charT>())
+    basic_vector_streambuf(T &&buf, size_t offset);
+    basic_vector_streambuf(T &&buf=T())
         : basic_vector_streambuf(std::move(buf), buf.size())
     {}
     ~basic_vector_streambuf() override;
 
-    std::vector<charT> get_buf();
+    T get_buf();
 
 private:
     char *extend(size_t sz) override;
 
-    std::vector<charT> m_buf;
+    T m_buf;
 };
 
-extern template class basic_vector_streambuf<char>;
-extern template class basic_vector_streambuf<unsigned char>;
+template<typename T>
+basic_vector_streambuf<T>::basic_vector_streambuf(T &&buf, size_t offset)
+    : buff_streambuf(offset),
+      m_buf(std::move(buf))
+{
+    setp((char*)&m_buf[0], (char*)&m_buf[m_buf.size()]);
+    pbump(offset);
+}
 
-using vector_streambuf = basic_vector_streambuf<char>;
-using uvector_streambuf = basic_vector_streambuf<unsigned char>;
+template<typename T>
+basic_vector_streambuf<T>::~basic_vector_streambuf()
+{
+}
+
+template<typename T>
+T basic_vector_streambuf<T>::get_buf()
+{
+    m_buf.resize(pptr() - pbase());
+    auto res = std::move(m_buf);
+    setp((char*)&m_buf[0], (char*)&m_buf[m_buf.size()]);
+    m_end = m_buf.size();
+    return res;
+}
+
+template<typename T>
+char *basic_vector_streambuf<T>::extend(size_t sz)
+{
+    auto oldbase = pbase();
+    auto oldptr = pptr();
+    auto oldsz = oldptr - oldbase;
+    auto newsz = (oldsz + sz) * 3 / 2;
+    if (newsz <= m_buf.size())
+        return oldptr;
+    // overallocate.
+    m_buf.resize(newsz);
+    setp((char*)&m_buf[0], (char*)&m_buf[m_buf.size()]);
+    pbump(oldsz);
+    return (char*)&m_buf[oldsz];
+}
+
+extern template class basic_vector_streambuf<std::vector<char>>;
+extern template class basic_vector_streambuf<std::vector<unsigned char>>;
+extern template class basic_vector_streambuf<std::string>;
+
+using vector_streambuf = basic_vector_streambuf<std::vector<char>>;
+using uvector_streambuf = basic_vector_streambuf<std::vector<unsigned char>>;
+using string_streambuf = basic_vector_streambuf<std::string>;
 
 class NACS_EXPORT() malloc_streambuf : public buff_streambuf {
 public:
@@ -120,30 +161,42 @@ public:
     }
 };
 
-template<typename charT>
+template<typename T>
 class NACS_EXPORT() basic_vector_ostream : public buff_ostream {
 public:
-    basic_vector_ostream(std::vector<charT> &&buf, size_t offset);
-    basic_vector_ostream(std::vector<charT> &&buf=std::vector<charT>())
+    basic_vector_ostream(T &&buf, size_t offset);
+    basic_vector_ostream(T &&buf=T())
         : basic_vector_ostream(std::move(buf), buf.size())
     {}
     ~basic_vector_ostream();
 
-    std::vector<charT> get_buf()
+    T get_buf()
     {
         flush();
         return m_buf.get_buf();
     }
 
 private:
-    basic_vector_streambuf<charT> m_buf;
+    basic_vector_streambuf<T> m_buf;
 };
 
-extern template class basic_vector_ostream<char>;
-extern template class basic_vector_ostream<unsigned char>;
+template<typename T>
+basic_vector_ostream<T>::basic_vector_ostream(T &&buf, size_t offset)
+    : buff_ostream(&m_buf), m_buf(std::move(buf), offset)
+{
+}
 
-using vector_ostream = basic_vector_ostream<char>;
-using uvector_ostream = basic_vector_ostream<unsigned char>;
+template<typename T>
+basic_vector_ostream<T>::~basic_vector_ostream()
+{
+}
+
+extern template class basic_vector_ostream<std::vector<char>>;
+extern template class basic_vector_ostream<std::vector<unsigned char>>;
+
+using vector_ostream = basic_vector_ostream<std::vector<char>>;
+using uvector_ostream = basic_vector_ostream<std::vector<unsigned char>>;
+using string_ostream = basic_vector_ostream<std::string>;
 
 class NACS_EXPORT() malloc_ostream : public buff_ostream {
 public:
