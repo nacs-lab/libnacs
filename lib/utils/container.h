@@ -59,6 +59,18 @@ public:
         : AnyPtr(new T(std::move(v)))
     {
     }
+    void *get() const noexcept
+    {
+        return std::unique_ptr<void,void(*)(void*)>::get();
+    }
+    void *release() noexcept
+    {
+        return std::unique_ptr<void,void(*)(void*)>::release();
+    }
+    explicit operator bool() const noexcept
+    {
+        return get() != nullptr;
+    }
 };
 
 /**
