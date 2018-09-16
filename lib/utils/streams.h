@@ -70,6 +70,7 @@ private:
 
 protected:
     // This is the last location accessed on the stream.
+    // In another word, this is the length of the file.
     ssize_t m_end;
 };
 
@@ -138,8 +139,22 @@ using vector_streambuf = basic_vector_streambuf<std::vector<char>>;
 using uvector_streambuf = basic_vector_streambuf<std::vector<unsigned char>>;
 using string_streambuf = basic_vector_streambuf<std::string>;
 
+class NACS_EXPORT() malloc_streambuf : public buff_streambuf {
+public:
+    malloc_streambuf();
+    ~malloc_streambuf() override;
+
+    char *get_buf(size_t &sz);
+
+private:
+    char *extend(size_t sz) override;
+
+    std::unique_ptr<char, CDeleter> m_buf;
+};
+
+// This is a streambuf for istream from constant memory.
+// Based on http://www.voidcn.com/article/p-vjnlygmc-gy.html
 class NACS_EXPORT() const_streambuf : public std::streambuf {
-    // Based on http://www.voidcn.com/article/p-vjnlygmc-gy.html
 public:
     const_streambuf(const void *begin, const void *end);
     ~const_streambuf() override;
@@ -155,20 +170,7 @@ private:
     const char *m_current;
 };
 
-
-class NACS_EXPORT() malloc_streambuf : public buff_streambuf {
-public:
-    malloc_streambuf();
-    ~malloc_streambuf() override;
-
-    char *get_buf(size_t &sz);
-
-private:
-    char *extend(size_t sz) override;
-
-    std::unique_ptr<char, CDeleter> m_buf;
-};
-
+// Here we have the (i|o)stream s that uses/wraps the streambufs above
 class buff_ostream : public std::ostream {
 public:
     buff_ostream(buff_streambuf *buf)
