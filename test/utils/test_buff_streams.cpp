@@ -55,24 +55,39 @@ void test_streams(F &&f)
     f(sstm);
     auto const res = sstm.str();
 
-    malloc_ostream mstm;
-    f(mstm);
-    size_t sz;
-    auto p = mstm.get_buf(sz);
-    assert(sz == res.size());
-    assert(memcmp(p, &res[0], res.size()) == 0);
-    free(p);
+    for (int i = 0; i < 2; i++) {
+        if (i != 0) {
+            std::stringstream sstm;
+            f(sstm);
+            sstm.seekp(0);
+            assert(res == sstm.str());
+        }
 
-    vector_ostream vstm;
-    f(vstm);
-    auto v = vstm.get_buf();
-    assert(v.size() == res.size());
-    assert(memcmp(&v[0], &res[0], res.size()) == 0);
+        malloc_ostream mstm;
+        f(mstm);
+        if (i != 0)
+            mstm.seekp(0);
+        size_t sz;
+        auto p = mstm.get_buf(sz);
+        assert(sz == res.size());
+        assert(memcmp(p, &res[0], res.size()) == 0);
+        free(p);
 
-    string_ostream sstm2;
-    f(sstm2);
-    auto s = sstm2.get_buf();
-    assert(s == res);
+        vector_ostream vstm;
+        f(vstm);
+        if (i != 0)
+            vstm.seekp(0);
+        auto v = vstm.get_buf();
+        assert(v.size() == res.size());
+        assert(memcmp(&v[0], &res[0], res.size()) == 0);
+
+        string_ostream sstm2;
+        f(sstm2);
+        if (i != 0)
+            sstm2.seekp(0);
+        auto s = sstm2.get_buf();
+        assert(s == res);
+    }
 }
 
 int main()

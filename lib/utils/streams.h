@@ -30,6 +30,10 @@
 
 namespace NaCs {
 
+// Similar to `std::stringstream` but is also indexable.
+// The subtypes also support multiple different back storages
+// and can generally transfer the ownership of the buffer
+// which is not possible with `std::stringstream`.
 class NACS_EXPORT() buff_streambuf : public std::streambuf {
 public:
     buff_streambuf(size_t sz=0)
@@ -58,9 +62,14 @@ private:
     pos_type _seekpos(pos_type pos);
     void update_size();
 
+    // The base class defines most of the interface with the stream framework
+    // and subclasses only need to define the `extend` method, which should
+    // resize the buffer to fit at least `sz` bytes from the current pointer
+    // without loosing any existing content (up to `m_end`).
     virtual char *extend(size_t sz) = 0;
 
 protected:
+    // This is the last location accessed on the stream.
     ssize_t m_end;
 };
 
@@ -98,7 +107,7 @@ basic_vector_streambuf<T>::~basic_vector_streambuf()
 template<typename T>
 T basic_vector_streambuf<T>::get_buf()
 {
-    m_buf.resize(pptr() - pbase());
+    m_buf.resize(m_end);
     auto res = std::move(m_buf);
     setp((char*)&m_buf[0], (char*)&m_buf[m_buf.size()]);
     m_end = m_buf.size();

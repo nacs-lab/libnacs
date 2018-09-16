@@ -75,6 +75,9 @@ inline auto buff_streambuf::_seekpos(pos_type pos) -> pos_type
 {
     if (pos < 0)
         return pos_type(-1);
+    // Update before changing the pointer as well as after changing the pointer
+    // so that we can catch seeking back.
+    update_size();
     auto base = pbase();
     auto end = epptr();
     if (unlikely(base + (off_type)pos > end)) {
@@ -135,7 +138,7 @@ malloc_streambuf::~malloc_streambuf()
 
 char *malloc_streambuf::get_buf(size_t &sz)
 {
-    sz = pptr() - pbase();
+    sz = m_end;
     auto buf = m_buf.release();
     setp(nullptr, nullptr);
     m_end = 0;
