@@ -36,6 +36,10 @@ static inline T checkErrno(T res, Arg&&... arg)
     return res;
 }
 
+// Class that represent an error raised during parsing.
+// It carries information about the reason and location of the error
+// which includes the line number, the line of text and optionally column number / range.
+// Both line and column numbers / ranges are 1-based.
 class NACS_EXPORT(utils) SyntaxError : public std::runtime_error {
 public:
     SyntaxError(std::string what, std::string line, int lineno,
@@ -71,6 +75,9 @@ private:
     int m_colend;
 };
 
+// Pretty print the error
+// The error section in the code will be highlighted
+// based on the column info if availabe.
 std::ostream &operator<<(std::ostream &stm, const SyntaxError &err);
 
 }

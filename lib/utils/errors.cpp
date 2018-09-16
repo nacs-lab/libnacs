@@ -23,6 +23,9 @@ namespace NaCs {
 
 namespace {
 
+// `std::runtime_error` want to get the `what` upfront before we could run anything
+// in the constructor so here it is...
+// Using `std::runtime_error` free us from overloading the `what` so why not...
 static std::string get_message(const std::string &what, const std::string &line,
                                int lineno, int colnum)
 {
