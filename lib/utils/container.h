@@ -258,6 +258,12 @@ public:
         assert(next->obj);
         return {next->obj, true};
     }
+    T *peek_filter() const
+    {
+        auto mid = m_mid.load(std::memory_order_acquire)
+            ->next.load(std::memory_order_relaxed);
+        return mid ? mid->obj : nullptr;
+    }
 
     // For filter thread
     /**
