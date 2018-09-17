@@ -242,6 +242,9 @@ public:
     std::pair<T*,bool> peek()
     {
         auto head = m_head;
+        // `m_mid->next` is the one to be filtered
+        // so `m_mid->obj` is always processed (or `NULL`).
+        // This in turns means that `head->obj` is always processed when not `NULL`.
         if (auto res = head->obj)
             return {res, true};
         auto mid = m_mid.load(std::memory_order_acquire);
