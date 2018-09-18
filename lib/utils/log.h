@@ -26,11 +26,11 @@ namespace NaCs {
 namespace Log {
 
 typedef enum {
-    DEBUG,
-    INFO,
-    WARN,
-    ERROR,
-    FORCE
+    Debug,
+    Info,
+    Warn,
+    Error,
+    Force
 } Level;
 
 extern Level level;

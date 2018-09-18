@@ -35,18 +35,18 @@ namespace Log {
 NACS_PROTECTED() Level level = [] {
     auto env = getenv("NACS_LOG");
     if (!env)
-        return INFO;
+        return Info;
     if (strcasecmp(env, "debug") == 0)
-        return DEBUG;
+        return Debug;
     else if (strcasecmp(env, "info") == 0)
-        return INFO;
+        return Info;
     else if (strcasecmp(env, "warn") == 0 || strcasecmp(env, "warning") == 0)
-        return WARN;
+        return Warn;
     else if (strcasecmp(env, "error") == 0)
-        return ERROR;
+        return Error;
     else if (strcasecmp(env, "none") == 0)
-        return FORCE;
-    return INFO;
+        return Force;
+    return Info;
 }();
 static FILE *log_f = stderr;
 
@@ -62,18 +62,18 @@ NACS_PROTECTED() void setLog(FILE *f)
 
 static NACS_INLINE bool checkLevel(unsigned _level)
 {
-    return _level <= FORCE && _level >= level;
+    return _level <= Force && _level >= level;
 }
 
 NACS_PROTECTED() void _logV(Level level, const char *func, const char *fmt, va_list ap)
 {
     NACS_RET_IF_FAIL(checkLevel(level));
     static const char *log_prefixes[] = {
-        [DEBUG] = "Debug-",
-        [INFO] = "Info-",
-        [WARN] = "Warn-",
-        [ERROR] = "Error-",
-        // [FORCE] = "Log-",
+        [Debug] = "Debug-",
+        [Info] = "Info-",
+        [Warn] = "Warn-",
+        [Error] = "Error-",
+        // [Force] = "Log-",
     };
 
     int pid = getpid();
@@ -81,7 +81,7 @@ NACS_PROTECTED() void _logV(Level level, const char *func, const char *fmt, va_l
     static std::mutex log_lock;
     {
         std::lock_guard<std::mutex> lk(log_lock);
-        if (level == FORCE) {
+        if (level == Force) {
             fprintf(log_f, "%d: ", pid);
         }
         else if (func) {
@@ -106,24 +106,24 @@ NACS_PROTECTED() void _log(Level level, const char *func, const char *fmt, ...)
 
 NACS_PROTECTED() void infoV(const char *fmt, va_list ap)
 {
-    _logV(INFO, nullptr, fmt, ap);
+    _logV(Info, nullptr, fmt, ap);
 }
 NACS_PROTECTED() void warnV(const char *fmt, va_list ap)
 {
-    _logV(WARN, nullptr, fmt, ap);
+    _logV(Warn, nullptr, fmt, ap);
 }
 NACS_PROTECTED() void errorV(const char *fmt, va_list ap)
 {
-    _logV(ERROR, nullptr, fmt, ap);
+    _logV(Error, nullptr, fmt, ap);
 }
 NACS_PROTECTED() void logV(const char *fmt, va_list ap)
 {
-    _logV(FORCE, nullptr, fmt, ap);
+    _logV(Force, nullptr, fmt, ap);
 }
 
 NACS_PROTECTED() void info(const char *fmt, ...)
 {
-    NACS_RET_IF_FAIL(checkLevel(INFO));
+    NACS_RET_IF_FAIL(checkLevel(Info));
     va_list ap;
     va_start(ap, fmt);
     infoV(fmt, ap);
@@ -132,7 +132,7 @@ NACS_PROTECTED() void info(const char *fmt, ...)
 
 NACS_PROTECTED() void warn(const char *fmt, ...)
 {
-    NACS_RET_IF_FAIL(checkLevel(WARN));
+    NACS_RET_IF_FAIL(checkLevel(Warn));
     va_list ap;
     va_start(ap, fmt);
     warnV(fmt, ap);
@@ -141,7 +141,7 @@ NACS_PROTECTED() void warn(const char *fmt, ...)
 
 NACS_PROTECTED() void error(const char *fmt, ...)
 {
-    NACS_RET_IF_FAIL(checkLevel(ERROR));
+    NACS_RET_IF_FAIL(checkLevel(Error));
     va_list ap;
     va_start(ap, fmt);
     errorV(fmt, ap);
