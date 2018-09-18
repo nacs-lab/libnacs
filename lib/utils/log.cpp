@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2013 - 2014 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2013 - 2018 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -32,7 +32,7 @@
 namespace NaCs {
 namespace Log {
 
-NACS_EXPORT() Level level = [] {
+NACS_PROTECTED() Level level = [] {
     auto env = getenv("NACS_LOG");
     if (!env)
         return INFO;
@@ -50,19 +50,24 @@ NACS_EXPORT() Level level = [] {
 }();
 static FILE *log_f = stderr;
 
-NACS_EXPORT() FILE *getLog()
+NACS_PROTECTED() FILE *getLog()
 {
     return log_f;
 }
 
-NACS_EXPORT() void setLog(FILE *f)
+NACS_PROTECTED() void setLog(FILE *f)
 {
     log_f = f ? f : stderr;
 }
 
-NACS_EXPORT() void _logV(Level level, const char *func, const char *fmt, va_list ap)
+static NACS_INLINE bool checkLevel(unsigned _level)
 {
-    NACS_RET_IF_FAIL(level >= level && ((int)level) >= 0 && level <= FORCE);
+    return _level <= FORCE && _level >= level;
+}
+
+NACS_PROTECTED() void _logV(Level level, const char *func, const char *fmt, va_list ap)
+{
+    NACS_RET_IF_FAIL(checkLevel(level));
     static const char *log_prefixes[] = {
         [DEBUG] = "Debug-",
         [INFO] = "Info-",
@@ -78,25 +83,82 @@ NACS_EXPORT() void _logV(Level level, const char *func, const char *fmt, va_list
         std::lock_guard<std::mutex> lk(log_lock);
         if (level == FORCE) {
             fprintf(log_f, "%d: ", pid);
-        } else {
+        }
+        else if (func) {
             fprintf(log_f, "%s%d %s ", log_prefixes[(int)level], pid, func);
+        }
+        else {
+            fprintf(log_f, "%s%d ", log_prefixes[(int)level], pid);
         }
         vfprintf(log_f, fmt, ap);
     }
     fflush(log_f);
 }
 
-NACS_EXPORT() void _log(Level level, const char *func, const char *fmt, ...)
+NACS_PROTECTED() void _log(Level level, const char *func, const char *fmt, ...)
 {
+    NACS_RET_IF_FAIL(checkLevel(level));
     va_list ap;
     va_start(ap, fmt);
     _logV(level, func, fmt, ap);
     va_end(ap);
 }
 
+NACS_PROTECTED() void infoV(const char *fmt, va_list ap)
+{
+    _logV(INFO, nullptr, fmt, ap);
+}
+NACS_PROTECTED() void warnV(const char *fmt, va_list ap)
+{
+    _logV(WARN, nullptr, fmt, ap);
+}
+NACS_PROTECTED() void errorV(const char *fmt, va_list ap)
+{
+    _logV(ERROR, nullptr, fmt, ap);
+}
+NACS_PROTECTED() void logV(const char *fmt, va_list ap)
+{
+    _logV(FORCE, nullptr, fmt, ap);
+}
+
+NACS_PROTECTED() void info(const char *fmt, ...)
+{
+    NACS_RET_IF_FAIL(checkLevel(INFO));
+    va_list ap;
+    va_start(ap, fmt);
+    infoV(fmt, ap);
+    va_end(ap);
+}
+
+NACS_PROTECTED() void warn(const char *fmt, ...)
+{
+    NACS_RET_IF_FAIL(checkLevel(WARN));
+    va_list ap;
+    va_start(ap, fmt);
+    warnV(fmt, ap);
+    va_end(ap);
+}
+
+NACS_PROTECTED() void error(const char *fmt, ...)
+{
+    NACS_RET_IF_FAIL(checkLevel(ERROR));
+    va_list ap;
+    va_start(ap, fmt);
+    errorV(fmt, ap);
+    va_end(ap);
+}
+
+NACS_PROTECTED() void log(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    logV(fmt, ap);
+    va_end(ap);
+}
+
 } // Log
 
-NACS_EXPORT() void backtrace()
+NACS_PROTECTED() void backtrace()
 {
 #if !NACS_OS_WINDOWS
     void *buff[1024];

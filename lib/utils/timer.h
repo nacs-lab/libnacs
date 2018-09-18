@@ -48,7 +48,7 @@ uint64_t getElapse(uint64_t prev);
 static inline void
 printTime(uint64_t time)
 {
-    nacsLog("Time: %" PRIu64 "\n", time);
+    Log::log("Time: %" PRIu64 "\n", time);
 }
 
 struct Timer {
