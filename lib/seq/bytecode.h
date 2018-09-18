@@ -222,11 +222,11 @@ static inline size_t count(const std::vector<uint8_t> &code)
  * Similar to most other functions on the bytecode, this merge wait instructions together
  * and also merge wait into TTL instructions.
  */
-void print(std::ostream &stm, const uint8_t *code, size_t code_len, uint32_t ttl_mask);
-void print(std::ostream &stm, const uint8_t *code, size_t code_len);
-static inline void print(std::ostream &stm, const std::vector<uint8_t> &code)
+void print(std::ostream &stm, const uint8_t *code, size_t code_len, uint32_t ttl_mask=0);
+static inline void print(std::ostream &stm, const std::vector<uint8_t> &code,
+                         uint32_t ttl_mask=0)
 {
-    print(stm, &code[0], code.size());
+    print(stm, &code[0], code.size(), ttl_mask);
 }
 
 /**
