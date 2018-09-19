@@ -82,5 +82,9 @@ int main()
         assert(val == 6);
     }
     assert(val == 7);
+    {
+        // Make sure we are default constructable.
+        AnyPtr ptr;
+    }
     return 0;
 }

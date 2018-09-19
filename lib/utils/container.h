@@ -44,6 +44,8 @@ class AnyPtr : std::unique_ptr<void,void(*)(void*)> {
             delete (T*)p;
         }
     };
+    static void noop_free(void*)
+    {}
 public:
     using std::unique_ptr<void,void(*)(void*)>::unique_ptr;
     template<typename T, class=std::enable_if_t<!std::is_same<T,void>::value>>
@@ -57,6 +59,10 @@ public:
                                     !std::is_pointer<T>::value>>
     AnyPtr(T &&v)
         : AnyPtr(new T(std::move(v)))
+    {
+    }
+    AnyPtr()
+        : unique_ptr(nullptr, noop_free)
     {
     }
     void *get() const noexcept
