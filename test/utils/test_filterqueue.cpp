@@ -31,6 +31,12 @@ std::uniform_int_distribution<int> dist{0, 10};
 void test(int n)
 {
     FilterQueue<std::atomic<int>> queue;
+    {
+        auto peekres = queue.peek();
+        assert(!peekres.first);
+        assert(!peekres.second);
+        assert(!queue.pop());
+    }
     std::thread tfilter([&] {
             for (int i = 0; i < n; i++) {
                 std::atomic<int> *p;

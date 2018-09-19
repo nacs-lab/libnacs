@@ -247,12 +247,12 @@ public:
         // This in turns means that `head->obj` is always processed when not `NULL`.
         if (auto res = head->obj)
             return {res, true};
-        auto mid = m_mid.load(std::memory_order_acquire);
         auto next = head->next.load(std::memory_order_relaxed);
-        if (head == mid)
-            return {next->obj, false};
         if (!next)
             return {nullptr, false};
+        auto mid = m_mid.load(std::memory_order_acquire);
+        if (head == mid)
+            return {next->obj, false};
         m_head = next;
         m_alloc.free(head);
         assert(next->obj);
