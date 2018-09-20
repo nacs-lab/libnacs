@@ -21,6 +21,7 @@ endif()
 # Options
 option(ENABLE_KNACS "Enable kernel driver" Off)
 option(ENABLE_LLVM "Enable LLVM JIT" Off)
+option(STATIC_LLVM "Statically link LLVM" Off)
 option(ENABLE_PYWRAPPER "Enable python wrapper for nacs-seq" On)
 option(ENABLE_INSTALL_NONLIB
   "Enable installation of files other than the libraries (e.g. headers and pkgconfig)"
