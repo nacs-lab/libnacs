@@ -99,9 +99,9 @@ class Writer {
         int tshift;
         if (op == 1) {
             // TTL1
-            tmask = 0xc0;
+            tmask = 0x3;
             tp = (uint8_t*)&stm[last_timed_inst + 1];
-            tshift = 6;
+            tshift = 0;
         }
         else {
             assert(0 && "Invalid command to increase time.");
