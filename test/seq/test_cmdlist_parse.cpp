@@ -33,24 +33,32 @@ void test(std::string name)
     vector_ostream vstm;
     try {
         uint32_t ttl_mask = Seq::CmdList::parse(vstm, istm);
+        auto vec = vstm.get_buf();
+        uint64_t len_ns = Seq::CmdList::total_time((uint8_t*)vec.data(), vec.size()) * 10;
         std::ifstream bstm(name + ".bin");
         assert(bstm.good());
-        uint32_t v;
-        bstm.read((char*)&v, 4);
-        assert(bstm.good());
-        assert(v == ttl_mask);
-        auto vec = vstm.get_buf();
-        for (auto c: vec)
-            assert(c == bstm.get());
-        assert(bstm.get() == eofc);
+        std::string str(std::istreambuf_iterator<char>(bstm), {});
+        auto str_data = (const uint8_t*)str.data();
+        auto str_sz = str.size();
+        uint32_t ver = 1;
+        assert(memcmp(str_data, &ver, 4) == 0);
+        str_data += 4;
+        str_sz -= 4;
+        assert(memcmp(str_data, &len_ns, 8) == 0);
+        str_data += 8;
+        str_sz -= 8;
+        assert(memcmp(str_data, &ttl_mask, 4) == 0);
+        str_data += 4;
+        str_sz -= 4;
+        assert(str_sz == vec.size());
+        assert(memcmp(str_data, vec.data(), str_sz));
     }
     catch (const SyntaxError &err) {
-        std::stringstream sstr;
+        string_ostream sstr;
         sstr << err;
         std::ifstream estm(name + ".err");
-        for (auto c: sstr.str())
-            assert(c == estm.get());
-        assert(estm.get() == eofc);
+        std::string expected(std::istreambuf_iterator<char>(estm), {});
+        assert(sstr.get_buf() == expected);
     }
 }
 
