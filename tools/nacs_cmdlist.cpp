@@ -136,10 +136,10 @@ int main(int argc, char **argv)
         Log::error("No action specified.\n");
         return 1;
     }
-    if (strcmp(argv[1], "parse")) {
+    if (strcmp(argv[1], "parse") == 0) {
         return parse(argc - 2, argv + 2);
     }
-    else if (strcmp(argv[1], "print")) {
+    else if (strcmp(argv[1], "print") == 0) {
         return print(argc - 2, argv + 2);
     }
     else {
