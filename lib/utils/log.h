@@ -37,6 +37,8 @@ extern Level level;
 
 void setLog(FILE *log_f);
 FILE *getLog();
+bool printPID();
+void printPID(bool b);
 
 __attribute__((format(printf, 3, 4)))
 void _log(Level level, const char *func, const char *fmt, ...);

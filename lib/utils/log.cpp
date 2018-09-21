@@ -48,6 +48,7 @@ NACS_PROTECTED() Level level = [] {
         return Force;
     return Info;
 }();
+
 static FILE *log_f = stderr;
 
 NACS_PROTECTED() FILE *getLog()
@@ -60,6 +61,17 @@ NACS_PROTECTED() void setLog(FILE *f)
     log_f = f ? f : stderr;
 }
 
+static bool print_pid = true;
+NACS_PROTECTED() bool printPID()
+{
+    return print_pid;
+}
+
+NACS_PROTECTED() void printPID(bool b)
+{
+    print_pid = b;
+}
+
 static NACS_INLINE bool checkLevel(unsigned _level)
 {
     return _level <= Force && _level >= level;
@@ -69,26 +81,35 @@ NACS_PROTECTED() void _logV(Level level, const char *func, const char *fmt, va_l
 {
     NACS_RET_IF_FAIL(checkLevel(level));
     static const char *log_prefixes[] = {
-        [Debug] = "Debug-",
-        [Info] = "Info-",
-        [Warn] = "Warn-",
-        [Error] = "Error-",
-        // [Force] = "Log-",
+        [Debug] = "Debug",
+        [Info] = "Info",
+        [Warn] = "Warn",
+        [Error] = "Error",
+        // [Force] = "Log",
     };
-
-    int pid = getpid();
 
     static std::mutex log_lock;
     {
         std::lock_guard<std::mutex> lk(log_lock);
-        if (level == Force) {
-            fprintf(log_f, "%d: ", pid);
+        if (print_pid) {
+            int pid = getpid();
+            if (level == Force) {
+                fprintf(log_f, "%d: ", pid);
+            }
+            else if (func) {
+                fprintf(log_f, "%s-%d %s ", log_prefixes[(int)level], pid, func);
+            }
+            else {
+                fprintf(log_f, "%s-%d ", log_prefixes[(int)level], pid);
+            }
+        }
+        else if (level == Force) {
         }
         else if (func) {
-            fprintf(log_f, "%s%d %s ", log_prefixes[(int)level], pid, func);
+            fprintf(log_f, "%s: %s ", log_prefixes[(int)level], func);
         }
         else {
-            fprintf(log_f, "%s%d ", log_prefixes[(int)level], pid);
+            fprintf(log_f, "%s: ", log_prefixes[(int)level]);
         }
         vfprintf(log_f, fmt, ap);
     }
