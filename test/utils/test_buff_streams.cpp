@@ -32,6 +32,11 @@ void test_print(std::ostream &stm)
     stm << 12345 << " abcde " << 1.23;
 }
 
+void test_endl(std::ostream &stm)
+{
+    stm << "123456789" << std::endl;
+}
+
 void test_seek(std::ostream &stm)
 {
     stm << 12345 << " abcde " << 1.23 << "asdfjkl;";
@@ -92,6 +97,7 @@ void test_streams(F &&f)
 
 int main()
 {
+    test_streams(test_endl);
     test_streams(test_print);
     test_streams(test_seek);
     return 0;

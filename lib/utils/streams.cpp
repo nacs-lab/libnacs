@@ -115,6 +115,12 @@ auto buff_streambuf::seekoff(off_type off, std::ios_base::seekdir dir,
     return _seekpos(pos);
 }
 
+inline int buff_streambuf::sync()
+{
+    update_size();
+    return 0;
+}
+
 inline void buff_streambuf::update_size()
 {
     auto sz = pptr() - pbase();

@@ -58,6 +58,7 @@ private:
     pos_type seekoff(off_type off, std::ios_base::seekdir dir,
                      std::ios_base::openmode which) override;
     pos_type seekpos(pos_type pos, std::ios_base::openmode which) override;
+    int sync() override;
 
     pos_type _seekpos(pos_type pos);
     void update_size();
