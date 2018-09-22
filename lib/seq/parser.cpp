@@ -325,7 +325,7 @@ std::pair<uint8_t,uint32_t> ParserBase::read_freqcmd()
             syntax_error("Unknown frequency unit", -1, unit.second + 1, colno);
         }
         if (freq_hz > 1.75e9)
-            syntax_error("Frequency too high (max 1.75GHz)", -1, freq_start + 1, colno);
+            syntax_error("Frequency too high (max 1.75GHz)", -1, freq_hz_start + 1, colno);
         constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
         freq = uint32_t(0.5 + freq_hz * freq_factor);
     }
@@ -402,7 +402,7 @@ std::pair<uint8_t,std::pair<bool,uint16_t>> ParserBase::read_phasecmd()
             syntax_error("Unknown phase unit", -1, unit.second + 1, colno);
         }
         if (!(abs(phase_deg) <= 360 * 10))
-            syntax_error("Phase too high (max +-1000%)", -1, phase_start + 1, colno);
+            syntax_error("Phase too high (max +-1000%)", -1, phase_deg_start + 1, colno);
         phase_deg = fmod(phase_deg, 360);
         constexpr double phase_factor = (1 << 14) / 90.0;
         phase = uint16_t(0.5 + phase_deg * phase_factor);
