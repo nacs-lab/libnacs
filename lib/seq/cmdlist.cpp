@@ -72,7 +72,7 @@ class Writer {
     // States
     uint32_t all_ttl_mask;
 
-    uint8_t max_time_left = 0;
+    uint64_t max_time_left = 0;
     ssize_t last_timed_inst = 0;
 
     buff_ostream &stm;
@@ -89,27 +89,28 @@ class Writer {
     // Increase the wait time encoded in the last instruction by `t`.
     // The caller should have checked that the time fits in the maximum time possible to be
     // encoded.
-    void incLastTime(uint8_t t)
+    void incLastTime(uint64_t t)
     {
         assert(t <= max_time_left);
-        max_time_left = uint8_t(max_time_left - t);
+        max_time_left = max_time_left - t;
         uint8_t op = stm[last_timed_inst];
-        uint8_t *tp;
-        uint8_t tmask;
-        int tshift;
         if (op == 1) {
+            assert(t <= 3);
             // TTL1
-            tmask = 0x3;
-            tp = (uint8_t*)&stm[last_timed_inst + 1];
-            tshift = 0;
+            uint8_t b = stm[last_timed_inst + 1];
+            uint8_t tb = uint8_t(t + (b & 0x3));
+            stm[last_timed_inst + 1] = uint8_t((b & ~0x3) | (tb & 0x3));
+        }
+        else if (op == 2) {
+            uint64_t ti;
+            memcpy(&ti, &stm[last_timed_inst + 1], 8);
+            ti += t;
+            memcpy(&stm[last_timed_inst + 1], &ti, 8);
         }
         else {
             assert(0 && "Invalid command to increase time.");
             abort();
         }
-        uint8_t b = *tp;
-        t = uint8_t(t + ((b & tmask) >> tshift));
-        *tp = uint8_t((b & ~tmask) | ((t << tshift) & tmask));
     }
 
 public:
@@ -134,14 +135,15 @@ public:
         if (dt == 0)
             return;
         if (dt <= max_time_left) {
-            incLastTime(uint8_t(dt));
+            incLastTime(dt);
             return;
         }
         if (max_time_left) {
             dt -= max_time_left;
             incLastTime(max_time_left);
         }
-        addInst(Inst::Wait{OpCode::Wait, dt});
+        last_timed_inst = addInst(Inst::Wait{OpCode::Wait, dt});
+        max_time_left = UINT64_MAX - dt;
     }
 
     void addClock(uint8_t period)

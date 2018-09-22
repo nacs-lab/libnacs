@@ -19,6 +19,7 @@
 #include "../../lib/seq/cmdlist.h"
 #include "../../lib/utils/streams.h"
 #include "../../lib/utils/errors.h"
+#include "../../lib/utils/log.h"
 
 #include <iostream>
 #include <fstream>
@@ -55,15 +56,17 @@ static uint64_t test_cmdlist_eq(const std::string &cmdlist, uint32_t ttl_mask,
     return len_ns;
 }
 
-static void test(std::string name)
+static void test(const std::string &dir, const std::string &name)
 {
-    std::ifstream istm(name);
+    Log::log("Testing: %s\n", name.c_str());
+    auto path = dir + name;
+    std::ifstream istm(path);
     assert(istm.good());
     string_ostream vstm;
     try {
         uint32_t ttl_mask = Seq::CmdList::parse(vstm, istm);
         auto vec = vstm.get_buf();
-        std::ifstream bstm(name + ".cmdbin");
+        std::ifstream bstm(path + ".cmdbin");
         assert(bstm.good());
         std::string binstr(std::istreambuf_iterator<char>(bstm), {});
         uint64_t len_ns = test_cmdlist_eq(vec, ttl_mask, binstr);
@@ -72,7 +75,7 @@ static void test(std::string name)
         tstm << "# " << len_ns << " ns" << std::endl;
         Seq::CmdList::print(tstm, (uint8_t*)vec.data(), vec.size(), ttl_mask);
         auto text = tstm.get_buf();
-        test_file_eq(name + ".txt", text);
+        test_file_eq(path + ".txt", text);
 
         const_istream tistm(text);
         auto ttl_mask2 = Seq::CmdList::parse(vstm, tistm);
@@ -82,45 +85,55 @@ static void test(std::string name)
     catch (const SyntaxError &err) {
         string_ostream sstr;
         sstr << err;
-        test_file_eq(name + ".err", sstr.get_buf());
+        test_file_eq(path + ".err", sstr.get_buf());
     }
 }
 
 int main(int argc, char **argv)
 {
+    Log::printPID(false);
     if (argc != 2) {
-        std::cerr << "ERROR: wrong number of arguments." << std::endl;
+        Log::error("ERROR: wrong number of arguments.\n");
         return 1;
     }
 
     std::string dir(argv[1]);
     dir += "/cmdlists/";
 
-    test(dir + "ttl_mask_err1");
-    test(dir + "ttl_mask_err2");
-    test(dir + "ttl_mask_err3");
+    test(dir, "ttl_mask_err1");
+    test(dir, "ttl_mask_err2");
+    test(dir, "ttl_mask_err3");
 
-    test(dir + "invalid_cmd");
-    test(dir + "invalid_cmd2");
+    test(dir, "invalid_cmd");
+    test(dir, "invalid_cmd2");
 
-    test(dir + "invalid_ttl");
-    test(dir + "invalid_ttl1_space");
-    test(dir + "invalid_ttlall_space");
+    test(dir, "invalid_ttl");
+    test(dir, "invalid_ttl1_space");
+    test(dir, "invalid_ttlall_space");
 
-    test(dir + "invalid_ttl1_1");
-    test(dir + "invalid_ttl1_2");
-    test(dir + "invalid_ttl1_3");
-    test(dir + "invalid_ttl1_4");
+    test(dir, "invalid_ttl1_1");
+    test(dir, "invalid_ttl1_2");
+    test(dir, "invalid_ttl1_3");
+    test(dir, "invalid_ttl1_4");
 
-    test(dir + "invalid_ttl_t1");
-    test(dir + "invalid_ttl_t2");
-    test(dir + "invalid_ttl_t3");
+    test(dir, "invalid_ttl_t1");
+    test(dir, "invalid_ttl_t2");
+    test(dir, "invalid_ttl_t3");
 
-    test(dir + "invalid_wait");
-    test(dir + "invalid_wait2");
-    test(dir + "invalid_wait3");
+    test(dir, "invalid_wait");
+    test(dir, "invalid_wait2");
+    test(dir, "invalid_wait3");
 
-    test(dir + "ttl_time");
+    test(dir, "ttl_time");
+    test(dir, "ttl_mask_wait");
+
+    test(dir, "dds_freq");
+    test(dir, "invalid_dds");
+    test(dir, "invalid_freq");
+    test(dir, "invalid_freq2");
+    test(dir, "invalid_freq_unit");
+    test(dir, "invalid_freq_val");
+    test(dir, "invalid_freq_val2");
 
     return 0;
 }
