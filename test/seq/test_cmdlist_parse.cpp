@@ -26,39 +26,63 @@
 
 using namespace NaCs;
 
-void test(std::string name)
+static void test_file_eq(const std::string &fname, const std::string &cmp)
+{
+    std::ifstream stm(fname);
+    assert(stm.good());
+    std::string fstr(std::istreambuf_iterator<char>(stm), {});
+    assert(cmp == fstr);
+}
+
+static uint64_t test_cmdlist_eq(const std::string &cmdlist, uint32_t ttl_mask,
+                                const std::string &cmp)
+{
+    uint64_t len_ns = Seq::CmdList::total_time((uint8_t*)cmdlist.data(), cmdlist.size()) * 10;
+    auto str_data = (const uint8_t*)cmp.data();
+    auto str_sz = cmp.size();
+    uint32_t ver = 1;
+    assert(memcmp(str_data, &ver, 4) == 0);
+    str_data += 4;
+    str_sz -= 4;
+    assert(memcmp(str_data, &len_ns, 8) == 0);
+    str_data += 8;
+    str_sz -= 8;
+    assert(memcmp(str_data, &ttl_mask, 4) == 0);
+    str_data += 4;
+    str_sz -= 4;
+    assert(str_sz == cmdlist.size());
+    assert(memcmp(str_data, cmdlist.data(), str_sz));
+    return len_ns;
+}
+
+static void test(std::string name)
 {
     std::ifstream istm(name);
     assert(istm.good());
-    vector_ostream vstm;
+    string_ostream vstm;
     try {
         uint32_t ttl_mask = Seq::CmdList::parse(vstm, istm);
         auto vec = vstm.get_buf();
-        uint64_t len_ns = Seq::CmdList::total_time((uint8_t*)vec.data(), vec.size()) * 10;
         std::ifstream bstm(name + ".bin");
         assert(bstm.good());
-        std::string str(std::istreambuf_iterator<char>(bstm), {});
-        auto str_data = (const uint8_t*)str.data();
-        auto str_sz = str.size();
-        uint32_t ver = 1;
-        assert(memcmp(str_data, &ver, 4) == 0);
-        str_data += 4;
-        str_sz -= 4;
-        assert(memcmp(str_data, &len_ns, 8) == 0);
-        str_data += 8;
-        str_sz -= 8;
-        assert(memcmp(str_data, &ttl_mask, 4) == 0);
-        str_data += 4;
-        str_sz -= 4;
-        assert(str_sz == vec.size());
-        assert(memcmp(str_data, vec.data(), str_sz));
+        std::string binstr(std::istreambuf_iterator<char>(bstm), {});
+        uint64_t len_ns = test_cmdlist_eq(vec, ttl_mask, binstr);
+
+        string_ostream tstm;
+        tstm << "# " << len_ns << " ns" << std::endl;
+        Seq::CmdList::print(tstm, (uint8_t*)vec.data(), vec.size(), ttl_mask);
+        auto text = tstm.get_buf();
+        test_file_eq(name + ".txt", text);
+
+        const_istream tistm(text);
+        auto ttl_mask2 = Seq::CmdList::parse(vstm, tistm);
+        assert(ttl_mask == ttl_mask2);
+        assert(vec == vstm.get_buf());
     }
     catch (const SyntaxError &err) {
         string_ostream sstr;
         sstr << err;
-        std::ifstream estm(name + ".err");
-        std::string expected(std::istreambuf_iterator<char>(estm), {});
-        assert(sstr.get_buf() == expected);
+        test_file_eq(name + ".err", sstr.get_buf());
     }
 }
 
