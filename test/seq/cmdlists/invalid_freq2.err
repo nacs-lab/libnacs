@@ -1,0 +1,4 @@
+SyntaxError: Missing frequency unit
+Line: 3, Column: 18
+freq(10) = 200.0 
+                 ^

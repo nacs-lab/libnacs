@@ -1,0 +1,5 @@
+# 2000 ns
+freq(10)=0x3beb3
+freq(0)=0x7b
+freq(1)=0x1767dce
+freq(2)=0x57c57c58

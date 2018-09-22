@@ -1,0 +1,7 @@
+# Test ttl with time
+ttl_mask = 0x10ff
+ttl(1) = On t = 2us
+wait(0.1us)
+ttl(2) = Off t = 0.5ms
+ttl(3) = true t = 0.05s
+ttl(0) = 0 t = 0x4

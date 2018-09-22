@@ -1,0 +1,5 @@
+# Test
+freq(10) = 200.0 kHz
+freq(0) = 100.0 Hz
+freq(1) = 20.0 MHz
+freq(2) = 1.2 GHz

@@ -1,0 +1,4 @@
+SyntaxError: Number literal out of range [0, 21]
+Line: 3
+freq(100) = 2.0 Hz
+     ~~~

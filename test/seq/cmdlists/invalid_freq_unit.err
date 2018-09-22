@@ -1,0 +1,4 @@
+SyntaxError: Unknown frequency unit
+Line: 3
+freq(10) = 200.0 THz
+                 ~~~

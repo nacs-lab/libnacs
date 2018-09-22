@@ -1,0 +1,4 @@
+SyntaxError: Frequency too high (max 1.75GHz)
+Line: 2
+freq(0) = 1.8 GHz
+          ~~~~~~~
