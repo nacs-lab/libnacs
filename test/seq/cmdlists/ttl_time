@@ -1,0 +1,5 @@
+# Test ttl with time
+ttl(1) = On t = 2us
+ttl(2) = Off t = 0.5ms
+ttl(3) = true t = 0.05s
+ttl(0) = 0 t = 0x4

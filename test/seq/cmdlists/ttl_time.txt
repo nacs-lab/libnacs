@@ -1,0 +1,6 @@
+# 50502040 ns
+ttl_mask=0xf
+ttl(1)=1 t=0xc8
+ttl(2)=0 t=0xc350
+ttl(3)=1 t=0x4c4b40
+ttl(0)=0 t=0x4

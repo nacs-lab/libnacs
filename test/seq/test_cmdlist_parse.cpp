@@ -51,7 +51,7 @@ static uint64_t test_cmdlist_eq(const std::string &cmdlist, uint32_t ttl_mask,
     str_data += 4;
     str_sz -= 4;
     assert(str_sz == cmdlist.size());
-    assert(memcmp(str_data, cmdlist.data(), str_sz));
+    assert(memcmp(str_data, cmdlist.data(), str_sz) == 0);
     return len_ns;
 }
 
@@ -63,7 +63,7 @@ static void test(std::string name)
     try {
         uint32_t ttl_mask = Seq::CmdList::parse(vstm, istm);
         auto vec = vstm.get_buf();
-        std::ifstream bstm(name + ".bin");
+        std::ifstream bstm(name + ".cmdbin");
         assert(bstm.good());
         std::string binstr(std::istreambuf_iterator<char>(bstm), {});
         uint64_t len_ns = test_cmdlist_eq(vec, ttl_mask, binstr);
@@ -119,6 +119,8 @@ int main(int argc, char **argv)
     test(dir + "invalid_wait");
     test(dir + "invalid_wait2");
     test(dir + "invalid_wait3");
+
+    test(dir + "ttl_time");
 
     return 0;
 }
