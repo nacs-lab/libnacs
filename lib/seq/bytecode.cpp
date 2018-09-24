@@ -103,6 +103,7 @@ void Keeper::addPulse(uint64_t dt)
     size_t pidx = m_npulses % (m_cons.avg_window - 1);
     m_total_len = m_total_len + dt - m_plens[pidx];
     m_plens[pidx] = dt;
+    m_npulses++;
 }
 
 uint64_t Keeper::minDt(uint64_t min_dt) const
@@ -203,6 +204,7 @@ class Writer {
             incLastTime(uint8_t(dt));
             return;
         }
+        keeper.addPulse(dt);
         uint16_t times[17];
         memset(times, 0, sizeof(times));
         for (int i = 15; i >= 0; i--) {
@@ -252,6 +254,7 @@ class Writer {
         if (ttl == cur_ttl && ttl_set)
             return 0;
         addWait(t - cur_t);
+        keeper.addPulse(3);
         cur_t += 3;
         auto changes = ttl ^ cur_ttl;
         if (!ttl_set) {
@@ -341,6 +344,7 @@ class Writer {
         addWait(t - cur_t);
         cur_t += 5;
         addInst(Inst::Clock{OpCode::Clock, 0, period});
+        keeper.addPulse(5);
         return 5;
     }
 
@@ -353,6 +357,7 @@ class Writer {
         if (dds[chn].freq_set && freq == dds[chn].freq)
             return 0;
         addWait(t - cur_t);
+        keeper.addPulse(50);
         cur_t += 50;
         uint32_t dfreq = freq - dds[chn].freq;
         dds[chn].freq = freq;
@@ -384,6 +389,7 @@ class Writer {
         if (dds[chn].amp_set && amp == dds[chn].amp)
             return 0;
         addWait(t - cur_t);
+        keeper.addPulse(50);
         cur_t += 50;
         uint16_t damp = uint16_t(amp - dds[chn].amp);
         dds[chn].amp = amp;
@@ -417,6 +423,7 @@ class Writer {
         if (dac[chn].set && V == dac[chn].V)
             return 0;
         addWait(t - cur_t);
+        keeper.addPulse(45);
         cur_t += 45;
         uint16_t dV = uint16_t(V - dac[chn].V);
         dac[chn].V = V;
@@ -431,8 +438,9 @@ class Writer {
     }
 
 public:
-    Writer(buff_ostream &stm)
-        : stm(stm)
+    Writer(buff_ostream &stm, Time::Keeper keeper)
+        : stm(stm),
+          keeper(keeper)
     {}
 
     uint32_t get_ttl_mask() const
@@ -494,6 +502,8 @@ public:
         }
         return mint;
     }
+
+    Time::Keeper keeper;
 };
 
 // Easier to deal with than static members.
@@ -508,7 +518,7 @@ class Scheduler {
     Writer writer;
 
     Time::Constraints t_cons;
-    Time::Keeper keeper;
+    Time::Keeper &keeper;
 
     /**
      * States for value calculations.
@@ -611,7 +621,6 @@ class Scheduler {
                 tlim += start_t;
             int min_dt = writer.addPulse(cid, val, t + start_t, tlim);
             if (min_dt < 0) {
-                keeper.addPulse(next_clock_time - prev_t);
                 int min_dt = writer.addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
                                              next_clock_time + start_t, UINT64_MAX);
                 prev_t = next_clock_time;
@@ -622,8 +631,6 @@ class Scheduler {
                 continue;
             }
             else if (min_dt != 0) {
-                uint64_t dt = t - prev_t;
-                keeper.addPulse(dt);
                 prev_t = t;
                 next_t = t + keeper.minDt(min_dt);
             }
@@ -833,9 +840,9 @@ public:
           n_pulses(pulses.size()),
           defaults(seq.defaults),
           clocks(seq.clocks),
-          writer(stm),
+          writer(stm, t_cons),
           t_cons(t_cons),
-          keeper(t_cons),
+          keeper(writer.keeper),
           start_vals(n_pulses),
           end_vals(n_pulses)
     {
