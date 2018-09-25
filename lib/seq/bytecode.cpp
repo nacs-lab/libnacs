@@ -260,8 +260,8 @@ class Writer {
         if (ttl == cur_ttl && ttl_set)
             return 0;
         addWait(t - cur_t);
-        keeper.addPulse(3);
-        cur_t += 3;
+        keeper.addPulse(PulseTime::Min);
+        cur_t += PulseTime::Min;
         auto changes = ttl ^ cur_ttl;
         if (!ttl_set) {
             ttl_set = true;
@@ -327,7 +327,7 @@ class Writer {
             last_timed_inst = addInst(Inst::TTLAll{OpCode::TTLAll, 0, ttl});
             max_time_left = 15;
         }
-        return 3;
+        return PulseTime::Min;
     }
 
     int addTTLSingle(uint64_t t, uint8_t chn, bool val)
@@ -348,10 +348,10 @@ class Writer {
     int addClock(uint64_t t, uint8_t period)
     {
         addWait(t - cur_t);
-        cur_t += 5;
+        cur_t += PulseTime::Clock;
         addInst(Inst::Clock{OpCode::Clock, 0, period});
-        keeper.addPulse(5);
-        return 5;
+        keeper.addPulse(PulseTime::Clock);
+        return PulseTime::Clock;
     }
 
     static constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
@@ -363,8 +363,8 @@ class Writer {
         if (dds[chn].freq_set && freq == dds[chn].freq)
             return 0;
         addWait(t - cur_t);
-        keeper.addPulse(50);
-        cur_t += 50;
+        keeper.addPulse(PulseTime::DDSFreq);
+        cur_t += PulseTime::DDSFreq;
         uint32_t dfreq = freq - dds[chn].freq;
         dds[chn].freq = freq;
         dds[chn].freq_set = true;
@@ -384,7 +384,7 @@ class Writer {
             addInst(Inst::DDSFreq{OpCode::DDSFreq, uint8_t(chn & 0x1f),
                         uint32_t(freq & 0x7fffffff)});
         }
-        return 50;
+        return PulseTime::DDSFreq;
     }
 
     int addDDSAmp(uint64_t t, uint8_t chn, double ampf)
@@ -395,8 +395,8 @@ class Writer {
         if (dds[chn].amp_set && amp == dds[chn].amp)
             return 0;
         addWait(t - cur_t);
-        keeper.addPulse(50);
-        cur_t += 50;
+        keeper.addPulse(PulseTime::DDSAmp);
+        cur_t += PulseTime::DDSAmp;
         uint16_t damp = uint16_t(amp - dds[chn].amp);
         dds[chn].amp = amp;
         dds[chn].amp_set = true;
@@ -408,7 +408,7 @@ class Writer {
             addInst(Inst::DDSAmp{OpCode::DDSAmp, 0, uint8_t(chn & 0x1f),
                         uint16_t(amp & 0xfff)});
         }
-        return 50;
+        return PulseTime::DDSAmp;
     }
 
     int addDAC(uint64_t t, uint8_t chn, double Vf)
@@ -429,8 +429,8 @@ class Writer {
         if (dac[chn].set && V == dac[chn].V)
             return 0;
         addWait(t - cur_t);
-        keeper.addPulse(45);
-        cur_t += 45;
+        keeper.addPulse(PulseTime::DAC);
+        cur_t += PulseTime::DAC;
         uint16_t dV = uint16_t(V - dac[chn].V);
         dac[chn].V = V;
         dac[chn].set = true;
@@ -440,7 +440,7 @@ class Writer {
         else {
             addInst(Inst::DAC{OpCode::DAC, 0, uint8_t(chn & 0x3), V});
         }
-        return 45;
+        return PulseTime::DAC;
     }
 
 public:
@@ -480,15 +480,24 @@ public:
 
     int addPulse(Channel chn, Val val, uint64_t t, uint64_t tlim)
     {
-        int mint = 50;
+        int mint;
         if (chn.typ == Channel::TTL) {
-            mint = 3;
+            mint = PulseTime::Min;
         }
         else if (chn.typ == Channel::CLOCK) {
-            mint = 5;
+            mint = PulseTime::Clock;
         }
         else if (chn.typ == Channel::DAC) {
-            mint = 45;
+            mint = PulseTime::DAC;
+        }
+        else if (chn.typ == Channel::DDS_FREQ) {
+            mint = PulseTime::DDSFreq;
+        }
+        else if (chn.typ == Channel::DDS_AMP) {
+            mint = PulseTime::DDSAmp;
+        }
+        else {
+            return -1;
         }
         if (t + mint > tlim)
             return -1;
@@ -606,15 +615,15 @@ class Scheduler {
     uint64_t get_next_time(uint64_t dt)
     {
         // Hardcoded for now.
-        // The minimum wait time we support is 3 so if the pulse does not happen exactly
-        // after the last one it need to happen at least 3 cycles later...
-        static constexpr uint8_t deadtime = 3;
+        // The minimum wait time we support is `PulseTime::Min`
+        // so if the pulse does not happen exactly after the last one
+        // it need to happen at least `PulseTime::Min` cycles later...
         auto req_t = prev_t + dt;
         if (next_t >= req_t)
             return next_t;
-        if (req_t >= next_t + deadtime)
+        if (req_t >= next_t + PulseTime::Min)
             return req_t;
-        return next_t + deadtime;
+        return next_t + PulseTime::Min;
     }
 
     // Add a pulse at `t`. The caller is expected to check the time limit

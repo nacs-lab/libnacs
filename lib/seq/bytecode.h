@@ -252,15 +252,15 @@ struct ExeState {
      *
      * * `dds_freq(uint8_t chn, uint32_t freq)`:
      *
-     *    Generate a DDS frequency pulse. Should take `50` cycles.
+     *    Generate a DDS frequency pulse. Should take `PulseTime::DDSFreq` cycles.
      *
      * * `dds_amp(uint8_t chn, uint16_t amp)`:
      *
-     *    Generate a DDS amplitude pulse. Should take `50` cycles.
+     *    Generate a DDS amplitude pulse. Should take `PulseTime::DDSAmp` cycles.
      *
      * * `dac(uint8_t chn, uint16_t V)`:
      *
-     *    Generate a DAC pulse. Should take `45` cycles.
+     *    Generate a DAC pulse. Should take `PulseTime::DAC` cycles.
      *
      * * `wait(uint64_t t)`:
      *
@@ -268,7 +268,7 @@ struct ExeState {
      *
      * * `clock(uint8_t period)`:
      *
-     *    Generate a clock pulse (`255` is off). Should take 5 cycles.
+     *    Generate a clock pulse (`255` is off). Should take `PulseTime::Clock` cycles.
      */
     template<typename T>
     void run(T &&cb, const uint8_t *code, size_t len);
@@ -346,7 +346,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
         switch (op) {
         case OpCode::TTLAll: {
             auto inst = loadInst<Inst::TTLAll>(p);
-            runTTL(inst.val, inst.t + 3);
+            runTTL(inst.val, inst.t + PulseTime::Min);
             break;
         }
         case OpCode::TTL2: {
@@ -355,7 +355,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             ttl = ttl ^ (1 << inst.val1);
             if (inst.val2 != inst.val1)
                 ttl = ttl ^ (1 << inst.val2);
-            runTTL(ttl, inst.t + 3);
+            runTTL(ttl, inst.t + PulseTime::Min);
             break;
         }
         case OpCode::TTL4: {
@@ -366,7 +366,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             ttl = ttl ^ (1 << inst.val3);
             if (inst.val4 != inst.val3)
                 ttl = ttl ^ (1 << inst.val4);
-            runTTL(ttl, 3);
+            runTTL(ttl, PulseTime::Min);
             break;
         }
         case OpCode::TTL5: {
@@ -377,7 +377,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             ttl = ttl ^ (1 << inst.val3);
             ttl = ttl ^ (1 << inst.val4);
             ttl = ttl ^ (1 << inst.val5);
-            runTTL(ttl, inst.t + 3);
+            runTTL(ttl, inst.t + PulseTime::Min);
             break;
         }
         case OpCode::Wait: {

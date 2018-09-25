@@ -79,7 +79,7 @@ static_assert(sizeof(TTLAll) == 5, "");
 
 struct NACS_PACKED TTL1 {
     OpCode op; // 1
-    uint8_t t: 2; // Total time is `t + 3`
+    uint8_t t: 2; // Total time is `t + PulseTime::Min`
     uint8_t val: 1;
     uint8_t chn: 5;
 };
@@ -199,27 +199,27 @@ struct ExeState {
      *
      * * `dds_freq(uint8_t chn, uint32_t freq)`:
      *
-     *    Generate a DDS frequency pulse. Should take `50` cycles.
+     *    Generate a DDS frequency pulse. Should take `PulseTime::DDSFreq` cycles.
      *
      * * `dds_amp(uint8_t chn, uint16_t amp)`:
      *
-     *    Generate a DDS amplitude pulse. Should take `50` cycles.
+     *    Generate a DDS amplitude pulse. Should take `PulseTime::DDSAmp` cycles.
      *
      * * `dds_phase(uint8_t chn, uint16_t phase)`:
      *
-     *    Generate a DDS phase pulse. Should take `50` cycles.
+     *    Generate a DDS phase pulse. Should take `PulseTime::DDSPhase` cycles.
      *
      * * `dds_detphase(uint8_t chn, uint16_t detphase)`:
      *
-     *    Generate a DDS det phase pulse. Should take `50` cycles.
+     *    Generate a DDS det phase pulse. Should take `PulseTime::DDSPhase` cycles.
      *
      * * `dds_reset(uint8_t chn)`:
      *
-     *    Generate a DDS reset pulse. Should take `50` cycles.
+     *    Generate a DDS reset pulse. Should take `PulseTime::DDSReset` cycles.
      *
      * * `dac(uint8_t chn, uint16_t V)`:
      *
-     *    Generate a DAC pulse. Should take `45` cycles.
+     *    Generate a DAC pulse. Should take `PulseTime::DAC` cycles.
      *
      * * `wait(uint64_t t)`:
      *
@@ -227,7 +227,7 @@ struct ExeState {
      *
      * * `clock(uint8_t period)`:
      *
-     *    Generate a clock pulse (`255` is off). Should take 5 cycles.
+     *    Generate a clock pulse (`255` is off). Should take `PulseTime::Clock` cycles.
      */
     template<typename T>
     void run(T &&cb, const uint8_t *code, size_t len);
@@ -267,7 +267,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             return t;
         };
         auto runTTL = [&] (uint32_t ttl) {
-            cb.ttl(ttl, consumeAllWait() + 3);
+            cb.ttl(ttl, consumeAllWait() + PulseTime::Min);
         };
         auto runTTL1 = [&] (uint8_t chn, bool val, uint64_t t) {
             t += consumeAllWait();
@@ -281,7 +281,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
         }
         case OpCode::TTL1: {
             auto inst = loadInst<Inst::TTL1>(p);
-            runTTL1(inst.chn, inst.val, inst.t + 3);
+            runTTL1(inst.chn, inst.val, inst.t + PulseTime::Min);
             break;
         }
         case OpCode::Wait: {

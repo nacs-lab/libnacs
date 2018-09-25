@@ -21,8 +21,13 @@
 
 #include <ostream>
 
+#include "seq.h"
+
 // This file contains a few classes/functions that are useful for both bytecode
 // and command list.
+
+namespace NaCs {
+namespace Seq {
 
 namespace {
 
@@ -86,27 +91,27 @@ struct TimeKeeper {
     }
     void dds_freq(uint8_t, uint32_t)
     {
-        total_t += 50;
+        total_t += PulseTime::DDSFreq;
     }
     void dds_amp(uint8_t, uint16_t)
     {
-        total_t += 50;
+        total_t += PulseTime::DDSAmp;
     }
     void dds_phase(uint8_t, uint16_t)
     {
-        total_t += 50;
+        total_t += PulseTime::DDSPhase;
     }
     void dds_detphase(uint8_t, uint16_t)
     {
-        total_t += 50;
+        total_t += PulseTime::DDSPhase;
     }
     void dds_reset(uint8_t)
     {
-        total_t += 50;
+        total_t += PulseTime::DDSReset;
     }
     void dac(uint8_t, uint16_t)
     {
-        total_t += 45;
+        total_t += PulseTime::DAC;
     }
     void wait(uint64_t t)
     {
@@ -114,11 +119,14 @@ struct TimeKeeper {
     }
     void clock(uint8_t)
     {
-        total_t += 5;
+        total_t += PulseTime::Clock;
     }
     uint64_t total_t = 0;
 };
 
 }
+
+} // Seq
+} // NaCs
 
 #endif // __NACS_SEQ_EXEHELPER_P_H__

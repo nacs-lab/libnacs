@@ -17,6 +17,8 @@
  *************************************************************************/
 
 #include "parser_p.h"
+#include "seq.h"
+
 #include "../utils/errors.h"
 
 #include <assert.h>
@@ -178,9 +180,9 @@ uint8_t ParserBase::read_ddschn(const char *name)
 
 uint64_t ParserBase::read_waittime()
 {
-    auto t_hex = read_hex(3);
+    auto t_hex = read_hex(PulseTime::Min);
     if (t_hex.second != -1) {
-        assert(t_hex.first >= 3);
+        assert(t_hex.first >= PulseTime::Min);
         return t_hex.first;
     }
     auto t_flt = read_float();
@@ -241,7 +243,7 @@ uint64_t ParserBase::read_ttlwait()
     if (peek() != '=')
         syntax_error("Invalid ttl time: expecting `=`", colno + 1);
     colno++;
-    return read_waittime() - 3;
+    return read_waittime() - PulseTime::Min;
 }
 
 uint32_t ParserBase::read_ttlall()
