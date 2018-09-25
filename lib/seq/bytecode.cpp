@@ -97,7 +97,7 @@ Keeper::Keeper(const Constraints &cons)
 
 void Keeper::addPulse(uint64_t dt)
 {
-    auto max_dt = m_cons.avg_dt * max(m_cons.avg_window / 100, 10);
+    auto max_dt = m_cons.avg_dt * max(m_cons.avg_window / 100, (unsigned)10);
     if (dt > max_dt)
         dt = max_dt;
     size_t pidx = m_npulses % (m_cons.avg_window - 1);
