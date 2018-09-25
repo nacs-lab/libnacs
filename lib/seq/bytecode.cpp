@@ -21,6 +21,7 @@
 #include "bytecode.h"
 
 #include "../utils/streams.h"
+#include "../utils/number.h"
 
 #include <math.h>
 
@@ -79,10 +80,6 @@ public:
     Keeper(const Constraints &);
     void addPulse(uint64_t dt);
     uint64_t minDt(uint64_t min_dt) const;
-    uint64_t minDt(void) const
-    {
-        return minDt(m_cons.prefer_dt);
-    }
     void reset(void);
 private:
     Constraints m_cons;
@@ -100,6 +97,9 @@ Keeper::Keeper(const Constraints &cons)
 
 void Keeper::addPulse(uint64_t dt)
 {
+    auto max_dt = m_cons.avg_dt * max(m_cons.avg_window / 100, 10);
+    if (dt > max_dt)
+        dt = max_dt;
     size_t pidx = m_npulses % (m_cons.avg_window - 1);
     m_total_len = m_total_len + dt - m_plens[pidx];
     m_plens[pidx] = dt;
@@ -108,9 +108,15 @@ void Keeper::addPulse(uint64_t dt)
 
 uint64_t Keeper::minDt(uint64_t min_dt) const
 {
-    auto window_sz = m_cons.avg_dt * m_cons.avg_window;
+    uint64_t window_sz;
+    if (m_npulses < m_cons.avg_window - 1) {
+        window_sz = m_cons.avg_dt * m_npulses * m_npulses / m_cons.avg_window;
+    }
+    else {
+        window_sz = m_cons.avg_dt * m_cons.avg_window;
+    }
     min_dt = std::max<uint64_t>(min_dt, 1);
-    if (m_npulses < m_cons.avg_window - 1 || m_total_len >= window_sz)
+    if (m_total_len >= window_sz)
         return min_dt;
     return std::max(window_sz - m_total_len, min_dt);
 }
@@ -604,7 +610,7 @@ class Scheduler {
         // after the last one it need to happen at least 3 cycles later...
         static constexpr uint8_t deadtime = 3;
         auto req_t = prev_t + dt;
-        if (next_t > req_t)
+        if (next_t >= req_t)
             return next_t;
         if (req_t >= next_t + deadtime)
             return req_t;
