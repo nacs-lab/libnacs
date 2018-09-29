@@ -56,6 +56,7 @@ enum class Opcode : uint8_t {
     Call,
     Interp,
     Convert,
+    Select,
     _Max,
 };
 
@@ -308,6 +309,7 @@ public:
     int32_t createInterp(int32_t v, double x0, double dx, uint32_t npoints,
                          const double *points);
     int32_t createConvert(Type typ, int32_t v);
+    int32_t createSelect(int32_t cond, int32_t val1, int32_t val2);
 private:
     int32_t addFloatData(const double *data, uint32_t ndata);
     int32_t *addInst(Opcode op, size_t nop);

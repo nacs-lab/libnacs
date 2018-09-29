@@ -152,6 +152,14 @@ static inline TagVal eval_func(const Function &f, GenVal *vals)
             res_slot = input.convert(f.vals[res]).val;
             break;
         }
+        case Opcode::Select: {
+            auto cond = eval_val(f, vals, *pc).get<bool>();
+            pc++;
+            auto val = eval_val(f, vals, cond ? pc[0] : pc[1]);
+            pc += 2;
+            res_slot = val.convert(f.vals[res]).val;
+            break;
+        }
         default:
             break;
         }

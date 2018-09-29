@@ -447,6 +447,8 @@ static inline const char *opName(Opcode op)
         return "interp";
     case Opcode::Convert:
         return "convert";
+    case Opcode::Select:
+        return "select";
     default:
         return "unknown";
     }
@@ -680,6 +682,26 @@ void Function::printBB(std::ostream &stm, const BB &bb) const
             stm << " = " << opName(op) << "(";
             printVal(stm, input);
             stm << ")" << std::endl;
+            break;
+        }
+        case Opcode::Select: {
+            auto res = *pc;
+            pc++;
+            auto cond = *pc;
+            pc++;
+            auto v1 = *pc;
+            pc++;
+            auto v2 = *pc;
+            pc++;
+            stm << "  ";
+            printVal(stm, res);
+            stm << " = " << opName(op) << " ";
+            printVal(stm, cond);
+            stm << ", ";
+            printVal(stm, v1);
+            stm << ", ";
+            printVal(stm, v2);
+            stm << std::endl;
             break;
         }
         default:
@@ -1074,6 +1096,22 @@ NACS_PROTECTED() int32_t Builder::createConvert(Type typ, int32_t v)
     auto res = newSSA(typ);
     ptr[0] = res;
     ptr[1] = v;
+    return res;
+}
+
+NACS_PROTECTED() int32_t Builder::createSelect(int32_t cond, int32_t val1, int32_t val2)
+{
+    auto ty1 = m_f.valType(val1);
+    auto ty2 = m_f.valType(val2);
+    auto resty = std::max(std::max(ty1, ty2), Type::Int32);
+    if (cond < 0)
+        return createConvert(resty, m_f.evalConst(cond).get<bool>() ? val1 : val2);
+    auto *ptr = addInst(Opcode::Select, 4);
+    auto res = newSSA(resty);
+    ptr[0] = res;
+    ptr[1] = cond;
+    ptr[2] = val1;
+    ptr[3] = val2;
     return res;
 }
 

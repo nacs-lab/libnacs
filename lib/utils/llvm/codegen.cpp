@@ -616,6 +616,17 @@ Function *Context::_emit_function(const IR::Function &func, uint64_t func_id,
             pc++;
             break;
         }
+        case IR::Opcode::Select: {
+            auto cond = emit_convert(builder, IR::Type::Bool, emit_val(*pc));
+            pc++;
+            auto ty = func.vals[res];
+            auto v1 = emit_convert(builder, ty, emit_val(*pc));
+            pc++;
+            auto v2 = emit_convert(builder, ty, emit_val(*pc));
+            pc++;
+            lres = builder.CreateSelect(cond, v1, v2);
+            break;
+        }
         default:
             lres = UndefValue::get(llvm_ty(func.vals[res]));
             break;
