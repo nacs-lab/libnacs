@@ -328,7 +328,7 @@ main()
                     "  Float64 %3 = select Bool %0, Int32 %1, Float64 %2\n"
                     "  ret Float64 %3\n"
                     "}");
-        auto f = exectx->getFunc<double(bool, int32_t, double)>(builder.get());
+        auto f = exectx->getFunc<double(bool, int, double)>(builder.get());
         assert(f(true, 1, 2.3) == 1.0);
         assert(f(false, 1, 2.3) == 2.3);
     }
@@ -341,7 +341,7 @@ main()
                     "  Float64 %2 = convert(Int32 %0)\n"
                     "  ret Float64 %2\n"
                     "}");
-        auto f = exectx->getFunc<double(int32_t, double)>(builder.get());
+        auto f = exectx->getFunc<double(int, double)>(builder.get());
         assert(f(1, 2.3) == 1.0);
         assert(f(10, 2.3) == 10.0);
     }
@@ -354,7 +354,7 @@ main()
                     "  Int32 %1 = convert(Float64 %0)\n"
                     "  ret Int32 %1\n"
                     "}");
-        auto f = exectx->getFunc<int32_t(double)>(builder.get());
+        auto f = exectx->getFunc<int(double)>(builder.get());
         assert(f(2.3) == 2);
         assert(f(10) == 10);
     }
