@@ -36,7 +36,7 @@ enum class Type : uint8_t {
     Int32,
     Float64,
     _Max,
-    };
+};
 
 constexpr static inline bool validate(Type typ)
 {
@@ -56,7 +56,7 @@ enum class Opcode : uint8_t {
     Call,
     Interp,
     _Max,
-    };
+};
 
 constexpr static inline bool validate(Opcode op)
 {
@@ -70,7 +70,7 @@ enum class CmpType : uint8_t {
     lt,
     le,
     ne,
-    };
+};
 
 enum class Builtins : uint16_t {
     // f(f)
@@ -135,7 +135,7 @@ enum class Builtins : uint16_t {
     // f(i, f)
     jn,
     yn,
-    };
+};
 
 // Constants are stored as negative numbers.
 // -1 and -2 have special meanings and more negative numbers are (negative and offsetted)
@@ -270,7 +270,7 @@ inline void Function::dump(void) const
     std::cerr << *this << std::endl;
 }
 
-class NACS_EXPORT(utils) Builder {
+class Builder {
 public:
     Builder(Type ret, std::vector<Type> args)
         : m_f(ret, args),

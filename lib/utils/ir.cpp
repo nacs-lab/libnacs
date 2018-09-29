@@ -818,12 +818,12 @@ int32_t *Builder::addInst(Opcode op, size_t nop, Function::InstRef &inst)
     return &bb[oldlen + 1];
 }
 
-void Builder::createRet(int32_t val)
+NACS_PROTECTED(utils) void Builder::createRet(int32_t val)
 {
     *addInst(Opcode::Ret, 1) = val;
 }
 
-int32_t Builder::getConstInt(int32_t val)
+NACS_PROTECTED(utils) int32_t Builder::getConstInt(int32_t val)
 {
     auto map = const_ints;
     auto it = map.find(val);
@@ -836,7 +836,7 @@ int32_t Builder::getConstInt(int32_t val)
     return id;
 }
 
-int32_t Builder::getConstFloat(double val)
+NACS_PROTECTED(utils) int32_t Builder::getConstFloat(double val)
 {
     auto map = const_floats;
     auto it = map.find(val);
@@ -849,7 +849,7 @@ int32_t Builder::getConstFloat(double val)
     return id;
 }
 
-int32_t Builder::getConst(TagVal val)
+NACS_PROTECTED(utils) int32_t Builder::getConst(TagVal val)
 {
     switch (val.typ) {
     case Type::Bool:
@@ -870,24 +870,24 @@ int32_t Builder::newSSA(Type typ)
     return id;
 }
 
-int32_t Builder::newBB(void)
+NACS_PROTECTED(utils) int32_t Builder::newBB(void)
 {
     int32_t id = (int32_t)m_f.code.size();
     m_f.code.push_back({});
     return id;
 }
 
-int32_t &Builder::curBB()
+NACS_PROTECTED(utils) int32_t &Builder::curBB()
 {
     return m_cur_bb;
 }
 
-void Builder::createBr(int32_t br)
+NACS_PROTECTED(utils) void Builder::createBr(int32_t br)
 {
     createBr(Consts::True, br, 0);
 }
 
-void Builder::createBr(int32_t cond, int32_t bb1, int32_t bb2)
+NACS_PROTECTED(utils) void Builder::createBr(int32_t cond, int32_t bb1, int32_t bb2)
 {
     if (cond == Consts::True) {
         int32_t *ptr = addInst(Opcode::Br, 2);
@@ -930,22 +930,22 @@ int32_t Builder::createPromoteOP(Opcode op, int32_t val1, int32_t val2)
     return res;
 }
 
-int32_t Builder::createAdd(int32_t val1, int32_t val2)
+NACS_PROTECTED(utils) int32_t Builder::createAdd(int32_t val1, int32_t val2)
 {
     return createPromoteOP(Opcode::Add, val1, val2);
 }
 
-int32_t Builder::createSub(int32_t val1, int32_t val2)
+NACS_PROTECTED(utils) int32_t Builder::createSub(int32_t val1, int32_t val2)
 {
     return createPromoteOP(Opcode::Sub, val1, val2);
 }
 
-int32_t Builder::createMul(int32_t val1, int32_t val2)
+NACS_PROTECTED(utils) int32_t Builder::createMul(int32_t val1, int32_t val2)
 {
     return createPromoteOP(Opcode::Mul, val1, val2);
 }
 
-int32_t Builder::createFDiv(int32_t val1, int32_t val2)
+NACS_PROTECTED(utils) int32_t Builder::createFDiv(int32_t val1, int32_t val2)
 {
     if (val1 < 0 && val2 < 0)
         return getConst(evalFDiv(m_f.evalConst(val1), m_f.evalConst(val2)));
@@ -957,7 +957,7 @@ int32_t Builder::createFDiv(int32_t val1, int32_t val2)
     return res;
 }
 
-int32_t Builder::createCmp(CmpType cmptyp, int32_t val1, int32_t val2)
+NACS_PROTECTED(utils) int32_t Builder::createCmp(CmpType cmptyp, int32_t val1, int32_t val2)
 {
     if (val1 < 0 && val2 < 0)
         return getConst(evalCmp(cmptyp, m_f.evalConst(val1),
@@ -971,7 +971,8 @@ int32_t Builder::createCmp(CmpType cmptyp, int32_t val1, int32_t val2)
     return res;
 }
 
-std::pair<int32_t, Function::InstRef> Builder::createPhi(Type typ, int ninputs)
+NACS_PROTECTED(utils) std::pair<int32_t, Function::InstRef>
+Builder::createPhi(Type typ, int ninputs)
 {
     Function::InstRef inst;
     int32_t *ptr = addInst(Opcode::Phi, ninputs * 2 + 2, inst);
@@ -982,7 +983,8 @@ std::pair<int32_t, Function::InstRef> Builder::createPhi(Type typ, int ninputs)
     return std::make_pair(res, inst);
 }
 
-int32_t Builder::createCall(Builtins id, int32_t nargs, const int32_t *args)
+NACS_PROTECTED(utils) int32_t Builder::createCall(Builtins id, int32_t nargs,
+                                                  const int32_t *args)
 {
     switch (getBuiltinType(id)) {
     case BuiltinType::F64_F64:
@@ -1031,8 +1033,8 @@ int32_t Builder::createCall(Builtins id, int32_t nargs, const int32_t *args)
     return res;
 }
 
-int32_t Builder::createInterp(int32_t v, double x0, double dx, uint32_t npoints,
-                              const double *points)
+NACS_PROTECTED(utils) int32_t Builder::createInterp(int32_t v, double x0, double dx,
+                                                    uint32_t npoints, const double *points)
 {
     auto x0id = getConstFloat(x0);
     auto dxid = getConstFloat(dx);
@@ -1056,7 +1058,8 @@ int32_t Builder::addFloatData(const double *data, uint32_t ndata)
     return res;
 }
 
-void Builder::addPhiInput(Function::InstRef phi, int32_t bb, int32_t val)
+NACS_PROTECTED(utils) void Builder::addPhiInput(Function::InstRef phi,
+                                                int32_t bb, int32_t val)
 {
     int32_t *inst = &m_f.code[phi.first][phi.second];
     int32_t nargs = inst[1];
