@@ -482,5 +482,65 @@ int main()
         assert(f2(vals) == 0.0);
     }
 
+    {
+        IR::Builder builder(IR::Type::Float64,
+                            {IR::Type::Bool, IR::Type::Int32, IR::Type::Float64});
+        builder.createRet(builder.createSelect(0, 1, 2));
+        test_str_eq(builder.get(), "Float64 (Bool %0, Int32 %1, Float64 %2) {\n"
+                    "L0:\n"
+                    "  Float64 %3 = select Bool %0, Int32 %1, Float64 %2\n"
+                    "  ret Float64 %3\n"
+                    "}");
+        auto f = exectx->getFunc<double(bool, int, double)>(builder.get());
+        assert(f(true, 1, 2.3) == 1.0);
+        assert(f(false, 1, 2.3) == 2.3);
+
+        auto test = gettest(builder.get());
+        auto f2 = (double(*)(bool, int, double))test.get_ptr();
+        assert(f2(true, 1, 2.3) == 1.0);
+        assert(f2(false, 1, 2.3) == 2.3);
+    }
+
+    {
+        IR::Builder builder(IR::Type::Int32, {IR::Type::Float64});
+        builder.createRet(builder.createConvert(IR::Type::Int32, 0));
+        test_str_eq(builder.get(), "Int32 (Float64 %0) {\n"
+                    "L0:\n"
+                    "  Int32 %1 = convert(Float64 %0)\n"
+                    "  ret Int32 %1\n"
+                    "}");
+        auto f = exectx->getFunc<int(double)>(builder.get());
+        assert(f(2.3) == 2);
+        assert(f(10) == 10);
+
+        auto test = gettest(builder.get());
+        auto f2 = (int(*)(double))test.get_ptr();
+        assert(f2(2.3) == 2);
+        assert(f2(10) == 10);
+    }
+
+    {
+        IR::Builder builder(IR::Type::Float64,
+                            {IR::Type::Bool, IR::Type::Int32, IR::Type::Float64});
+        auto c1 = builder.createCall(IR::Builtins::cos, {1});
+        auto s2 = builder.createCall(IR::Builtins::sin, {2});
+        builder.createRet(builder.createSelect(0, c1, s2));
+        test_str_eq(builder.get(), "Float64 (Bool %0, Int32 %1, Float64 %2) {\n"
+                    "L0:\n"
+                    "  Float64 %3 = call cos(Int32 %1)\n"
+                    "  Float64 %4 = call sin(Float64 %2)\n"
+                    "  Float64 %5 = select Bool %0, Float64 %3, Float64 %4\n"
+                    "  ret Float64 %5\n"
+                    "}");
+        auto f = exectx->getFunc<double(bool, int, double)>(builder.get());
+        assert(f(true, 1, 2.3) == cos(1));
+        assert(f(false, 1, 2.3) == sin(2.3));
+
+        auto test = gettest(builder.get());
+        auto f2 = (double(*)(bool, int, double))test.get_ptr();
+        assert(f2(true, 1, 2.3) == cos(1));
+        assert(f2(false, 1, 2.3) == sin(2.3));
+    }
+
     return 0;
 }
