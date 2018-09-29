@@ -44,7 +44,7 @@ public:
     }
     Function *emit_function(const IR::Function &func, uint64_t func_id)
     {
-        return _emit_function(func, func_id, {}, true);
+        return _emit_function(func, func_id, {}, false);
     }
 private:
     NACS_EXPORT(utils)

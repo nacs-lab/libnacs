@@ -60,6 +60,14 @@ struct LLVMTest {
     {
         LLVM::Codegen::Context ctx(mod.get());
         f = ctx.emit_function(func, 0);
+        auto fty = f->getFunctionType();
+        assert(!fty->isVarArg());
+        auto T_i8 = llvm::Type::getInt8Ty(ll_ctx);
+        auto T_i32 = llvm::Type::getInt32Ty(ll_ctx);
+        auto T_f64 = llvm::Type::getDoubleTy(ll_ctx);
+        for (auto argt: fty->params()) {
+            assert(argt == T_i8 || argt == T_i32 || argt == T_f64);
+        }
     }
     LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func,
              const std::map<uint32_t,uint32_t> &closure_args)
@@ -68,6 +76,17 @@ struct LLVMTest {
     {
         LLVM::Codegen::Context ctx(mod.get());
         f = ctx.emit_function(func, 0, closure_args);
+        auto fty = f->getFunctionType();
+        assert(!fty->isVarArg());
+        auto T_i8 = llvm::Type::getInt8Ty(ll_ctx);
+        auto T_i32 = llvm::Type::getInt32Ty(ll_ctx);
+        auto T_f64 = llvm::Type::getDoubleTy(ll_ctx);
+        auto nparams = fty->getNumParams();
+        for (unsigned i = 0; i < nparams - 1; i++) {
+            auto argt = fty->getParamType(i);
+            assert(argt == T_i8 || argt == T_i32 || argt == T_f64);
+        }
+        assert(fty->getParamType(nparams - 1)->isPointerTy());
     }
     LLVMTest(LLVMTest&&) = default;
     LLVMTest &operator=(LLVMTest&&) = default;
