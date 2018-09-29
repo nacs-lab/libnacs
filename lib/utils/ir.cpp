@@ -1066,6 +1066,8 @@ NACS_PROTECTED() int32_t Builder::createInterp(int32_t v, double x0, double dx,
 
 NACS_PROTECTED() int32_t Builder::createConvert(Type typ, int32_t v)
 {
+    if (m_f.valType(v) == typ)
+        return v;
     if (v < 0)
         return getConst(m_f.evalConst(v).convert(typ));
     auto *ptr = addInst(Opcode::Convert, 2);
