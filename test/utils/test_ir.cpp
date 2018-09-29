@@ -319,5 +319,45 @@ main()
                     "}");
     }
 
+    {
+        IR::Builder builder(IR::Type::Float64,
+                            {IR::Type::Bool, IR::Type::Int32, IR::Type::Float64});
+        builder.createRet(builder.createSelect(0, 1, 2));
+        test_str_eq(builder.get(), "Float64 (Bool %0, Int32 %1, Float64 %2) {\n"
+                    "L0:\n"
+                    "  Float64 %3 = select Bool %0, Int32 %1, Float64 %2\n"
+                    "  ret Float64 %3\n"
+                    "}");
+        auto f = exectx->getFunc<double(bool, int32_t, double)>(builder.get());
+        assert(f(true, 1, 2.3) == 1.0);
+        assert(f(false, 1, 2.3) == 2.3);
+    }
+
+    {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Int32, IR::Type::Float64});
+        builder.createRet(builder.createSelect(IR::Consts::True, 0, 1));
+        test_str_eq(builder.get(), "Float64 (Int32 %0, Float64 %1) {\n"
+                    "L0:\n"
+                    "  Float64 %2 = convert(Int32 %0)\n"
+                    "  ret Float64 %2\n"
+                    "}");
+        auto f = exectx->getFunc<double(int32_t, double)>(builder.get());
+        assert(f(1, 2.3) == 1.0);
+        assert(f(10, 2.3) == 10.0);
+    }
+
+    {
+        IR::Builder builder(IR::Type::Int32, {IR::Type::Float64});
+        builder.createRet(builder.createConvert(IR::Type::Int32, 0));
+        test_str_eq(builder.get(), "Int32 (Float64 %0) {\n"
+                    "L0:\n"
+                    "  Int32 %1 = convert(Float64 %0)\n"
+                    "  ret Int32 %1\n"
+                    "}");
+        auto f = exectx->getFunc<int32_t(double)>(builder.get());
+        assert(f(2.3) == 2);
+        assert(f(10) == 10);
+    }
+
     return 0;
 }
