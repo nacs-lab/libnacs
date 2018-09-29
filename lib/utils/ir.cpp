@@ -445,6 +445,8 @@ static inline const char *opName(Opcode op)
         return "call";
     case Opcode::Interp:
         return "interp";
+    case Opcode::Convert:
+        return "convert";
     default:
         return "unknown";
     }
@@ -666,6 +668,18 @@ void Function::printBB(std::ostream &stm, const BB &bb) const
                 stm << datap[i];
             }
             stm << "}" << std::endl;
+            break;
+        }
+        case Opcode::Convert: {
+            auto res = *pc;
+            pc++;
+            auto input = *pc;
+            pc++;
+            stm << "  ";
+            printVal(stm, res);
+            stm << " = " << opName(op) << "(";
+            printVal(stm, input);
+            stm << ")" << std::endl;
             break;
         }
         default:
@@ -1047,6 +1061,17 @@ NACS_PROTECTED() int32_t Builder::createInterp(int32_t v, double x0, double dx,
     ptr[3] = dxid;
     ptr[4] = data_id;
     ptr[5] = (int32_t)npoints;
+    return res;
+}
+
+NACS_PROTECTED() int32_t Builder::createConvert(Type typ, int32_t v)
+{
+    if (v < 0)
+        return getConst(m_f.evalConst(v).convert(typ));
+    auto *ptr = addInst(Opcode::Convert, 2);
+    auto res = newSSA(typ);
+    ptr[0] = res;
+    ptr[1] = v;
     return res;
 }
 

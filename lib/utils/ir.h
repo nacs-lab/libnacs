@@ -55,6 +55,7 @@ enum class Opcode : uint8_t {
     Phi,
     Call,
     Interp,
+    Convert,
     _Max,
 };
 
@@ -306,6 +307,7 @@ public:
     }
     int32_t createInterp(int32_t v, double x0, double dx, uint32_t npoints,
                          const double *points);
+    int32_t createConvert(Type typ, int32_t v);
 private:
     int32_t addFloatData(const double *data, uint32_t ndata);
     int32_t *addInst(Opcode op, size_t nop);

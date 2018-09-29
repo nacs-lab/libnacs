@@ -146,6 +146,12 @@ static inline TagVal eval_func(const Function &f, GenVal *vals)
             res_slot = TagVal(linearInterpolate(input, x0, dx, ndata, datap)).val;
             break;
         }
+        case Opcode::Convert: {
+            auto input = eval_val(f, vals, *pc);
+            pc++;
+            res_slot = input.convert(f.vals[res]).val;
+            break;
+        }
         default:
             break;
         }

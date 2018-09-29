@@ -611,6 +611,11 @@ Function *Context::_emit_function(const IR::Function &func, uint64_t func_id,
                         ConstantInt::get(T_i32, ndata), datap});
             break;
         }
+        case IR::Opcode::Convert: {
+            lres = emit_val(*pc);
+            pc++;
+            break;
+        }
         default:
             lres = UndefValue::get(llvm_ty(func.vals[res]));
             break;
