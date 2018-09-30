@@ -57,6 +57,10 @@ enum class Opcode : uint8_t {
     Interp,
     Convert,
     Select,
+    And,
+    Or,
+    Xor,
+    Not,
     _Max,
 };
 
@@ -310,6 +314,10 @@ public:
                          const double *points);
     int32_t createConvert(Type typ, int32_t v);
     int32_t createSelect(int32_t cond, int32_t val1, int32_t val2);
+    int32_t createAnd(int32_t val1, int32_t val2);
+    int32_t createOr(int32_t val1, int32_t val2);
+    int32_t createXor(int32_t val1, int32_t val2);
+    int32_t createNot(int32_t val);
 private:
     int32_t addFloatData(const double *data, uint32_t ndata);
     int32_t *addInst(Opcode op, size_t nop);

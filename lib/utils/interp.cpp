@@ -160,6 +160,32 @@ static inline TagVal eval_func(const Function &f, GenVal *vals)
             res_slot = val.convert(f.vals[res]).val;
             break;
         }
+        case Opcode::And:
+        case Opcode::Or:
+        case Opcode::Xor: {
+            auto v1 = eval_val(f, vals, *pc).get<bool>();
+            pc++;
+            auto v2 = eval_val(f, vals, *pc).get<bool>();
+            pc++;
+            bool v = false;
+            if (op == Opcode::And) {
+                v = v1 && v2;
+            }
+            else if (op == Opcode::Or) {
+                v = v1 || v2;
+            }
+            else if (op == Opcode::Xor) {
+                v = v1 xor v2;
+            }
+            res_slot = TagVal(v).val;
+            break;
+        }
+        case Opcode::Not: {
+            auto v = eval_val(f, vals, *pc).get<bool>();
+            pc++;
+            res_slot = TagVal(!v).val;
+            break;
+        }
         default:
             break;
         }

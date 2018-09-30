@@ -627,6 +627,30 @@ Function *Context::_emit_function(const IR::Function &func, uint64_t func_id,
             lres = builder.CreateSelect(cond, v1, v2);
             break;
         }
+        case IR::Opcode::And:
+        case IR::Opcode::Or:
+        case IR::Opcode::Xor: {
+            auto v1 = emit_convert(builder, IR::Type::Bool, emit_val(*pc));
+            pc++;
+            auto v2 = emit_convert(builder, IR::Type::Bool, emit_val(*pc));
+            pc++;
+            if (op == IR::Opcode::And) {
+                lres = builder.CreateAnd(v1, v2);
+            }
+            else if (op == IR::Opcode::Or) {
+                lres = builder.CreateOr(v1, v2);
+            }
+            else if (op == IR::Opcode::Xor) {
+                lres = builder.CreateXor(v1, v2);
+            }
+            break;
+        }
+        case IR::Opcode::Not: {
+            auto v = emit_convert(builder, IR::Type::Bool, emit_val(*pc));
+            pc++;
+            lres = builder.CreateNot(v);
+            break;
+        }
         default:
             lres = UndefValue::get(llvm_ty(func.vals[res]));
             break;

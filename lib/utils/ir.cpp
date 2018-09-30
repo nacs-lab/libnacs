@@ -449,6 +449,14 @@ static inline const char *opName(Opcode op)
         return "convert";
     case Opcode::Select:
         return "select";
+    case Opcode::And:
+        return "and";
+    case Opcode::Or:
+        return "or";
+    case Opcode::Xor:
+        return "xor";
+    case Opcode::Not:
+        return "not";
     default:
         return "unknown";
     }
@@ -701,6 +709,36 @@ void Function::printBB(std::ostream &stm, const BB &bb) const
             printVal(stm, v1);
             stm << ", ";
             printVal(stm, v2);
+            stm << std::endl;
+            break;
+        }
+        case Opcode::And:
+        case Opcode::Or:
+        case Opcode::Xor: {
+            auto res = *pc;
+            pc++;
+            auto v1 = *pc;
+            pc++;
+            auto v2 = *pc;
+            pc++;
+            stm << "  ";
+            printVal(stm, res);
+            stm << " = " << opName(op) << " ";
+            printVal(stm, v1);
+            stm << ", ";
+            printVal(stm, v2);
+            stm << std::endl;
+            break;
+        }
+        case Opcode::Not: {
+            auto res = *pc;
+            pc++;
+            auto v = *pc;
+            pc++;
+            stm << "  ";
+            printVal(stm, res);
+            stm << " = " << opName(op) << " ";
+            printVal(stm, v);
             stm << std::endl;
             break;
         }
@@ -1112,6 +1150,85 @@ NACS_PROTECTED() int32_t Builder::createSelect(int32_t cond, int32_t val1, int32
     ptr[1] = cond;
     ptr[2] = val1;
     ptr[3] = val2;
+    return res;
+}
+
+NACS_PROTECTED() int32_t Builder::createAnd(int32_t val1, int32_t val2)
+{
+    if (val1 < 0) {
+        auto c1 = m_f.evalConst(val1).get<bool>();
+        if (!c1)
+            return Consts::False;
+        return createConvert(Type::Bool, val2);
+    }
+    else if (val2 < 0) {
+        auto c2 = m_f.evalConst(val2).get<bool>();
+        if (!c2)
+            return Consts::False;
+        return createConvert(Type::Bool, val1);
+    }
+    auto *ptr = addInst(Opcode::And, 3);
+    auto res = newSSA(Type::Bool);
+    ptr[0] = res;
+    ptr[1] = val1;
+    ptr[2] = val2;
+    return res;
+}
+
+NACS_PROTECTED() int32_t Builder::createOr(int32_t val1, int32_t val2)
+{
+    if (val1 < 0) {
+        auto c1 = m_f.evalConst(val1).get<bool>();
+        if (c1)
+            return Consts::True;
+        return createConvert(Type::Bool, val2);
+    }
+    else if (val2 < 0) {
+        auto c2 = m_f.evalConst(val2).get<bool>();
+        if (c2)
+            return Consts::True;
+        return createConvert(Type::Bool, val1);
+    }
+    auto *ptr = addInst(Opcode::Or, 3);
+    auto res = newSSA(Type::Bool);
+    ptr[0] = res;
+    ptr[1] = val1;
+    ptr[2] = val2;
+    return res;
+}
+
+NACS_PROTECTED() int32_t Builder::createXor(int32_t val1, int32_t val2)
+{
+    if (val1 < 0) {
+        auto c1 = m_f.evalConst(val1).get<bool>();
+        if (c1)
+            return createConvert(Type::Bool, val2);
+        return createNot(val2);
+    }
+    else if (val2 < 0) {
+        auto c2 = m_f.evalConst(val2).get<bool>();
+        if (c2)
+            return createConvert(Type::Bool, val1);
+        return createNot(val1);
+    }
+    auto *ptr = addInst(Opcode::Xor, 3);
+    auto res = newSSA(Type::Bool);
+    ptr[0] = res;
+    ptr[1] = val1;
+    ptr[2] = val2;
+    return res;
+}
+
+NACS_PROTECTED() int32_t Builder::createNot(int32_t val)
+{
+    if (val < 0) {
+        auto c1 = m_f.evalConst(val).get<bool>();
+        return c1 ? Consts::True : Consts::False;
+    }
+    auto *ptr = addInst(Opcode::Not, 2);
+    auto res = newSSA(Type::Bool);
+    ptr[0] = res;
+    ptr[1] = val;
     return res;
 }
 
