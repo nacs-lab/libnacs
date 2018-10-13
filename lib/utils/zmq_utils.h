@@ -19,6 +19,7 @@
 #include "utils.h"
 
 #include <zmq.hpp>
+#include <string.h>
 
 #ifndef __NACS_UTILS_ZMQ_H__
 #define __NACS_UTILS_ZMQ_H__
@@ -65,6 +66,11 @@ static inline zmq::message_t bits_msg(T v)
     zmq::message_t msg(sizeof(T));
     std::memcpy(msg.data(), &v, sizeof(T));
     return msg;
+}
+
+static inline zmq::message_t str_msg(const char *str)
+{
+    return zmq::message_t(str, strlen(str));
 }
 
 }
