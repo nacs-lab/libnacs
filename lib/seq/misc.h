@@ -61,8 +61,8 @@ private:
     std::vector<double> m_data;
     pos_type m_last_pos = 0;
     std::string m_last_line;
-    double m_lo = 0;
-    double m_hi = 0;
+    const double m_lo = 0;
+    const double m_hi = 0;
 };
 
 }
