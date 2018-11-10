@@ -37,7 +37,9 @@ bool WavemeterParser::do_parse(std::istream &stm, bool inc)
         prev_read = m_last_pos;
     while (true) {
         auto pos = stm.tellg();
-        if (!try_parseline(stm)) {
+        double tsf;
+        double val;
+        if (!try_parseline(stm, tsf, val)) {
             if (started) {
                 // If we've already started, only allow failure on the last line
                 stm.clear();
@@ -58,6 +60,8 @@ bool WavemeterParser::do_parse(std::istream &stm, bool inc)
             stm >> ignore_line;
             continue;
         }
+        m_time.push_back(tsf);
+        m_data.push_back(val);
         started = true;
         prev_read = pos;
         stm >> ignore_line;
@@ -116,17 +120,7 @@ NACS_INTERNAL bool WavemeterParser::try_parsenumber(std::istream &stm, double &v
     return true;
 }
 
-NACS_INTERNAL bool WavemeterParser::try_parseval_nolim(std::istream &stm, double tsf)
-{
-    double val;
-    if (!try_parsenumber(stm, val))
-        return false;
-    m_time.push_back(tsf);
-    m_data.push_back(val);
-    return true;
-}
-
-NACS_INTERNAL bool WavemeterParser::try_parseval_withlim(std::istream &stm, double tsf,
+NACS_INTERNAL bool WavemeterParser::try_parseval_withlim(std::istream &stm, double &val,
                                                          double lo, double hi)
 {
     bool found_val = false;
@@ -169,22 +163,18 @@ NACS_INTERNAL bool WavemeterParser::try_parseval_withlim(std::istream &stm, doub
             break;
         }
     }
-    if (!found_val)
-        return false;
-    m_time.push_back(tsf);
-    m_data.push_back(max_pos);
-    return true;
+    val = max_pos;
+    return found_val;
 }
 
-bool WavemeterParser::try_parseline(std::istream &stm)
+bool WavemeterParser::try_parseline(std::istream &stm, double &tsf, double &val) const
 {
-    double tsf;
     if (!try_parsetime(stm, tsf))
         return false;
     tsf = tsf / 86400 + 719529;
     if (m_lo < m_hi)
-        return try_parseval_withlim(stm, tsf, m_lo, m_hi);
-    return try_parseval_nolim(stm, tsf);
+        return try_parseval_withlim(stm, val, m_lo, m_hi);
+    return try_parsenumber(stm, val);
 }
 
 bool WavemeterParser::match_cache(std::istream &stm) const
