@@ -12,6 +12,7 @@ set(nacs_utils_HDRS
   thread.h
   timer.h
   utils.h
+  wavemeter.h
   zmq_utils.h)
 set(nacs_utils_SRCS
   errors.cpp
@@ -25,7 +26,8 @@ set(nacs_utils_SRCS
   streams.cpp
   term.cpp
   timer.cpp
-  utils.cpp)
+  utils.cpp
+  wavemeter.cpp)
 set(nacs_utils_LINKS m pthread)
 if(IS_UNIX)
   # For shm_*
