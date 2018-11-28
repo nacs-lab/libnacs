@@ -26,19 +26,27 @@ namespace NaCs {
 
 class Wavemeter {
     // Stateless parsing functions
-    static bool try_parsetime(std::istream &stm, double *tsf);
-    static bool try_parsenumber(std::istream &stm, double *val, bool *eol);
-    static inline bool try_parsenumber(std::istream &stm, double *val)
+    // Parse the time stamp
+    static bool parsetime(std::istream &stm, double *tsf);
+    // Parse a single number
+    static bool parsenumber(std::istream &stm, double *val, bool *eol);
+    static inline bool parsenumber(std::istream &stm, double *val)
     {
         bool eol;
-        return try_parsenumber(stm, val, &eol);
+        return parsenumber(stm, val, &eol);
     }
-    static bool try_parseval(std::istream &stm, double *val, double lo, double hi);
-    bool try_parseline(std::istream &stm, double *tsf, double *val) const;
+    // Parse the data section of the log file and find the best match
+    // given the upper and lower bound
+    static bool parseval(std::istream &stm, double *val, double lo, double hi);
+    // Parse both the time and the data from a complete line.
+    bool parseline(std::istream &stm, double *tsf, double *val) const;
+    // Find the beginning of the line that includes `ub`
+    // Do not look back more than `lb`.
     using pos_type = std::istream::pos_type;
     static pos_type find_linestart(std::istream &stm, pos_type ub, pos_type lb);
-    std::pair<bool,pos_type> try_parse_at(std::istream &stm, pos_type pos, pos_type lb,
-                                          double *tsf, double *val) const;
+    // Parse the line that includes `pos`. Do not look back more than `lb`
+    std::pair<bool,pos_type> parse_at(std::istream &stm, pos_type pos, pos_type lb,
+                                      double *tsf, double *val) const;
 
     // Time -> position
     std::pair<pos_type,pos_type> find_pos_range(double t) const;

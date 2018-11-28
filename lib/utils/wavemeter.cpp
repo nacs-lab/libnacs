@@ -28,7 +28,7 @@
 
 namespace NaCs {
 
-NACS_INTERNAL bool Wavemeter::try_parsetime(std::istream &stm, double *tsf)
+NACS_INTERNAL bool Wavemeter::parsetime(std::istream &stm, double *tsf)
 {
     std::tm timedate;
     memset(&timedate, 0, sizeof(timedate));
@@ -62,7 +62,7 @@ NACS_INTERNAL bool Wavemeter::try_parsetime(std::istream &stm, double *tsf)
     return true;
 }
 
-NACS_INTERNAL bool Wavemeter::try_parsenumber(std::istream &stm, double *val, bool *eol)
+NACS_INTERNAL bool Wavemeter::parsenumber(std::istream &stm, double *val, bool *eol)
 {
     stm >> *val;
     // Read value failed
@@ -80,15 +80,15 @@ NACS_INTERNAL bool Wavemeter::try_parsenumber(std::istream &stm, double *val, bo
     return true;
 }
 
-NACS_INTERNAL bool Wavemeter::try_parseval(std::istream &stm, double *val,
-                                           double lo, double hi)
+NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
+                                       double lo, double hi)
 {
     bool found_val = false;
     double max_pos = 0;
     double max_height = std::numeric_limits<double>::lowest();
 
     bool eol;
-    auto parsenum = [&] (double *val) { return try_parsenumber(stm, val, &eol); };
+    auto parsenum = [&] (double *val) { return parsenumber(stm, val, &eol); };
     auto getpair = [&] {
         double pos;
         double height;
@@ -127,12 +127,12 @@ NACS_INTERNAL bool Wavemeter::try_parseval(std::istream &stm, double *val,
     return found_val;
 }
 
-NACS_INTERNAL bool Wavemeter::try_parseline(std::istream &stm, double *tsf, double *val) const
+NACS_INTERNAL bool Wavemeter::parseline(std::istream &stm, double *tsf, double *val) const
 {
-    if (!try_parsetime(stm, tsf))
+    if (!parsetime(stm, tsf))
         return false;
     *tsf = *tsf / 86400 + 719529;
-    return try_parseval(stm, val, m_lo, m_hi);
+    return parseval(stm, val, m_lo, m_hi);
 }
 
 static const std::istream::pos_type pos_error = std::streamoff(-1);
@@ -160,13 +160,13 @@ NACS_INTERNAL auto Wavemeter::find_linestart(std::istream &stm, pos_type ub,
     return lb;
 }
 
-NACS_INTERNAL auto Wavemeter::try_parse_at(std::istream &stm, pos_type pos, pos_type lb,
-                                           double *tsf, double *val) const
+NACS_INTERNAL auto Wavemeter::parse_at(std::istream &stm, pos_type pos, pos_type lb,
+                                       double *tsf, double *val) const
     -> std::pair<bool,pos_type>
 {
     auto ls = find_linestart(stm, pos, lb);
     stm.seekg(ls);
-    auto res = try_parseline(stm, tsf, val);
+    auto res = parseline(stm, tsf, val);
     stm.clear();
     stm >> ignore_line;
     return {res, ls};
