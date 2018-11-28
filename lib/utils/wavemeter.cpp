@@ -150,7 +150,7 @@ NACS_INTERNAL auto Wavemeter::find_linestart(std::istream &stm, pos_type ub,
         stm.seekg(loc);
         stm.read(buff, sizeof(buff));
         if (!stm)
-            return pos_error;
+            throw std::runtime_error("Error finding line start");
         for (int i = sz - 1; i >= 0; i--) {
             if (buff[i] == '\n') {
                 return loc + std::streamoff(i);
@@ -158,6 +158,18 @@ NACS_INTERNAL auto Wavemeter::find_linestart(std::istream &stm, pos_type ub,
         }
     }
     return lb;
+}
+
+NACS_INTERNAL auto Wavemeter::try_parse_at(std::istream &stm, pos_type pos, pos_type lb,
+                                           double *tsf, double *val) const
+    -> std::pair<bool,pos_type>
+{
+    auto ls = find_linestart(stm, pos, lb);
+    stm.seekg(ls);
+    auto res = try_parseline(stm, tsf, val);
+    stm.clear();
+    stm >> ignore_line;
+    return {res, ls};
 }
 
 NACS_INTERNAL auto Wavemeter::find_pos_range(double t) const
@@ -217,7 +229,7 @@ NACS_INTERNAL void Wavemeter::add_pos_range(double tstart, double tend,
     // For the following cases, we may need to check if any range(s) after us should be merged.
     --it;
     if (it == m_pos_cache.end() || it->second.tend < tstart) {
-        // We aren't overlapping with any ranges.
+        // We aren't overlapping with any (previous) ranges.
         it = add_range();
     }
     else if (unlikely(it->second.tend >= tend)) {

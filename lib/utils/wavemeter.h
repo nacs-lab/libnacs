@@ -37,6 +37,8 @@ class Wavemeter {
     bool try_parseline(std::istream &stm, double *tsf, double *val) const;
     using pos_type = std::istream::pos_type;
     static pos_type find_linestart(std::istream &stm, pos_type ub, pos_type lb);
+    std::pair<bool,pos_type> try_parse_at(std::istream &stm, pos_type pos, pos_type lb,
+                                          double *tsf, double *val) const;
 
     // Time -> position
     std::pair<pos_type,pos_type> find_pos_range(double t) const;
