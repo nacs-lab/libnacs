@@ -127,7 +127,7 @@ NACS_INTERNAL bool Wavemeter::try_parseval(std::istream &stm, double *val,
     return found_val;
 }
 
-bool Wavemeter::try_parseline(std::istream &stm, double *tsf, double *val) const
+NACS_INTERNAL bool Wavemeter::try_parseline(std::istream &stm, double *tsf, double *val) const
 {
     if (!try_parsetime(stm, tsf))
         return false;
@@ -158,6 +158,95 @@ NACS_INTERNAL auto Wavemeter::find_linestart(std::istream &stm, pos_type ub,
         }
     }
     return lb;
+}
+
+NACS_INTERNAL auto Wavemeter::find_pos_range(double t) const
+    -> std::pair<pos_type,pos_type>
+{
+    // Empty case
+    if (m_pos_cache.empty())
+        return {0, pos_error};
+    auto it = m_pos_cache.upper_bound(t);
+    if (likely(it == m_pos_cache.end())) {
+        // No range after us, check the last range.
+        auto rit = m_pos_cache.rbegin();
+        if (rit->second.tend >= t)
+            return {rit->second.pstart, rit->second.pend};
+        return {rit->second.pend, pos_error};
+    }
+    pos_type ub = it->second.pstart;
+    --it;
+    // The one above us is the first range
+    if (it == m_pos_cache.end())
+        return {0, ub};
+    // We are within the previous range
+    if (it->second.tend >= t)
+        return {it->second.pstart, it->second.pend};
+    // We are in between two ranges.
+    return {it->second.pend, ub};
+}
+
+NACS_INTERNAL void Wavemeter::add_pos_range(double tstart, double tend,
+                                            pos_type pstart, pos_type pend)
+{
+    auto add_range = [&] {
+        return m_pos_cache.emplace(tstart, PosRange{tend, pstart, pend}).first;
+    };
+    // Empty case
+    if (m_pos_cache.empty()) {
+        add_range();
+        return;
+    }
+    auto it = m_pos_cache.upper_bound(tstart);
+    if (likely(it == m_pos_cache.end())) {
+        // No range after us, try to merge with the last range
+        auto rit = m_pos_cache.rbegin();
+        // Already covered.
+        if (unlikely(rit->second.tend >= tend))
+            return;
+        // Not overlapping with the last range
+        if (rit->second.tend < tstart) {
+            add_range();
+            return;
+        }
+        // Modify the last range
+        rit->second.tend = tend;
+        rit->second.pend = pend;
+        return;
+    }
+    // For the following cases, we may need to check if any range(s) after us should be merged.
+    --it;
+    if (it == m_pos_cache.end() || it->second.tend < tstart) {
+        // We aren't overlapping with any ranges.
+        it = add_range();
+    }
+    else if (unlikely(it->second.tend >= tend)) {
+        // No new range.
+        return;
+    }
+    else {
+        it->second.tend = tend;
+        it->second.pend = pend;
+    }
+    // `it` is the range that contains the new range.
+    // We need to check if any range after `it` have overlap.
+    for (auto it2 = it++; it2 != m_pos_cache.end(); it2 = m_pos_cache.erase(it2)) {
+        // Not overlapping anymore
+        if (it2->first > it->second.tend)
+            return;
+        if (it2->second.tend > it->second.tend) {
+            // The end of the new range is after us so we can stop after update.
+            it->second.tend = it2->second.tend;
+            it->second.pend = it2->second.pend;
+            m_pos_cache.erase(it2);
+            return;
+        }
+    }
+}
+
+NACS_EXPORT() Wavemeter::Wavemeter(double lo, double hi)
+: m_lo(lo), m_hi(hi)
+{
 }
 
 }

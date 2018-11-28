@@ -20,6 +20,7 @@
 #define __NACS_UTILS_WAVEMETER_H__
 
 #include <istream>
+#include <map>
 
 namespace NaCs {
 
@@ -34,9 +35,26 @@ class Wavemeter {
     }
     static bool try_parseval(std::istream &stm, double *val, double lo, double hi);
     bool try_parseline(std::istream &stm, double *tsf, double *val) const;
-
     using pos_type = std::istream::pos_type;
     static pos_type find_linestart(std::istream &stm, pos_type ub, pos_type lb);
+
+    // Time -> position
+    std::pair<pos_type,pos_type> find_pos_range(double t) const;
+    void add_pos_range(double tstart, double tend, pos_type pstart, pos_type pend);
+
+public:
+    Wavemeter(double lo, double hi);
+
+private:
+    struct PosRange {
+        double tend;
+        pos_type pstart;
+        pos_type pend;
+    };
+    std::map<double,PosRange> m_pos_cache;
+
+    const double m_lo = 0;
+    const double m_hi = 0;
 };
 
 }
