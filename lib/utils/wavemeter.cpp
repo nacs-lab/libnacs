@@ -123,6 +123,8 @@ NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
             break;
         }
     }
+    stm.clear();
+    stm >> ignore_line;
     *val = max_pos;
     return found_val;
 }
@@ -166,10 +168,31 @@ NACS_INTERNAL auto Wavemeter::parse_at(std::istream &stm, pos_type pos, pos_type
 {
     auto ls = find_linestart(stm, pos, lb);
     stm.seekg(ls);
-    auto res = parseline(stm, tsf, val);
-    stm.clear();
-    stm >> ignore_line;
-    return {res, ls};
+    return {parseline(stm, tsf, val), ls};
+}
+
+NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_type pos_max,
+                                          std::vector<double> &times,
+                                          std::vector<double> &datas)
+{
+    while (true) {
+        auto pos = stm.tellg();
+        if (pos >= pos_max)
+            return;
+        double tsf;
+        double val;
+        auto res = parseline(stm, &tsf, &val);
+        // EOF without new line
+        if (!stm || stm.peek() != '\n')
+            return;
+        if (!res)
+            continue;
+        times.push_back(tsf);
+        datas.push_back(val);
+        if (tsf >= tmax) {
+            return;
+        }
+    }
 }
 
 NACS_INTERNAL auto Wavemeter::find_pos_range(double t) const
