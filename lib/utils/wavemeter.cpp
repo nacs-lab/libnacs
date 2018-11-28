@@ -132,7 +132,7 @@ NACS_INTERNAL bool Wavemeter::try_parseline(std::istream &stm, double *tsf, doub
     if (!try_parsetime(stm, tsf))
         return false;
     *tsf = *tsf / 86400 + 719529;
-    return try_parsenumber(stm, val);
+    return try_parseval(stm, val, m_lo, m_hi);
 }
 
 static const std::istream::pos_type pos_error = std::streamoff(-1);
