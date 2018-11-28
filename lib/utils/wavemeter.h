@@ -48,9 +48,9 @@ class Wavemeter {
     // Parse the line that includes `pos`. Do not look back more than `lb`
     std::pair<bool,pos_type> parse_at(std::istream &stm, pos_type pos, pos_type lb,
                                       double *tsf, double *val) const;
-
+    // Parse until the time and position limit.
     void parse_until(std::istream &stm, double tmax, pos_type pos_max,
-                     std::vector<double> &times, std::vector<double> &datas);
+                     std::vector<double> &times, std::vector<double> &datas) const;
 
     // Time -> position
     std::pair<pos_type,pos_type> find_pos_range(double t) const;

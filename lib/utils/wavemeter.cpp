@@ -173,11 +173,11 @@ NACS_INTERNAL auto Wavemeter::parse_at(std::istream &stm, pos_type pos, pos_type
 
 NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_type pos_max,
                                           std::vector<double> &times,
-                                          std::vector<double> &datas)
+                                          std::vector<double> &datas) const
 {
     while (true) {
         auto pos = stm.tellg();
-        if (pos >= pos_max)
+        if (pos_max != pos_error && pos >= pos_max)
             return;
         double tsf;
         double val;
