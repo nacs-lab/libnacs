@@ -26,6 +26,18 @@
 namespace NaCs {
 
 class Wavemeter {
+    using pos_type = std::istream::pos_type;
+    struct PosRange {
+        double tend;
+        pos_type pstart;
+        pos_type pend;
+    };
+    struct Segment {
+        std::vector<double> times{};
+        std::vector<double> datas{};
+        size_t size = 0;
+    };
+
     // Stateless parsing functions
     // Parse the time stamp
     static bool parsetime(std::istream &stm, double *tsf);
@@ -43,7 +55,6 @@ class Wavemeter {
     bool parseline(std::istream &stm, double *tsf, double *val) const;
     // Find the beginning of the line that includes `ub`
     // Do not look back more than `lb`.
-    using pos_type = std::istream::pos_type;
     static pos_type find_linestart(std::istream &stm, pos_type ub, pos_type lb);
     // Parse the line that includes `pos`. Do not look back more than `lb`
     std::pair<bool,pos_type> parse_at(std::istream &stm, pos_type pos, pos_type lb,
@@ -56,16 +67,17 @@ class Wavemeter {
     std::pair<pos_type,pos_type> find_pos_range(double t) const;
     void add_pos_range(double tstart, double tend, pos_type pstart, pos_type pend);
 
+    // Parse and cache the result for a block.
+    const Segment *get_segment(std::istream &stm, double tstart, double tend);
+
 public:
     Wavemeter(double lo, double hi);
+    std::pair<const double*,const double*>
+    parse(std::istream &stm, size_t *sz, double tstart, double tend);
 
 private:
-    struct PosRange {
-        double tend;
-        pos_type pstart;
-        pos_type pend;
-    };
     std::map<double,PosRange> m_pos_cache;
+    std::map<pos_type,Segment> m_segments;
 
     const double m_lo = 0;
     const double m_hi = 0;

@@ -22,6 +22,7 @@
 #include "utils.h"
 
 #include <ctime>
+#include <fstream>
 #include <iomanip>
 
 #include <time.h>
@@ -279,9 +280,59 @@ NACS_INTERNAL void Wavemeter::add_pos_range(double tstart, double tend,
     }
 }
 
+NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
+                                          double tend) -> const Segment*
+{
+    // TODO
+    return nullptr;
+}
+
+NACS_EXPORT() std::pair<const double*,const double*>
+Wavemeter::parse(std::istream &stm, size_t *sz, double tstart, double tend)
+{
+    auto seg = get_segment(stm, tstart, tend);
+    auto it1 = std::lower_bound(seg->times.begin(), seg->times.end(), tstart);
+    if (it1 == seg->times.end())
+        return {nullptr, nullptr};
+    auto idx1 = it1 - seg->times.begin();
+    auto it2 = std::lower_bound(seg->times.begin(), seg->times.end(), tend);
+    auto idx2 = it2 == seg->times.end() ? seg->times.size() - 1 : it2 - seg->times.begin();
+    *sz = idx2 - idx1;
+    return {&*it1, &seg->datas[idx1]};
+}
+
 NACS_EXPORT() Wavemeter::Wavemeter(double lo, double hi)
 : m_lo(lo), m_hi(hi)
 {
+}
+
+}
+
+extern "C" {
+
+using namespace NaCs;
+
+NACS_EXPORT() void *nacs_utils_new_wavemeter(double lo, double hi)
+{
+    return new Wavemeter(lo, hi);
+}
+
+NACS_EXPORT() size_t nacs_utils_wavemeter_parse(void *_parser, const char *name,
+                                                const double **ts, const double **data,
+                                                double tstart, double tend)
+{
+    auto parser = (Wavemeter*)_parser;
+    size_t sz = 0;
+    std::ifstream stm(name);
+    auto ptrs = parser->parse(stm, &sz, tstart, tend);
+    *ts = ptrs.first;
+    *data = ptrs.second;
+    return sz;
+}
+
+NACS_EXPORT() void nacs_utils_free_wavemeter(void *parser)
+{
+    delete (Wavemeter*)parser;
 }
 
 }
