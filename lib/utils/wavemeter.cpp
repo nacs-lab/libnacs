@@ -25,6 +25,7 @@
 #include <fstream>
 #include <iomanip>
 
+#include <assert.h>
 #include <time.h>
 
 namespace NaCs {
@@ -195,6 +196,56 @@ NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_ty
         datas.push_back(val);
         if (tsf >= tmax) {
             return;
+        }
+    }
+}
+
+// Find the location that is right before `tstart` and starts parsing there.
+// Only look in `[pstart, pend)`.
+// The starting time may be after `tstart` if no point before `tstart` exists in the range.
+// The returned range may be larger than needed.
+// If return value is `true`, `tsf` and `val` contains the number corresponds to the first point.
+NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
+                                          pos_type pstart, pos_type pend,
+                                          double *tsf, double *val) const
+{
+    pos_type lb = pstart;
+    pos_type ub = pend;
+    bool lb_valid = false;
+    std::pair<double,double> lb_res{0, 0};
+    while (true) {
+        auto sz = ub - lb;
+        // Good enough
+        if (sz < 10240) {
+            stm.seekg(lb);
+            std::tie(*tsf, *val) = lb_res;
+            return lb_valid;
+        }
+        pos_type mid = lb + sz / 2;
+        double t, v;
+        auto res = parse_at(stm, mid, lb, &t, &v);
+        if (unlikely(!res.first)) {
+            while (stm.tellg() < ub && !res.first)
+                res.first = parseline(stm, &t, &v);
+            if (!res.first) {
+                // Nothing above use is useful, just update ub
+                // This can cause the invalid part to be reparse by the caller but
+                // we don't really expect that to happen (in a performance important way)
+                // anyway so it's more important to keep the code simpler.
+                ub = res.second;
+                continue;
+            }
+        }
+        assert(res.first);
+        if (t > tstart) {
+            // mid is ub
+            ub = res.second;
+        }
+        else {
+            // mid is lb
+            lb = stm.tellg();
+            lb_valid = true;
+            lb_res = {t, v};
         }
     }
 }

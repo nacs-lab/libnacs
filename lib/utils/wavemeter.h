@@ -62,6 +62,8 @@ class Wavemeter {
     // Parse until the time and position limit.
     void parse_until(std::istream &stm, double tmax, pos_type pos_max,
                      std::vector<double> &times, std::vector<double> &datas) const;
+    bool start_parse(std::istream &stm, double tstart,
+                     pos_type pstart, pos_type pend, double *tsf, double *val) const;
 
     // Time -> position
     std::pair<pos_type,pos_type> find_pos_range(double t) const;
