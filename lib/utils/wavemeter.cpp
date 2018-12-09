@@ -132,8 +132,11 @@ NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
 
 NACS_INTERNAL bool Wavemeter::parseline(std::istream &stm, double *tsf, double *val) const
 {
-    if (!parsetime(stm, tsf))
+    if (!parsetime(stm, tsf)) {
+        stm.clear();
+        stm >> ignore_line;
         return false;
+    }
     *tsf = *tsf / 86400 + 719529;
     return parseval(stm, val, m_lo, m_hi);
 }
@@ -143,9 +146,9 @@ static const std::istream::pos_type pos_error = std::streamoff(-1);
 NACS_INTERNAL auto Wavemeter::find_linestart(std::istream &stm, pos_type ub,
                                              pos_type lb) -> pos_type
 {
-    char buff[150];
     pos_type loc = ub;
     while (loc > lb) {
+        char buff[150];
         size_t sz = loc - lb;
         if (sz > sizeof(buff))
             sz = sizeof(buff);
