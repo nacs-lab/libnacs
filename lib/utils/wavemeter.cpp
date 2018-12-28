@@ -344,12 +344,16 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
 NACS_EXPORT() std::pair<const double*,const double*>
 Wavemeter::parse(std::istream &stm, size_t *sz, double tstart, double tend)
 {
+    if (unlikely(tend <= tstart)) {
+        *sz = 0;
+        return {nullptr, nullptr};
+    }
     auto seg = get_segment(stm, tstart, tend);
     auto it1 = std::lower_bound(seg->times.begin(), seg->times.end(), tstart);
     if (it1 == seg->times.end())
         return {nullptr, nullptr};
     auto idx1 = it1 - seg->times.begin();
-    auto it2 = std::lower_bound(seg->times.begin(), seg->times.end(), tend);
+    auto it2 = std::lower_bound(it1, seg->times.end(), tend);
     auto idx2 = it2 == seg->times.end() ? seg->times.size() - 1 : it2 - seg->times.begin();
     *sz = idx2 - idx1;
     return {&*it1, &seg->datas[idx1]};
