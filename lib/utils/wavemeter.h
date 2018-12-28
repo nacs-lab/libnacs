@@ -37,6 +37,8 @@ class Wavemeter {
         std::vector<double> datas{};
         size_t size = 0;
     };
+    using seg_map_t = std::map<pos_type,Segment>;
+    using seg_ent_t = seg_map_t::value_type;
 
     // Stateless parsing functions
     // Parse the time stamp
@@ -69,6 +71,9 @@ class Wavemeter {
     std::pair<pos_type,pos_type> find_pos_range(double t) const;
     void add_pos_range(double tstart, double tend, pos_type pstart, pos_type pend);
 
+    void extend_segment(std::istream &stm, seg_ent_t &ent, double tend,
+                        pos_type pend=std::streamoff(-1));
+
     // Parse and cache the result for a block.
     const Segment *get_segment(std::istream &stm, double tstart, double tend);
 
@@ -79,7 +84,7 @@ public:
 
 private:
     std::map<double,PosRange> m_pos_cache;
-    std::map<pos_type,Segment> m_segments;
+    seg_map_t m_segments;
 
     const double m_lo = 0;
     const double m_hi = 0;
