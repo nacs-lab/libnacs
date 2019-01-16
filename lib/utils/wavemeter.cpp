@@ -127,6 +127,8 @@ NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
     }
     stm.clear();
     stm >> ignore_line;
+    if (!stm)
+        return false;
     *val = max_pos;
     return found_val;
 }
@@ -187,11 +189,14 @@ NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_ty
         double tsf;
         double val;
         auto res = parseline(stm, &tsf, &val);
-        // EOF without new line
-        if (!stm || stm.peek() != '\n')
-            return;
-        if (!res)
+        if (!unlikely(res)) {
+            if (!stm) {
+                // Error/EOF
+                stm.clear();
+                return;
+            }
             continue;
+        }
         times.push_back(tsf);
         datas.push_back(val);
         if (tsf >= tmax) {
@@ -225,6 +230,7 @@ NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
         double t, v;
         auto res = parse_at(stm, mid, lb, &t, &v);
         if (unlikely(!res.first)) {
+            stm.clear();
             while (stm.tellg() < ub && !res.first)
                 res.first = parseline(stm, &t, &v);
             if (!res.first) {
@@ -233,6 +239,7 @@ NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
                 // we don't really expect that to happen (in a performance important way)
                 // anyway so it's more important to keep the code simpler.
                 ub = res.second;
+                stm.clear();
                 continue;
             }
         }

@@ -51,7 +51,8 @@ class Wavemeter {
         return parsenumber(stm, val, &eol);
     }
     // Parse the data section of the log file and find the best match
-    // given the upper and lower bound
+    // given the upper and lower bound.
+    // The line must be terminated by a `\n`.
     static bool parseval(std::istream &stm, double *val, double lo, double hi);
     // Parse both the time and the data from a complete line.
     bool parseline(std::istream &stm, double *tsf, double *val) const;
