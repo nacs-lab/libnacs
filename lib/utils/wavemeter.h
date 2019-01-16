@@ -72,7 +72,7 @@ class Wavemeter {
     void add_pos_range(double tstart, double tend, pos_type pstart, pos_type pend);
 
     void extend_segment(std::istream &stm, seg_ent_t &ent, double tend,
-                        pos_type pend=std::streamoff(-1));
+                        pos_type pend);
 
     // Parse and cache the result for a block.
     const Segment *get_segment(std::istream &stm, double tstart, double tend);
