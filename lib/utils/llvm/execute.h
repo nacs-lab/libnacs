@@ -34,7 +34,13 @@ namespace Exe {
 
 using namespace llvm;
 
-class Resolver : public JITSymbolResolver {
+#if LLVM_VERSION_MAJOR >= 7
+using ResolverBase = LegacyJITSymbolResolver;
+#else
+using ResolverBase = JITSymbolResolver;
+#endif
+
+class Resolver : public ResolverBase {
 public:
     Resolver() = default;
 private:

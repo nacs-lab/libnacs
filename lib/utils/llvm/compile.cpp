@@ -26,9 +26,16 @@
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/MC/MCContext.h>
 #include <llvm/Support/TargetSelect.h>
+#if LLVM_VERSION_MAJOR >= 7
+#  include <llvm/Transforms/InstCombine/InstCombine.h>
+#endif
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
+#if LLVM_VERSION_MAJOR >= 7
+#  include <llvm/Transforms/Scalar/InstSimplifyPass.h>
+#endif
+#include <llvm/Transforms/Utils.h>
 #include <llvm/Transforms/Vectorize.h>
 
 #include <mutex>
@@ -70,7 +77,11 @@ void addOptimization(legacy::PassManagerBase &pm)
     pm.add(createSCCPPass());                 // Constant prop with SCCP
 
     pm.add(createSinkingPass()); ////////////// ****
+#if LLVM_VERSION_MAJOR >= 7
+    pm.add(createInstSimplifyLegacyPass());///////// ****
+#else
     pm.add(createInstructionSimplifierPass());///////// ****
+#endif
     pm.add(createInstructionCombiningPass());
     pm.add(createJumpThreadingPass());         // Thread jumps
     pm.add(createDeadStoreEliminationPass());  // Delete dead stores
