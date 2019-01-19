@@ -36,7 +36,7 @@ NACS_INTERNAL bool Wavemeter::parsetime(std::istream &stm, double *tsf)
     memset(&timedate, 0, sizeof(timedate));
     stm >> ignore_space >> std::get_time(&timedate, "%Y-%m-%dT%H:%M:%S");
     // Read time failed
-    if (stm.eof() || !stm)
+    if (!stm.good())
         return false;
     timedate.tm_isdst = 0;
 #if NACS_OS_WINDOWS
@@ -52,7 +52,7 @@ NACS_INTERNAL bool Wavemeter::parsetime(std::istream &stm, double *tsf)
         double f = 0;
         stm >> f;
         // Read second fraction failed
-        if (stm.fail())
+        if (!stm.good())
             return false;
         *tsf += f;
     }
@@ -68,7 +68,7 @@ NACS_INTERNAL bool Wavemeter::parsenumber(std::istream &stm, double *val, bool *
 {
     stm >> *val;
     // Read value failed
-    if (stm.fail())
+    if (!stm.good())
         return false;
     stm >> ignore_space;
     auto nc = stm.peek();
@@ -127,7 +127,7 @@ NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
     }
     stm.clear();
     stm >> ignore_line;
-    if (!stm)
+    if (!stm.good())
         return false;
     *val = max_pos;
     return found_val;
@@ -158,7 +158,7 @@ NACS_INTERNAL auto Wavemeter::find_linestart(std::istream &stm, pos_type ub,
         loc -= sz;
         stm.seekg(loc);
         stm.read(buff, sizeof(buff));
-        if (!stm)
+        if (!stm.good())
             throw std::runtime_error("Error finding line start");
         for (int i = sz - 1; i >= 0; i--) {
             if (buff[i] == '\n') {
@@ -190,8 +190,8 @@ NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_ty
         double val;
         auto res = parseline(stm, &tsf, &val);
         if (!unlikely(res)) {
-            if (!stm) {
-                // Error/EOF
+            // Treat IO error as not possible to read forward
+            if (!stm.good()) {
                 stm.clear();
                 return;
             }
@@ -230,11 +230,12 @@ NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
         double t, v;
         auto res = parse_at(stm, mid, lb, &t, &v);
         if (unlikely(!res.first)) {
-            stm.clear();
-            while (stm.tellg() < ub && !res.first)
+            while (!res.first && stm.good() && stm.tellg() < ub) {
+                stm.clear();
                 res.first = parseline(stm, &t, &v);
+            }
             if (!res.first) {
-                // Nothing above use is useful, just update ub
+                // Nothing above us is useful, just update ub
                 // This can cause the invalid part to be reparse by the caller but
                 // we don't really expect that to happen (in a performance important way)
                 // anyway so it's more important to keep the code simpler.

@@ -55,6 +55,7 @@ class Wavemeter {
     // The line must be terminated by a `\n`.
     static bool parseval(std::istream &stm, double *val, double lo, double hi);
     // Parse both the time and the data from a complete line.
+    // A `good()` `stm` after the function return guarantees forward progress.
     bool parseline(std::istream &stm, double *tsf, double *val) const;
     // Find the beginning of the line that includes `ub`
     // Do not look back more than `lb`.
