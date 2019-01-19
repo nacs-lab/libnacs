@@ -129,9 +129,11 @@ inline void buff_streambuf::update_size()
     }
 }
 
+#if !NACS_OS_WINDOWS
 template class basic_vector_streambuf<std::vector<char>>;
 template class basic_vector_streambuf<std::vector<unsigned char>>;
 template class basic_vector_streambuf<std::string>;
+#endif
 
 malloc_streambuf::malloc_streambuf()
 {
@@ -210,9 +212,11 @@ std::streamsize const_streambuf::showmanyc()
     return m_end - m_current;
 }
 
+#if !NACS_OS_WINDOWS
 template class basic_vector_ostream<std::vector<char>>;
 template class basic_vector_ostream<std::vector<unsigned char>>;
 template class basic_vector_ostream<std::string>;
+#endif
 
 malloc_ostream::malloc_ostream()
     : buff_ostream(&m_buf), m_buf()

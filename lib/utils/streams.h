@@ -132,9 +132,12 @@ char *basic_vector_streambuf<T>::extend(size_t sz)
     return (char*)&m_buf[oldsz];
 }
 
+#if !NACS_OS_WINDOWS
+// Couldn't get visibility to work on windows
 extern template class basic_vector_streambuf<std::vector<char>>;
 extern template class basic_vector_streambuf<std::vector<unsigned char>>;
 extern template class basic_vector_streambuf<std::string>;
+#endif
 
 using vector_streambuf = basic_vector_streambuf<std::vector<char>>;
 using uvector_streambuf = basic_vector_streambuf<std::vector<unsigned char>>;
@@ -221,9 +224,12 @@ basic_vector_ostream<T>::~basic_vector_ostream()
 {
 }
 
+#if !NACS_OS_WINDOWS
+// Couldn't get visibility to work on windows
 extern template class basic_vector_ostream<std::vector<char>>;
 extern template class basic_vector_ostream<std::vector<unsigned char>>;
 extern template class basic_vector_ostream<std::string>;
+#endif
 
 using vector_ostream = basic_vector_ostream<std::vector<char>>;
 using uvector_ostream = basic_vector_ostream<std::vector<unsigned char>>;
