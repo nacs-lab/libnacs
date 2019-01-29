@@ -353,7 +353,9 @@ NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, seg_ent_t &ent,
         return;
     stm.seekg(ent.first + std::streamoff(ent.second.size));
     parse_until(stm, tend, pend, ent.second.times, ent.second.datas);
-    ent.second.size = stm.tellg() - ent.first;
+    pend = stm.tellg();
+    ent.second.size = pend - ent.first;
+    add_pos_range(ent.second.times.front(), ent.second.times.back(), ent.first, pend);
 }
 
 NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, double tend,
