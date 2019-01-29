@@ -82,8 +82,8 @@ class Wavemeter {
 
     void extend_segment(std::istream &stm, seg_ent_t &ent, double tend,
                         pos_type pend);
-    const Segment *new_segment_end(std::istream &stm, double tstart, double tend,
-                                   pos_type lb, pos_type ub);
+    const Segment *new_segment(std::istream &stm, double tstart, double tend,
+                               pos_type lb, pos_type ub);
 
     // Parse and cache the result for a block.
     const Segment *get_segment(std::istream &stm, double tstart, double tend);

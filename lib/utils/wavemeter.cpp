@@ -356,12 +356,18 @@ NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, seg_ent_t &ent,
     ent.second.size = stm.tellg() - ent.first;
 }
 
-NACS_INTERNAL auto Wavemeter::new_segment_end(std::istream &stm, double tstart, double tend,
-                                              pos_type lb, pos_type ub) -> const Segment*
+NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, double tend,
+                                          pos_type lb, pos_type ub) -> const Segment*
 {
     double tsf, val;
     pos_type loc;
-    bool valid = start_parse(stm, tstart, lb, ub, &tsf, &val, &loc);
+    bool valid;
+    try {
+        valid = start_parse(stm, tstart, lb, ub, &tsf, &val, &loc);
+    }
+    catch (...) {
+        return nullptr;
+    }
     if (!stm.good())
         return nullptr;
     std::vector<double> times;
