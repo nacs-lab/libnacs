@@ -359,7 +359,8 @@ NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, seg_ent_t &ent,
 }
 
 NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, double tend,
-                                          pos_type lb, pos_type ub) -> const Segment*
+                                          pos_type lb, pos_type ub, Segment *prev)
+    -> const Segment*
 {
     double tsf, val;
     pos_type loc;
@@ -372,14 +373,25 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
     }
     if (!stm.good())
         return nullptr;
+    if (!valid)
+        loc = stm.tellg();
+    if (loc == lb && prev) {
+        if (valid) {
+            prev->times.push_back(tsf);
+            prev->datas.push_back(val);
+        }
+        auto pstart = lb - std::streamoff(prev->size);
+        parse_until(stm, tend, ub, prev->times, prev->datas);
+        auto pend = stm.tellg();
+        prev->size = pend - pstart;
+        add_pos_range(prev->times.front(), prev->times.back(), pstart, pend);
+        return prev;
+    }
     std::vector<double> times;
     std::vector<double> datas;
     if (valid) {
         times.push_back(tsf);
         datas.push_back(val);
-    }
-    else {
-        loc = stm.tellg();
     }
     parse_until(stm, tend, ub, times, datas);
     if (times.empty())

@@ -82,8 +82,9 @@ class Wavemeter {
 
     void extend_segment(std::istream &stm, seg_ent_t &ent, double tend,
                         pos_type pend);
+    // If `prev` is not NULL, it's a segment that ends at `lb`.
     const Segment *new_segment(std::istream &stm, double tstart, double tend,
-                               pos_type lb, pos_type ub);
+                               pos_type lb, pos_type ub, Segment *prev=nullptr);
 
     // Parse and cache the result for a block.
     const Segment *get_segment(std::istream &stm, double tstart, double tend);
