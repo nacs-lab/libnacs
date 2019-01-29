@@ -33,9 +33,16 @@ class Wavemeter {
         pos_type pend;
     };
     struct Segment {
-        std::vector<double> times{};
-        std::vector<double> datas{};
-        size_t size = 0;
+        std::vector<double> times;
+        std::vector<double> datas;
+        size_t size;
+        Segment(std::vector<double> times,
+                std::vector<double> datas,
+                size_t size)
+            : times(std::move(times)),
+              datas(std::move(datas)),
+              size(size)
+        {}
     };
     using seg_map_t = std::map<pos_type,Segment>;
     using seg_ent_t = seg_map_t::value_type;
@@ -66,8 +73,8 @@ class Wavemeter {
     // Parse until the time and position limit.
     void parse_until(std::istream &stm, double tmax, pos_type pos_max,
                      std::vector<double> &times, std::vector<double> &datas) const;
-    bool start_parse(std::istream &stm, double tstart,
-                     pos_type pstart, pos_type pend, double *tsf, double *val) const;
+    bool start_parse(std::istream &stm, double tstart, pos_type pstart, pos_type pend,
+                     double *tsf, double *val, pos_type *loc) const;
 
     // Time -> position
     std::pair<pos_type,pos_type> find_pos_range(double t) const;
@@ -75,6 +82,8 @@ class Wavemeter {
 
     void extend_segment(std::istream &stm, seg_ent_t &ent, double tend,
                         pos_type pend);
+    const Segment *new_segment_end(std::istream &stm, double tstart, double tend,
+                                   pos_type lb, pos_type ub);
 
     // Parse and cache the result for a block.
     const Segment *get_segment(std::istream &stm, double tstart, double tend);

@@ -24,6 +24,7 @@
 #include <ctime>
 #include <fstream>
 #include <iomanip>
+#include <tuple>
 
 #include <assert.h>
 #include <time.h>
@@ -209,21 +210,24 @@ NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_ty
 // Only look in `[pstart, pend)`.
 // The starting time may be after `tstart` if no point before `tstart` exists in the range.
 // The returned range may be larger than needed.
-// If return value is `true`, `tsf` and `val` contains the number corresponds to the first point.
+// If return value is `true`, `tsf` and `val` contains the number corresponds to the first point,
+// and `loc` is the start of the corresponding line. Note that the data is only guaranteed
+// to be the first valid line following `loc`, there could be any number of garbage lines
+// before it.
 NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
                                           pos_type pstart, pos_type pend,
-                                          double *tsf, double *val) const
+                                          double *tsf, double *val, pos_type *loc) const
 {
     pos_type lb = pstart;
     pos_type ub = pend;
     bool lb_valid = false;
-    std::pair<double,double> lb_res{0, 0};
+    std::tuple<double,double,pos_type> lb_res{0, 0, 0};
     while (true) {
         auto sz = ub - lb;
         // Good enough
         if (sz < 10240) {
             stm.seekg(lb);
-            std::tie(*tsf, *val) = lb_res;
+            std::tie(*tsf, *val, *loc) = lb_res;
             return lb_valid;
         }
         pos_type mid = lb + sz / 2;
@@ -253,7 +257,7 @@ NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
             // mid is lb
             lb = stm.tellg();
             lb_valid = true;
-            lb_res = {t, v};
+            lb_res = {t, v, res.second};
         }
     }
 }
@@ -350,6 +354,33 @@ NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, seg_ent_t &ent,
     stm.seekg(ent.first + std::streamoff(ent.second.size));
     parse_until(stm, tend, pend, ent.second.times, ent.second.datas);
     ent.second.size = stm.tellg() - ent.first;
+}
+
+NACS_INTERNAL auto Wavemeter::new_segment_end(std::istream &stm, double tstart, double tend,
+                                              pos_type lb, pos_type ub) -> const Segment*
+{
+    double tsf, val;
+    pos_type loc;
+    bool valid = start_parse(stm, tstart, lb, ub, &tsf, &val, &loc);
+    if (!stm.good())
+        return nullptr;
+    std::vector<double> times;
+    std::vector<double> datas;
+    if (valid) {
+        times.push_back(tsf);
+        datas.push_back(val);
+    }
+    else {
+        loc = stm.tellg();
+    }
+    parse_until(stm, tend, ub, times, datas);
+    if (times.empty())
+        return nullptr;
+    auto it = m_segments.emplace(std::piecewise_construct,
+                                 std::forward_as_tuple(loc),
+                                 std::forward_as_tuple(std::move(times), std::move(datas),
+                                                       stm.tellg() - loc)).first;
+    return &it->second;
 }
 
 NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
