@@ -376,10 +376,12 @@ NACS_INTERNAL auto Wavemeter::new_segment_end(std::istream &stm, double tstart, 
     parse_until(stm, tend, ub, times, datas);
     if (times.empty())
         return nullptr;
+    auto pend = stm.tellg();
+    add_pos_range(times.front(), times.back(), loc, pend);
     auto it = m_segments.emplace(std::piecewise_construct,
                                  std::forward_as_tuple(loc),
                                  std::forward_as_tuple(std::move(times), std::move(datas),
-                                                       stm.tellg() - loc)).first;
+                                                       pend - loc)).first;
     return &it->second;
 }
 
