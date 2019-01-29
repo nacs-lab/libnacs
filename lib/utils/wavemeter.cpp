@@ -408,6 +408,20 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
 NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
                                           double tend) -> const Segment*
 {
+    // Handle the most likely case first, i.e. reading from the end of file.
+    auto lastit = m_segments.rbegin();
+    if (unlikely(lastit == m_segments.rend()))
+        return new_segment(stm, tstart, tend, 0, pos_error);
+    if (lastit->second.times.front() <= tstart) {
+        if (lastit->second.times.back() + 120 >= tstart) {
+            extend_segment(stm, *lastit, tend, pos_error);
+            return &lastit->second;
+        }
+        return new_segment(stm, tstart, tend,
+                           lastit->first + std::streamoff(lastit->second.size),
+                           pos_error, &lastit->second);
+    }
+
     // TODO
     return nullptr;
 }
