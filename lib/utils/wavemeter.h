@@ -20,32 +20,54 @@
 #define __NACS_UTILS_WAVEMETER_H__
 
 #include <istream>
-#include <map>
+#include <set>
 #include <vector>
+
+#include <assert.h>
 
 namespace NaCs {
 
 class Wavemeter {
     using pos_type = std::istream::pos_type;
-    struct PosRange {
-        double tend;
+    struct Segment {
         pos_type pstart;
         pos_type pend;
-    };
-    struct Segment {
+        // These two should never be empty.
         std::vector<double> times;
         std::vector<double> datas;
-        size_t size;
-        Segment(std::vector<double> times,
-                std::vector<double> datas,
-                size_t size)
-            : times(std::move(times)),
-              datas(std::move(datas)),
-              size(size)
-        {}
+        Segment(pos_type pstart, pos_type pend,
+                std::vector<double> times, std::vector<double> datas)
+            : pstart(pstart),
+              pend(pend),
+              times(std::move(times)),
+              datas(std::move(datas))
+        {
+            assert(!this->times.empty());
+        }
     };
-    using seg_map_t = std::map<pos_type,Segment>;
-    using seg_ent_t = seg_map_t::value_type;
+    struct SegComp {
+        using is_transparent = void;
+        bool operator()(const pos_type &pos1, const Segment &seg2) const
+        {
+            return pos1 < seg2.pstart;
+        }
+        bool operator()(const Segment &seg1, const pos_type &pos2) const
+        {
+            return seg1.pstart < pos2;
+        }
+        bool operator()(const double &t1, const Segment &seg2) const
+        {
+            return t1 < seg2.times.front();
+        }
+        bool operator()(const Segment &seg1, const double &t2) const
+        {
+            return seg1.times.front() < t2;
+        }
+        bool operator()(const Segment &seg1, const Segment &seg2) const
+        {
+            return seg1.pstart < seg2.pstart;
+        }
+    };
 
     // Stateless parsing functions
     // Parse the time stamp
@@ -78,14 +100,11 @@ class Wavemeter {
 
     // Time -> position
     std::pair<pos_type,pos_type> find_pos_range(double t) const;
-    void add_pos_range(double tstart, double tend, pos_type pstart, pos_type pend);
 
-    void extend_segment(std::istream &stm, seg_ent_t &ent, double tend,
-                        pos_type pend);
+    void extend_segment(std::istream &stm, Segment &seg, double tend, pos_type pend);
     // If `prev` is not NULL, it's a segment that ends at `lb`.
     const Segment *new_segment(std::istream &stm, double tstart, double tend,
                                pos_type lb, pos_type ub, Segment *prev=nullptr);
-
     // Parse and cache the result for a block.
     const Segment *get_segment(std::istream &stm, double tstart, double tend);
 
@@ -95,8 +114,7 @@ public:
     parse(std::istream &stm, size_t *sz, double tstart, double tend);
 
 private:
-    std::map<double,PosRange> m_pos_cache;
-    seg_map_t m_segments;
+    std::set<Segment,SegComp> m_segments;
 
     const double m_lo = 0;
     const double m_hi = 0;

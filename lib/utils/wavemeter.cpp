@@ -266,96 +266,36 @@ NACS_INTERNAL auto Wavemeter::find_pos_range(double t) const
     -> std::pair<pos_type,pos_type>
 {
     // Empty case
-    if (m_pos_cache.empty())
+    if (m_segments.empty())
         return {0, pos_error};
-    auto it = m_pos_cache.upper_bound(t);
-    if (likely(it == m_pos_cache.end())) {
+    auto it = m_segments.upper_bound(t);
+    if (likely(it == m_segments.end())) {
         // No range after us, check the last range.
-        auto rit = m_pos_cache.rbegin();
-        if (rit->second.tend >= t)
-            return {rit->second.pstart, rit->second.pend};
-        return {rit->second.pend, pos_error};
+        auto rit = m_segments.rbegin();
+        if (rit->times.back() >= t)
+            return {rit->pstart, rit->pend};
+        return {rit->pend, pos_error};
     }
-    pos_type ub = it->second.pstart;
+    pos_type ub = it->pstart;
     --it;
     // The one above us is the first range
-    if (it == m_pos_cache.end())
+    if (it == m_segments.end())
         return {0, ub};
     // We are within the previous range
-    if (it->second.tend >= t)
-        return {it->second.pstart, it->second.pend};
+    if (it->times.back() >= t)
+        return {it->pstart, it->pend};
     // We are in between two ranges.
-    return {it->second.pend, ub};
+    return {it->pend, ub};
 }
 
-NACS_INTERNAL void Wavemeter::add_pos_range(double tstart, double tend,
-                                            pos_type pstart, pos_type pend)
-{
-    auto add_range = [&] {
-        return m_pos_cache.emplace(tstart, PosRange{tend, pstart, pend}).first;
-    };
-    // Empty case
-    if (m_pos_cache.empty()) {
-        add_range();
-        return;
-    }
-    auto it = m_pos_cache.upper_bound(tstart);
-    if (likely(it == m_pos_cache.end())) {
-        // No range after us, try to merge with the last range
-        auto rit = m_pos_cache.rbegin();
-        // Already covered.
-        if (unlikely(rit->second.tend >= tend))
-            return;
-        // Not overlapping with the last range
-        if (rit->second.tend < tstart) {
-            add_range();
-            return;
-        }
-        // Modify the last range
-        rit->second.tend = tend;
-        rit->second.pend = pend;
-        return;
-    }
-    // For the following cases, we may need to check if any range(s) after us should be merged.
-    --it;
-    if (it == m_pos_cache.end() || it->second.tend < tstart) {
-        // We aren't overlapping with any (previous) ranges.
-        it = add_range();
-    }
-    else if (unlikely(it->second.tend >= tend)) {
-        // No new range.
-        return;
-    }
-    else {
-        it->second.tend = tend;
-        it->second.pend = pend;
-    }
-    // `it` is the range that contains the new range.
-    // We need to check if any range after `it` have overlap.
-    for (auto it2 = it++; it2 != m_pos_cache.end(); it2 = m_pos_cache.erase(it2)) {
-        // Not overlapping anymore
-        if (it2->first > it->second.tend)
-            return;
-        if (it2->second.tend > it->second.tend) {
-            // The end of the new range is after us so we can stop after update.
-            it->second.tend = it2->second.tend;
-            it->second.pend = it2->second.pend;
-            m_pos_cache.erase(it2);
-            return;
-        }
-    }
-}
-
-NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, seg_ent_t &ent,
+NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, Segment &seg,
                                              double tend, pos_type pend)
 {
-    if (ent.second.times.back() >= tend)
+    if (seg.times.back() >= tend)
         return;
-    stm.seekg(ent.first + std::streamoff(ent.second.size));
-    parse_until(stm, tend, pend, ent.second.times, ent.second.datas);
-    pend = stm.tellg();
-    ent.second.size = pend - ent.first;
-    add_pos_range(ent.second.times.front(), ent.second.times.back(), ent.first, pend);
+    stm.seekg(seg.pend);
+    parse_until(stm, tend, pend, seg.times, seg.datas);
+    seg.pend = stm.tellg();
 }
 
 NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, double tend,
@@ -380,11 +320,8 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
             prev->times.push_back(tsf);
             prev->datas.push_back(val);
         }
-        auto pstart = lb - std::streamoff(prev->size);
         parse_until(stm, tend, ub, prev->times, prev->datas);
-        auto pend = stm.tellg();
-        prev->size = pend - pstart;
-        add_pos_range(prev->times.front(), prev->times.back(), pstart, pend);
+        prev->pend = stm.tellg();
         return prev;
     }
     std::vector<double> times;
@@ -396,13 +333,7 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
     parse_until(stm, tend, ub, times, datas);
     if (times.empty())
         return nullptr;
-    auto pend = stm.tellg();
-    add_pos_range(times.front(), times.back(), loc, pend);
-    auto it = m_segments.emplace(std::piecewise_construct,
-                                 std::forward_as_tuple(loc),
-                                 std::forward_as_tuple(std::move(times), std::move(datas),
-                                                       pend - loc)).first;
-    return &it->second;
+    return &*m_segments.emplace(loc, stm.tellg(), std::move(times), std::move(datas)).first;
 }
 
 NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
@@ -412,14 +343,13 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
     auto lastit = m_segments.rbegin();
     if (unlikely(lastit == m_segments.rend()))
         return new_segment(stm, tstart, tend, 0, pos_error);
-    if (lastit->second.times.front() <= tstart) {
-        if (lastit->second.times.back() + 120 >= tstart) {
-            extend_segment(stm, *lastit, tend, pos_error);
-            return &lastit->second;
+    if (lastit->times.front() <= tstart) {
+        if (lastit->times.back() + 120 >= tstart) {
+            extend_segment(stm, const_cast<Segment&>(*lastit), tend, pos_error);
+            return &*lastit;
         }
-        return new_segment(stm, tstart, tend,
-                           lastit->first + std::streamoff(lastit->second.size),
-                           pos_error, &lastit->second);
+        return new_segment(stm, tstart, tend, lastit->pend, pos_error,
+                           const_cast<Segment*>(&*lastit));
     }
 
     // TODO
