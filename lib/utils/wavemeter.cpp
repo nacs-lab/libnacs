@@ -153,7 +153,7 @@ NACS_INTERNAL auto Wavemeter::find_linestart(std::istream &stm, pos_type ub,
     pos_type loc = ub;
     while (loc > lb) {
         char buff[150];
-        size_t sz = loc - lb;
+        std::streamoff sz = loc - lb;
         if (sz > sizeof(buff))
             sz = sizeof(buff);
         loc -= sz;
@@ -161,7 +161,7 @@ NACS_INTERNAL auto Wavemeter::find_linestart(std::istream &stm, pos_type ub,
         stm.read(buff, sizeof(buff));
         if (!stm.good())
             throw std::runtime_error("Error finding line start");
-        for (int i = sz - 1; i >= 0; i--) {
+        for (std::streamoff i = sz - 1; i >= 0; i--) {
             if (buff[i] == '\n') {
                 return loc + std::streamoff(i);
             }
