@@ -34,8 +34,8 @@
 #include <llvm/Transforms/Scalar/GVN.h>
 #if LLVM_VERSION_MAJOR >= 7
 #  include <llvm/Transforms/Scalar/InstSimplifyPass.h>
+#  include <llvm/Transforms/Utils.h>
 #endif
-#include <llvm/Transforms/Utils.h>
 #include <llvm/Transforms/Vectorize.h>
 
 #include <mutex>
