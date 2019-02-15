@@ -336,6 +336,8 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
     return &*m_segments.emplace(loc, stm.tellg(), std::move(times), std::move(datas)).first;
 }
 
+static constexpr double time_threshold = 120;
+
 NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
                                           double tend) -> const Segment*
 {
@@ -344,7 +346,7 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
     if (unlikely(lastit == m_segments.rend()))
         return new_segment(stm, tstart, tend, 0, pos_error);
     if (lastit->times.front() <= tstart) {
-        if (lastit->times.back() + 120 >= tstart) {
+        if (lastit->times.back() + time_threshold >= tstart) {
             extend_segment(stm, const_cast<Segment&>(*lastit), tend, pos_error);
             return &*lastit;
         }
