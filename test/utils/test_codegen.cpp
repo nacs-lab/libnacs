@@ -16,10 +16,6 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#ifdef NDEBUG
-#  undef NDEBUG
-#endif
-
 #include "../../lib/utils/llvm/codegen.h"
 #include "../../lib/utils/llvm/compile.h"
 #include "../../lib/utils/llvm/execute.h"
