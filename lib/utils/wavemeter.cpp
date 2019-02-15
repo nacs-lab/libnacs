@@ -291,14 +291,14 @@ NACS_INTERNAL auto Wavemeter::find_pos_range(double t) const
     return {it->pend, ub};
 }
 
-NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, Segment &seg,
+NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, seg_iterator seg,
                                              double tend, pos_type pend)
 {
-    if (seg.times.back() >= tend)
+    if (seg->times.back() >= tend)
         return;
-    stm.seekg(seg.pend);
-    parse_until(stm, tend, pend, seg.times, seg.datas);
-    seg.pend = stm.tellg();
+    stm.seekg(seg->pend);
+    parse_until(stm, tend, pend, seg->times, seg->datas);
+    seg->pend = stm.tellg();
 }
 
 NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, double tend,
@@ -348,7 +348,7 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
         return new_segment(stm, tstart, tend, 0, pos_error);
     if (lastit->times.front() <= tstart) {
         if (lastit->times.back() + time_threshold >= tstart) {
-            extend_segment(stm, const_cast<Segment&>(*lastit), tend, pos_error);
+            extend_segment(stm, lastit.base(), tend, pos_error);
             return lastit.base();
         }
         return new_segment(stm, tstart, tend, lastit->pend, pos_error, lastit.base());
@@ -378,7 +378,7 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
             return it2; // `front() <= tstart` and `back() >= tend`
         if (endt2 + time_threshold >= tstart) {
             // `front() <= tstart <= back() + time_threshold` and `back() < tend`
-            extend_segment(stm, const_cast<Segment&>(*it2), tend, it->pend);
+            extend_segment(stm, it2, tend, it->pend);
             it = it2;
             goto segment_started;
         }

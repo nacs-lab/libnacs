@@ -103,7 +103,7 @@ class Wavemeter {
     // Time -> position
     std::pair<pos_type,pos_type> find_pos_range(double t) const;
 
-    void extend_segment(std::istream &stm, Segment &seg, double tend, pos_type pend);
+    void extend_segment(std::istream &stm, seg_iterator seg, double tend, pos_type pend);
     // If `prev` is not NULL, it's a segment that ends at `lb`.
     seg_iterator new_segment(std::istream &stm, double tstart, double tend,
                              pos_type lb, pos_type ub, seg_iterator prev);
