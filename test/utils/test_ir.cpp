@@ -16,10 +16,6 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#ifdef NDEBUG
-#  undef NDEBUG
-#endif
-
 #include "../../lib/utils/ir.h"
 #include "../../lib/utils/number.h"
 #include "../../lib/utils/timer.h"

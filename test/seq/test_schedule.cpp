@@ -16,10 +16,6 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#ifdef NDEBUG
-#  undef NDEBUG
-#endif
-
 #include "../../lib/utils/timer.h"
 #include "../../lib/seq/bytecode.h"
 

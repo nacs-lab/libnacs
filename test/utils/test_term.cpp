@@ -20,10 +20,6 @@
 
 #include <iostream>
 
-#ifdef NDEBUG
-#  undef NDEBUG
-#endif
-
 #include <assert.h>
 
 using namespace NaCs;
