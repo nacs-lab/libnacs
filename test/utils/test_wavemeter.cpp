@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2019 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -17,7 +17,7 @@
  *************************************************************************/
 
 #include "../../lib/utils/timer.h"
-#include "../../lib/seq/misc.h"
+#include "../../lib/utils/wavemeter.h"
 
 #include <iostream>
 #include <fstream>
@@ -32,18 +32,19 @@ int main(int argc, char **argv)
     assert(argc >= 2);
 
     std::ifstream istm(argv[1]);
+    auto max_double = std::numeric_limits<double>::max();
 
-    WavemeterParser parser(0, std::numeric_limits<double>::max());
+    Wavemeter parser(0, max_double);
     size_t sz;
 
     Timer timer;
-    parser.parse(istm, &sz, true);
+    parser.parse(istm, &sz, 0, max_double);
     timer.print(true);
 
-    auto ptrs = parser.parse(istm, &sz, true);
+    auto ptrs = parser.parse(istm, &sz, 0, max_double);
     timer.print(true);
 
-    parser.parse(istm, &sz, true);
+    parser.parse(istm, &sz, 0, max_double);
     timer.print(true);
 
     std::cout << (void*)ptrs.first << " "

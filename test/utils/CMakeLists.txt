@@ -58,6 +58,10 @@ set(test_thread_SOURCES test_thread.cpp)
 add_executable(test-thread ${test_thread_SOURCES})
 target_link_libraries(test-thread nacs-utils)
 
+set(test_wavemeter_SOURCES test_wavemeter.cpp)
+add_executable(test-wavemeter ${test_wavemeter_SOURCES})
+target_link_libraries(test-wavemeter nacs-utils)
+
 if(ENABLE_LLVM)
   set(test_codegen_SOURCES test_codegen.cpp)
   add_executable(test-codegen ${test_codegen_SOURCES})
