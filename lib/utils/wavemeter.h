@@ -31,10 +31,10 @@ class Wavemeter {
     using pos_type = std::istream::pos_type;
     struct Segment {
         pos_type pstart;
-        pos_type pend;
+        mutable pos_type pend;
         // These two should never be empty.
-        std::vector<double> times;
-        std::vector<double> datas;
+        mutable std::vector<double> times;
+        mutable std::vector<double> datas;
         Segment(pos_type pstart, pos_type pend,
                 std::vector<double> times, std::vector<double> datas)
             : pstart(pstart),
@@ -68,6 +68,8 @@ class Wavemeter {
             return seg1.pstart < seg2.pstart;
         }
     };
+    using seg_map_t = std::set<Segment,SegComp>;
+    using seg_iterator = seg_map_t::iterator;
 
     // Stateless parsing functions
     // Parse the time stamp
@@ -104,7 +106,12 @@ class Wavemeter {
     void extend_segment(std::istream &stm, Segment &seg, double tend, pos_type pend);
     // If `prev` is not NULL, it's a segment that ends at `lb`.
     const Segment *new_segment(std::istream &stm, double tstart, double tend,
-                               pos_type lb, pos_type ub, Segment *prev=nullptr);
+                               pos_type lb, pos_type ub, seg_iterator prev);
+    const Segment *new_segment(std::istream &stm, double tstart, double tend,
+                               pos_type lb, pos_type ub)
+    {
+        return new_segment(stm, tstart, tend, lb, ub, m_segments.end());
+    }
     // Parse and cache the result for a block.
     const Segment *get_segment(std::istream &stm, double tstart, double tend);
 
@@ -114,7 +121,7 @@ public:
     parse(std::istream &stm, size_t *sz, double tstart, double tend);
 
 private:
-    std::set<Segment,SegComp> m_segments;
+    seg_map_t m_segments;
 
     const double m_lo = 0;
     const double m_hi = 0;

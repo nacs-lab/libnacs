@@ -299,7 +299,7 @@ NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, Segment &seg,
 }
 
 NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, double tend,
-                                          pos_type lb, pos_type ub, Segment *prev)
+                                          pos_type lb, pos_type ub, seg_iterator prev)
     -> const Segment*
 {
     double tsf, val;
@@ -315,14 +315,14 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
         return nullptr;
     if (!valid)
         loc = stm.tellg();
-    if (loc == lb && prev) {
+    if (loc == lb && prev != m_segments.end()) {
         if (valid) {
             prev->times.push_back(tsf);
             prev->datas.push_back(val);
         }
         parse_until(stm, tend, ub, prev->times, prev->datas);
         prev->pend = stm.tellg();
-        return prev;
+        return &*prev;
     }
     std::vector<double> times;
     std::vector<double> datas;
@@ -350,8 +350,7 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
             extend_segment(stm, const_cast<Segment&>(*lastit), tend, pos_error);
             return &*lastit;
         }
-        return new_segment(stm, tstart, tend, lastit->pend, pos_error,
-                           const_cast<Segment*>(&*lastit));
+        return new_segment(stm, tstart, tend, lastit->pend, pos_error, lastit.base());
     }
 
     // Now the generic case
