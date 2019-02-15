@@ -380,17 +380,46 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
             // `front() <= tstart <= back() + time_threshold` and `back() < tend`
             extend_segment(stm, it2, tend, it->pend);
             it = it2;
+            ++it2;
             goto segment_started;
         }
         lb = it2->pend;
     }
     // We now know that we aren't overlapping with/closed enough to any previous ones.
+    {
+        auto tmp = it;
+        it = new_segment(stm, tstart, tend, lb, it->pstart, it2);
+        it2 = tmp;
+    }
 
 segment_started:
+    // `it` is the current segment,
+    // `it2` is the next segement that might need merging.
+    while (true) {
+        if (it2 == m_segments.end()) {
+            extend_segment(stm, it, tend, pos_error);
+            break;
+        }
+        extend_segment(stm, it, tend, it2->pstart);
+        // Gap big enough
+        if (it2->pstart - it->pend > pos_threshold &&
+            it2->times.front() - it->times.back() > time_threshold)
+            break;
+        if (it->pend != it2->pstart)
+            extend_segment(stm, it, it2->times.back(), it2->pstart);
+        // Merge the two segments
+        it->pend = it2->pend;
+        it->times.insert(it->times.end(), it2->times.begin(), it2->times.end());
+        it->datas.insert(it->datas.end(), it2->datas.begin(), it2->datas.end());
+        auto tmp = it2;
+        ++it2;
+        m_segments.erase(tmp);
+        if (it->times.back() >= tend) {
+            break;
+        }
+    }
 
-
-    // TODO
-    return m_segments.end();
+    return it;
 }
 
 NACS_EXPORT() std::pair<const double*,const double*>
