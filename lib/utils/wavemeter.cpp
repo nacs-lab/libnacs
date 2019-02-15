@@ -354,6 +354,41 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
                            const_cast<Segment*>(&*lastit));
     }
 
+    // Now the generic case
+
+    // First, determine which block to start.
+    // We know that the cache isn't empty already.
+    auto it = m_segments.upper_bound(tstart);
+    if (it == m_segments.end()) {
+        // This means that `lastit->times.front() > tstart`,
+        // which disagrees with what we checked above.
+        // Maybe this can happen if the time is actually not sorted
+        // (due to daylight saving for example) which we are not handling very well now.
+        // Return an error in this case for now instead of crashing...
+        // Admittedly, when we are here we've probably already had UB so this is just a best
+        // effort...
+        return nullptr;
+    }
+    auto it2 = it;
+    --it2;
+    pos_type lb = 0;
+    if (it2 != m_segments.end()) {
+        auto endt2 = it2->times.back();
+        if (endt2 >= tend)
+            return &*it2; // `front() <= tstart` and `back() >= tend`
+        if (endt2 + time_threshold >= tstart) {
+            // `front() <= tstart <= back() + time_threshold` and `back() < tend`
+            extend_segment(stm, const_cast<Segment&>(*it2), tend, it->pend);
+            it = it2;
+            goto segment_started;
+        }
+        lb = it2->pend;
+    }
+    // We now know that we aren't overlapping with/closed enough to any previous ones.
+
+segment_started:
+
+
     // TODO
     return nullptr;
 }
