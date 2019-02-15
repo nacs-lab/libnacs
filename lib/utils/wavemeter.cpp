@@ -206,6 +206,9 @@ NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_ty
     }
 }
 
+static constexpr double time_threshold = 120;
+static constexpr std::streamoff pos_threshold = 10240;
+
 // Find the location that is right before `tstart` and starts parsing there.
 // Only look in `[pstart, pend)`.
 // The starting time may be after `tstart` if no point before `tstart` exists in the range.
@@ -225,7 +228,7 @@ NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
     while (true) {
         auto sz = ub - lb;
         // Good enough
-        if (sz < 10240) {
+        if (sz < pos_threshold) {
             stm.seekg(lb);
             std::tie(*tsf, *val, *loc) = lb_res;
             return lb_valid;
@@ -335,8 +338,6 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
         return m_segments.end();
     return m_segments.emplace(loc, stm.tellg(), std::move(times), std::move(datas)).first;
 }
-
-static constexpr double time_threshold = 120;
 
 NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
                                           double tend) -> seg_iterator
