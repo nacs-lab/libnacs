@@ -105,15 +105,15 @@ class Wavemeter {
 
     void extend_segment(std::istream &stm, Segment &seg, double tend, pos_type pend);
     // If `prev` is not NULL, it's a segment that ends at `lb`.
-    const Segment *new_segment(std::istream &stm, double tstart, double tend,
-                               pos_type lb, pos_type ub, seg_iterator prev);
-    const Segment *new_segment(std::istream &stm, double tstart, double tend,
-                               pos_type lb, pos_type ub)
+    seg_iterator new_segment(std::istream &stm, double tstart, double tend,
+                             pos_type lb, pos_type ub, seg_iterator prev);
+    seg_iterator new_segment(std::istream &stm, double tstart, double tend,
+                             pos_type lb, pos_type ub)
     {
         return new_segment(stm, tstart, tend, lb, ub, m_segments.end());
     }
     // Parse and cache the result for a block.
-    const Segment *get_segment(std::istream &stm, double tstart, double tend);
+    seg_iterator get_segment(std::istream &stm, double tstart, double tend);
 
 public:
     Wavemeter(double lo, double hi);

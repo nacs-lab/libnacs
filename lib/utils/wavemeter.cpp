@@ -300,7 +300,7 @@ NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, Segment &seg,
 
 NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, double tend,
                                           pos_type lb, pos_type ub, seg_iterator prev)
-    -> const Segment*
+    -> seg_iterator
 {
     double tsf, val;
     pos_type loc;
@@ -309,10 +309,10 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
         valid = start_parse(stm, tstart, lb, ub, &tsf, &val, &loc);
     }
     catch (...) {
-        return nullptr;
+        return m_segments.end();
     }
     if (!stm.good())
-        return nullptr;
+        return m_segments.end();
     if (!valid)
         loc = stm.tellg();
     if (loc == lb && prev != m_segments.end()) {
@@ -322,7 +322,7 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
         }
         parse_until(stm, tend, ub, prev->times, prev->datas);
         prev->pend = stm.tellg();
-        return &*prev;
+        return prev;
     }
     std::vector<double> times;
     std::vector<double> datas;
@@ -332,14 +332,14 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
     }
     parse_until(stm, tend, ub, times, datas);
     if (times.empty())
-        return nullptr;
-    return &*m_segments.emplace(loc, stm.tellg(), std::move(times), std::move(datas)).first;
+        return m_segments.end();
+    return m_segments.emplace(loc, stm.tellg(), std::move(times), std::move(datas)).first;
 }
 
 static constexpr double time_threshold = 120;
 
 NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
-                                          double tend) -> const Segment*
+                                          double tend) -> seg_iterator
 {
     // Handle the most likely case first, i.e. reading from the end of file.
     auto lastit = m_segments.rbegin();
@@ -348,7 +348,7 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
     if (lastit->times.front() <= tstart) {
         if (lastit->times.back() + time_threshold >= tstart) {
             extend_segment(stm, const_cast<Segment&>(*lastit), tend, pos_error);
-            return &*lastit;
+            return lastit.base();
         }
         return new_segment(stm, tstart, tend, lastit->pend, pos_error, lastit.base());
     }
@@ -366,7 +366,7 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
         // Return an error in this case for now instead of crashing...
         // Admittedly, when we are here we've probably already had UB so this is just a best
         // effort...
-        return nullptr;
+        return m_segments.end();
     }
     auto it2 = it;
     --it2;
@@ -374,7 +374,7 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
     if (it2 != m_segments.end()) {
         auto endt2 = it2->times.back();
         if (endt2 >= tend)
-            return &*it2; // `front() <= tstart` and `back() >= tend`
+            return it2; // `front() <= tstart` and `back() >= tend`
         if (endt2 + time_threshold >= tstart) {
             // `front() <= tstart <= back() + time_threshold` and `back() < tend`
             extend_segment(stm, const_cast<Segment&>(*it2), tend, it->pend);
@@ -389,7 +389,7 @@ segment_started:
 
 
     // TODO
-    return nullptr;
+    return m_segments.end();
 }
 
 NACS_EXPORT() std::pair<const double*,const double*>
@@ -400,6 +400,8 @@ Wavemeter::parse(std::istream &stm, size_t *sz, double tstart, double tend)
         return {nullptr, nullptr};
     }
     auto seg = get_segment(stm, tstart, tend);
+    if (seg == m_segments.end())
+        return {nullptr, nullptr};
     auto it1 = std::lower_bound(seg->times.begin(), seg->times.end(), tstart);
     if (it1 == seg->times.end())
         return {nullptr, nullptr};
