@@ -115,6 +115,8 @@ class Wavemeter {
     // Parse and cache the result for a block.
     seg_iterator get_segment(std::istream &stm, double tstart, double tend);
 
+    // TODO: GC of cache
+
 public:
     Wavemeter(double lo, double hi);
     std::pair<const double*,const double*>
