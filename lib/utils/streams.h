@@ -168,6 +168,9 @@ private:
     int_type uflow() override;
     int_type pbackfail(int_type ch) override;
     std::streamsize showmanyc() override;
+    pos_type seekoff(off_type off, std::ios_base::seekdir dir,
+                     std::ios_base::openmode which) override;
+    pos_type seekpos(pos_type pos, std::ios_base::openmode which) override;
 
     const char *const m_begin;
     const char *const m_end;
