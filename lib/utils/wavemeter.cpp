@@ -323,22 +323,23 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
                                           double tend) -> seg_iterator
 {
     // Handle the most likely case first, i.e. reading from the end of file.
-    auto lastit = m_segments.rbegin();
-    if (unlikely(lastit == m_segments.rend()))
+    if (unlikely(m_segments.empty()))
         return new_segment(stm, tstart, tend, 0, pos_error);
-    if (lastit->times.front() <= tstart) {
-        if (lastit->times.back() + time_threshold >= tstart) {
-            extend_segment(stm, lastit.base(), tend, pos_error);
-            return lastit.base();
+    auto it = m_segments.end();
+    --it;
+    if (it->times.front() <= tstart) {
+        if (it->times.back() + time_threshold >= tstart) {
+            extend_segment(stm, it, tend, pos_error);
+            return it;
         }
-        return new_segment(stm, tstart, tend, lastit->pend, pos_error, lastit.base());
+        return new_segment(stm, tstart, tend, it->pend, pos_error, it);
     }
 
     // Now the generic case
 
     // First, determine which block to start.
     // We know that the cache isn't empty already.
-    auto it = m_segments.upper_bound(tstart);
+    it = m_segments.upper_bound(tstart);
     if (it == m_segments.end()) {
         // This means that `lastit->times.front() > tstart`,
         // which disagrees with what we checked above.
