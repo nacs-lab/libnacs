@@ -154,7 +154,7 @@ NACS_INTERNAL auto Wavemeter::find_linestart(std::istream &stm, pos_type ub,
     while (loc > lb) {
         char buff[150];
         std::streamoff sz = loc - lb;
-        if (sz > sizeof(buff))
+        if (sz > std::streamoff(sizeof(buff)))
             sz = sizeof(buff);
         loc -= sz;
         stm.seekg(loc);
