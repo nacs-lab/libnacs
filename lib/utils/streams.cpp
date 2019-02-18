@@ -212,6 +212,41 @@ std::streamsize const_streambuf::showmanyc()
     return m_end - m_current;
 }
 
+auto const_streambuf::seekpos(pos_type pos, std::ios_base::openmode which) -> pos_type
+{
+    if (which != std::ios_base::in)
+        return pos_type(-1);
+    if (m_begin + pos > m_end)
+        return pos_type(-1);
+    m_current = m_begin + pos;
+    return pos;
+}
+
+auto const_streambuf::seekoff(off_type off, std::ios_base::seekdir dir,
+                              std::ios_base::openmode which) -> pos_type
+{
+    if (which != std::ios_base::in)
+        return pos_type(-1);
+    const char *ptr;;
+    if (dir == std::ios_base::beg) {
+        ptr = m_begin;
+    }
+    else if (dir == std::ios_base::cur) {
+        ptr = m_current;
+    }
+    else if (dir == std::ios_base::end) {
+        ptr = m_end;
+    }
+    else {
+        return pos_type(-1);
+    }
+    ptr += off;
+    if (ptr < m_begin || ptr > m_end)
+        return pos_type(-1);
+    m_current = ptr;
+    return ptr - m_begin;
+}
+
 #if !NACS_OS_WINDOWS
 template class basic_vector_ostream<std::vector<char>>;
 template class basic_vector_ostream<std::vector<unsigned char>>;
