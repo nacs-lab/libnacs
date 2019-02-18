@@ -35,10 +35,12 @@
 using namespace NaCs;
 
 struct TestFile {
+    static constexpr double teps = 2e-8;
     TestFile(double t0, double t1, double dt, double _lo, double _hi, int npeaks=5)
         : lo(_lo),
           hi(_hi)
     {
+        assert(dt > 10 * teps);
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<> data_dis(lo, hi);
@@ -56,6 +58,8 @@ struct TestFile {
         data_dis = std::uniform_real_distribution<>((3 * lo - hi) / 2, (3 * hi - lo) / 2);
 
         string_ostream stm;
+        // Enough precision for round trip of time and data.
+        stm.precision(20);
         // Header
         stm << "Timestamp";
         for (int i = 0; i < npeaks; i++)
@@ -92,6 +96,42 @@ struct TestFile {
         file = stm.get_buf();
     }
 
+    void test_parse(Wavemeter &parser, double tstart, double tend)
+    {
+        const_istream stm(file);
+        size_t sz;
+        auto ptrs = parser.parse(stm, &sz, tstart, tend);
+        if (ptrs.first == nullptr) {
+            assert(ptrs.second == nullptr);
+            assert(tstart + teps > times.back() ||
+                   tend - teps > times.front());
+            return;
+        }
+        assert(ptrs.second != nullptr);
+        // The first data must be at least the same as tstart.
+        assert(*ptrs.first >= tstart);
+        // Given the constraint on `dt`, the first data must be `idx_start` or `idx_start + 1`.
+        size_t idx_start = std::lower_bound(times.begin(), times.end(),
+                                            tstart - teps) - times.begin();
+        if (abs(*ptrs.first - times[idx_start]) > teps) {
+            idx_start++;
+            assert(idx_start < times.size());
+            assert(abs(*ptrs.first - times[idx_start]) <= teps);
+        }
+        if (idx_start > 0) {
+            assert(times[idx_start - 1] < tstart + teps);
+        }
+        for (size_t i = 0; i < sz; i++) {
+            assert(abs(ptrs.first[i] - times[idx_start + i]) <= teps);
+            assert(ptrs.second[i] == datas[idx_start + i]);
+            assert(ptrs.second[i] >= lo);
+            assert(ptrs.second[i] <= hi);
+        }
+        if (idx_start + sz < times.size() - 1) {
+            assert(times[idx_start + sz + 1] > tend - teps);
+        }
+    }
+
     const double lo;
     const double hi;
     std::string file;
@@ -101,5 +141,29 @@ struct TestFile {
 
 int main()
 {
+    TestFile test(736570.3, 736572.4, 1.0 / 86400, 288, 289);
+
+    Wavemeter parser(test.lo, test.hi);
+    test.test_parse(parser, 736570.3, 736572.3);
+    test.test_parse(parser, 736570.3, 736572.4);
+
+    parser.clear();
+    test.test_parse(parser, 736570.3, 736570.4);
+    test.test_parse(parser, 736570.5, 736570.8);
+    test.test_parse(parser, 736571.0, 736572.0);
+    test.test_parse(parser, 736570.3, 736572.4);
+
+    parser.clear();
+    test.test_parse(parser, 736571.0, 736572.0);
+    test.test_parse(parser, 736570.5, 736570.8);
+    test.test_parse(parser, 736570.3, 736570.4);
+    test.test_parse(parser, 736570.3, 736572.4);
+
+    parser.clear();
+    test.test_parse(parser, 736571.0, 736572.0);
+    test.test_parse(parser, 736570.5, 736570.8);
+    test.test_parse(parser, 736570.7, 736571.1);
+    test.test_parse(parser, 736570.3, 736572.4);
+
     return 0;
 }
