@@ -223,6 +223,12 @@ NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
 {
     pos_type lb = pstart;
     pos_type ub = pend;
+    if (ub == pos_error) {
+        stm.seekg(0, std::ios::end);
+        if (!stm.good())
+            throw std::runtime_error("Unable to seek stream.");
+        ub = stm.tellg();
+    }
     bool lb_valid = false;
     std::tuple<double,double,pos_type> lb_res{0, 0, 0};
     while (true) {
