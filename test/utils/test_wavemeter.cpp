@@ -150,8 +150,12 @@ int main()
 
         parser.clear();
         test.test_parse(parser, 736570.3, 736570.4);
+        test.test_parse(parser, 736570.3, 736570.4);
+        test.test_parse(parser, 736570.5, 736570.8);
         test.test_parse(parser, 736570.5, 736570.8);
         test.test_parse(parser, 736571.0, 736572.0);
+        test.test_parse(parser, 736571.0, 736572.0);
+        test.test_parse(parser, 736570.3, 736572.4);
         test.test_parse(parser, 736570.3, 736572.4);
 
         parser.clear();
@@ -170,6 +174,15 @@ int main()
     test0(1.0 / 8640);
     test0(1.0 / 86400);
     test0(1.0 / 864000);
+
+    auto test1 = [&] () {
+        TestFile test(737351.77, 737391.67, 1.0 / 86400, 288000, 289000);
+
+        Wavemeter parser(test.lo, test.hi);
+        test.test_parse(parser, 737390.0, 737392.0);
+        test.test_parse(parser, 737390.0, 737392.0);
+    };
+    test1();
 
     return 0;
 }
