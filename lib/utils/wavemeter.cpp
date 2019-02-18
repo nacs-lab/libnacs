@@ -265,32 +265,6 @@ NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
     }
 }
 
-NACS_INTERNAL auto Wavemeter::find_pos_range(double t) const
-    -> std::pair<pos_type,pos_type>
-{
-    // Empty case
-    if (m_segments.empty())
-        return {0, pos_error};
-    auto it = m_segments.upper_bound(t);
-    if (likely(it == m_segments.end())) {
-        // No range after us, check the last range.
-        auto rit = m_segments.rbegin();
-        if (rit->times.back() >= t)
-            return {rit->pstart, rit->pend};
-        return {rit->pend, pos_error};
-    }
-    pos_type ub = it->pstart;
-    --it;
-    // The one above us is the first range
-    if (it == m_segments.end())
-        return {0, ub};
-    // We are within the previous range
-    if (it->times.back() >= t)
-        return {it->pstart, it->pend};
-    // We are in between two ranges.
-    return {it->pend, ub};
-}
-
 NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, seg_iterator seg,
                                              double tend, pos_type pend)
 {
