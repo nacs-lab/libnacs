@@ -1,12 +1,10 @@
 set(nacs_seq_HDRS
   bytecode.h
   cmdlist.h
-  misc.h
   seq.h)
 set(nacs_seq_SRCS
   bytecode.cpp
   cmdlist.cpp
-  misc.cpp
   parser.cpp
   seq.cpp)
 set(nacs_seq_LINKS nacs-utils)
