@@ -141,29 +141,35 @@ struct TestFile {
 
 int main()
 {
-    TestFile test(736570.3, 736572.4, 1.0 / 86400, 288, 289);
+    auto test0 = [&] (double dt) {
+        TestFile test(736570.3, 736572.4, dt, 288, 289);
 
-    Wavemeter parser(test.lo, test.hi);
-    test.test_parse(parser, 736570.3, 736572.3);
-    test.test_parse(parser, 736570.3, 736572.4);
+        Wavemeter parser(test.lo, test.hi);
+        test.test_parse(parser, 736570.3, 736572.3);
+        test.test_parse(parser, 736570.3, 736572.4);
 
-    parser.clear();
-    test.test_parse(parser, 736570.3, 736570.4);
-    test.test_parse(parser, 736570.5, 736570.8);
-    test.test_parse(parser, 736571.0, 736572.0);
-    test.test_parse(parser, 736570.3, 736572.4);
+        parser.clear();
+        test.test_parse(parser, 736570.3, 736570.4);
+        test.test_parse(parser, 736570.5, 736570.8);
+        test.test_parse(parser, 736571.0, 736572.0);
+        test.test_parse(parser, 736570.3, 736572.4);
 
-    parser.clear();
-    test.test_parse(parser, 736571.0, 736572.0);
-    test.test_parse(parser, 736570.5, 736570.8);
-    test.test_parse(parser, 736570.3, 736570.4);
-    test.test_parse(parser, 736570.3, 736572.4);
+        parser.clear();
+        test.test_parse(parser, 736571.0, 736572.0);
+        test.test_parse(parser, 736570.5, 736570.8);
+        test.test_parse(parser, 736570.3, 736570.4);
+        test.test_parse(parser, 736570.3, 736572.4);
 
-    parser.clear();
-    test.test_parse(parser, 736571.0, 736572.0);
-    test.test_parse(parser, 736570.5, 736570.8);
-    test.test_parse(parser, 736570.7, 736571.1);
-    test.test_parse(parser, 736570.3, 736572.4);
+        parser.clear();
+        test.test_parse(parser, 736571.0, 736572.0);
+        test.test_parse(parser, 736570.5, 736570.8);
+        test.test_parse(parser, 736570.7, 736571.1);
+        test.test_parse(parser, 736570.3, 736572.4);
+    };
+
+    test0(1.0 / 8640);
+    test0(1.0 / 86400);
+    test0(1.0 / 864000);
 
     return 0;
 }
