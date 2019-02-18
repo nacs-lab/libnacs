@@ -476,6 +476,12 @@ NACS_EXPORT() size_t nacs_utils_wavemeter_parse(void *_parser, const char *name,
     return sz;
 }
 
+NACS_EXPORT() void nacs_utils_wavemeter_clear(void *_parser)
+{
+    auto parser = (Wavemeter*)_parser;
+    parser->clear();
+}
+
 NACS_EXPORT() void nacs_utils_free_wavemeter(void *parser)
 {
     delete (Wavemeter*)parser;
