@@ -104,7 +104,7 @@ struct TestFile {
         if (ptrs.first == nullptr) {
             assert(ptrs.second == nullptr);
             assert(tstart + teps > times.back() ||
-                   tend - teps > times.front());
+                   tend - teps < times.front());
             return;
         }
         assert(ptrs.second != nullptr);
