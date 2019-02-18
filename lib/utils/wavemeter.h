@@ -121,6 +121,7 @@ public:
     Wavemeter(double lo, double hi);
     std::pair<const double*,const double*>
     parse(std::istream &stm, size_t *sz, double tstart, double tend);
+    void clear();
 
 private:
     seg_map_t m_segments;

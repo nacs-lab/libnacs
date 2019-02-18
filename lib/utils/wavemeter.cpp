@@ -447,6 +447,11 @@ NACS_EXPORT() Wavemeter::Wavemeter(double lo, double hi)
 {
 }
 
+NACS_EXPORT() void Wavemeter::clear()
+{
+    m_segments.clear();
+}
+
 }
 
 extern "C" {
