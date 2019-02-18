@@ -351,9 +351,9 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
         return m_segments.end();
     }
     auto it2 = it;
-    --it2;
     pos_type lb = 0;
-    if (it2 != m_segments.end()) {
+    if (it2 != m_segments.begin()) {
+        --it2;
         auto endt2 = it2->times.back();
         if (endt2 >= tend)
             return it2; // `front() <= tstart` and `back() >= tend`
@@ -365,6 +365,9 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
             goto segment_started;
         }
         lb = it2->pend;
+    }
+    else {
+        it2 = m_segments.end();
     }
     // We now know that we aren't overlapping with/closed enough to any previous ones.
     {
