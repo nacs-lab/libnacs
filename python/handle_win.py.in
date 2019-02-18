@@ -3,14 +3,15 @@
 import os
 import ctypes
 
-def _open_handle():
+def _open_handle(path):
     prev_cwd = os.getcwd()
     try:
         os.chdir(r"@INSTALL_WINDOWS_BINDIR@")
-        hdl = ctypes.CDLL(r"@CMAKE_SHARED_LIBRARY_PREFIX@nacs-seq-@MAJOR_VERSION@.dll")
+        hdl = ctypes.CDLL(path)
     finally:
         os.chdir(prev_cwd)
     return hdl
 
-nacs_seq = _open_handle()
+nacs_seq = _open_handle(r"@CMAKE_SHARED_LIBRARY_PREFIX@nacs-seq-@MAJOR_VERSION@.dll")
+nacs_utils = _open_handle(r"@CMAKE_SHARED_LIBRARY_PREFIX@nacs-utils-@MAJOR_VERSION@.dll")
 libc = ctypes.cdll.msvcrt
