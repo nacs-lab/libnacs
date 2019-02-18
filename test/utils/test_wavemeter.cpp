@@ -16,39 +16,90 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#include "../../lib/utils/streams.h"
 #include "../../lib/utils/timer.h"
 #include "../../lib/utils/wavemeter.h"
 
+#include <algorithm>
+#include <ctime>
+#include <iomanip>
 #include <iostream>
 #include <fstream>
 #include <limits>
+#include <random>
+#include <string>
+#include <vector>
 
 #include <assert.h>
 
 using namespace NaCs;
 
-int main(int argc, char **argv)
+struct TestFile {
+    TestFile(double t0, double t1, double dt, double _lo, double _hi, int npeaks=5)
+        : lo(_lo),
+          hi(_hi)
+    {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<> data_dis(lo, hi);
+        std::uniform_real_distribution<> dt_dis(dt * 0.5, dt * 1.5);
+        // Populate the data.
+        double t = t0;
+        while (t < t1) {
+            times.push_back(t);
+            datas.push_back(data_dis(gen));
+            auto dt2 = dt_dis(gen);
+            t += dt2;
+        }
+        // Populate the file
+        std::uniform_real_distribution<> strength_dis(-10, 0);
+        data_dis = std::uniform_real_distribution<>((3 * lo - hi) / 2, (3 * hi - lo) / 2);
+
+        string_ostream stm;
+        // Header
+        stm << "Timestamp";
+        for (int i = 0; i < npeaks; i++)
+            stm << ",Cursor " << i + 1 << " Wavelength,Cursor " << i + 1 << " Intensity";
+        stm << std::endl;
+
+        std::vector<double> freqs(npeaks);
+        size_t nline = times.size();
+        for (size_t i = 0; i < nline; i++) {
+            double tf = (times[i] - 719529) * 86400;
+            double tsecf;
+            double tmsf = modf(tf, &tsecf);
+
+            auto tsec = std::time_t(tsecf);
+            auto tms = int(tmsf * 1000);
+            stm << std::put_time(std::gmtime(&tsec), "%Y-%m-%dT%H:%M:%S")
+                << '.' << std::setfill('0') << std::setw(3) << tms;
+
+            for (int j = 0; j < npeaks - 1; j++)
+                freqs[j] = data_dis(gen);
+            freqs[npeaks - 1] = datas[i];
+            std::sort(freqs.begin(), freqs.end());
+
+            for (int j = 0; j < npeaks; j++) {
+                double strength = strength_dis(gen);
+                if (freqs[j] == datas[i])
+                    strength += 11;
+                stm << ',' << freqs[j] << ',' << strength;
+            }
+
+            stm << std::endl;
+        }
+
+        file = stm.get_buf();
+    }
+
+    const double lo;
+    const double hi;
+    std::string file;
+    std::vector<double> times;
+    std::vector<double> datas;
+};
+
+int main()
 {
-    assert(argc >= 2);
-
-    std::ifstream istm(argv[1]);
-    auto max_double = std::numeric_limits<double>::max();
-
-    Wavemeter parser(0, max_double);
-    size_t sz;
-
-    Timer timer;
-    parser.parse(istm, &sz, 0, max_double);
-    timer.print(true);
-
-    auto ptrs = parser.parse(istm, &sz, 0, max_double);
-    timer.print(true);
-
-    parser.parse(istm, &sz, 0, max_double);
-    timer.print(true);
-
-    std::cout << (void*)ptrs.first << " "
-              << (void*)ptrs.second << std::endl;
-
     return 0;
 }
