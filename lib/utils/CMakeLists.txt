@@ -44,19 +44,19 @@ set(nacs_utils_llvm_HDRS
   llvm/codegen.h
   llvm/compile.h
   llvm/utils.h)
-if(ENABLE_LLVM)
-  set(nacs_utils_SRCS ${nacs_utils_SRCS}
-    llvm/codegen.cpp
-    llvm/compile.cpp
-    llvm/execute.cpp
-    llvm/memmgr.cpp
-    llvm/mergephi-pass.cpp)
-endif()
+set(nacs_utils_llvm_SRCS
+  llvm/codegen.cpp
+  llvm/compile.cpp
+  llvm/execute.cpp
+  llvm/memmgr.cpp
+  llvm/mergephi-pass.cpp)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 if(ENABLE_LLVM)
+  set(nacs_utils_SRCS ${nacs_utils_SRCS} ${nacs_utils_llvm_SRCS})
   include_directories(${LLVM_INCLUDE_DIRS})
-  add_definitions(${LLVM_DEFINITIONS})
+  set_property(SOURCE ${nacs_utils_llvm_SRCS} APPEND_STRING
+    PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
 endif()
 
 add_definitions("-\"DNACS_EXPORT_LIB_utils()=\"")

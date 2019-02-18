@@ -98,7 +98,7 @@ basic_vector_streambuf<T>::basic_vector_streambuf(T &&buf, size_t offset)
       m_buf(std::move(buf))
 {
     setp((char*)&m_buf[0], (char*)&m_buf[m_buf.size()]);
-    pbump(offset);
+    pbump((int)offset);
 }
 
 template<typename T>
@@ -128,7 +128,7 @@ char *basic_vector_streambuf<T>::extend(size_t sz)
     // overallocate.
     m_buf.resize(newsz);
     setp((char*)&m_buf[0], (char*)&m_buf[m_buf.size()]);
-    pbump(oldsz);
+    pbump((int)oldsz);
     return (char*)&m_buf[oldsz];
 }
 

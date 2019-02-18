@@ -28,7 +28,7 @@ std::streamsize buff_streambuf::xsputn(const char *s, std::streamsize count)
 {
     auto p = extend(count);
     memcpy(p, s, count);
-    pbump(count);
+    pbump((int)count);
     update_size();
     return count;
 }
@@ -165,7 +165,7 @@ char *malloc_streambuf::extend(size_t sz)
     auto buf = (char*)realloc(m_buf.release(), new_sz);
     m_buf.reset(buf);
     setp(buf, &buf[new_sz]);
-    pbump(oldsz);
+    pbump((int)oldsz);
     return &buf[oldsz];
 }
 

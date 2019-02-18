@@ -55,11 +55,9 @@ if(ENABLE_LLVM)
 
   message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-else()
-  add_definitions(-Wconversion)
 endif()
 
-add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden
+add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden -Wconversion
   -fno-math-errno -Wno-sign-conversion -Wno-psabi -Wno-unknown-warning-option
   -D_FILE_OFFSET_BITS=64)
 
