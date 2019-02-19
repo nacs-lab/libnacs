@@ -359,7 +359,7 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
             return it2; // `front() <= tstart` and `back() >= tend`
         if (endt2 + time_threshold >= tstart) {
             // `front() <= tstart <= back() + time_threshold` and `back() < tend`
-            extend_segment(stm, it2, tend, it->pend);
+            extend_segment(stm, it2, tend, it->pstart);
             it = it2;
             ++it2;
             goto segment_started;
