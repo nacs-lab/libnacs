@@ -35,7 +35,7 @@
 using namespace NaCs;
 
 struct TestFile {
-    static constexpr double teps = 2e-8;
+    static constexpr double teps = 1.5e-3;
     TestFile(double t0, double t1, double dt, double _lo, double _hi, int npeaks=5)
         : lo(_lo),
           hi(_hi)
@@ -69,7 +69,7 @@ struct TestFile {
         std::vector<double> freqs(npeaks);
         size_t nline = times.size();
         for (size_t i = 0; i < nline; i++) {
-            double tf = (times[i] - 719529) * 86400;
+            double tf = times[i];
             double tsecf;
             double tmsf = modf(tf, &tsecf);
 
@@ -142,45 +142,46 @@ struct TestFile {
 int main()
 {
     auto test0 = [&] (double dt) {
-        TestFile test(736570.3, 736572.4, dt, 288, 289);
+        TestFile test(1472368320, 1472549760, dt, 288000, 289000);
 
         Wavemeter parser(test.lo, test.hi);
-        test.test_parse(parser, 736570.3, 736572.3);
-        test.test_parse(parser, 736570.3, 736572.4);
+        test.test_parse(parser, 1472368320, 1472541120);
+        test.test_parse(parser, 1472368320, 1472541120);
+        test.test_parse(parser, 1472550000, 1472580000);
 
         parser.clear();
-        test.test_parse(parser, 736570.3, 736570.4);
-        test.test_parse(parser, 736570.3, 736570.4);
-        test.test_parse(parser, 736570.5, 736570.8);
-        test.test_parse(parser, 736570.5, 736570.8);
-        test.test_parse(parser, 736571.0, 736572.0);
-        test.test_parse(parser, 736571.0, 736572.0);
-        test.test_parse(parser, 736570.3, 736572.4);
-        test.test_parse(parser, 736570.3, 736572.4);
+        test.test_parse(parser, 1472368320, 1472376960);
+        test.test_parse(parser, 1472368320, 1472376960);
+        test.test_parse(parser, 1472385600, 1472411520);
+        test.test_parse(parser, 1472385600, 1472411520);
+        test.test_parse(parser, 1472428800, 1472515200);
+        test.test_parse(parser, 1472428800, 1472515200);
+        test.test_parse(parser, 1472368320, 1472549760);
+        test.test_parse(parser, 1472368320, 1472549760);
 
         parser.clear();
-        test.test_parse(parser, 736571.0, 736572.0);
-        test.test_parse(parser, 736570.5, 736570.8);
-        test.test_parse(parser, 736570.3, 736570.4);
-        test.test_parse(parser, 736570.3, 736572.4);
+        test.test_parse(parser, 1472428800, 1472515200);
+        test.test_parse(parser, 1472385600, 1472411520);
+        test.test_parse(parser, 1472368320, 1472376960);
+        test.test_parse(parser, 1472368320, 1472549760);
 
         parser.clear();
-        test.test_parse(parser, 736571.0, 736572.0);
-        test.test_parse(parser, 736570.5, 736570.8);
-        test.test_parse(parser, 736570.7, 736571.1);
-        test.test_parse(parser, 736570.3, 736572.4);
+        test.test_parse(parser, 1472428800, 1472515200);
+        test.test_parse(parser, 1472385600, 1472411520);
+        test.test_parse(parser, 1472402880, 1472437440);
+        test.test_parse(parser, 1472368320, 1472549760);
     };
 
-    test0(1.0 / 8640);
-    test0(1.0 / 86400);
-    test0(1.0 / 864000);
+    test0(10);
+    test0(1);
+    test0(0.1);
 
     auto test1 = [&] () {
-        TestFile test(737351.77, 737391.67, 1.0 / 86400, 288000, 289000);
+        TestFile test(1539887328, 1543334688, 1, 288000, 289000);
 
         Wavemeter parser(test.lo, test.hi);
-        test.test_parse(parser, 737390.0, 737392.0);
-        test.test_parse(parser, 737390.0, 737392.0);
+        test.test_parse(parser, 1543190400, 1543363200);
+        test.test_parse(parser, 1543190400, 1543363200);
     };
     test1();
 

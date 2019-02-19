@@ -141,7 +141,6 @@ NACS_INTERNAL bool Wavemeter::parseline(std::istream &stm, double *tsf, double *
         stm >> ignore_line;
         return false;
     }
-    *tsf = *tsf / 86400 + 719529;
     return parseval(stm, val, m_lo, m_hi);
 }
 
