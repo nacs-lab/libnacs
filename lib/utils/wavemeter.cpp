@@ -97,10 +97,11 @@ NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
         double height;
         if (!parsenum(&pos))
             return false;
-        if (eol)
+        // Only check pos since height in dB could legally be 0
+        if (eol || pos == 0)
             return false;
         stm.get();
-        if (lo > pos || pos > hi || pos == 0) {
+        if (lo > pos || pos > hi) {
             while (true) {
                 auto c = stm.peek();
                 if (c == ',')
@@ -114,8 +115,7 @@ NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
                 stm.get();
             }
             stm.get();
-            // Only check pos since height in dB could legally be 0
-            return pos != 0;
+            return true;
         }
         if (!parsenum(&height))
             return false;
