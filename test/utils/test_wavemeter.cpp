@@ -201,6 +201,7 @@ int main()
         Wavemeter parser(test.lo, test.hi);
         test.test_parse(parser, 1543190400, 1543363200);
         test.test_parse(parser, 1543190400, 1543363200);
+        test.test_parse(parser, 0, std::numeric_limits<double>::max());
     };
     test1();
 

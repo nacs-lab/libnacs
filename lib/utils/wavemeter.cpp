@@ -378,6 +378,12 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
         auto tmp = it;
         it = new_segment(stm, tstart, tend, lb, it->pstart, it2);
         it2 = tmp;
+        if (it == m_segments.end()) {
+            // `new_segment` may return `end()` if it finds no data before
+            // the next segment starts, in this case, the next one is what we should use.
+            it = tmp;
+            ++it2;
+        }
     }
 
 segment_started:
