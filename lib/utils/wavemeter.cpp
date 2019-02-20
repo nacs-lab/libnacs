@@ -86,13 +86,13 @@ NACS_INTERNAL bool Wavemeter::parsenumber(std::istream &stm, double *val, bool *
 NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
                                        double lo, double hi)
 {
-    bool found_val = false;
+    bool line_valid = true;
     double max_pos = 0;
     double max_height = std::numeric_limits<double>::lowest();
 
-    bool eol;
-    auto parsenum = [&] (double *val) { return parsenumber(stm, val, &eol); };
     auto getpair = [&] {
+        bool eol = false;
+        auto parsenum = [&] (double *val) { return parsenumber(stm, val, &eol); };
         double pos;
         double height;
         if (!parsenum(&pos))
@@ -100,38 +100,41 @@ NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
         if (eol)
             return false;
         stm.get();
+        if (lo > pos || pos > hi || pos == 0) {
+            while (true) {
+                auto c = stm.peek();
+                if (c == ',')
+                    break;
+                if (c == '\n')
+                    return false;
+                if (unlikely(c == eofc)) {
+                    line_valid = false;
+                    return false;
+                }
+                stm.get();
+            }
+            stm.get();
+            // Only check pos since height in dB could legally be 0
+            return pos != 0;
+        }
         if (!parsenum(&height))
             return false;
-        if (lo <= pos && pos <= hi) {
-            if (!found_val || max_height < height) {
-                max_height = height;
-                max_pos = pos;
-                found_val = true;
-            }
+        if (max_height < height) {
+            max_height = height;
+            max_pos = pos;
         }
-        else if (!found_val) {
-            // The line is valid.
-            // If there's no data in range, make sure we return 0 instead of error.
-            found_val = true;
-        }
-        // height in dB could legally be 0
-        if (pos == 0)
-            eol = true;
         if (!eol)
             stm.get();
-        return true;
+        return !eol;
     };
     while (getpair()) {
-        if (eol) {
-            break;
-        }
     }
     stm.clear();
     stm >> ignore_line;
     if (!stm.good())
         return false;
     *val = max_pos;
-    return found_val;
+    return line_valid;
 }
 
 NACS_INTERNAL bool Wavemeter::parseline(std::istream &stm, double *tsf, double *val) const
