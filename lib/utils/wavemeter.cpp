@@ -197,8 +197,10 @@ NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_ty
             }
             continue;
         }
-        times.push_back(tsf);
-        datas.push_back(val);
+        if (val != 0) {
+            times.push_back(tsf);
+            datas.push_back(val);
+        }
         if (tsf >= tmax) {
             return;
         }
@@ -298,7 +300,7 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
     if (!valid)
         loc = stm.tellg();
     if (loc == lb && prev != m_segments.end()) {
-        if (valid) {
+        if (valid && val != 0) {
             prev->times.push_back(tsf);
             prev->datas.push_back(val);
         }
@@ -308,7 +310,7 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
     }
     std::vector<double> times;
     std::vector<double> datas;
-    if (valid) {
+    if (valid && val != 0) {
         times.push_back(tsf);
         datas.push_back(val);
     }

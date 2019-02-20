@@ -67,9 +67,7 @@ struct TestFile {
         stm << std::endl;
 
         std::vector<double> freqs(npeaks);
-        size_t nline = times.size();
-        for (size_t i = 0; i < nline; i++) {
-            double tf = times[i];
+        auto gen_line = [&] (double tf, double data, bool valid) {
             double tsecf;
             double tmsf = modf(tf, &tsecf);
 
@@ -78,19 +76,40 @@ struct TestFile {
             stm << std::put_time(std::gmtime(&tsec), "%Y-%m-%dT%H:%M:%S")
                 << '.' << std::setfill('0') << std::setw(3) << tms;
 
-            for (int j = 0; j < npeaks - 1; j++)
-                freqs[j] = data_dis(gen);
-            freqs[npeaks - 1] = datas[i];
+            if (valid) {
+                for (int j = 0; j < npeaks - 1; j++)
+                    freqs[j] = data_dis(gen);
+                freqs[npeaks - 1] = data;
+            }
+            else {
+                for (int j = 0; j < npeaks; j++) {
+                    do {
+                        freqs[j] = data_dis(gen);
+                    } while (lo <= freqs[j] && freqs[j] <= hi);
+                }
+            }
             std::sort(freqs.begin(), freqs.end());
 
             for (int j = 0; j < npeaks; j++) {
                 double strength = strength_dis(gen);
-                if (freqs[j] == datas[i])
+                if (valid && freqs[j] == data)
                     strength += 11;
                 stm << ',' << freqs[j] << ',' << strength;
             }
 
             stm << std::endl;
+        };
+
+        size_t nline = times.size();
+        for (size_t i = 0; ; i++) {
+            gen_line(times[i], datas[i], true);
+            if (i == nline - 1)
+                break;
+            auto dt2 = dt_dis(gen);
+            auto t2 = times[i] + dt2;
+            if (times[i + 1] > t2) {
+                gen_line(t2, 0, false);
+            }
         }
 
         file = stm.get_buf();
