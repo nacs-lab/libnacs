@@ -34,23 +34,30 @@ namespace Codegen {
 
 using namespace llvm;
 
+struct Wrapper {
+    enum ArgType : uint8_t {
+        Closure
+    };
+    struct Arg {
+        ArgType type;
+        uint32_t idx;
+    };
+    bool closure = false;
+    std::map<uint32_t,Arg> arg_map{};
+    void add_closure(uint32_t arg, uint32_t idx)
+    {
+        arg_map.emplace(arg, Arg{Closure, idx});
+    }
+};
+
 class Context {
 public:
     NACS_EXPORT(utils) Context(Module *mod);
-    Function *emit_function(const IR::Function &func, uint64_t func_id,
-                            const std::map<uint32_t,uint32_t> &closure_args)
-    {
-        return _emit_function(func, func_id, closure_args, true);
-    }
-    Function *emit_function(const IR::Function &func, uint64_t func_id)
-    {
-        return _emit_function(func, func_id, {}, false);
-    }
+    NACS_EXPORT(utils) Function *emit_wrapper(Function *func,
+                                              StringRef name, const Wrapper &spec);
+    NACS_EXPORT(utils) Function *emit_function(const IR::Function &func,
+                                               StringRef name, bool _export=true);
 private:
-    NACS_EXPORT(utils)
-    Function *_emit_function(const IR::Function &func, uint64_t func_id,
-                             const std::map<uint32_t,uint32_t> &closure_args,
-                             bool has_closure);
     Type *llvm_ty(IR::Type ty) const;
     Type *llvm_argty(IR::Type ty) const;
     Value *emit_const(IR::TagVal c) const;

@@ -30,6 +30,7 @@
 #  include <llvm/Transforms/InstCombine/InstCombine.h>
 #endif
 #include <llvm/Transforms/IPO.h>
+#include <llvm/Transforms/IPO/AlwaysInliner.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #if LLVM_VERSION_MAJOR >= 7
@@ -54,6 +55,7 @@ void addOptimization(legacy::PassManagerBase &pm)
     pm.add(createDeadInstEliminationPass());
     pm.add(createInstructionCombiningPass());
 
+    pm.add(createAlwaysInlinerLegacyPass());  // Respect always_inline
     pm.add(createInstructionCombiningPass()); // Cleanup for scalarrepl.
     pm.add(createSROAPass());                 // Break up aggregate allocas
     pm.add(createInstructionCombiningPass()); // Cleanup for scalarrepl.

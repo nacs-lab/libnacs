@@ -59,7 +59,7 @@ Constant *Context::ensurePureFunc(StringRef name, FunctionType *ft, bool canread
             return ConstantExpr::getBitCast(f, pft);
         return f;
     }
-    Function *f = Function::Create(ft, GlobalVariable::ExternalLinkage, name, m_mod);
+    Function *f = Function::Create(ft, GlobalValue::ExternalLinkage, name, m_mod);
     f->addFnAttr(Attribute::NoRecurse);
     f->addFnAttr(Attribute::NoUnwind);
     if (canread) {
@@ -229,36 +229,99 @@ Value *Context::emit_cmp(IRBuilder<> &builder, IR::CmpType cmptyp,
     }
 }
 
-Function *Context::_emit_function(const IR::Function &func, uint64_t func_id,
-                                  const std::map<uint32_t,uint32_t> &closure_args,
-                                  bool has_closure)
+NACS_EXPORT()
+Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &spec)
+{
+    // 1. Create function signature
+    auto fty = func->getFunctionType();
+    assert(!fty->isVarArg());
+    auto nargs = fty->getNumParams();
+    auto rt = fty->getReturnType();
+    SmallVector<Type*, 8> fsig;
+    for (int i = 0; i < nargs; i++) {
+        auto arg_spec = spec.arg_map.find(i);
+        auto argt = fty->getParamType(i);
+        if (arg_spec == spec.arg_map.end()) {
+            fsig.push_back(argt);
+            continue;
+        }
+        if (arg_spec->second.type == Wrapper::Closure) {
+            if (!spec.closure)
+                return nullptr;
+            // Nothing to do with this argument
+        }
+        else {
+            // Unknown argument type
+            return nullptr;
+        }
+    }
+    if (spec.closure)
+        fsig.push_back(T_i8->getPointerTo());
+    auto wrapf_type = FunctionType::get(rt, fsig, false);
+
+    // 2. Create function
+    auto wrapf = Function::Create(wrapf_type, GlobalValue::ExternalLinkage, name, m_mod);
+    wrapf->setVisibility(GlobalValue::ProtectedVisibility);
+    wrapf->addFnAttr(Attribute::NoRecurse);
+    wrapf->addFnAttr(Attribute::NoUnwind);
+    wrapf->addFnAttr(Attribute::ReadOnly);
+
+    BasicBlock *b0 = BasicBlock::Create(m_ctx, "top", wrapf);
+    IRBuilder<> builder(b0);
+
+    // 3. Create arguments
+    SmallVector<Value*, 8> call_args(nargs);
+    auto argit = wrapf->arg_end();
+    auto clarg = spec.closure ? &*(--argit) : nullptr;
+    argit = wrapf->arg_begin();
+    uint32_t max_offset = 0;
+    for (int i = 0, j = 0; i < nargs; i++) {
+        auto arg_spec = spec.arg_map.find(i);
+        if (arg_spec == spec.arg_map.end()) {
+            call_args[i] = &*(argit + j);
+            j++;
+            continue;
+        }
+        // Only type for now.
+        assert(arg_spec->second.type == Wrapper::Closure);
+        auto offset = arg_spec->second.idx;
+        auto argt = fty->getParamType(i);
+        auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(T_i8, clarg, offset * 8),
+                                         argt->getPointerTo());
+        max_offset = max(max_offset, offset + 1);
+        auto load = builder.CreateLoad(argt, ptr);
+        load->setAlignment(8);
+        load->setMetadata(LLVMContext::MD_tbaa, tbaa_const);
+        call_args[i] = load;
+    }
+    if (max_offset) {
+        assert(spec.closure);
+        clarg->addAttr(Attribute::NonNull);
+        wrapf->addDereferenceableParamAttr(fsig.size() - 1, max_offset * 8);
+    }
+    auto res = builder.CreateCall(func, call_args);
+    builder.CreateRet(res);
+    return wrapf;
+}
+
+NACS_EXPORT()
+Function *Context::emit_function(const IR::Function &func, StringRef name, bool _export)
 {
     auto nargs = func.nargs;
     auto nslots = func.vals.size();
     // 1. Create function signature
     auto rt = llvm_argty(func.ret);
-    auto nargs_llvm = nargs;
-    if (has_closure)
-        nargs_llvm = nargs - (int)closure_args.size() + 1;
-    SmallVector<Type*, 8> fsig(nargs_llvm);
-    auto clit = closure_args.begin();
-    for (int i = 0, j = 0; i < nargs; i++) {
-        if (has_closure && clit != closure_args.end() && (int)clit->first == i) {
-            ++clit;
-            continue;
-        }
-        fsig[j] = llvm_argty(func.vals[i]);
-        j++;
-    }
-    if (has_closure) {
-        assert(clit == closure_args.end());
-        fsig[nargs_llvm - 1] = T_i8->getPointerTo();
-    }
+    SmallVector<Type*, 8> fsig(nargs);
+    for (int i = 0; i < nargs; i++)
+        fsig[i] = llvm_argty(func.vals[i]);
     auto ftype = FunctionType::get(rt, fsig, false);
 
     // 2. Create function
-    auto f = Function::Create(ftype, GlobalVariable::ExternalLinkage,
-                              std::to_string(func_id), m_mod);
+    auto f = Function::Create(ftype, _export ? GlobalValue::ExternalLinkage :
+                              GlobalValue::InternalLinkage, name, m_mod);
+    if (_export)
+        f->setVisibility(GlobalValue::ProtectedVisibility);
+    f->addFnAttr(Attribute::AlwaysInline);
     f->addFnAttr(Attribute::NoRecurse);
     f->addFnAttr(Attribute::NoUnwind);
     f->addFnAttr(Attribute::ReadOnly);
@@ -274,39 +337,11 @@ Function *Context::_emit_function(const IR::Function &func, uint64_t func_id,
     for (unsigned i = 0; i < nslots; i++)
         slots[i] = builder.CreateAlloca(llvm_ty(func.vals[i]));
     auto argit = f->arg_begin();
-    clit = closure_args.begin();
     for (int i = 0; i < nargs; i++) {
-        if (has_closure && clit != closure_args.end() && (int)clit->first == i) {
-            ++clit;
-            continue;
-        }
         Value *argv = &*argit++;
         if (func.vals[i] == IR::Type::Bool)
             argv = builder.CreateTrunc(argv, T_bool);
         builder.CreateStore(argv, slots[i]);
-    }
-    if (has_closure) {
-        Argument *argv = &*argit++;
-        uint32_t max_offset = 0;
-        for (auto cl: closure_args) {
-            auto slot = slots[cl.first];
-            auto ty = func.vals[cl.first];
-            auto lty = llvm_argty(ty);
-            auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(T_i8, argv,
-                                                                        cl.second * 8),
-                                             lty->getPointerTo());
-            max_offset = max(max_offset, cl.second + 1);
-            auto load = builder.CreateLoad(lty, ptr);
-            load->setAlignment(8);
-            load->setMetadata(LLVMContext::MD_tbaa, tbaa_const);
-            Value *val = load;
-            if (ty == IR::Type::Bool)
-                val = builder.CreateTrunc(val, T_bool);
-            builder.CreateStore(val, slot);
-        }
-        if (max_offset)
-            argv->addAttr(Attribute::NonNull);
-        f->addDereferenceableParamAttr(nargs_llvm - 1, max_offset * 8);
     }
     auto prev_bb_var = builder.CreateAlloca(T_i32);
 
@@ -601,7 +636,7 @@ Function *Context::_emit_function(const IR::Function &func, uint64_t func_id,
             ArrayRef<double> dataref(&func.float_table[data_offset], ndata);
             auto table = ConstantDataArray::get(m_ctx, dataref);
             Constant *datap = new GlobalVariable(*m_mod, table->getType(), true,
-                                                 GlobalVariable::InternalLinkage, table,
+                                                 GlobalValue::InternalLinkage, table,
                                                  ".L.nacs." + std::to_string(m_counter++));
             cast<GlobalVariable>(datap)->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
             datap = ConstantExpr::getBitCast(datap, T_f64->getPointerTo());

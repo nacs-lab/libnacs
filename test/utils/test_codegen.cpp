@@ -60,7 +60,7 @@ struct LLVMTest {
           engine(engine)
     {
         LLVM::Codegen::Context ctx(mod);
-        f = ctx.emit_function(func, 0);
+        f = ctx.emit_function(func, "0");
         auto fty = f->getFunctionType();
         assert(!fty->isVarArg());
         for (auto argt: fty->params()) {
@@ -68,20 +68,17 @@ struct LLVMTest {
         }
     }
     LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func,
-             const std::map<uint32_t,uint32_t> &closure_args)
+             const LLVM::Codegen::Wrapper &wrapper)
         : mod(LLVM::new_module("", ll_ctx)),
           engine(engine)
     {
         LLVM::Codegen::Context ctx(mod);
-        f = ctx.emit_function(func, 0, closure_args);
-        auto fty = f->getFunctionType();
-        assert(!fty->isVarArg());
-        auto nparams = fty->getNumParams();
-        for (unsigned i = 0; i < nparams - 1; i++) {
-            auto argt = fty->getParamType(i);
+        auto f0 = ctx.emit_function(func, "1", false);
+        auto fty0 = f0->getFunctionType();
+        assert(!fty0->isVarArg());
+        for (auto argt: fty0->params())
             assert(argt == ctx.T_i8 || argt == ctx.T_i32 || argt == ctx.T_f64);
-        }
-        assert(fty->getParamType(nparams - 1)->isPointerTy());
+        f = ctx.emit_wrapper(f0, "0", wrapper);
     }
     LLVMTest(LLVMTest&&) = default;
     LLVMTest &operator=(LLVMTest&&) = default;
@@ -442,7 +439,8 @@ int main()
         auto f = (double(*)(double, double))test.get_ptr();
         assert(f(2.3, 1.3) == -1.71);
 
-        auto test0 = gettest(builder.get(), std::map<uint32_t,uint32_t>{});
+        LLVM::Codegen::Wrapper wrap0{true};
+        auto test0 = gettest(builder.get(), wrap0);
         auto f0 = (double(*)(double, double, IR::GenVal*))test0.get_ptr();
         assert(f0(2.3, 1.3, nullptr) == -1.71);
         assert(f0(2.3, 10.0, nullptr) == -51.3);
@@ -450,7 +448,9 @@ int main()
 
         IR::GenVal vals[2];
 
-        auto test11 = gettest(builder.get(), std::map<uint32_t,uint32_t>{{0, 0}});
+        LLVM::Codegen::Wrapper wrap11{true};
+        wrap11.add_closure(0, 0);
+        auto test11 = gettest(builder.get(), wrap11);
         auto f11 = (double(*)(double, IR::GenVal*))test11.get_ptr();
         vals[0] = IR::TagVal(2.3).val;
         assert(f11(1.3, vals) == -1.71);
@@ -458,7 +458,9 @@ int main()
         vals[0] = IR::TagVal(1.3).val;
         assert(f11(1.0, vals) == 0.0);
 
-        auto test12 = gettest(builder.get(), std::map<uint32_t,uint32_t>{{1, 0}});
+        LLVM::Codegen::Wrapper wrap12{true};
+        wrap12.add_closure(1, 0);
+        auto test12 = gettest(builder.get(), wrap12);
         auto f12 = (double(*)(double, IR::GenVal*))test12.get_ptr();
         vals[0] = IR::TagVal(1.3).val;
         assert(f12(2.3, vals) == -1.71);
@@ -467,7 +469,10 @@ int main()
         vals[0] = IR::TagVal(1.0).val;
         assert(f12(1.3, vals) == 0.0);
 
-        auto test2 = gettest(builder.get(), std::map<uint32_t,uint32_t>{{1, 0}, {0, 1}});
+        LLVM::Codegen::Wrapper wrap2{true};
+        wrap2.add_closure(1, 0);
+        wrap2.add_closure(0, 1);
+        auto test2 = gettest(builder.get(), wrap2);
         auto f2 = (double(*)(IR::GenVal*))test2.get_ptr();
         vals[0] = IR::TagVal(1.3).val;
         vals[1] = IR::TagVal(2.3).val;
