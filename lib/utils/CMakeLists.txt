@@ -68,12 +68,19 @@ add_library(nacs-utils SHARED
 if(ENABLE_LLVM)
   # AFAICT llvm_config is pretty broken so just do it ourselves...
   if(STATIC_LLVM)
+    # Statically linking LLVM is needed on windows since we want to be loaded into LLVM
+    # that ships it own version of LLVM that is probably not compatible with ours.
     set(LLVM_CONFIG_FLAGS --link-static)
   else()
     set(LLVM_CONFIG_FLAGS --link-shared)
   endif()
   execute_process(COMMAND llvm-config --libs ${LLVM_CONFIG_FLAGS} OUTPUT_VARIABLE llvm_libs)
   string(STRIP "${llvm_libs}" llvm_libs)
+  # Link LLVM privately, this makes sure that we are not accidentally linking to LLVM
+  # in any other libraries. Additional linking is dangerous for statically linked LLVM
+  # since the two libraries/programs will be linking to different copies of LLVM
+  # that cannot interact with each other safely.
+  # See also comments in `lib/utils/llvm/utils.h`
   target_link_libraries(nacs-utils PRIVATE ${llvm_libs})
   if(IS_UNIX)
     target_link_libraries(nacs-utils PRIVATE dl)

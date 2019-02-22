@@ -39,6 +39,11 @@ void dump(llvm::Function *f);
 void dump(llvm::Module *m);
 void dump(llvm::Metadata *m);
 void dump(llvm::DebugLoc *dbg);
+
+// The following functions are provided so that the user does not need to link to LLVM.
+// This is useful/needed when we statically linking LLVM and cannot
+// link to the same version of LLVM as the user.
+// See also comments in `lib/utils/CMakeLists.txt`
 llvm::Module *new_module(llvm::StringRef, llvm::LLVMContext&);
 void delete_module(llvm::Module*);
 llvm::LLVMContext *new_context();
