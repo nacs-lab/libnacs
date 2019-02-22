@@ -49,7 +49,8 @@ set(nacs_utils_llvm_SRCS
   llvm/compile.cpp
   llvm/execute.cpp
   llvm/memmgr.cpp
-  llvm/mergephi-pass.cpp)
+  llvm/mergephi-pass.cpp
+  llvm/utils.cpp)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 if(ENABLE_LLVM)
@@ -73,15 +74,15 @@ if(ENABLE_LLVM)
   endif()
   execute_process(COMMAND llvm-config --libs ${LLVM_CONFIG_FLAGS} OUTPUT_VARIABLE llvm_libs)
   string(STRIP "${llvm_libs}" llvm_libs)
-  target_link_libraries(nacs-utils ${llvm_libs})
+  target_link_libraries(nacs-utils PRIVATE ${llvm_libs})
   if(IS_UNIX)
-    target_link_libraries(nacs-utils dl)
+    target_link_libraries(nacs-utils PRIVATE dl)
   endif()
   if(MINGW AND STATIC_LLVM)
-    target_link_libraries(nacs-utils ole32 uuid z)
+    target_link_libraries(nacs-utils PRIVATE ole32 uuid z)
   endif()
 endif()
-target_link_libraries(nacs-utils ${nacs_utils_LINKS})
+target_link_libraries(nacs-utils PUBLIC ${nacs_utils_LINKS})
 
 set_target_properties(nacs-utils PROPERTIES
   VERSION "${MAJOR_VERSION}.${MINOR_VERSION}"

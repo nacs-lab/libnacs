@@ -36,12 +36,7 @@ using namespace llvm;
 
 Module *optimize(Module *mod);
 bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M, bool opt=true);
-static inline bool emit_objfile(SmallVectorImpl<char> &vec, TargetMachine *tgt,
-                                Module *M, bool opt=true)
-{
-    llvm::raw_svector_ostream stm(vec);
-    return emit_objfile(stm, tgt, M, opt);
-}
+bool emit_objfile(SmallVectorImpl<char> &vec, TargetMachine *tgt, Module *M, bool opt=true);
 TargetMachine *get_native_target();
 std::unique_ptr<TargetMachine> create_target(StringRef triple, StringRef cpu,
                                              StringRef features);

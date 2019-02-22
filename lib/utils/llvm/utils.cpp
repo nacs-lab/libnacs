@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2019 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,35 +16,67 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#ifndef __NACS_UTILS_LLVM_UTILS_H__
-#define __NACS_UTILS_LLVM_UTILS_H__
-
-#include <llvm/IR/DebugLoc.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Module.h>
-#include <llvm/IR/Metadata.h>
-#include <llvm/IR/Type.h>
-#include <llvm/IR/Value.h>
-#include <llvm/Support/Debug.h>
-
-#define NACS_LLVM_VER (LLVM_VERSION_MAJOR * 10000 + LLVM_VERSION_MINOR * 100 \
-                       + LLVM_VERSION_PATCH)
+#include "../utils.h"
+#include "utils.h"
 
 namespace NaCs {
 namespace LLVM {
 
-void dump(llvm::Value *v);
-void dump(llvm::Type *v);
-void dump(llvm::Function *f);
-void dump(llvm::Module *m);
-void dump(llvm::Metadata *m);
-void dump(llvm::DebugLoc *dbg);
-llvm::Module *new_module(llvm::StringRef, llvm::LLVMContext&);
-void delete_module(llvm::Module*);
-llvm::LLVMContext *new_context();
-void delete_context(llvm::LLVMContext*);
+using namespace llvm;
+
+NACS_EXPORT() void dump(Value *v)
+{
+    v->print(dbgs(), true);
+    dbgs() << "\n";
+}
+
+NACS_EXPORT() void dump(Type *v)
+{
+    v->print(dbgs(), true);
+    dbgs() << "\n";
+}
+
+NACS_EXPORT() void dump(Function *f)
+{
+    f->print(dbgs(), nullptr, false, true);
+}
+
+NACS_EXPORT() void dump(Module *m)
+{
+    m->print(dbgs(), nullptr);
+}
+
+NACS_EXPORT() void dump(Metadata *m)
+{
+    m->print(dbgs());
+    dbgs() << "\n";
+}
+
+NACS_EXPORT() void dump(DebugLoc *dbg)
+{
+    dbg->print(dbgs());
+    dbgs() << "\n";
+}
+
+NACS_EXPORT() Module *new_module(StringRef name, LLVMContext &ctx)
+{
+    return new Module(name, ctx);
+}
+
+NACS_EXPORT() void delete_module(Module *mod)
+{
+    delete mod;
+}
+
+NACS_EXPORT() LLVMContext *new_context()
+{
+    return new LLVMContext;
+}
+
+NACS_EXPORT() void delete_context(LLVMContext *ctx)
+{
+    delete ctx;
+}
 
 }
 }
-
-#endif

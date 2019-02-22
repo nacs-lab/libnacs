@@ -117,6 +117,13 @@ NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Modu
     return true;
 }
 
+NACS_EXPORT() bool emit_objfile(SmallVectorImpl<char> &vec, TargetMachine *tgt,
+                                Module *M, bool opt)
+{
+    llvm::raw_svector_ostream stm(vec);
+    return emit_objfile(stm, tgt, M, opt);
+}
+
 // For testing only
 NACS_EXPORT() Module *optimize(Module *mod)
 {

@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING 1
+
 #include "../../lib/utils/llvm/codegen.h"
 #include "../../lib/utils/llvm/compile.h"
 #include "../../lib/utils/llvm/execute.h"
@@ -51,36 +53,30 @@ static void test_str_eq(T &&v, std::string val)
 
 struct LLVMTest {
     LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func)
-        : mod(new llvm::Module("", ll_ctx)),
+        : mod(LLVM::new_module("", ll_ctx)),
           engine(engine)
     {
-        LLVM::Codegen::Context ctx(mod.get());
+        LLVM::Codegen::Context ctx(mod);
         f = ctx.emit_function(func, 0);
         auto fty = f->getFunctionType();
         assert(!fty->isVarArg());
-        auto T_i8 = llvm::Type::getInt8Ty(ll_ctx);
-        auto T_i32 = llvm::Type::getInt32Ty(ll_ctx);
-        auto T_f64 = llvm::Type::getDoubleTy(ll_ctx);
         for (auto argt: fty->params()) {
-            assert(argt == T_i8 || argt == T_i32 || argt == T_f64);
+            assert(argt == ctx.T_i8 || argt == ctx.T_i32 || argt == ctx.T_f64);
         }
     }
     LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func,
              const std::map<uint32_t,uint32_t> &closure_args)
-        : mod(new llvm::Module("", ll_ctx)),
+        : mod(LLVM::new_module("", ll_ctx)),
           engine(engine)
     {
-        LLVM::Codegen::Context ctx(mod.get());
+        LLVM::Codegen::Context ctx(mod);
         f = ctx.emit_function(func, 0, closure_args);
         auto fty = f->getFunctionType();
         assert(!fty->isVarArg());
-        auto T_i8 = llvm::Type::getInt8Ty(ll_ctx);
-        auto T_i32 = llvm::Type::getInt32Ty(ll_ctx);
-        auto T_f64 = llvm::Type::getDoubleTy(ll_ctx);
         auto nparams = fty->getNumParams();
         for (unsigned i = 0; i < nparams - 1; i++) {
             auto argt = fty->getParamType(i);
-            assert(argt == T_i8 || argt == T_i32 || argt == T_f64);
+            assert(argt == ctx.T_i8 || argt == ctx.T_i32 || argt == ctx.T_f64);
         }
         assert(fty->getParamType(nparams - 1)->isPointerTy());
     }
@@ -88,19 +84,19 @@ struct LLVMTest {
     LLVMTest &operator=(LLVMTest&&) = default;
     LLVMTest &opt()
     {
-        LLVM::Compile::optimize(mod.get());
+        LLVM::Compile::optimize(mod);
         return *this;
     }
     LLVMTest &print()
     {
-        LLVM::dump(mod.get());
+        LLVM::dump(mod);
         return *this;
     }
     void *get_ptr()
     {
         llvm::SmallVector<char,0> vec;
         auto res = LLVM::Compile::emit_objfile(vec, LLVM::Compile::get_native_target(),
-                                               mod.get());
+                                               mod);
         assert(res);
         auto obj_id = engine.load(&vec[0], vec.size());
         obj_ids.push_back(obj_id);
@@ -112,8 +108,9 @@ struct LLVMTest {
         for (auto id: obj_ids) {
             engine.free(id);
         }
+        LLVM::delete_module(mod);
     }
-    std::unique_ptr<llvm::Module> mod;
+    llvm::Module *mod;
     LLVM::Exe::Engine &engine;
     llvm::Function *f = nullptr;
     std::vector<uint64_t> obj_ids;
@@ -122,10 +119,11 @@ struct LLVMTest {
 int main()
 {
     LLVM::Exe::Engine engine;
-    llvm::LLVMContext llvm_ctx;
+    std::unique_ptr<llvm::LLVMContext,void(*)(llvm::LLVMContext*)>
+        llvm_ctx(LLVM::new_context(), LLVM::delete_context);
 
     auto gettest = [&] (auto ...args) {
-        return LLVMTest(llvm_ctx, engine, args...);
+        return LLVMTest(*llvm_ctx, engine, args...);
     };
 
     auto exectx = IR::ExeContext::get();

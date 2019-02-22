@@ -64,6 +64,7 @@ private:
 
     Module *m_mod;
     LLVMContext &m_ctx;
+public:
     IntegerType *T_bool;
     IntegerType *T_i8;
     IntegerType *T_i32;
@@ -74,6 +75,7 @@ private:
     FunctionType *F_f64_f64i32;
     FunctionType *F_f64_i32f64;
     FunctionType *F_f64_f64f64f64i32pf64;
+private:
     MDBuilder m_mdbuilder;
     MDNode *tbaa_root;
     MDNode *tbaa_const;
