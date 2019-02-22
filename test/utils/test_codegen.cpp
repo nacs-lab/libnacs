@@ -16,6 +16,9 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+// This avoid linking to LLVM
+// Without this, LLVM header generates a global variable with
+// weak linkage that links to symbol in libLLVM.
 #define LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING 1
 
 #include "../../lib/utils/llvm/codegen.h"
