@@ -52,6 +52,9 @@ set(nacs_utils_llvm_SRCS
   llvm/mergephi-pass.cpp
   llvm/utils.cpp)
 
+configure_file(config.h.in config.h @ONLY)
+set(nacs_utils_HDRS ${nacs_utils_HDRS} "${CMAKE_CURRENT_BINARY_DIR}/config.h")
+
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 if(ENABLE_LLVM)
   set(nacs_utils_SRCS ${nacs_utils_SRCS} ${nacs_utils_llvm_SRCS})
@@ -88,6 +91,10 @@ if(ENABLE_LLVM)
   if(MINGW AND STATIC_LLVM)
     target_link_libraries(nacs-utils PRIVATE ole32 uuid z)
   endif()
+endif()
+if(ENABLE_SIMD)
+  include_directories(${SLEEF_INCLUDE_DIR})
+  target_link_libraries(nacs-utils PUBLIC ${SLEEF_LIBRARIES})
 endif()
 target_link_libraries(nacs-utils PUBLIC ${nacs_utils_LINKS})
 

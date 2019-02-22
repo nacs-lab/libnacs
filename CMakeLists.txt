@@ -26,6 +26,7 @@ option(ENABLE_PYWRAPPER "Enable python wrapper for nacs-seq" On)
 option(ENABLE_INSTALL_NONLIB
   "Enable installation of files other than the libraries (e.g. headers and pkgconfig)"
   ${IS_UNIX})
+option(ENABLE_SIMD "Enable simd optimization" On)
 
 include(CMakeCMacros)
 include(GNUInstallDirs)
@@ -55,6 +56,10 @@ if(ENABLE_LLVM)
 
   message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+endif()
+
+if(ENABLE_SIMD)
+  find_package(Sleef REQUIRED)
 endif()
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden -Wconversion
