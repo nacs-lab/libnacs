@@ -126,9 +126,8 @@ static inline __m128d linearInterpolate2(__m128d x, uint32_t npoints, const doub
 {
     auto und_ok = (__m128)(x > 0);
     auto ovr_ok = (__m128)(x < 1);
-    auto ok = _mm_and_ps(ovr_ok, und_ok);
     x = x * (npoints - 1);
-    x = (__m128d)_mm_and_ps((__m128)x, ok);
+    x = (__m128d)_mm_and_ps((__m128)x, _mm_and_ps(ovr_ok, und_ok));
     auto modres = modfd2<id>(x);
     x = modres.x;
     auto lof = modres.y;
@@ -206,9 +205,8 @@ static inline __m256d linearInterpolate4(__m256d x, uint32_t npoints, const doub
 {
     auto und_ok = (__m256)(x > 0);
     auto ovr_ok = (__m256)(x < 1);
-    auto ok = _mm256_and_ps(ovr_ok, und_ok);
     x = x * (npoints - 1);
-    x = (__m256d)_mm256_and_ps((__m256)x, ok);
+    x = (__m256d)_mm256_and_ps((__m256)x, _mm256_and_ps(ovr_ok, und_ok));
     auto modres = modfd4<id>(x);
     x = modres.x;
     auto lof = modres.y;
@@ -217,11 +215,8 @@ static inline __m256d linearInterpolate4(__m256d x, uint32_t npoints, const doub
     auto vhi = (__m256d){points[lo[0] + 1], points[lo[1] + 1],
                          points[lo[2] + 1], points[lo[3] + 1]};
     auto res = x * vhi + (1 - x) * vlo;
-    res = (__m256d)_mm256_and_ps((__m256)res, ok);
-    auto und_res = _mm256_andnot_ps((__m256)_mm256_broadcast_sd(points), und_ok);
-    auto ovr_res = _mm256_andnot_ps((__m256)_mm256_broadcast_sd(&points[npoints - 1]), ovr_ok);
-    res = (__m256d)_mm256_or_ps((__m256)res, und_res);
-    res = (__m256d)_mm256_or_ps((__m256)res, ovr_res);
+    res = _mm256_blendv_pd((__m256d)und_ok, res, _mm256_broadcast_sd(points));
+    res = _mm256_blendv_pd((__m256d)ovr_ok, res, _mm256_broadcast_sd(&points[npoints - 1]));
     return res;
 }
 
@@ -250,9 +245,8 @@ NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const
 {
     auto und_ok = (__m256)(x > 0);
     auto ovr_ok = (__m256)(x < 1);
-    auto ok = _mm256_and_ps(ovr_ok, und_ok);
     x = x * (npoints - 1);
-    x = (__m256d)_mm256_and_ps((__m256)x, ok);
+    x = (__m256d)_mm256_and_ps((__m256)x, _mm256_and_ps(ovr_ok, und_ok));
     auto modres = modfd4<1>(x);
     x = modres.x;
     auto lof = modres.y;
@@ -260,11 +254,8 @@ NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const
     auto vlo = _mm256_i32gather_pd(points, lo, 1);
     auto vhi = _mm256_i32gather_pd(points + 1, lo, 1);
     auto res = x * vhi + (1 - x) * vlo;
-    res = (__m256d)_mm256_and_ps((__m256)res, ok);
-    auto und_res = _mm256_andnot_ps((__m256)_mm256_broadcast_sd(points), und_ok);
-    auto ovr_res = _mm256_andnot_ps((__m256)_mm256_broadcast_sd(&points[npoints - 1]), ovr_ok);
-    res = (__m256d)_mm256_or_ps((__m256)res, und_res);
-    res = (__m256d)_mm256_or_ps((__m256)res, ovr_res);
+    res = _mm256_blendv_pd((__m256d)und_ok, res, _mm256_broadcast_sd(points));
+    res = _mm256_blendv_pd((__m256d)ovr_ok, res, _mm256_broadcast_sd(&points[npoints - 1]));
     return res;
 }
 
