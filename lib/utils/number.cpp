@@ -110,13 +110,13 @@ __m128d selectd2<0>(__m128 mask, __m128d v0, __m128d v1)
 template<> __attribute__((target("sse4.1")))
 inline __m128d selectd2<1>(__m128 mask, __m128d v0, __m128d v1)
 {
-    return _mm_blendv_pd((__m128d)mask, v0, v1);
+    return _mm_blendv_pd(v1, v0, (__m128d)mask);
 }
 
 template<> __attribute__((target("avx")))
 inline __m128d selectd2<2>(__m128 mask, __m128d v0, __m128d v1)
 {
-    return _mm_blendv_pd((__m128d)mask, v0, v1);
+    return _mm_blendv_pd(v1, v0, (__m128d)mask);
 }
 
 typedef int v4si __attribute__((__vector_size__(16)));
@@ -215,8 +215,8 @@ static inline __m256d linearInterpolate4(__m256d x, uint32_t npoints, const doub
     auto vhi = (__m256d){points[lo[0] + 1], points[lo[1] + 1],
                          points[lo[2] + 1], points[lo[3] + 1]};
     auto res = x * vhi + (1 - x) * vlo;
-    res = _mm256_blendv_pd((__m256d)und_ok, res, _mm256_broadcast_sd(points));
-    res = _mm256_blendv_pd((__m256d)ovr_ok, res, _mm256_broadcast_sd(&points[npoints - 1]));
+    res = _mm256_blendv_pd(_mm256_broadcast_sd(points), res, (__m256d)und_ok);
+    res = _mm256_blendv_pd(_mm256_broadcast_sd(&points[npoints - 1]), res, (__m256d)ovr_ok);
     return res;
 }
 
@@ -254,8 +254,8 @@ NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const
     auto vlo = _mm256_i32gather_pd(points, lo, 1);
     auto vhi = _mm256_i32gather_pd(points + 1, lo, 1);
     auto res = x * vhi + (1 - x) * vlo;
-    res = _mm256_blendv_pd((__m256d)und_ok, res, _mm256_broadcast_sd(points));
-    res = _mm256_blendv_pd((__m256d)ovr_ok, res, _mm256_broadcast_sd(&points[npoints - 1]));
+    res = _mm256_blendv_pd(_mm256_broadcast_sd(points), res, (__m256d)und_ok);
+    res = _mm256_blendv_pd(_mm256_broadcast_sd(&points[npoints - 1]), res, (__m256d)ovr_ok);
     return res;
 }
 
@@ -291,8 +291,8 @@ static inline __m512d linearInterpolate8(__m512d x, uint32_t npoints, const doub
     auto vhi = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo,
                                         (points + 1), 1);
     auto res = x * vhi + (1 - x) * vlo;
-    res = _mm512_mask_blend_pd(und_ok, res, _mm512_set1_pd(points[0]));
-    res = _mm512_mask_blend_pd(ovr_ok, res, _mm512_set1_pd(points[npoints - 1]));
+    res = _mm512_mask_blend_pd(und_ok, _mm512_set1_pd(points[0]), res);
+    res = _mm512_mask_blend_pd(ovr_ok, _mm512_set1_pd(points[npoints - 1]), res);
     return res;
 }
 
