@@ -104,7 +104,7 @@ template<int id> static inline __m128d selectd2(__m128, __m128d, __m128d);
 template<>
 __m128d selectd2<0>(__m128 mask, __m128d v0, __m128d v1)
 {
-    return (__m128d)_mm_or_ps(_mm_and_ps((__m128)v0, mask), _mm_andnot_ps((__m128)v1, mask));
+    return (__m128d)_mm_or_ps(_mm_and_ps(mask, (__m128)v0), _mm_andnot_ps(mask, (__m128)v1));
 }
 
 template<> __attribute__((target("sse4.1")))
@@ -133,7 +133,7 @@ static inline __m128d linearInterpolate2(__m128d x, uint32_t npoints, const doub
     auto lof = modres.y;
     auto lo = (v4si)_mm_cvtpd_epi32(lof);
     auto vlo = (__m128d){points[lo[0]], points[lo[1]]};
-    auto vhi = (__m128d){points[lo[1] + 1], points[lo[1] + 1]};
+    auto vhi = (__m128d){points[lo[0] + 1], points[lo[1] + 1]};
     auto res = x * vhi + (1 - x) * vlo;
     res = selectd2<id>(und_ok, res, (__m128d){points[0], points[0]});
     res = selectd2<id>(ovr_ok, res, (__m128d){points[npoints - 1], points[npoints - 1]});
@@ -288,7 +288,8 @@ static inline __m512d linearInterpolate8(__m512d x, uint32_t npoints, const doub
     auto lof = modres.y;
     auto lo = (v8si)_mm512_cvtpd_epi32(lof);
     auto vlo = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo, points, 1);
-    auto vhi = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo, points + 1, 1);
+    auto vhi = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo,
+                                        (points + 1), 1);
     auto res = x * vhi + (1 - x) * vlo;
     res = _mm512_mask_blend_pd(und_ok, res, _mm512_set1_pd(points[0]));
     res = _mm512_mask_blend_pd(ovr_ok, res, _mm512_set1_pd(points[npoints - 1]));
