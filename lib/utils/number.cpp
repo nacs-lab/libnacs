@@ -119,7 +119,7 @@ inline __m128d selectd2<2>(__m128 mask, __m128d v0, __m128d v1)
     return _mm_blendv_pd((__m128d)mask, v0, v1);
 }
 
-typedef int v4si __attribute__ ((__vector_size__(16)));
+typedef int v4si __attribute__((__vector_size__(16)));
 
 template<int id> __attribute__((always_inline, flatten))
 static inline __m128d linearInterpolate2(__m128d x, uint32_t npoints, const double *points)
@@ -274,7 +274,7 @@ nacs_m512d_2 modfd8<0>(__m512d v)
     return Sleef_modfd8_avx512f(v);
 }
 
-typedef int v8si __attribute__ ((__vector_size__(32)));
+typedef int v8si __attribute__((__vector_size__(32)));
 
 template<int id> __attribute__((target("avx512f,avx512dq"), always_inline, flatten))
 static inline __m512d linearInterpolate8(__m512d x, uint32_t npoints, const double *points)
