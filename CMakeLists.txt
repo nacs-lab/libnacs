@@ -90,6 +90,8 @@ if(IS_WINDOWS)
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
 endif()
 
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/lib/utils") # config.h
+
 add_subdirectory(lib)
 if(ENABLE_PYWRAPPER)
   add_subdirectory(python)

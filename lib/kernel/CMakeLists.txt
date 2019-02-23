@@ -10,8 +10,6 @@ set(nacs_kernel_SRCS
   )
 set(nacs_kernel_LINKS nacs-utils)
 
-include_directories("${CMAKE_CURRENT_BINARY_DIR}")
-
 add_library(nacs-kernel SHARED
   ${nacs_kernel_SRCS})
 

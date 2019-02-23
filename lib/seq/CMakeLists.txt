@@ -9,7 +9,6 @@ set(nacs_seq_SRCS
   seq.cpp)
 set(nacs_seq_LINKS nacs-utils)
 
-include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 add_definitions("-\"DNACS_EXPORT_LIB_seq()=\"")
 
 add_library(nacs-seq SHARED

@@ -58,7 +58,8 @@ JITSymbol Resolver::findSymbol(const std::string &name)
 uintptr_t Resolver::find_extern(const std::string &name)
 {
     if (name == "interp")
-        return (uintptr_t)linearInterpolate;
+        return (uintptr_t)static_cast<double(*)(double, double, double,
+                                                uint32_t, const double*)>(linearInterpolate);
 #ifndef NACS_HAS_EXP10
     if (name == "exp10")
         return (uintptr_t)nacs_exp10;

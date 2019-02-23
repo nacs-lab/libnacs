@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#include "config.h"
+
 #ifndef _NACS_UTILS_MACROS_H_
 #define _NACS_UTILS_MACROS_H_
 

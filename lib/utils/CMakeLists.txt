@@ -55,7 +55,6 @@ set(nacs_utils_llvm_SRCS
 configure_file(config.h.in config.h @ONLY)
 set(nacs_utils_HDRS ${nacs_utils_HDRS} "${CMAKE_CURRENT_BINARY_DIR}/config.h")
 
-include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 if(ENABLE_LLVM)
   set(nacs_utils_SRCS ${nacs_utils_SRCS} ${nacs_utils_llvm_SRCS})
   include_directories(${LLVM_INCLUDE_DIRS})
