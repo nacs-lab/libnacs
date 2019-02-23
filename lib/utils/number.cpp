@@ -200,7 +200,7 @@ nacs_m256d_2 modfd4<1>(__m256d v)
     return Sleef_modfd4_avx2(v);
 }
 
-template<int id> __attribute__((target("avx")))
+template<int id> __attribute__((target("avx"), always_inline, flatten))
 static inline __m256d linearInterpolate4(__m256d x, uint32_t npoints, const double *points)
 {
     auto und_ok = (__m256)(x > 0);
@@ -220,7 +220,7 @@ static inline __m256d linearInterpolate4(__m256d x, uint32_t npoints, const doub
     return res;
 }
 
-template<int id> __attribute__((target("avx")))
+template<int id> __attribute__((target("avx"), always_inline, flatten))
 static inline __m256d linearInterpolate4(__m256d x, __m256d x0, __m256d dx,
                                          uint32_t npoints, const double *points)
 {
@@ -276,31 +276,26 @@ nacs_m512d_2 modfd8<0>(__m512d v)
 
 typedef int v8si __attribute__ ((__vector_size__(32)));
 
-template<int id> __attribute__((target("avx512f,avx512dq")))
+template<int id> __attribute__((target("avx512f,avx512dq"), always_inline, flatten))
 static inline __m512d linearInterpolate8(__m512d x, uint32_t npoints, const double *points)
 {
-    // TODO: we should be able to use mask to optimize this.
-    auto und_ok = (__m512)(x > 0);
-    auto ovr_ok = (__m512)(x < 1);
-    auto ok = _mm512_and_ps(ovr_ok, und_ok);
+    auto und_ok = _mm512_cmp_pd_mask(x, _mm512_set1_pd(0), _CMP_GT_OS);
+    auto ovr_ok = _mm512_cmp_pd_mask(x, _mm512_set1_pd(1), _CMP_LT_OS);
+    __mmask8 ok = und_ok & ovr_ok;
     x = x * (npoints - 1);
-    x = (__m512d)_mm512_and_ps((__m512)x, ok);
     auto modres = modfd8<id>(x);
     x = modres.x;
     auto lof = modres.y;
     auto lo = (v8si)_mm512_cvtpd_epi32(lof);
-    auto vlo = _mm512_i32gather_pd((__m256i)lo, points, 1);
-    auto vhi = _mm512_i32gather_pd((__m256i)lo, points + 1, 1);
+    auto vlo = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo, points, 1);
+    auto vhi = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo, points + 1, 1);
     auto res = x * vhi + (1 - x) * vlo;
-    res = (__m512d)_mm512_and_ps((__m512)res, ok);
-    auto und_res = _mm512_andnot_ps((__m512)_mm512_set1_pd(points[0]), und_ok);
-    auto ovr_res = _mm512_andnot_ps((__m512)_mm512_set1_pd(points[npoints - 1]), ovr_ok);
-    res = (__m512d)_mm512_or_ps((__m512)res, und_res);
-    res = (__m512d)_mm512_or_ps((__m512)res, ovr_res);
+    res = _mm512_mask_blend_pd(und_ok, res, _mm512_set1_pd(points[0]));
+    res = _mm512_mask_blend_pd(ovr_ok, res, _mm512_set1_pd(points[npoints - 1]));
     return res;
 }
 
-template<int id> __attribute__((target("avx512f,avx512dq")))
+template<int id> __attribute__((target("avx512f,avx512dq"), always_inline, flatten))
 static inline __m512d linearInterpolate8(__m512d x, __m512d x0, __m512d dx,
                                          uint32_t npoints, const double *points)
 {
