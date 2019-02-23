@@ -24,6 +24,10 @@ set(test_fixedqueue_SOURCES test_fixedqueue.cpp)
 add_executable(test-fixedqueue ${test_fixedqueue_SOURCES})
 target_link_libraries(test-fixedqueue nacs-utils)
 
+set(test_interp_SOURCES test_interp.cpp)
+add_executable(test-interp ${test_interp_SOURCES})
+target_link_libraries(test-interp nacs-utils)
+
 set(test_ir_SOURCES test_ir.cpp)
 add_executable(test-ir ${test_ir_SOURCES})
 target_link_libraries(test-ir nacs-utils)
