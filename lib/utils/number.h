@@ -182,6 +182,14 @@ NACS_EXPORT(utils) __m128d linearInterpolate2_avx2(__m128d x, uint32_t npoints,
                                                    const double *points);
 NACS_EXPORT(utils) __m128d linearInterpolate2_avx2(__m128d x, __m128d x0, __m128d dx,
                                                    uint32_t npoints, const double *points);
+NACS_EXPORT(utils) __m256d linearInterpolate4_avx(__m256d x, uint32_t npoints,
+                                                  const double *points);
+NACS_EXPORT(utils) __m256d linearInterpolate4_avx(__m256d x, __m256d x0, __m256d dx,
+                                                  uint32_t npoints, const double *points);
+NACS_EXPORT(utils) __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints,
+                                                   const double *points);
+NACS_EXPORT(utils) __m256d linearInterpolate4_avx2(__m256d x, __m256d x0, __m256d dx,
+                                                   uint32_t npoints, const double *points);
 #endif
 
 }
