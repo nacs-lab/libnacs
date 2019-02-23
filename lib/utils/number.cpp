@@ -82,26 +82,46 @@ NACS_EXPORT() double linearInterpolate(double x, double x0, double dx,
 template<int id> static inline nacs_m128d_2 modfd2(__m128d);
 
 template<>
-nacs_m128d_2 modfd2<0>(__m128d v)
+inline nacs_m128d_2 modfd2<0>(__m128d v)
 {
     return Sleef_modfd2_sse2(v);
 }
 
 template<>
-nacs_m128d_2 modfd2<1>(__m128d v)
+inline nacs_m128d_2 modfd2<1>(__m128d v)
 {
     return Sleef_modfd2_sse4(v);
 }
 
 template<>
-nacs_m128d_2 modfd2<2>(__m128d v)
+inline nacs_m128d_2 modfd2<2>(__m128d v)
 {
     return Sleef_modfd2_avx2128(v);
 }
 
+template<int id> static inline __m128d selectd2(__m128, __m128d, __m128d);
+
+template<>
+__m128d selectd2<0>(__m128 mask, __m128d v0, __m128d v1)
+{
+    return (__m128d)_mm_or_ps(_mm_and_ps((__m128)v0, mask), _mm_andnot_ps((__m128)v1, mask));
+}
+
+template<> __attribute__((target("sse4.1")))
+inline __m128d selectd2<1>(__m128 mask, __m128d v0, __m128d v1)
+{
+    return _mm_blendv_pd((__m128d)mask, v0, v1);
+}
+
+template<> __attribute__((target("avx")))
+inline __m128d selectd2<2>(__m128 mask, __m128d v0, __m128d v1)
+{
+    return _mm_blendv_pd((__m128d)mask, v0, v1);
+}
+
 typedef int v4si __attribute__ ((__vector_size__(16)));
 
-template<int id>
+template<int id> __attribute__((always_inline, flatten))
 static inline __m128d linearInterpolate2(__m128d x, uint32_t npoints, const double *points)
 {
     auto und_ok = (__m128)(x > 0);
@@ -116,16 +136,12 @@ static inline __m128d linearInterpolate2(__m128d x, uint32_t npoints, const doub
     auto vlo = (__m128d){points[lo[0]], points[lo[1]]};
     auto vhi = (__m128d){points[lo[1] + 1], points[lo[1] + 1]};
     auto res = x * vhi + (1 - x) * vlo;
-    res = (__m128d)_mm_and_ps((__m128)res, ok);
-    auto und_res = _mm_andnot_ps((__m128)(__m128d){points[0], points[0]}, und_ok);
-    auto ovr_res = _mm_andnot_ps((__m128)(__m128d){points[npoints - 1],
-                                                   points[npoints - 1]}, ovr_ok);
-    res = (__m128d)_mm_or_ps((__m128)res, und_res);
-    res = (__m128d)_mm_or_ps((__m128)res, ovr_res);
+    res = selectd2<id>(und_ok, res, (__m128d){points[0], points[0]});
+    res = selectd2<id>(ovr_ok, res, (__m128d){points[npoints - 1], points[npoints - 1]});
     return res;
 }
 
-template<int id>
+template<int id> __attribute__((always_inline, flatten))
 static inline __m128d linearInterpolate2(__m128d x, __m128d x0, __m128d dx,
                                          uint32_t npoints, const double *points)
 {
