@@ -42,8 +42,7 @@ Context::Context(Module *mod)
       F_f64_f64f64f64(FunctionType::get(T_f64, {T_f64, T_f64, T_f64}, false)),
       F_f64_f64i32(FunctionType::get(T_f64, {T_f64, T_i32}, false)),
       F_f64_i32f64(FunctionType::get(T_f64, {T_i32, T_f64}, false)),
-      F_f64_f64f64f64i32pf64(FunctionType::get(T_f64, {T_f64, T_f64, T_f64,
-                      T_i32, T_f64->getPointerTo()}, false)),
+      F_f64_f64i32pf64(FunctionType::get(T_f64, {T_f64, T_i32, T_f64->getPointerTo()}, false)),
       m_mdbuilder(m_ctx),
       tbaa_root(m_mdbuilder.createTBAARoot("nacs_tbaa"))
 {
@@ -640,9 +639,10 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
                                                  ".L.nacs." + std::to_string(m_counter++));
             cast<GlobalVariable>(datap)->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
             datap = ConstantExpr::getBitCast(datap, T_f64->getPointerTo());
-
-            auto interp_f = ensurePureFunc("interp", F_f64_f64f64f64i32pf64, true);
-            lres = builder.CreateCall(interp_f, {input, x0, dx,
+            input = builder.CreateFSub(input, x0);
+            input = builder.CreateFDiv(input, dx);
+            auto interp_f = ensurePureFunc("interp", F_f64_f64i32pf64, true);
+            lres = builder.CreateCall(interp_f, {input,
                         ConstantInt::get(T_i32, ndata), datap});
             break;
         }
