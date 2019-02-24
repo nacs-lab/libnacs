@@ -30,8 +30,7 @@ set(nacs_utils_SRCS
   wavemeter.cpp)
 set(nacs_utils_LINKS m pthread)
 set_source_files_properties(number.cpp
-  PROPERTIES COMPILE_FLAGS
-  "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-fno-plt -fno-stack-protector>")
+  PROPERTIES COMPILE_FLAGS "-ffp-contract=fast")
 if(IS_UNIX)
   # For shm_*
   set(nacs_utils_LINKS ${nacs_utils_LINKS} rt)
