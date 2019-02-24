@@ -35,8 +35,6 @@ static inline double _linearInterpolate(double x, uint32_t npoints, const double
     int lo = (int)x;
     x = x - lo;
     double vlo = points[lo];
-    if (x == 0)
-        return vlo;
     double vhi = points[lo + 1];
     return x * vhi + (1 - x) * vlo;
 }
