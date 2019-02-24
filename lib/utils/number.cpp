@@ -246,13 +246,13 @@ NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const
     auto und_ok = (__m256)(x > 0);
     auto ovr_ok = (__m256)(x < 1);
     x = x * (npoints - 1);
-    x = (__m256d)_mm256_and_ps((__m256)x, _mm256_and_ps(ovr_ok, und_ok));
     auto modres = modfd4<1>(x);
     x = modres.x;
     auto lof = modres.y;
     auto lo = _mm256_cvtpd_epi32(lof);
-    auto vlo = _mm256_i32gather_pd(points, lo, 1);
-    auto vhi = _mm256_i32gather_pd(points + 1, lo, 1);
+    auto ok = (__m256d)_mm256_and_ps(ovr_ok, und_ok);
+    auto vlo = _mm256_mask_i32gather_pd(_mm256_undefined_pd(), points, lo, ok, 1);
+    auto vhi = _mm256_mask_i32gather_pd(_mm256_undefined_pd(), (points + 1), lo, ok, 1);
     auto res = x * vhi + (1 - x) * vlo;
     res = _mm256_blendv_pd(_mm256_broadcast_sd(points), res, (__m256d)und_ok);
     res = _mm256_blendv_pd(_mm256_broadcast_sd(&points[npoints - 1]), res, (__m256d)ovr_ok);
@@ -281,12 +281,12 @@ static inline __m512d linearInterpolate8(__m512d x, uint32_t npoints, const doub
 {
     auto und_ok = _mm512_cmp_pd_mask(x, _mm512_set1_pd(0), _CMP_GT_OS);
     auto ovr_ok = _mm512_cmp_pd_mask(x, _mm512_set1_pd(1), _CMP_LT_OS);
-    __mmask8 ok = und_ok & ovr_ok;
     x = x * (npoints - 1);
     auto modres = modfd8<id>(x);
     x = modres.x;
     auto lof = modres.y;
     auto lo = (v8si)_mm512_cvtpd_epi32(lof);
+    __mmask8 ok = und_ok & ovr_ok;
     auto vlo = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo, points, 1);
     auto vhi = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo,
                                         (points + 1), 1);
