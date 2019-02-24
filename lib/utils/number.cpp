@@ -18,7 +18,7 @@
 
 #include "number.h"
 
-#if defined(ENABLE_SIMD) && (NACS_CPU_X86 || NACS_CPU_X86_64)
+#if NACS_CPU_X86 || NACS_CPU_X86_64
 #  include <immintrin.h>
 #endif
 
@@ -52,7 +52,7 @@ NACS_EXPORT() double linearInterpolate(double x, double x0, double dx,
     return _linearInterpolate((x - x0) / dx, npoints, points);
 }
 
-#if defined(ENABLE_SIMD) && (NACS_CPU_X86 || NACS_CPU_X86_64)
+#if NACS_CPU_X86 || NACS_CPU_X86_64
 
 __attribute__((always_inline))
 static inline __m128d linearInterpolate2(__m128d x, uint32_t npoints, const double *points)

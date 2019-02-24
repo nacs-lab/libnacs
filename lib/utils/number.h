@@ -169,7 +169,7 @@ NACS_EXPORT(utils) double linearInterpolate(double x, uint32_t npoints, const do
 NACS_EXPORT(utils) double linearInterpolate(double x, double x0, double dx,
                                             uint32_t npoints, const double *points);
 
-#if defined(ENABLE_SIMD) && (NACS_CPU_X86 || NACS_CPU_X86_64)
+#if NACS_CPU_X86 || NACS_CPU_X86_64
 NACS_EXPORT(utils) __m128d linearInterpolate2_sse2(__m128d x, uint32_t npoints,
                                                    const double *points);
 NACS_EXPORT(utils) __m128d linearInterpolate2_sse2(__m128d x, __m128d x0, __m128d dx,
