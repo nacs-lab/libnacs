@@ -112,32 +112,18 @@ NACS_EXPORT() __m128d linearInterpolate2_avx2(__m128d x, __m128d x0, __m128d dx,
     return linearInterpolate2((x - x0) / dx, npoints, points);
 }
 
-template<int id> static inline nacs_m256d_2 modfd4(__m256d);
-
-template<>
-nacs_m256d_2 modfd4<0>(__m256d v)
-{
-    return Sleef_modfd4_avx(v);
-}
-
-template<>
-nacs_m256d_2 modfd4<1>(__m256d v)
-{
-    return Sleef_modfd4_avx2(v);
-}
-
 typedef int v4si __attribute__((__vector_size__(16)));
 
-template<int id> __attribute__((target("avx"), always_inline, flatten))
+__attribute__((target("avx"), always_inline, flatten))
 static inline __m256d linearInterpolate4(__m256d x, uint32_t npoints, const double *points)
 {
     auto und_ok = (__m256)(x > 0);
     auto ovr_ok = (__m256)(x < 1);
     x = x * (npoints - 1);
-    x = (__m256d)_mm256_and_ps((__m256)x, _mm256_and_ps(ovr_ok, und_ok));
-    auto modres = modfd4<id>(x);
+    auto modres = Sleef_modfd4_avx(x);
     x = modres.x;
     auto lof = modres.y;
+    lof = (__m256d)_mm256_and_ps((__m256)lof, _mm256_and_ps(ovr_ok, und_ok));
     auto lo = (v4si)_mm256_cvtpd_epi32(lof);
     auto vlo = (__m256d){points[lo[0]], points[lo[1]], points[lo[2]], points[lo[3]]};
     auto vhi = (__m256d){points[lo[0] + 1], points[lo[1] + 1],
@@ -148,33 +134,34 @@ static inline __m256d linearInterpolate4(__m256d x, uint32_t npoints, const doub
     return res;
 }
 
-template<int id> __attribute__((target("avx"), always_inline, flatten))
+__attribute__((target("avx"), always_inline, flatten))
 static inline __m256d linearInterpolate4(__m256d x, __m256d x0, __m256d dx,
                                          uint32_t npoints, const double *points)
 {
-    return linearInterpolate4<id>((x - x0) / dx, npoints, points);
+    return linearInterpolate4((x - x0) / dx, npoints, points);
 }
 
 __attribute__((target("avx")))
 NACS_EXPORT() __m256d linearInterpolate4_avx(__m256d x, uint32_t npoints, const double *points)
 {
-    return linearInterpolate4<0>(x, npoints, points);
+    return linearInterpolate4(x, npoints, points);
 }
 
 __attribute__((target("avx")))
 NACS_EXPORT() __m256d linearInterpolate4_avx(__m256d x, __m256d x0, __m256d dx,
                                              uint32_t npoints, const double *points)
 {
-    return linearInterpolate4<0>(x, x0, dx, npoints, points);
+    return linearInterpolate4(x, x0, dx, npoints, points);
 }
 
-__attribute__((target("avx2,fma")))
-NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const double *points)
+__attribute__((target("avx2,fma"), always_inline))
+static inline __m256d _linearInterpolate4_avx2(__m256d x, uint32_t npoints,
+                                               const double *points)
 {
     auto und_ok = (__m256)(x > 0);
     auto ovr_ok = (__m256)(x < 1);
     x = x * (npoints - 1);
-    auto modres = modfd4<1>(x);
+    auto modres = Sleef_modfd4_avx2(x);
     x = modres.x;
     auto lof = modres.y;
     auto lo = _mm256_cvtpd_epi32(lof);
@@ -188,35 +175,31 @@ NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const
 }
 
 __attribute__((target("avx2,fma")))
+NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const double *points)
+{
+    return _linearInterpolate4_avx2(x, npoints, points);
+}
+
+__attribute__((target("avx2,fma")))
 NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, __m256d x0, __m256d dx,
                                               uint32_t npoints, const double *points)
 {
-    return linearInterpolate4_avx2((x - x0) / dx, npoints, points);
+    return _linearInterpolate4_avx2((x - x0) / dx, npoints, points);
 }
 
-template<int id> static inline nacs_m512d_2 modfd8(__m512d);
-
-template<>
-nacs_m512d_2 modfd8<0>(__m512d v)
-{
-    return Sleef_modfd8_avx512f(v);
-}
-
-typedef int v8si __attribute__((__vector_size__(32)));
-
-template<int id> __attribute__((target("avx512f,avx512dq"), always_inline, flatten))
+__attribute__((target("avx512f,avx512dq"), always_inline, flatten))
 static inline __m512d linearInterpolate8(__m512d x, uint32_t npoints, const double *points)
 {
     auto und_ok = _mm512_cmp_pd_mask(x, _mm512_set1_pd(0), _CMP_GT_OS);
     auto ovr_ok = _mm512_cmp_pd_mask(x, _mm512_set1_pd(1), _CMP_LT_OS);
     x = x * (npoints - 1);
-    auto modres = modfd8<id>(x);
+    auto modres = Sleef_modfd8_avx512f(x);
     x = modres.x;
     auto lof = modres.y;
-    auto lo = (v8si)_mm512_cvtpd_epi32(lof);
+    auto lo = _mm512_cvtpd_epi32(lof);
     __mmask8 ok = und_ok & ovr_ok;
-    auto vlo = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo, points, 8);
-    auto vhi = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo,
+    auto vlo = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, lo, points, 8);
+    auto vhi = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, lo,
                                         (points + 1), 8);
     auto res = x * vhi + (1 - x) * vlo;
     res = _mm512_mask_blend_pd(und_ok, _mm512_set1_pd(points[0]), res);
@@ -224,25 +207,25 @@ static inline __m512d linearInterpolate8(__m512d x, uint32_t npoints, const doub
     return res;
 }
 
-template<int id> __attribute__((target("avx512f,avx512dq"), always_inline, flatten))
+__attribute__((target("avx512f,avx512dq"), always_inline, flatten))
 static inline __m512d linearInterpolate8(__m512d x, __m512d x0, __m512d dx,
                                          uint32_t npoints, const double *points)
 {
-    return linearInterpolate8<id>((x - x0) / dx, npoints, points);
+    return linearInterpolate8((x - x0) / dx, npoints, points);
 }
 
 __attribute__((target("avx512f,avx512dq")))
 NACS_EXPORT() __m512d linearInterpolate8_avx512f(__m512d x, uint32_t npoints,
                                                  const double *points)
 {
-    return linearInterpolate8<0>(x, npoints, points);
+    return linearInterpolate8(x, npoints, points);
 }
 
 __attribute__((target("avx512f,avx512dq")))
 NACS_EXPORT() __m512d linearInterpolate8_avx512f(__m512d x, __m512d x0, __m512d dx,
                                                  uint32_t npoints, const double *points)
 {
-    return linearInterpolate8<0>(x, x0, dx, npoints, points);
+    return linearInterpolate8(x, x0, dx, npoints, points);
 }
 
 #endif
