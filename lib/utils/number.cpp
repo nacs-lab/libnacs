@@ -20,26 +20,6 @@
 
 #if defined(ENABLE_SIMD) && (NACS_CPU_X86 || NACS_CPU_X86_64)
 #  include <immintrin.h>
-extern "C" {
-// including sleef.h does not include all the function prototypes unless
-// the feature is enabled for the whole file.
-// We'll just pull the definitions we need instead so that we could do dispatch ourselves.
-typedef struct {
-  __m256d x, y;
-} nacs_m256d_2;
-
-typedef struct {
-  __m512d x, y;
-} nacs_m512d_2;
-
-// The name sleef here is just a placeholder to make sure this expand to dllimport
-// Any name other than utils should work here.
-NACS_EXPORT(sleef) nacs_m256d_2 Sleef_modfd4_avx(__m256d);
-NACS_EXPORT(sleef) nacs_m256d_2 Sleef_modfd4_avx2(__m256d);
-
-NACS_EXPORT(sleef) nacs_m512d_2 Sleef_modfd8_avx512f(__m512d);
-
-}
 #endif
 
 namespace NaCs {
@@ -47,16 +27,13 @@ namespace NaCs {
 __attribute__((always_inline))
 static inline double _linearInterpolate(double x, uint32_t npoints, const double *points)
 {
-    if (unlikely(x <= 0)) {
+    if (unlikely(x <= 0))
         return points[0];
-    }
-    else if (unlikely(x >= 1)) {
+    if (unlikely(x >= 1))
         return points[npoints - 1];
-    }
     x = x * (npoints - 1);
-    double lof = 0.0;
-    x = modf(x, &lof);
-    uint32_t lo = (uint32_t)lof;
+    int lo = (int)x;
+    x = x - lo;
     double vlo = points[lo];
     if (x == 0)
         return vlo;
@@ -120,11 +97,9 @@ static inline __m256d linearInterpolate4(__m256d x, uint32_t npoints, const doub
     auto und_ok = (__m256)(x > 0);
     auto ovr_ok = (__m256)(x < 1);
     x = x * (npoints - 1);
-    auto modres = Sleef_modfd4_avx(x);
-    x = modres.x;
-    auto lof = modres.y;
-    lof = (__m256d)_mm256_and_ps((__m256)lof, _mm256_and_ps(ovr_ok, und_ok));
-    auto lo = (v4si)_mm256_cvtpd_epi32(lof);
+    x = (__m256d)_mm256_and_ps((__m256)x, _mm256_and_ps(ovr_ok, und_ok));
+    auto lo = (v4si)_mm256_cvttpd_epi32(x);
+    x = x - _mm256_cvtepi32_pd((__m128i)lo);
     auto vlo = (__m256d){points[lo[0]], points[lo[1]], points[lo[2]], points[lo[3]]};
     auto vhi = (__m256d){points[lo[0] + 1], points[lo[1] + 1],
                          points[lo[2] + 1], points[lo[3] + 1]};
@@ -161,10 +136,8 @@ static inline __m256d _linearInterpolate4_avx2(__m256d x, uint32_t npoints,
     auto und_ok = (__m256)(x > 0);
     auto ovr_ok = (__m256)(x < 1);
     x = x * (npoints - 1);
-    auto modres = Sleef_modfd4_avx2(x);
-    x = modres.x;
-    auto lof = modres.y;
-    auto lo = _mm256_cvtpd_epi32(lof);
+    auto lo = _mm256_cvttpd_epi32(x);
+    x = x - _mm256_cvtepi32_pd(lo);
     auto ok = (__m256d)_mm256_and_ps(ovr_ok, und_ok);
     auto vlo = _mm256_mask_i32gather_pd(_mm256_undefined_pd(), points, lo, ok, 8);
     auto vhi = _mm256_mask_i32gather_pd(_mm256_undefined_pd(), (points + 1), lo, ok, 8);
@@ -193,10 +166,8 @@ static inline __m512d linearInterpolate8(__m512d x, uint32_t npoints, const doub
     auto und_ok = _mm512_cmp_pd_mask(x, _mm512_set1_pd(0), _CMP_GT_OS);
     auto ovr_ok = _mm512_cmp_pd_mask(x, _mm512_set1_pd(1), _CMP_LT_OS);
     x = x * (npoints - 1);
-    auto modres = Sleef_modfd8_avx512f(x);
-    x = modres.x;
-    auto lof = modres.y;
-    auto lo = _mm512_cvtpd_epi32(lof);
+    auto lo = _mm512_cvttpd_epi32(x);
+    x = x - _mm512_cvtepi32_pd(lo);
     __mmask8 ok = und_ok & ovr_ok;
     auto vlo = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, lo, points, 8);
     auto vhi = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, lo,
