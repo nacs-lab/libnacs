@@ -179,8 +179,8 @@ NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const
     auto lof = modres.y;
     auto lo = _mm256_cvtpd_epi32(lof);
     auto ok = (__m256d)_mm256_and_ps(ovr_ok, und_ok);
-    auto vlo = _mm256_mask_i32gather_pd(_mm256_undefined_pd(), points, lo, ok, 1);
-    auto vhi = _mm256_mask_i32gather_pd(_mm256_undefined_pd(), (points + 1), lo, ok, 1);
+    auto vlo = _mm256_mask_i32gather_pd(_mm256_undefined_pd(), points, lo, ok, 8);
+    auto vhi = _mm256_mask_i32gather_pd(_mm256_undefined_pd(), (points + 1), lo, ok, 8);
     auto res = x * vhi + (1 - x) * vlo;
     res = _mm256_blendv_pd(_mm256_broadcast_sd(points), res, (__m256d)und_ok);
     res = _mm256_blendv_pd(_mm256_broadcast_sd(&points[npoints - 1]), res, (__m256d)ovr_ok);
@@ -215,9 +215,9 @@ static inline __m512d linearInterpolate8(__m512d x, uint32_t npoints, const doub
     auto lof = modres.y;
     auto lo = (v8si)_mm512_cvtpd_epi32(lof);
     __mmask8 ok = und_ok & ovr_ok;
-    auto vlo = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo, points, 1);
+    auto vlo = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo, points, 8);
     auto vhi = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, (__m256i)lo,
-                                        (points + 1), 1);
+                                        (points + 1), 8);
     auto res = x * vhi + (1 - x) * vlo;
     res = _mm512_mask_blend_pd(und_ok, _mm512_set1_pd(points[0]), res);
     res = _mm512_mask_blend_pd(ovr_ok, _mm512_set1_pd(points[npoints - 1]), res);
