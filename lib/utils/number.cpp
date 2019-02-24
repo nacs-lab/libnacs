@@ -76,17 +76,34 @@ NACS_EXPORT() __m128d linearInterpolate2_sse2(__m128d x, __m128d x0, __m128d dx,
     return linearInterpolate2((x - x0) / dx, npoints, points);
 }
 
+__attribute__((target("avx2,fma"), always_inline))
+static inline __m128d _linearInterpolate2_avx2(__m128d x, uint32_t npoints, const double *points)
+{
+    auto und_ok = (__m128)(x > 0);
+    auto ovr_ok = (__m128)(x < 1);
+    x = x * (npoints - 1);
+    auto lo = _mm_cvttpd_epi32(x);
+    x = x - _mm_cvtepi32_pd(lo);
+    auto ok = (__m128d)_mm_and_ps(ovr_ok, und_ok);
+    auto vlo = _mm_mask_i32gather_pd(_mm_undefined_pd(), points, lo, ok, 8);
+    auto vhi = _mm_mask_i32gather_pd(_mm_undefined_pd(), (points + 1), lo, ok, 8);
+    auto res = x * vhi + (1 - x) * vlo;
+    res = _mm_blendv_pd(_mm_set1_pd(points[0]), res, (__m128d)und_ok);
+    res = _mm_blendv_pd(_mm_set1_pd(points[npoints - 1]), res, (__m128d)ovr_ok);
+    return res;
+}
+
 __attribute__((target("avx2,fma")))
 NACS_EXPORT() __m128d linearInterpolate2_avx2(__m128d x, uint32_t npoints, const double *points)
 {
-    return linearInterpolate2(x, npoints, points);
+    return _linearInterpolate2_avx2(x, npoints, points);
 }
 
 __attribute__((target("avx2,fma")))
 NACS_EXPORT() __m128d linearInterpolate2_avx2(__m128d x, __m128d x0, __m128d dx,
                                               uint32_t npoints, const double *points)
 {
-    return linearInterpolate2((x - x0) / dx, npoints, points);
+    return _linearInterpolate2_avx2((x - x0) / dx, npoints, points);
 }
 
 typedef int v4si __attribute__((__vector_size__(16)));
