@@ -25,10 +25,6 @@ extern "C" {
 // the feature is enabled for the whole file.
 // We'll just pull the definitions we need instead so that we could do dispatch ourselves.
 typedef struct {
-  __m128d x, y;
-} nacs_m128d_2;
-
-typedef struct {
   __m256d x, y;
 } nacs_m256d_2;
 
@@ -38,10 +34,6 @@ typedef struct {
 
 // The name sleef here is just a placeholder to make sure this expand to dllimport
 // Any name other than utils should work here.
-NACS_EXPORT(sleef) nacs_m128d_2 Sleef_modfd2_sse2(__m128d);
-NACS_EXPORT(sleef) nacs_m128d_2 Sleef_modfd2_sse4(__m128d);
-NACS_EXPORT(sleef) nacs_m128d_2 Sleef_modfd2_avx2128(__m128d);
-
 NACS_EXPORT(sleef) nacs_m256d_2 Sleef_modfd4_avx(__m256d);
 NACS_EXPORT(sleef) nacs_m256d_2 Sleef_modfd4_avx2(__m256d);
 
@@ -52,7 +44,8 @@ NACS_EXPORT(sleef) nacs_m512d_2 Sleef_modfd8_avx512f(__m512d);
 
 namespace NaCs {
 
-NACS_EXPORT() double linearInterpolate(double x, uint32_t npoints, const double *points)
+__attribute__((always_inline))
+static inline double _linearInterpolate(double x, uint32_t npoints, const double *points)
 {
     if (unlikely(x <= 0)) {
         return points[0];
@@ -71,119 +64,52 @@ NACS_EXPORT() double linearInterpolate(double x, uint32_t npoints, const double 
     return x * vhi + (1 - x) * vlo;
 }
 
+NACS_EXPORT() double linearInterpolate(double x, uint32_t npoints, const double *points)
+{
+    return _linearInterpolate(x, npoints, points);
+}
+
 NACS_EXPORT() double linearInterpolate(double x, double x0, double dx,
                                        uint32_t npoints, const double *points)
 {
-    return linearInterpolate((x - x0) / dx, npoints, points);
+    return _linearInterpolate((x - x0) / dx, npoints, points);
 }
 
 #if defined(ENABLE_SIMD) && (NACS_CPU_X86 || NACS_CPU_X86_64)
 
-template<int id> static inline nacs_m128d_2 modfd2(__m128d);
-
-template<>
-inline nacs_m128d_2 modfd2<0>(__m128d v)
-{
-    return Sleef_modfd2_sse2(v);
-}
-
-template<>
-inline nacs_m128d_2 modfd2<1>(__m128d v)
-{
-    return Sleef_modfd2_sse4(v);
-}
-
-template<>
-inline nacs_m128d_2 modfd2<2>(__m128d v)
-{
-    return Sleef_modfd2_avx2128(v);
-}
-
-template<int id> static inline __m128d selectd2(__m128, __m128d, __m128d);
-
-template<>
-__m128d selectd2<0>(__m128 mask, __m128d v0, __m128d v1)
-{
-    return (__m128d)_mm_or_ps(_mm_and_ps(mask, (__m128)v0), _mm_andnot_ps(mask, (__m128)v1));
-}
-
-template<> __attribute__((target("sse4.1")))
-inline __m128d selectd2<1>(__m128 mask, __m128d v0, __m128d v1)
-{
-    return _mm_blendv_pd(v1, v0, (__m128d)mask);
-}
-
-template<> __attribute__((target("avx")))
-inline __m128d selectd2<2>(__m128 mask, __m128d v0, __m128d v1)
-{
-    return _mm_blendv_pd(v1, v0, (__m128d)mask);
-}
-
-typedef int v4si __attribute__((__vector_size__(16)));
-
-template<int id> __attribute__((always_inline, flatten))
+__attribute__((always_inline))
 static inline __m128d linearInterpolate2(__m128d x, uint32_t npoints, const double *points)
 {
-    auto und_ok = (__m128)(x > 0);
-    auto ovr_ok = (__m128)(x < 1);
-    x = x * (npoints - 1);
-    x = (__m128d)_mm_and_ps((__m128)x, _mm_and_ps(ovr_ok, und_ok));
-    auto modres = modfd2<id>(x);
-    x = modres.x;
-    auto lof = modres.y;
-    auto lo = (v4si)_mm_cvtpd_epi32(lof);
-    auto vlo = (__m128d){points[lo[0]], points[lo[1]]};
-    auto vhi = (__m128d){points[lo[0] + 1], points[lo[1] + 1]};
-    auto res = x * vhi + (1 - x) * vlo;
-    res = selectd2<id>(und_ok, res, (__m128d){points[0], points[0]});
-    res = selectd2<id>(ovr_ok, res, (__m128d){points[npoints - 1], points[npoints - 1]});
-    return res;
-}
-
-template<int id> __attribute__((always_inline, flatten))
-static inline __m128d linearInterpolate2(__m128d x, __m128d x0, __m128d dx,
-                                         uint32_t npoints, const double *points)
-{
-    return linearInterpolate2<id>((x - x0) / dx, npoints, points);
+    // From benchmark, on a Skylake CPU, this is actually faster than a vectorized version.
+    // (This has higher instruction count but a even higher IPC)
+    return __m128d{_linearInterpolate(x[0], npoints, points),
+            _linearInterpolate(x[1], npoints, points)};
 }
 
 __attribute__((target("sse2")))
 NACS_EXPORT() __m128d linearInterpolate2_sse2(__m128d x, uint32_t npoints, const double *points)
 {
-    return linearInterpolate2<0>(x, npoints, points);
+    return linearInterpolate2(x, npoints, points);
 }
 
 __attribute__((target("sse2")))
 NACS_EXPORT() __m128d linearInterpolate2_sse2(__m128d x, __m128d x0, __m128d dx,
                                               uint32_t npoints, const double *points)
 {
-    return linearInterpolate2<0>(x, x0, dx, npoints, points);
-}
-
-__attribute__((target("sse4.1")))
-NACS_EXPORT() __m128d linearInterpolate2_sse4(__m128d x, uint32_t npoints, const double *points)
-{
-    return linearInterpolate2<1>(x, npoints, points);
-}
-
-__attribute__((target("sse4.1")))
-NACS_EXPORT() __m128d linearInterpolate2_sse4(__m128d x, __m128d x0, __m128d dx,
-                                              uint32_t npoints, const double *points)
-{
-    return linearInterpolate2<1>(x, x0, dx, npoints, points);
+    return linearInterpolate2((x - x0) / dx, npoints, points);
 }
 
 __attribute__((target("avx2,fma")))
 NACS_EXPORT() __m128d linearInterpolate2_avx2(__m128d x, uint32_t npoints, const double *points)
 {
-    return linearInterpolate2<2>(x, npoints, points);
+    return linearInterpolate2(x, npoints, points);
 }
 
 __attribute__((target("avx2,fma")))
 NACS_EXPORT() __m128d linearInterpolate2_avx2(__m128d x, __m128d x0, __m128d dx,
                                               uint32_t npoints, const double *points)
 {
-    return linearInterpolate2<2>(x, x0, dx, npoints, points);
+    return linearInterpolate2((x - x0) / dx, npoints, points);
 }
 
 template<int id> static inline nacs_m256d_2 modfd4(__m256d);
@@ -199,6 +125,8 @@ nacs_m256d_2 modfd4<1>(__m256d v)
 {
     return Sleef_modfd4_avx2(v);
 }
+
+typedef int v4si __attribute__((__vector_size__(16)));
 
 template<int id> __attribute__((target("avx"), always_inline, flatten))
 static inline __m256d linearInterpolate4(__m256d x, uint32_t npoints, const double *points)
