@@ -1,5 +1,6 @@
 set(nacs_utils_HDRS
   container.h
+  dlload.h
   errors.h
   fd_utils.h
   ir.h
@@ -15,6 +16,7 @@ set(nacs_utils_HDRS
   wavemeter.h
   zmq_utils.h)
 set(nacs_utils_SRCS
+  dlload.cpp
   errors.cpp
   fd_utils.cpp
   interp.cpp
