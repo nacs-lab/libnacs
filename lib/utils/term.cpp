@@ -16,8 +16,9 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "utils.h"
 #include "term.h"
+
+#include "utils.h"
 
 #if !NACS_OS_WINDOWS
 #  include <spawn.h>

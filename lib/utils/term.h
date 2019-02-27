@@ -19,6 +19,8 @@
 #ifndef __NACS_UTILS_TERM_H__
 #define __NACS_UTILS_TERM_H__
 
+#include "utils.h"
+
 #include <ostream>
 
 namespace NaCs {
