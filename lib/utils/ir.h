@@ -457,6 +457,8 @@ public:
     {
         return Func<FT>(getFuncBase(std::forward<F>(f)));
     }
+    virtual ~ExeContext()
+    {}
 };
 
 }
