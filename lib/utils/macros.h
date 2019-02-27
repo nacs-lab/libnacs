@@ -165,7 +165,8 @@
 #  define NACS_INTERNAL
 #else
 #  define NACS_EXPORT(...) __attribute__((visibility("default")))
-#  define NACS_PROTECTED(...) __attribute__((visibility("protected")))
+// This allows NACS_PROTECTED(...) to be used in headers
+#  define NACS_PROTECTED(lib...) NACS_SWITCH(lib, , __attribute__((visibility("protected"))))
 #  define NACS_INTERNAL __attribute__((visibility("internal")))
 #endif
 
