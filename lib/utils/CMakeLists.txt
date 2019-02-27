@@ -23,6 +23,7 @@ set(nacs_utils_SRCS
   log.cpp
   mem.cpp
   number.cpp
+  number_simd.S
   streams.cpp
   term.cpp
   timer.cpp

@@ -1,0 +1,315 @@
+/*************************************************************************
+ *   Copyright (c) 2019 - 2019 Yichao Yu <yyc1992@gmail.com>             *
+ *                                                                       *
+ *   This library is free software; you can redistribute it and/or       *
+ *   modify it under the terms of the GNU Lesser General Public          *
+ *   License as published by the Free Software Foundation; either        *
+ *   version 3.0 of the License, or (at your option) any later version.  *
+ *                                                                       *
+ *   This library is distributed in the hope that it will be useful,     *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU    *
+ *   Lesser General Public License for more details.                     *
+ *                                                                       *
+ *   You should have received a copy of the GNU Lesser General Public    *
+ *   License along with this library. If not,                            *
+ *   see <http://www.gnu.org/licenses/>.                                 *
+ *************************************************************************/
+
+#include "macros.h"
+
+#if (defined(__x86_64__) || defined(__x86_64)) && \
+        defined(__GNUC__) && !defined(__clang__) && NACS_OS_WINDOWS
+        .text
+        .def    _ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32
+        .scl    2
+        .type   32
+        .endef
+        .section    .rdata,"dr"
+        .p2align    5
+.Ldouble1_v4:
+        .quad   4607182418800017408     # double 1
+        .quad   4607182418800017408     # double 1
+        .quad   4607182418800017408     # double 1
+        .quad   4607182418800017408     # double 1
+        .text
+        .globl  _ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32
+        .p2align    4, 0x90
+        // NaCs::linearInterpolate2_sse2(double __vector(2), unsigned int, double const*)
+        .seh_proc   _ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32
+_ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32:
+        .seh_endprologue
+        pxor        %xmm5, %xmm5
+        comisd      %xmm0, %xmm5
+        jnb         .L2sse2_v1_undflw
+        movsd       .Ldouble1_v4(%rip), %xmm2
+        leal        -1(%rdx), %eax
+        comisd      %xmm2, %xmm0
+        jnb         .L2sse2_v1_ovrflw
+        pxor        %xmm3, %xmm3
+        pxor        %xmm1, %xmm1
+        cvtsi2sdq   %rax, %xmm3
+        mulsd       %xmm0, %xmm3
+        cvttsd2si   %xmm3, %eax
+        cvtsi2sd    %eax, %xmm1
+        cltq
+        movsd       8(%r8,%rax,8), %xmm4
+        subsd       %xmm1, %xmm3
+        mulsd       %xmm3, %xmm4
+        subsd       %xmm3, %xmm2
+        mulsd       (%r8,%rax,8), %xmm2
+        addsd       %xmm2, %xmm4
+.L2sse2_v2:
+        unpckhpd    %xmm0, %xmm0
+        comisd      %xmm0, %xmm5
+        jnb         .L2sse2_v2_undflw
+.L2sse2_v2_not_undflw:
+        movsd       .Ldouble1_v4(%rip), %xmm2
+        subl        $1, %edx
+        comisd      %xmm2, %xmm0
+        jnb         .L2sse2_v2_ovrflw
+        pxor        %xmm1, %xmm1
+        cvtsi2sdq   %rdx, %xmm1
+        mulsd       %xmm0, %xmm1
+        pxor        %xmm0, %xmm0
+        cvttsd2si   %xmm1, %eax
+        cvtsi2sd    %eax, %xmm0
+        cltq
+        subsd       %xmm0, %xmm1
+        movsd       8(%r8,%rax,8), %xmm0
+        subsd       %xmm1, %xmm2
+        mulsd       %xmm1, %xmm0
+        movsd       (%r8,%rax,8), %xmm1
+        mulsd       %xmm2, %xmm1
+        addsd       %xmm0, %xmm1
+        movapd      %xmm4, %xmm0
+        unpcklpd    %xmm1, %xmm0
+        ret
+        .p2align 4,,10
+        .p2align 3
+.L2sse2_v1_ovrflw:
+        unpckhpd    %xmm0, %xmm0
+        movsd       (%r8,%rax,8), %xmm4
+        comisd      %xmm0, %xmm5
+        jb          .L2sse2_v2_not_undflw
+.L2sse2_v2_undflw:
+        movsd       (%r8), %xmm1
+        movapd      %xmm4, %xmm0
+        unpcklpd    %xmm1, %xmm0
+        ret
+        .p2align 4,,10
+        .p2align 3
+.L2sse2_v2_ovrflw:
+        movsd       (%r8,%rdx,8), %xmm1
+        movapd      %xmm4, %xmm0
+        unpcklpd    %xmm1, %xmm0
+        ret
+        .p2align 4,,10
+        .p2align 3
+.L2sse2_v1_undflw:
+        movsd       (%r8), %xmm4
+        jmp         .L2sse2_v2
+        .seh_endproc
+
+        .def    _ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32
+        .p2align    4, 0x90
+        // NaCs::linearInterpolate2_avx2(double __vector(2), unsigned int, double const*)
+        .seh_proc   _ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32
+_ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32:
+        // Using the scratch area
+        vmovapd     %xmm7, 24(%rsp)
+        .seh_savexmm %xmm7, 24
+        vmovaps     %xmm6, 8(%rsp)
+        .seh_savexmm %xmm6, 8
+        .seh_endprologue
+        leal        -1(%rdx), %eax
+        vxorpd      %xmm1, %xmm1, %xmm1
+        vmovapd     .Ldouble1_v4(%rip), %xmm2
+        vxorpd      %xmm3, %xmm3, %xmm3
+        vcvtsi2sdq  %rax, %xmm1, %xmm1
+        vcmpltpd    %xmm0, %xmm3, %xmm3
+        vcmpltpd    %xmm2, %xmm0, %xmm6
+        vxorpd      %xmm5, %xmm5, %xmm5
+        vmovddup    %xmm1, %xmm1
+        vmulpd      %xmm0, %xmm1, %xmm1
+        vcvttpd2dqx %xmm1, %xmm7
+        vcvtdq2pd   %xmm7, %xmm0
+        vsubpd      %xmm0, %xmm1, %xmm1
+        vandps      %xmm3, %xmm6, %xmm0
+        vmovapd     %xmm0, %xmm4
+        vgatherdpd  %xmm4, (%r8,%xmm7,8), %xmm5
+        vxorpd      %xmm4, %xmm4, %xmm4
+        vgatherdpd  %xmm0, 8(%r8,%xmm7,8), %xmm4
+        vsubpd      %xmm1, %xmm2, %xmm2
+        vmovddup    (%r8), %xmm0
+        vmulpd      %xmm5, %xmm2, %xmm2
+        vfmadd132pd %xmm4, %xmm2, %xmm1
+        vblendvpd   %xmm3, %xmm1, %xmm0, %xmm1
+        vmovddup    (%r8,%rax,8), %xmm0
+        vblendvpd   %xmm6, %xmm1, %xmm0, %xmm0
+        vmovaps     8(%rsp), %xmm6
+        vmovaps     24(%rsp), %xmm7
+        ret
+        .seh_endproc
+
+        .def    _ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48
+        .p2align    4, 0x90
+        // NaCs::linearInterpolate4_avx(double __vector(4), unsigned int, double const*)
+        .seh_proc _ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48
+_ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48:
+        // Using the scratch area
+        vmovapd       %xmm7, 24(%rsp)
+        .seh_savexmm %xmm7, 24
+        vmovaps       %xmm6, 8(%rsp)
+        .seh_savexmm %xmm6, 8
+        .seh_endprologue
+        leal          -1(%rdx), %r9d
+        vxorpd        %xmm2, %xmm2, %xmm2
+        vmovapd       .Ldouble1_v4(%rip), %ymm6
+        vxorpd        %xmm4, %xmm4, %xmm4
+        vcvtsi2sdq    %r9, %xmm2, %xmm2
+        vcmpltpd      %ymm0, %ymm4, %ymm4
+        vcmpltpd      %ymm6, %ymm0, %ymm5
+        vmovddup      %xmm2, %xmm2
+        vandps        %ymm4, %ymm5, %ymm3
+        vinsertf128   $1, %xmm2, %ymm2, %ymm2
+        vmulpd        %ymm0, %ymm2, %ymm1
+        vandps        %ymm3, %ymm1, %ymm1
+        vcvttpd2dqy   %ymm1, %xmm2
+        vpextrd       $2, %xmm2, %edx
+        vcvtdq2pd     %xmm2, %ymm0
+        vmovd         %xmm2, %ecx
+        movslq        %edx, %rdx
+        vpextrd       $1, %xmm2, %r10d
+        vsubpd        %ymm0, %ymm1, %ymm1
+        movslq        %ecx, %rcx
+        vpextrd       $3, %xmm2, %eax
+        vmovsd        8(%r8,%rdx,8), %xmm2
+        movslq        %r10d, %r10
+        vmovsd        (%r8,%rdx,8), %xmm3
+        cltq
+        vmovhpd       8(%r8,%rax,8), %xmm2, %xmm0
+        vmovsd        8(%r8,%rcx,8), %xmm2
+        vmovhpd       8(%r8,%r10,8), %xmm2, %xmm2
+        vinsertf128   $0x1, %xmm0, %ymm2, %ymm2
+        vmovhpd       (%r8,%rax,8), %xmm3, %xmm0
+        vmovsd        (%r8,%rcx,8), %xmm3
+        vmulpd        %ymm1, %ymm2, %ymm2
+        vsubpd        %ymm1, %ymm6, %ymm1
+        vmovhpd       (%r8,%r10,8), %xmm3, %xmm3
+        vinsertf128   $0x1, %xmm0, %ymm3, %ymm3
+        vbroadcastsd  (%r8), %ymm0
+        vmulpd        %ymm1, %ymm3, %ymm1
+        vaddpd        %ymm1, %ymm2, %ymm1
+        vblendvpd     %ymm4, %ymm1, %ymm0, %ymm1
+        vbroadcastsd  (%r8,%r9,8), %ymm0
+        vblendvpd     %ymm5, %ymm1, %ymm0, %ymm0
+        vmovaps       8(%rsp), %xmm6
+        vmovaps       24(%rsp), %xmm7
+        ret
+        .seh_endproc
+
+        .def    _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48
+        .p2align    4, 0x90
+        // NaCs::linearInterpolate4_avx2(double __vector(4), unsigned int, double const*)
+        .seh_proc _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48
+_ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48:
+        // Using the scratch area
+        vmovapd       %xmm7, 24(%rsp)
+        .seh_savexmm %xmm7, 24
+        vmovaps       %xmm6, 8(%rsp)
+        .seh_savexmm %xmm6, 8
+        .seh_endprologue
+        leal          -1(%rdx), %eax
+        vxorpd        %xmm1, %xmm1, %xmm1
+        vmovapd       .Ldouble1_v4(%rip), %ymm2
+        vxorpd        %xmm3, %xmm3, %xmm3
+        vcvtsi2sdq    %rax, %xmm1, %xmm1
+        vcmpltpd      %ymm0, %ymm3, %ymm3
+        vcmpltpd      %ymm2, %ymm0, %ymm6
+        vxorpd        %xmm5, %xmm5, %xmm5
+        vbroadcastsd  %xmm1, %ymm1
+        vmulpd        %ymm0, %ymm1, %ymm1
+        vcvttpd2dqy   %ymm1, %xmm7
+        vcvtdq2pd     %xmm7, %ymm0
+        vsubpd        %ymm0, %ymm1, %ymm1
+        vandps        %ymm3, %ymm6, %ymm0
+        vmovapd       %ymm0, %ymm4
+        vgatherdpd    %ymm4, (%r8,%xmm7,8), %ymm5
+        vxorpd        %xmm4, %xmm4, %xmm4
+        vgatherdpd    %ymm0, 8(%r8,%xmm7,8), %ymm4
+        vsubpd        %ymm1, %ymm2, %ymm2
+        vbroadcastsd  (%r8), %ymm0
+        vmulpd        %ymm5, %ymm2, %ymm2
+        vfmadd132pd   %ymm4, %ymm2, %ymm1
+        vblendvpd     %ymm3, %ymm1, %ymm0, %ymm1
+        vbroadcastsd  (%r8,%rax,8), %ymm0
+        vblendvpd     %ymm6, %ymm1, %ymm0, %ymm0
+        vmovaps       8(%rsp), %xmm6
+        vmovaps       24(%rsp), %xmm7
+        ret
+        .seh_endproc
+
+// Do not enable for avx512 for now since the calling convention is currently the same as
+// non-vectorcall as of Feb. 2019. The computer on which we need the asm implementation
+// also doesn't support avx512 anyway so it doesn't really matter for now...
+//         .def    _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80
+//         .scl    2
+//         .type   32
+//         .endef
+//         .globl  _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80
+//         .p2align    4, 0x90
+//         // NaCs::linearInterpolate8_avx512f(double __vector(8), unsigned int, double const*)
+//         .seh_proc _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80
+// _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80:
+//         .seh_endprologue
+//         vxorpd        %xmm1, %xmm1, %xmm1
+//         leal          -1(%rdx), %eax
+//         vbroadcastsd  .Ldouble1_v4(%rip), %zmm2
+//         vcmppd        $14, %zmm1, %zmm0, %k1
+//         vxorpd        %xmm1, %xmm1, %xmm1
+//         vxorpd        %xmm4, %xmm4, %xmm4
+//         vcvtsi2sdq    %rax, %xmm1, %xmm1
+//         vcmppd        $1, %zmm2, %zmm0, %k2
+//         vxorpd        %xmm5, %xmm5, %xmm5
+//         kmovb         %k1, %r9d
+//         kmovb         %k2, %ecx
+//         andl          %ecx, %r9d
+//         vbroadcastsd  %xmm1, %zmm1
+//         kmovb         %r9d, %k4
+//         kmovb         %r9d, %k3
+//         vmulpd        %zmm0, %zmm1, %zmm0
+//         vcvttpd2dq    %zmm0, %ymm1
+//         vcvtdq2pd     %ymm1, %zmm3
+//         vsubpd        %zmm3, %zmm0, %zmm0
+//         vgatherdpd    (%r8,%ymm1,8), %zmm4{%k4}
+//         vgatherdpd    8(%r8,%ymm1,8), %zmm5{%k3}
+//         vbroadcastsd  (%r8), %zmm1
+//         vsubpd        %zmm0, %zmm2, %zmm2
+//         vmulpd        %zmm4, %zmm2, %zmm2
+//         vfmadd132pd   %zmm5, %zmm2, %zmm0
+//         vmovapd       %zmm0, %zmm1{%k1}
+//         vbroadcastsd  (%r8,%rax,8), %zmm0
+//         vmovapd       %zmm1, %zmm0{%k2}
+//         ret
+//         .seh_endproc
+
+        .section    .drectve,"yn"
+        .ascii  " -export:_ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32"
+        .ascii  " -export:_ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32"
+        .ascii  " -export:_ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48"
+        .ascii  " -export:_ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48"
+        // .ascii  " -export:_ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80"
+#endif
