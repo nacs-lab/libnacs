@@ -237,7 +237,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     auto nargs = fty->getNumParams();
     auto rt = fty->getReturnType();
     SmallVector<Type*, 8> fsig;
-    for (int i = 0; i < nargs; i++) {
+    for (unsigned i = 0; i < nargs; i++) {
         auto arg_spec = spec.arg_map.find(i);
         auto argt = fty->getParamType(i);
         if (arg_spec == spec.arg_map.end()) {
@@ -274,7 +274,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     auto clarg = spec.closure ? &*(--argit) : nullptr;
     argit = wrapf->arg_begin();
     uint32_t max_offset = 0;
-    for (int i = 0, j = 0; i < nargs; i++) {
+    for (unsigned i = 0, j = 0; i < nargs; i++) {
         auto arg_spec = spec.arg_map.find(i);
         if (arg_spec == spec.arg_map.end()) {
             call_args[i] = &*(argit + j);
@@ -675,7 +675,8 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             else if (op == IR::Opcode::Or) {
                 lres = builder.CreateOr(v1, v2);
             }
-            else if (op == IR::Opcode::Xor) {
+            else {
+                assert(op == IR::Opcode::Xor);
                 lres = builder.CreateXor(v1, v2);
             }
             break;
