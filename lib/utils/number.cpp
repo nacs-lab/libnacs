@@ -61,13 +61,13 @@ static inline __m128d linearInterpolate2(__m128d x, uint32_t npoints, const doub
             _linearInterpolate(x[1], npoints, points)};
 }
 
-__attribute__((target("sse2")))
+NACS_VECTORCALL __attribute__((target("sse2")))
 NACS_EXPORT() __m128d linearInterpolate2_sse2(__m128d x, uint32_t npoints, const double *points)
 {
     return linearInterpolate2(x, npoints, points);
 }
 
-__attribute__((target("sse2")))
+NACS_VECTORCALL __attribute__((target("sse2")))
 NACS_EXPORT() __m128d linearInterpolate2_sse2(__m128d x, __m128d x0, __m128d dx,
                                               uint32_t npoints, const double *points)
 {
@@ -91,13 +91,13 @@ static inline __m128d _linearInterpolate2_avx2(__m128d x, uint32_t npoints, cons
     return res;
 }
 
-__attribute__((target("avx2,fma")))
+NACS_VECTORCALL __attribute__((target("avx2,fma")))
 NACS_EXPORT() __m128d linearInterpolate2_avx2(__m128d x, uint32_t npoints, const double *points)
 {
     return _linearInterpolate2_avx2(x, npoints, points);
 }
 
-__attribute__((target("avx2,fma")))
+NACS_VECTORCALL __attribute__((target("avx2,fma")))
 NACS_EXPORT() __m128d linearInterpolate2_avx2(__m128d x, __m128d x0, __m128d dx,
                                               uint32_t npoints, const double *points)
 {
@@ -131,13 +131,13 @@ static inline __m256d linearInterpolate4(__m256d x, __m256d x0, __m256d dx,
     return linearInterpolate4((x - x0) / dx, npoints, points);
 }
 
-__attribute__((target("avx")))
+NACS_VECTORCALL __attribute__((target("avx")))
 NACS_EXPORT() __m256d linearInterpolate4_avx(__m256d x, uint32_t npoints, const double *points)
 {
     return linearInterpolate4(x, npoints, points);
 }
 
-__attribute__((target("avx")))
+NACS_VECTORCALL __attribute__((target("avx")))
 NACS_EXPORT() __m256d linearInterpolate4_avx(__m256d x, __m256d x0, __m256d dx,
                                              uint32_t npoints, const double *points)
 {
@@ -162,13 +162,13 @@ static inline __m256d _linearInterpolate4_avx2(__m256d x, uint32_t npoints,
     return res;
 }
 
-__attribute__((target("avx2,fma")))
+NACS_VECTORCALL __attribute__((target("avx2,fma")))
 NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const double *points)
 {
     return _linearInterpolate4_avx2(x, npoints, points);
 }
 
-__attribute__((target("avx2,fma")))
+NACS_VECTORCALL __attribute__((target("avx2,fma")))
 NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, __m256d x0, __m256d dx,
                                               uint32_t npoints, const double *points)
 {

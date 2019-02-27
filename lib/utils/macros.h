@@ -220,4 +220,10 @@
 #  define NACS_PACKED __attribute__((__packed__))
 #endif
 
+#if NACS_OS_WINDOWS && defined(__clang__)
+#  define NACS_VECTORCALL __vectorcall
+#else
+#  define NACS_VECTORCALL
+#endif
+
 #endif
