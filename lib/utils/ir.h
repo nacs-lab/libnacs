@@ -213,15 +213,15 @@ struct TagVal {
     void dump(void) const;
 } __attribute__((aligned(8)));
 
-std::ostream &operator<<(std::ostream &stm, const TagVal &val);
+NACS_EXPORT(utils) std::ostream &operator<<(std::ostream &stm, const TagVal &val);
 
 inline void TagVal::dump(void) const
 {
     std::cerr << *this << std::endl;
 }
 
-bool checkBuiltinType(Builtins id, Type *args, size_t narg);
-double evalBuiltin(Builtins id, TagVal *args);
+NACS_EXPORT(utils) bool checkBuiltinType(Builtins id, Type *args, size_t narg);
+NACS_EXPORT(utils) double evalBuiltin(Builtins id, TagVal *args);
 
 struct Function {
     typedef std::vector<int32_t> BB;
@@ -234,15 +234,15 @@ struct Function {
           consts{},
           float_table{}
     {}
-    Function(const uint32_t*, size_t);
-    Function(const uint8_t*, size_t);
+    NACS_EXPORT(utils) Function(const uint32_t*, size_t);
+    NACS_EXPORT(utils) Function(const uint8_t*, size_t);
     Function(const std::vector<uint32_t> &data)
         : Function(data.data(), data.size())
     {}
     Function(Function&&) = default;
     Function(const Function&) = default;
-    void dump(void) const;
-    Type valType(int32_t id) const;
+    NACS_EXPORT(utils) void dump(void) const;
+    NACS_EXPORT(utils) Type valType(int32_t id) const;
     TagVal evalConst(int32_t id) const
     {
         assert(id < 0);
@@ -254,7 +254,7 @@ struct Function {
             return consts[Consts::_Offset - id];
         }
     }
-    std::vector<uint32_t> serialize(void) const;
+    NACS_EXPORT(utils) std::vector<uint32_t> serialize(void) const;
     const Type ret;
     const int nargs;
     // Types of all slots
@@ -266,10 +266,10 @@ private:
     void printValName(std::ostream &stm, int32_t id) const;
     void printVal(std::ostream &stm, int32_t id) const;
     void printBB(std::ostream &stm, const BB&) const;
-    friend std::ostream &operator<<(std::ostream &stm, const Function &f);
+    friend NACS_EXPORT(utils) std::ostream &operator<<(std::ostream &stm, const Function &f);
 };
 
-std::ostream &operator<<(std::ostream &stm, const Function &f);
+NACS_EXPORT(utils) std::ostream &operator<<(std::ostream &stm, const Function &f);
 
 inline void Function::dump(void) const
 {
@@ -288,36 +288,36 @@ public:
     {
         return m_f;
     }
-    int32_t getConst(TagVal val);
-    int32_t getConstInt(int32_t val);
-    int32_t getConstFloat(double val);
+    NACS_PROTECTED(utils) int32_t getConst(TagVal val);
+    NACS_PROTECTED(utils) int32_t getConstInt(int32_t val);
+    NACS_PROTECTED(utils) int32_t getConstFloat(double val);
 
-    int32_t newBB(void);
-    int32_t &curBB(void);
+    NACS_PROTECTED(utils) int32_t newBB(void);
+    NACS_PROTECTED(utils) int32_t &curBB(void);
 
-    void createRet(int32_t val);
-    void createBr(int32_t br);
-    void createBr(int32_t cond, int32_t bb1, int32_t bb2);
-    int32_t createAdd(int32_t val1, int32_t val2);
-    int32_t createSub(int32_t val1, int32_t val2);
-    int32_t createMul(int32_t val1, int32_t val2);
-    int32_t createFDiv(int32_t val1, int32_t val2);
-    int32_t createCmp(CmpType cmptyp, int32_t val1, int32_t val2);
-    std::pair<int32_t, Function::InstRef> createPhi(Type typ, int ninputs);
-    void addPhiInput(Function::InstRef phi, int32_t bb, int32_t val);
-    int32_t createCall(Builtins id, int32_t nargs, const int32_t *args);
+    NACS_PROTECTED(utils) void createRet(int32_t val);
+    NACS_PROTECTED(utils) void createBr(int32_t br);
+    NACS_PROTECTED(utils) void createBr(int32_t cond, int32_t bb1, int32_t bb2);
+    NACS_PROTECTED(utils) int32_t createAdd(int32_t val1, int32_t val2);
+    NACS_PROTECTED(utils) int32_t createSub(int32_t val1, int32_t val2);
+    NACS_PROTECTED(utils) int32_t createMul(int32_t val1, int32_t val2);
+    NACS_PROTECTED(utils) int32_t createFDiv(int32_t val1, int32_t val2);
+    NACS_PROTECTED(utils) int32_t createCmp(CmpType cmptyp, int32_t val1, int32_t val2);
+    NACS_PROTECTED(utils) std::pair<int32_t, Function::InstRef> createPhi(Type typ, int ninputs);
+    NACS_PROTECTED(utils) void addPhiInput(Function::InstRef phi, int32_t bb, int32_t val);
+    NACS_PROTECTED(utils) int32_t createCall(Builtins id, int32_t nargs, const int32_t *args);
     int32_t createCall(Builtins id, const std::vector<int32_t> &args)
     {
         return createCall(id, (int32_t)args.size(), args.data());
     }
-    int32_t createInterp(int32_t v, double x0, double dx, uint32_t npoints,
-                         const double *points);
-    int32_t createConvert(Type typ, int32_t v);
-    int32_t createSelect(int32_t cond, int32_t val1, int32_t val2);
-    int32_t createAnd(int32_t val1, int32_t val2);
-    int32_t createOr(int32_t val1, int32_t val2);
-    int32_t createXor(int32_t val1, int32_t val2);
-    int32_t createNot(int32_t val);
+    NACS_PROTECTED(utils) int32_t createInterp(int32_t v, double x0, double dx, uint32_t npoints,
+                                               const double *points);
+    NACS_PROTECTED(utils) int32_t createConvert(Type typ, int32_t v);
+    NACS_PROTECTED(utils) int32_t createSelect(int32_t cond, int32_t val1, int32_t val2);
+    NACS_PROTECTED(utils) int32_t createAnd(int32_t val1, int32_t val2);
+    NACS_PROTECTED(utils) int32_t createOr(int32_t val1, int32_t val2);
+    NACS_PROTECTED(utils) int32_t createXor(int32_t val1, int32_t val2);
+    NACS_PROTECTED(utils) int32_t createNot(int32_t val);
 private:
     int32_t addFloatData(const double *data, uint32_t ndata);
     int32_t *addInst(Opcode op, size_t nop);
@@ -449,7 +449,7 @@ public:
         FuncBase m_base;
         friend class ExeContext;
     };
-    static std::unique_ptr<ExeContext> get();
+    static NACS_EXPORT(utils) std::unique_ptr<ExeContext> get();
     virtual FuncBase getFuncBase(const Function &) = 0;
     virtual FuncBase getFuncBase(Function&&) = 0;
     template<typename FT, typename F>

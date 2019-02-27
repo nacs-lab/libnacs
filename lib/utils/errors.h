@@ -78,7 +78,7 @@ private:
 // Pretty print the error
 // The error section in the code will be highlighted
 // based on the column info if availabe.
-std::ostream &operator<<(std::ostream &stm, const SyntaxError &err);
+NACS_EXPORT(utils) std::ostream &operator<<(std::ostream &stm, const SyntaxError &err);
 
 }
 

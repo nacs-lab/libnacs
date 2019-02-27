@@ -37,12 +37,12 @@ namespace NaCs {
  */
 
 // offset does **NOT** have to be integer multiple of page size.
-void *mapFile(const char *name, off_t offset, size_t len);
-void *mapFile(int fd, off_t offset, size_t len);
-bool sendFD(int sock, int fd);
-int recvFD(int sock);
-bool fdSetCloexec(int fd, bool cloexec);
-bool fdSetNonBlock(int fd, bool nonblock);
+NACS_EXPORT(utils) void *mapFile(const char *name, off_t offset, size_t len);
+NACS_EXPORT(utils) void *mapFile(int fd, off_t offset, size_t len);
+NACS_EXPORT(utils) bool sendFD(int sock, int fd);
+NACS_EXPORT(utils) int recvFD(int sock);
+NACS_EXPORT(utils) bool fdSetCloexec(int fd, bool cloexec);
+NACS_EXPORT(utils) bool fdSetNonBlock(int fd, bool nonblock);
 
 #if NACS_OS_LINUX
 // Helper functions for event fd.
