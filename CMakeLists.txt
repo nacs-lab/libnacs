@@ -72,6 +72,13 @@ cmake_c_fix_include_path(lib/seq nacs-seq)
 
 set(LINKER_FLAGS -Wl,--as-needed -Wl,--no-undefined -Wl,--gc-sections -pthread -fno-math-errno)
 
+if(IS_WINDOWS)
+  set(LINKER_FLAGS ${LINKER_FLAGS} -static-libstdc++)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-bin")
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
+endif()
+
 cmake_c_add_flags(CMAKE_C_FLAGS -std=gnu11)
 cmake_c_add_flags(CMAKE_CXX_FLAGS -std=gnu++14 -fno-rtti)
 cmake_c_add_flags(CMAKE_EXE_LINKER_FLAGS ${LINKER_FLAGS})
@@ -82,13 +89,6 @@ cmake_c_add_flags(CMAKE_C_FLAGS_DEBUG -ggdb3 -O0)
 cmake_c_add_flags(CMAKE_CXX_FLAGS_DEBUG -ggdb3 -O0)
 
 cmake_c_include_fix_path()
-
-if(IS_WINDOWS)
-  cmake_c_add_flags(CMAKE_CXX_FLAGS -static-libstdc++)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-bin")
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
-endif()
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/lib/utils") # config.h
 
