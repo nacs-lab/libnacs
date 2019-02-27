@@ -77,6 +77,9 @@ if(IS_WINDOWS)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-bin")
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
+  # Workaround CMake bug for Clang
+  set(CMAKE_ASM_COMPILE_OPTIONS_PIC)
+  set(CMAKE_ASM_COMPILE_OPTIONS_PIE)
 endif()
 
 cmake_c_add_flags(CMAKE_C_FLAGS -std=gnu11)
