@@ -244,7 +244,7 @@ std::pair<T,int> ParserBase::read_dec(T lo, T hi)
     if (lo >= 0 && peek() == '-')
         syntax_error("Unexpected negative number", startcol + 1,
                      startcol + 1, startcol + int(endptr - startptr));
-    colno = startcol + (endptr - startptr);
+    colno = startcol + int(endptr - startptr);
     return {res, startcol};
 }
 

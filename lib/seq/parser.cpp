@@ -118,7 +118,7 @@ std::pair<uint64_t,int> ParserBase::read_hex(uint64_t lo, uint64_t hi)
         syntax_error("Hex literal out of range [" + to_hexstring(lo) + ", " +
                      to_hexstring(hi) + "]", -1,
                      startcol + 1, startcol + int(endptr - startptr));
-    colno = startcol + (endptr - startptr);
+    colno = startcol + int(endptr - startptr);
     return {res, startcol};
 }
 
@@ -146,7 +146,7 @@ std::pair<double,int> ParserBase::read_float(double lo, double hi)
         syntax_error("Floating point literal out of range [" + std::to_string(lo) + ", " +
                      std::to_string(hi) + "]", -1,
                      startcol + 1, startcol + int(endptr - startptr));
-    colno = startcol + (endptr - startptr);
+    colno = startcol + int(endptr - startptr);
     return {res, startcol};
 }
 
