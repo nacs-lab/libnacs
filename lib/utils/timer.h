@@ -39,11 +39,11 @@
 
 namespace NaCs {
 
-uint64_t getTime();
-uint64_t getRes();
-uint64_t getCoarseTime();
-uint64_t getCoarseRes();
-uint64_t getElapse(uint64_t prev);
+NACS_EXPORT(utils) uint64_t getTime();
+NACS_EXPORT(utils) uint64_t getRes();
+NACS_EXPORT(utils) uint64_t getCoarseTime();
+NACS_EXPORT(utils) uint64_t getCoarseRes();
+NACS_EXPORT(utils) uint64_t getElapse(uint64_t prev);
 
 static inline void
 printTime(uint64_t time)

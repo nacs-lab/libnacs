@@ -89,8 +89,8 @@ constexpr auto white_bg = _TermState::get_bg(7);
 
 constexpr auto bold = _TermState::get_bold();
 
-std::ostream &operator<<(std::ostream &stm, _TermState state);
-std::ostream &reset(std::ostream &stm);
+NACS_EXPORT(utils) std::ostream &operator<<(std::ostream &stm, _TermState state);
+NACS_EXPORT(utils) std::ostream &reset(std::ostream &stm);
 
 }
 }

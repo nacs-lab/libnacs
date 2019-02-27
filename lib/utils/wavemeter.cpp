@@ -19,7 +19,6 @@
 #include "wavemeter.h"
 
 #include "streams.h"
-#include "utils.h"
 
 #include <ctime>
 #include <fstream>

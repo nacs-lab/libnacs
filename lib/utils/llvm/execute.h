@@ -174,15 +174,15 @@ private:
 
 class Engine {
 public:
-    Engine();
-    ~Engine();
-    uint64_t load(const object::ObjectFile &O);
-    uint64_t load(const char *p, size_t len);
+    NACS_EXPORT(utils) Engine();
+    NACS_EXPORT(utils) ~Engine();
+    NACS_EXPORT(utils) uint64_t load(const object::ObjectFile &O);
+    NACS_EXPORT(utils) uint64_t load(const char *p, size_t len);
     // Must be called before `free`ing any other files after the `load`.
-    void *get_symbol(StringRef name);
+    NACS_EXPORT(utils) void *get_symbol(StringRef name);
     // This does not invalidates pointers from any other files
     // but it does clears all symbols.
-    void free(uint64_t id);
+    NACS_EXPORT(utils) void free(uint64_t id);
 private:
     void reset_dyld();
     MemMgr m_memmgr;

@@ -34,12 +34,12 @@ namespace Compile {
 
 using namespace llvm;
 
-Module *optimize(Module *mod);
-bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M, bool opt=true);
-bool emit_objfile(SmallVectorImpl<char> &vec, TargetMachine *tgt, Module *M, bool opt=true);
-TargetMachine *get_native_target();
-std::unique_ptr<TargetMachine> create_target(StringRef triple, StringRef cpu,
-                                             StringRef features);
+NACS_EXPORT(utils) Module *optimize(Module *mod);
+NACS_EXPORT(utils) bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M, bool opt=true);
+NACS_EXPORT(utils) bool emit_objfile(SmallVectorImpl<char> &vec, TargetMachine *tgt, Module *M, bool opt=true);
+NACS_EXPORT(utils) TargetMachine *get_native_target();
+NACS_EXPORT(utils) std::unique_ptr<TargetMachine> create_target(StringRef triple, StringRef cpu,
+                                                                StringRef features);
 
 }
 }

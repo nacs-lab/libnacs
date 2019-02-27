@@ -33,32 +33,32 @@ typedef enum {
     Force
 } Level;
 
-extern Level level;
+extern NACS_PROTECTED(utils) Level level;
 
-void setLog(FILE *log_f);
-FILE *getLog();
-bool printPID();
-void printPID(bool b);
+NACS_PROTECTED(utils) void setLog(FILE *log_f);
+NACS_PROTECTED(utils) FILE *getLog();
+NACS_PROTECTED(utils) bool printPID();
+NACS_PROTECTED(utils) void printPID(bool b);
 
-__attribute__((format(printf, 3, 4)))
+NACS_PROTECTED(utils) __attribute__((format(printf, 3, 4)))
 void _log(Level level, const char *func, const char *fmt, ...);
 
-__attribute__((format(printf, 3, 0)))
+NACS_PROTECTED(utils) __attribute__((format(printf, 3, 0)))
 void _logV(Level level, const char *func, const char *fmt, va_list ap);
 
-__attribute__((format(printf, 1, 2))) void info(const char *fmt, ...);
-__attribute__((format(printf, 1, 2))) void warn(const char *fmt, ...);
-__attribute__((format(printf, 1, 2))) void error(const char *fmt, ...);
-__attribute__((format(printf, 1, 2))) void log(const char *fmt, ...);
+NACS_PROTECTED(utils) __attribute__((format(printf, 1, 2))) void info(const char *fmt, ...);
+NACS_PROTECTED(utils) __attribute__((format(printf, 1, 2))) void warn(const char *fmt, ...);
+NACS_PROTECTED(utils) __attribute__((format(printf, 1, 2))) void error(const char *fmt, ...);
+NACS_PROTECTED(utils) __attribute__((format(printf, 1, 2))) void log(const char *fmt, ...);
 
-__attribute__((format(printf, 1, 0))) void infoV(const char *fmt, va_list ap);
-__attribute__((format(printf, 1, 0))) void warnV(const char *fmt, va_list ap);
-__attribute__((format(printf, 1, 0))) void errorV(const char *fmt, va_list ap);
-__attribute__((format(printf, 1, 0))) void logV(const char *fmt, va_list ap);
+NACS_PROTECTED(utils) __attribute__((format(printf, 1, 0))) void infoV(const char *fmt, va_list ap);
+NACS_PROTECTED(utils) __attribute__((format(printf, 1, 0))) void warnV(const char *fmt, va_list ap);
+NACS_PROTECTED(utils) __attribute__((format(printf, 1, 0))) void errorV(const char *fmt, va_list ap);
+NACS_PROTECTED(utils) __attribute__((format(printf, 1, 0))) void logV(const char *fmt, va_list ap);
 
 } // Log
 
-void backtrace();
+NACS_PROTECTED(utils) void backtrace();
 
 } // NaCs
 

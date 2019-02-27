@@ -19,6 +19,8 @@
 #ifndef __NACS_UTILS_WAVEMETER_H__
 #define __NACS_UTILS_WAVEMETER_H__
 
+#include "utils.h"
+
 #include <istream>
 #include <set>
 #include <vector>
@@ -115,10 +117,10 @@ class Wavemeter {
     // TODO: GC of cache
 
 public:
-    Wavemeter(double lo, double hi);
-    std::pair<const double*,const double*>
+    NACS_EXPORT(utils) Wavemeter(double lo, double hi);
+    NACS_EXPORT(utils) std::pair<const double*,const double*>
     parse(std::istream &stm, size_t *sz, double tstart, double tend);
-    void clear();
+    NACS_EXPORT(utils) void clear();
 
 private:
     seg_map_t m_segments;

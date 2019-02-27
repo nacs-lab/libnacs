@@ -19,6 +19,8 @@
 #ifndef __NACS_UTILS_LLVM_UTILS_H__
 #define __NACS_UTILS_LLVM_UTILS_H__
 
+#include "../utils.h"
+
 #include <llvm/IR/DebugLoc.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Module.h>
@@ -33,21 +35,21 @@
 namespace NaCs {
 namespace LLVM {
 
-void dump(llvm::Value *v);
-void dump(llvm::Type *v);
-void dump(llvm::Function *f);
-void dump(llvm::Module *m);
-void dump(llvm::Metadata *m);
-void dump(llvm::DebugLoc *dbg);
+NACS_EXPORT(utils) void dump(llvm::Value *v);
+NACS_EXPORT(utils) void dump(llvm::Type *v);
+NACS_EXPORT(utils) void dump(llvm::Function *f);
+NACS_EXPORT(utils) void dump(llvm::Module *m);
+NACS_EXPORT(utils) void dump(llvm::Metadata *m);
+NACS_EXPORT(utils) void dump(llvm::DebugLoc *dbg);
 
 // The following functions are provided so that the user does not need to link to LLVM.
 // This is useful/needed when we statically linking LLVM and cannot
 // link to the same version of LLVM as the user.
 // See also comments in `lib/utils/CMakeLists.txt`
-llvm::Module *new_module(llvm::StringRef, llvm::LLVMContext&);
-void delete_module(llvm::Module*);
-llvm::LLVMContext *new_context();
-void delete_context(llvm::LLVMContext*);
+NACS_EXPORT(utils) llvm::Module *new_module(llvm::StringRef, llvm::LLVMContext&);
+NACS_EXPORT(utils) void delete_module(llvm::Module*);
+NACS_EXPORT(utils) llvm::LLVMContext *new_context();
+NACS_EXPORT(utils) void delete_context(llvm::LLVMContext*);
 
 }
 }

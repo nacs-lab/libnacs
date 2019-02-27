@@ -63,8 +63,8 @@ write(volatile void *addr, T2 val, size_t idx=0)
 }
 
 NACS_EXPORT(utils) extern const size_t page_size;
-void *mapPhyAddr(void*, size_t);
-void *getPhyAddr(void*);
+NACS_EXPORT(utils) void *mapPhyAddr(void*, size_t);
+NACS_EXPORT(utils) void *getPhyAddr(void*);
 #if NACS_OS_WINDOWS
 enum class Prot : int {
     RW = PAGE_READWRITE,
@@ -79,20 +79,20 @@ enum class Prot : int {
 };
 #endif
 // Map anonymous pages of `size`. Guaranteed to be aligned to page size.
-void *mapAnonPage(size_t size, Prot prot);
+NACS_EXPORT(utils) void *mapAnonPage(size_t size, Prot prot);
 // Unmap pages.
 // Windows does not support partially unmap a previously allocated region.
 // If partially freeing the memory is needed, use `decommitPage` instead.
-void unmapPage(void *ptr, size_t size);
+NACS_EXPORT(utils) void unmapPage(void *ptr, size_t size);
 // Change the protection on the page
-bool protectPage(void *ptr, size_t size, Prot prot);
+NACS_EXPORT(utils) bool protectPage(void *ptr, size_t size, Prot prot);
 
 // Mark the page as unused. This does not free the address range but allows the OS
 // to reused the physical memory. On Unix, the page is still accessible after the call.
-void decommitPage(void *ptr, size_t size);
+NACS_EXPORT(utils) void decommitPage(void *ptr, size_t size);
 // Recommit a previously decommited page and set the page protection to `prot`.
 // This is required on windows after a page is decommited.
-bool recommitPage(void *ptr, size_t size, Prot prot);
+NACS_EXPORT(utils) bool recommitPage(void *ptr, size_t size, Prot prot);
 
 /**
  * This is a helper class to create pages that are mapped twice,
@@ -108,19 +108,19 @@ public:
             throw std::runtime_error("Failed to initialize DualMap.");
         }
     }
-    ~DualMap();
-    bool init();
+    NACS_EXPORT(utils) ~DualMap();
+    NACS_EXPORT(utils) bool init();
     // Allocate a new page(s).
     // The address returned in the first element is writable at first
     // and can be changed to read only or executable later.
     // The ID returned in the second element can be used later to create shared writable map
     // of the same memory region later.
-    std::pair<void*,uintptr_t> alloc(size_t size, bool exec);
+    NACS_EXPORT(utils) std::pair<void*,uintptr_t> alloc(size_t size, bool exec);
     // Create a writable map for the allocation determined by `id`.
     // Only one such map should be created for each allocation.
-    void *remap_wraddr(uintptr_t id, size_t size);
+    NACS_EXPORT(utils) void *remap_wraddr(uintptr_t id, size_t size);
     // Free the allocation and associated writable address.
-    void free(void *ptr, uintptr_t id, size_t size, void *wraddr=nullptr);
+    NACS_EXPORT(utils) void free(void *ptr, uintptr_t id, size_t size, void *wraddr=nullptr);
 private:
 #if !NACS_OS_WINDOWS
     static bool checkFdOrClose(int fd);
@@ -148,16 +148,16 @@ public:
             throw std::runtime_error("Failed to initialize MemWriter.");
         }
     }
-    ~MemWriter();
+    NACS_EXPORT(utils) ~MemWriter();
 #if NACS_OS_LINUX
-    bool init();
+    NACS_EXPORT(utils) bool init();
 #else
     bool init()
     {
         return false;
     }
 #endif
-    void write(void *dest, void *ptr, size_t size);
+    NACS_EXPORT(utils) void write(void *dest, void *ptr, size_t size);
 private:
 #if NACS_OS_LINUX
     static int open_self_mem();
