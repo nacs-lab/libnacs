@@ -306,10 +306,78 @@ _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48:
 //         ret
 //         .seh_endproc
 
+        .def     _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64
+        .p2align        4, 0x90
+        .seh_proc _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64
+_ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64:
+        .seh_endprologue
+        movq    40(%rsp), %r8
+        subpd   %xmm1, %xmm0
+        divpd   %xmm2, %xmm0
+        movl    %r9d, %edx
+        jmp     _ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32
+        .seh_endproc
+
+        .def     _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64
+        .p2align        4, 0x90
+        .seh_proc _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64
+_ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64:
+        .seh_endprologue
+        movq    40(%rsp), %r8
+        vsubpd  %xmm1, %xmm0, %xmm0
+        vdivpd  %xmm2, %xmm0, %xmm0
+        movl    %r9d, %edx
+        jmp     _ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32
+        .seh_endproc
+
+        .def     _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112
+        .p2align        4, 0x90
+        .seh_proc _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112
+_ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112:
+        .seh_endprologue
+        movq    40(%rsp), %r8
+        vsubpd  %ymm1, %ymm0, %ymm0
+        vdivpd  %ymm2, %ymm0, %ymm0
+        movl    %r9d, %edx
+        jmp     _ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48
+        .seh_endproc
+
+        .def     _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112
+        .p2align        4, 0x90
+        .seh_proc _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112
+_ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112:
+        .seh_endprologue
+        movq    40(%rsp), %r8
+        vsubpd  %ymm1, %ymm0, %ymm0
+        vdivpd  %ymm2, %ymm0, %ymm0
+        movl    %r9d, %edx
+        jmp     _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48
+        .seh_endproc
+
         .section    .drectve,"yn"
         .ascii  " -export:_ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32"
         .ascii  " -export:_ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32"
         .ascii  " -export:_ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48"
         .ascii  " -export:_ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48"
         // .ascii  " -export:_ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80"
+        .ascii  " -export:_ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64"
+        .ascii  " -export:_ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64"
+        .ascii  " -export:_ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112"
+        .ascii  " -export:_ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112"
 #endif
