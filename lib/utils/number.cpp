@@ -149,6 +149,7 @@ static inline __m512d linearInterpolate8(__m512d x, __m512d x0, __m512d dx,
 }
 
 #  if NACS_OS_WINDOWS
+#    if !defined(__GNUC__) || defined(__clang__)
 __attribute__((target("sse2"))) NACS_EXPORT()
 void linearInterpolate2_sse2(__m128d &res, const __m128d &x, uint32_t npoints,
                              const double *points)
@@ -204,6 +205,7 @@ void linearInterpolate4_avx2(__m256d &res, const __m256d &x, const __m256d &x0,
 {
     res = _linearInterpolate4_avx2((x - x0) / dx, npoints, points);
 }
+#    endif
 
 __attribute__((target("avx512f,avx512dq"))) NACS_EXPORT()
 void linearInterpolate8_avx512f(__m512d &res, const __m512d &x, uint32_t npoints,

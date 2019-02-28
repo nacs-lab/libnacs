@@ -38,6 +38,10 @@
         // NaCs::linearInterpolate2_sse2(double __vector(2), unsigned int, double const*)
         .seh_proc   _ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32
 _ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32:
+        // The wrapper function below `_ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd`,
+        // assumes that this function does not touch `%rcx` and does not use the stack.
+        // `_ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64`
+        // assumes that this function does not touch `%rcx`.
         .seh_endprologue
         pxor        %xmm5, %xmm5
         comisd      %xmm0, %xmm5
@@ -120,6 +124,9 @@ _ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32:
         // NaCs::linearInterpolate2_avx2(double __vector(2), unsigned int, double const*)
         .seh_proc   _ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32
 _ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32:
+        // The wrapper function below `_ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd`,
+        // and `_ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64`
+        // assumes that this function does not touch `%rcx`.
         // Using the scratch area
         vmovapd     %xmm7, 24(%rsp)
         .seh_savexmm %xmm7, 24
@@ -165,6 +172,9 @@ _ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32:
         // NaCs::linearInterpolate4_avx(double __vector(4), unsigned int, double const*)
         .seh_proc _ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48
 _ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48:
+        // The wrapper function below `_ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd`,
+        // and `_ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112`
+        // assumes that this function does not touch `%r11`.
         // Using the scratch area
         vmovapd       %xmm7, 24(%rsp)
         .seh_savexmm %xmm7, 24
@@ -226,6 +236,9 @@ _ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48:
         // NaCs::linearInterpolate4_avx2(double __vector(4), unsigned int, double const*)
         .seh_proc _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48
 _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48:
+        // The wrapper function below `_ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd`
+        // and `_ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112`
+        // assumes that this function does not touch `%rcx`.
         // Using the scratch area
         vmovapd       %xmm7, 24(%rsp)
         .seh_savexmm %xmm7, 24
@@ -314,6 +327,8 @@ _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48:
         .p2align        4, 0x90
         .seh_proc _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64
 _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64:
+        // The wrapper function below `_ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd`
+        // assumes that this function does not touch `%rcx`.
         .seh_endprologue
         movq    40(%rsp), %r8
         subpd   %xmm1, %xmm0
@@ -330,6 +345,8 @@ _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64:
         .p2align        4, 0x90
         .seh_proc _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64
 _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64:
+        // The wrapper function below `_ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd`
+        // assumes that this function does not touch `%rcx`.
         .seh_endprologue
         movq    40(%rsp), %r8
         vsubpd  %xmm1, %xmm0, %xmm0
@@ -346,6 +363,8 @@ _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64:
         .p2align        4, 0x90
         .seh_proc _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112
 _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112:
+        // The wrapper function below `_ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd`
+        // assumes that this function does not touch `%r11`.
         .seh_endprologue
         movq    40(%rsp), %r8
         vsubpd  %ymm1, %ymm0, %ymm0
@@ -362,12 +381,209 @@ _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112:
         .p2align        4, 0x90
         .seh_proc _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112
 _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112:
+        // The wrapper function below `_ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd`
+        // assumes that this function does not touch `%rcx`.
         .seh_endprologue
         movq    40(%rsp), %r8
         vsubpd  %ymm1, %ymm0, %ymm0
         vdivpd  %ymm2, %ymm0, %ymm0
         movl    %r9d, %edx
         jmp     _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48
+        .seh_endproc
+
+        .def     _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd
+        .p2align        4, 0x90
+        .seh_proc _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd
+_ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd:
+        // Assumes that `_ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32`
+        // does not touch `%rcx` and doesn't need the stack
+        // subq    $8, %rsp
+        // .seh_stackalloc 8
+        .seh_endprologue
+        movaps  (%rdx), %xmm0
+        movl    %r8d, %edx
+        movq    %r9, %r8
+        callq   _ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32
+        movaps  %xmm0, (%rcx)
+        // addq    $8, %rsp
+        ret
+        .seh_endproc
+
+        .def     _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd
+        .p2align        4, 0x90
+        .seh_proc _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd
+_ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd:
+        // Assumes that `_ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64`
+        // does not touch `%rcx`
+        subq    $56, %rsp
+        .seh_stackalloc 56
+        .seh_endprologue
+        movl    96(%rsp), %eax
+        movq    104(%rsp), %r10
+        movaps  (%rdx), %xmm0
+        movaps  (%r8), %xmm1
+        movaps  (%r9), %xmm2
+        movq    %r10, 32(%rsp)
+        movl    %eax, %r9d
+        callq   _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64
+        movaps  %xmm0, (%rcx)
+        addq    $56, %rsp
+        ret
+        .seh_endproc
+
+        .def     _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd
+        .p2align        4, 0x90
+        .seh_proc _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd
+_ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd:
+        // Assumes that `_ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32`
+        // does not touch `%rcx`.
+        subq    $40, %rsp
+        .seh_stackalloc 40
+        .seh_endprologue
+        vmovaps (%rdx), %xmm0
+        movl    %r8d, %edx
+        movq    %r9, %r8
+        callq   _ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32
+        vmovaps %xmm0, (%rcx)
+        addq    $40, %rsp
+        ret
+        .seh_endproc
+
+        .def     _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd
+        .p2align        4, 0x90
+        .seh_proc _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd
+_ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd:
+        // Assumes that `_ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64`
+        // does not touch `%r10`
+        subq    $56, %rsp
+        .seh_stackalloc 56
+        .seh_endprologue
+        movl    96(%rsp), %eax
+        movq    104(%rsp), %r10
+        vmovaps  (%rdx), %xmm0
+        vmovaps  (%r8), %xmm1
+        vmovaps  (%r9), %xmm2
+        movq    %r10, 32(%rsp)
+        movl    %eax, %r9d
+        callq   _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64
+        vmovaps  %xmm0, (%rcx)
+        addq    $56, %rsp
+        ret
+        .seh_endproc
+
+        .def     _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd
+        .p2align        4, 0x90
+        .seh_proc _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd
+_ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd:
+        // Assumes that `_ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48`
+        // does not touch `%r11`.
+        // Also assumes that the caller knows about avx so we don't need `vzeroupper`
+        subq    $40, %rsp
+        .seh_stackalloc 40
+        .seh_endprologue
+        movq    %rcx, %r11
+        vmovaps (%rdx), %ymm0
+        movl    %r8d, %edx
+        movq    %r9, %r8
+        callq   _ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48
+        vmovaps %ymm0, (%r11)
+        addq    $40, %rsp
+        ret
+        .seh_endproc
+
+        .def     _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd
+        .p2align        4, 0x90
+        .seh_proc _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd
+_ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd:
+        // Assumes that `_ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112`
+        // does not touch `%r11`.
+        // Also assumes that the caller knows about avx so we don't need `vzeroupper`
+        subq    $56, %rsp
+        .seh_stackalloc 56
+        .seh_endprologue
+        movq    %rcx, %r11
+        movl    96(%rsp), %eax
+        movq    104(%rsp), %rcx
+        vmovaps (%rdx), %ymm0
+        vmovaps (%r8), %ymm1
+        vmovaps (%r9), %ymm2
+        movq    %rcx, 32(%rsp)
+        movl    %eax, %r9d
+        callq   _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112
+        vmovaps %ymm0, (%r11)
+        addq    $56, %rsp
+        ret
+        .seh_endproc
+
+        .def     _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd
+        .p2align        4, 0x90
+        .seh_proc _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd
+_ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd:
+        // Assumes that `_ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48`
+        // does not touch `%rcx`.
+        // Also assumes that the caller knows about avx so we don't need `vzeroupper`
+        subq    $40, %rsp
+        .seh_stackalloc 40
+        .seh_endprologue
+        vmovaps (%rdx), %ymm0
+        movl    %r8d, %edx
+        movq    %r9, %r8
+        callq   _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48
+        vmovaps %ymm0, (%rcx)
+        addq    $40, %rsp
+        ret
+        .seh_endproc
+
+        .def     _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd
+        .p2align        4, 0x90
+        .seh_proc _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd
+_ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd:
+        subq    $56, %rsp
+        .seh_stackalloc 56
+        .seh_endprologue
+        movl    96(%rsp), %eax
+        movq    104(%rsp), %r11
+        vmovaps (%rdx), %ymm0
+        vmovaps (%r8), %ymm1
+        vmovaps (%r9), %ymm2
+        movq    %r11, 32(%rsp)
+        movl    %eax, %r9d
+        callq   _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112
+        vmovaps %ymm0, (%rcx)
+        addq    $56, %rsp
+        ret
         .seh_endproc
 
         .section    .drectve,"yn"
@@ -380,4 +596,12 @@ _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112:
         .ascii  " -export:_ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64"
         .ascii  " -export:_ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112"
         .ascii  " -export:_ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112"
+        .ascii  " -export:_ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd"
+        .ascii  " -export:_ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd"
+        .ascii  " -export:_ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd"
+        .ascii  " -export:_ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd"
+        .ascii  " -export:_ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd"
+        .ascii  " -export:_ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd"
+        .ascii  " -export:_ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd"
+        .ascii  " -export:_ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd"
 #endif
