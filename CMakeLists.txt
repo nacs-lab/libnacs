@@ -65,6 +65,9 @@ endif()
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden -Wconversion
   -fno-math-errno -Wno-sign-conversion -Wno-psabi -D_FILE_OFFSET_BITS=64)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  # We have GCC specific warning options that makes Clang unhappy.
+  # Adding this unconditionally cause GCC to issue a warning if there are other warnings
+  # so only add this conditionally for clang.
   add_definitions(-Wno-unknown-warning-option)
 endif()
 
@@ -75,6 +78,7 @@ cmake_c_fix_include_path(lib/seq nacs-seq)
 set(LINKER_FLAGS -Wl,--as-needed -Wl,--no-undefined -Wl,--gc-sections -pthread -fno-math-errno)
 
 if(IS_WINDOWS)
+  # GCC is somehow not happy about the `<inttypes.h>` we find even though it appears to work
   cmake_c_add_flags(CMAKE_C_FLAGS -Wno-format -Wno-format-extra-args)
   cmake_c_add_flags(CMAKE_CXX_FLAGS -Wno-format -Wno-format-extra-args)
   set(LINKER_FLAGS ${LINKER_FLAGS} -static-libstdc++)
