@@ -63,8 +63,10 @@ if(ENABLE_SIMD)
 endif()
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden -Wconversion
-  -fno-math-errno -Wno-sign-conversion -Wno-psabi -Wno-unknown-warning-option
-  -D_FILE_OFFSET_BITS=64)
+  -fno-math-errno -Wno-sign-conversion -Wno-psabi -D_FILE_OFFSET_BITS=64)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_definitions(-Wno-unknown-warning-option)
+endif()
 
 cmake_c_fix_include_path(lib/utils nacs-utils)
 cmake_c_fix_include_path(lib/kernel nacs-kernel)
@@ -73,6 +75,8 @@ cmake_c_fix_include_path(lib/seq nacs-seq)
 set(LINKER_FLAGS -Wl,--as-needed -Wl,--no-undefined -Wl,--gc-sections -pthread -fno-math-errno)
 
 if(IS_WINDOWS)
+  cmake_c_add_flags(CMAKE_C_FLAGS -Wno-format -Wno-format-extra-args)
+  cmake_c_add_flags(CMAKE_CXX_FLAGS -Wno-format -Wno-format-extra-args)
   set(LINKER_FLAGS ${LINKER_FLAGS} -static-libstdc++)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-bin")
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
