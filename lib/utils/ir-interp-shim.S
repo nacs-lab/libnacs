@@ -166,13 +166,13 @@ nacs_exefunc_cb:
         je      .Lint_end
 
         cmpq    $3, %rax
-        movsd   %xmm1, %xmm8
+        movsd   %xmm1, %xmm4
         je      .Lfloat_end
         cmpq    $4, %rax
-        movsd   %xmm2, %xmm8
+        movsd   %xmm2, %xmm4
         je      .Lfloat_end
         cmpq    $5, %rax
-        movsd   %xmm3, %xmm8
+        movsd   %xmm3, %xmm4
         je      .Lfloat_end
 
         movq    (%rbp,%rax), %rax
@@ -180,7 +180,7 @@ nacs_exefunc_cb:
         movq    %rax, -8(%rsp,%r11,8)
         jmp     .Lloop_end
 .Lfloat_end:
-        movsd   %xmm8, -8(%rsp,%r11,8)
+        movsd   %xmm4, -8(%rsp,%r11,8)
 .Lloop_end:
         subq    $1, %r11
         jne     .Lloop
