@@ -170,6 +170,127 @@ NACS_EXPORT(utils) double linearInterpolate(double x, double x0, double dx,
                                             uint32_t npoints, const double *points);
 
 #if NACS_CPU_X86 || NACS_CPU_X86_64
+// GCC support of __m256d calling convention on windows is a mess...
+// Export pass by reference functions on windows to work around this.
+#  define NACS_SIMD_USE_REF 0
+#  if NACS_OS_WINDOWS
+NACS_EXPORT(utils)
+void linearInterpolate2_sse2(__m128d &res, const __m128d &x,
+                             uint32_t npoints, const double *points);
+NACS_EXPORT(utils)
+void linearInterpolate2_sse2(__m128d &res, const __m128d &x, const __m128d &x0,
+                             const __m128d &dx, uint32_t npoints, const double *points);
+NACS_EXPORT(utils)
+void linearInterpolate2_avx2(__m128d &res, const __m128d &x, uint32_t npoints,
+                             const double *points);
+NACS_EXPORT(utils)
+void linearInterpolate2_avx2(__m128d &res, const __m128d &x, const __m128d &x0,
+                             const __m128d &dx, uint32_t npoints, const double *points);
+NACS_EXPORT(utils)
+void linearInterpolate4_avx(__m256d &res, const __m256d &x, uint32_t npoints,
+                            const double *points);
+NACS_EXPORT(utils)
+void linearInterpolate4_avx(__m256d &res, const __m256d &x, const __m256d &x0,
+                            const __m256d &dx, uint32_t npoints, const double *points);
+NACS_EXPORT(utils)
+void linearInterpolate4_avx2(__m256d &res, const __m256d &x, uint32_t npoints,
+                             const double *points);
+NACS_EXPORT(utils)
+void linearInterpolate4_avx2(__m256d &res, const __m256d &x, const __m256d &x0, const __m256d &dx,
+                             uint32_t npoints, const double *points);
+NACS_EXPORT(utils)
+void linearInterpolate8_avx512f(__m512d &res, const __m512d &x, uint32_t npoints,
+                                const double *points);
+NACS_EXPORT(utils)
+void linearInterpolate8_avx512f(__m512d &res, const __m512d &x, const __m512d &x0,
+                                const __m512d &dx, uint32_t npoints, const double *points);
+#    if defined(__GNUC__) && !defined(__clang__)
+#      undef NACS_SIMD_USE_REF
+#      define NACS_SIMD_USE_REF 1
+#    endif
+__attribute__((always_inline)) static inline
+__m512d linearInterpolate8_avx512f(__m512d x, uint32_t npoints, const double *points)
+{
+    __m512d res;
+    linearInterpolate8_avx512f(res, x, npoints, points);
+    return res;
+}
+__attribute__((always_inline)) static inline
+__m512d linearInterpolate8_avx512f(__m512d x, __m512d x0, __m512d dx,
+                                   uint32_t npoints, const double *points)
+{
+    __m512d res;
+    linearInterpolate8_avx512f(res, x, x0, dx, npoints, points);
+    return res;
+}
+#  else
+NACS_EXPORT(utils) __m512d linearInterpolate8_avx512f(__m512d x, uint32_t npoints,
+                                                      const double *points);
+NACS_EXPORT(utils) __m512d linearInterpolate8_avx512f(__m512d x, __m512d x0, __m512d dx,
+                                                      uint32_t npoints, const double *points);
+#  endif
+#  if NACS_SIMD_USE_REF
+__attribute__((always_inline)) static inline
+__m128d linearInterpolate2_sse2(__m128d x, uint32_t npoints, const double *points)
+{
+    __m128d res;
+    linearInterpolate2_sse2(res, x, npoints, points);
+    return res;
+}
+__attribute__((always_inline)) static inline
+__m128d linearInterpolate2_sse2(__m128d x, __m128d x0, __m128d dx,
+                                uint32_t npoints, const double *points)
+{
+    __m128d res;
+    linearInterpolate2_sse2(res, x, x0, dx, npoints, points);
+    return res;
+}
+__attribute__((always_inline)) static inline
+__m128d linearInterpolate2_avx2(__m128d x, uint32_t npoints, const double *points)
+{
+    __m128d res;
+    linearInterpolate2_avx2(res, x, npoints, points);
+    return res;
+}
+__attribute__((always_inline)) static inline
+__m128d linearInterpolate2_avx2(__m128d x, __m128d x0, __m128d dx,
+                                uint32_t npoints, const double *points)
+{
+    __m128d res;
+    linearInterpolate2_avx2(res, x, x0, dx, npoints, points);
+    return res;
+}
+__attribute__((always_inline)) static inline
+__m256d linearInterpolate4_avx(__m256d x, uint32_t npoints, const double *points)
+{
+    __m256d res;
+    linearInterpolate4_avx(res, x, npoints, points);
+    return res;
+}
+__attribute__((always_inline)) static inline
+__m256d linearInterpolate4_avx(__m256d x, __m256d x0, __m256d dx,
+                               uint32_t npoints, const double *points)
+{
+    __m256d res;
+    linearInterpolate4_avx(res, x, x0, dx, npoints, points);
+    return res;
+}
+__attribute__((always_inline)) static inline
+__m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const double *points)
+{
+    __m256d res;
+    linearInterpolate4_avx2(res, x, npoints, points);
+    return res;
+}
+__attribute__((always_inline)) static inline
+__m256d linearInterpolate4_avx2(__m256d x, __m256d x0, __m256d dx,
+                                uint32_t npoints, const double *points)
+{
+    __m256d res;
+    linearInterpolate4_avx2(res, x, x0, dx, npoints, points);
+    return res;
+}
+#  else
 NACS_EXPORT(utils) NACS_VECTORCALL
 __m128d linearInterpolate2_sse2(__m128d x, uint32_t npoints, const double *points);
 NACS_EXPORT(utils) NACS_VECTORCALL
@@ -190,10 +311,7 @@ __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const double *point
 NACS_EXPORT(utils) NACS_VECTORCALL
 __m256d linearInterpolate4_avx2(__m256d x, __m256d x0, __m256d dx,
                                 uint32_t npoints, const double *points);
-NACS_EXPORT(utils) __m512d linearInterpolate8_avx512f(__m512d x, uint32_t npoints,
-                                                      const double *points);
-NACS_EXPORT(utils) __m512d linearInterpolate8_avx512f(__m512d x, __m512d x0, __m512d dx,
-                                                      uint32_t npoints, const double *points);
+#  endif
 #endif
 
 }

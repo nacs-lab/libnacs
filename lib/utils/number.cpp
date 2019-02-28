@@ -61,19 +61,6 @@ static inline __m128d linearInterpolate2(__m128d x, uint32_t npoints, const doub
             _linearInterpolate(x[1], npoints, points)};
 }
 
-NACS_VECTORCALL __attribute__((target("sse2")))
-NACS_EXPORT() __m128d linearInterpolate2_sse2(__m128d x, uint32_t npoints, const double *points)
-{
-    return linearInterpolate2(x, npoints, points);
-}
-
-NACS_VECTORCALL __attribute__((target("sse2")))
-NACS_EXPORT() __m128d linearInterpolate2_sse2(__m128d x, __m128d x0, __m128d dx,
-                                              uint32_t npoints, const double *points)
-{
-    return linearInterpolate2((x - x0) / dx, npoints, points);
-}
-
 __attribute__((target("avx2,fma"), always_inline))
 static inline __m128d _linearInterpolate2_avx2(__m128d x, uint32_t npoints, const double *points)
 {
@@ -89,19 +76,6 @@ static inline __m128d _linearInterpolate2_avx2(__m128d x, uint32_t npoints, cons
     res = _mm_blendv_pd(_mm_set1_pd(points[0]), res, (__m128d)und_ok);
     res = _mm_blendv_pd(_mm_set1_pd(points[npoints - 1]), res, (__m128d)ovr_ok);
     return res;
-}
-
-NACS_VECTORCALL __attribute__((target("avx2,fma")))
-NACS_EXPORT() __m128d linearInterpolate2_avx2(__m128d x, uint32_t npoints, const double *points)
-{
-    return _linearInterpolate2_avx2(x, npoints, points);
-}
-
-NACS_VECTORCALL __attribute__((target("avx2,fma")))
-NACS_EXPORT() __m128d linearInterpolate2_avx2(__m128d x, __m128d x0, __m128d dx,
-                                              uint32_t npoints, const double *points)
-{
-    return _linearInterpolate2_avx2((x - x0) / dx, npoints, points);
 }
 
 typedef int v4si __attribute__((__vector_size__(16)));
@@ -131,19 +105,6 @@ static inline __m256d linearInterpolate4(__m256d x, __m256d x0, __m256d dx,
     return linearInterpolate4((x - x0) / dx, npoints, points);
 }
 
-NACS_VECTORCALL __attribute__((target("avx")))
-NACS_EXPORT() __m256d linearInterpolate4_avx(__m256d x, uint32_t npoints, const double *points)
-{
-    return linearInterpolate4(x, npoints, points);
-}
-
-NACS_VECTORCALL __attribute__((target("avx")))
-NACS_EXPORT() __m256d linearInterpolate4_avx(__m256d x, __m256d x0, __m256d dx,
-                                             uint32_t npoints, const double *points)
-{
-    return linearInterpolate4(x, x0, dx, npoints, points);
-}
-
 __attribute__((target("avx2,fma"), always_inline))
 static inline __m256d _linearInterpolate4_avx2(__m256d x, uint32_t npoints,
                                                const double *points)
@@ -160,19 +121,6 @@ static inline __m256d _linearInterpolate4_avx2(__m256d x, uint32_t npoints,
     res = _mm256_blendv_pd(_mm256_broadcast_sd(points), res, (__m256d)und_ok);
     res = _mm256_blendv_pd(_mm256_broadcast_sd(&points[npoints - 1]), res, (__m256d)ovr_ok);
     return res;
-}
-
-NACS_VECTORCALL __attribute__((target("avx2,fma")))
-NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const double *points)
-{
-    return _linearInterpolate4_avx2(x, npoints, points);
-}
-
-NACS_VECTORCALL __attribute__((target("avx2,fma")))
-NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, __m256d x0, __m256d dx,
-                                              uint32_t npoints, const double *points)
-{
-    return _linearInterpolate4_avx2((x - x0) / dx, npoints, points);
 }
 
 __attribute__((target("avx512f,avx512dq"), always_inline, flatten))
@@ -200,6 +148,132 @@ static inline __m512d linearInterpolate8(__m512d x, __m512d x0, __m512d dx,
     return linearInterpolate8((x - x0) / dx, npoints, points);
 }
 
+#  if NACS_OS_WINDOWS
+__attribute__((target("sse2"))) NACS_EXPORT()
+void linearInterpolate2_sse2(__m128d &res, const __m128d &x, uint32_t npoints,
+                             const double *points)
+{
+    res = linearInterpolate2(x, npoints, points);
+}
+
+__attribute__((target("sse2"))) NACS_EXPORT()
+void linearInterpolate2_sse2(__m128d &res, const __m128d &x, const __m128d &x0,
+                             const __m128d &dx, uint32_t npoints, const double *points)
+{
+    res = linearInterpolate2((x - x0) / dx, npoints, points);
+}
+
+__attribute__((target("avx2,fma"))) NACS_EXPORT()
+void linearInterpolate2_avx2(__m128d &res, const __m128d &x, uint32_t npoints,
+                             const double *points)
+{
+    res = _linearInterpolate2_avx2(x, npoints, points);
+}
+
+__attribute__((target("avx2,fma"))) NACS_EXPORT()
+void linearInterpolate2_avx2(__m128d &res, const __m128d &x, const __m128d &x0,
+                             const __m128d &dx, uint32_t npoints, const double *points)
+{
+    res = _linearInterpolate2_avx2((x - x0) / dx, npoints, points);
+}
+
+__attribute__((target("avx"))) NACS_EXPORT()
+void linearInterpolate4_avx(__m256d &res, const __m256d &x, uint32_t npoints,
+                            const double *points)
+{
+    res = linearInterpolate4(x, npoints, points);
+}
+
+__attribute__((target("avx"))) NACS_EXPORT()
+void linearInterpolate4_avx(__m256d &res, const __m256d &x, const __m256d &x0,
+                            const __m256d &dx, uint32_t npoints, const double *points)
+{
+    res = linearInterpolate4(x, x0, dx, npoints, points);
+}
+
+__attribute__((target("avx2,fma"))) NACS_EXPORT()
+void linearInterpolate4_avx2(__m256d &res, const __m256d &x, uint32_t npoints,
+                             const double *points)
+{
+    res = _linearInterpolate4_avx2(x, npoints, points);
+}
+
+__attribute__((target("avx2,fma"))) NACS_EXPORT()
+void linearInterpolate4_avx2(__m256d &res, const __m256d &x, const __m256d &x0,
+                             const __m256d &dx, uint32_t npoints, const double *points)
+{
+    res = _linearInterpolate4_avx2((x - x0) / dx, npoints, points);
+}
+
+__attribute__((target("avx512f,avx512dq"))) NACS_EXPORT()
+void linearInterpolate8_avx512f(__m512d &res, const __m512d &x, uint32_t npoints,
+                                const double *points)
+{
+    res = linearInterpolate8(x, npoints, points);
+}
+
+__attribute__((target("avx512f,avx512dq"))) NACS_EXPORT()
+void linearInterpolate8_avx512f(__m512d &res, const __m512d &x, const __m512d &x0,
+                                const __m512d &dx, uint32_t npoints, const double *points)
+{
+    res = linearInterpolate8(x, x0, dx, npoints, points);
+}
+#  endif
+
+#  if !NACS_SIMD_USE_REF
+NACS_VECTORCALL __attribute__((target("sse2")))
+NACS_EXPORT() __m128d linearInterpolate2_sse2(__m128d x, uint32_t npoints, const double *points)
+{
+    return linearInterpolate2(x, npoints, points);
+}
+
+NACS_VECTORCALL __attribute__((target("sse2")))
+NACS_EXPORT() __m128d linearInterpolate2_sse2(__m128d x, __m128d x0, __m128d dx,
+                                              uint32_t npoints, const double *points)
+{
+    return linearInterpolate2((x - x0) / dx, npoints, points);
+}
+
+NACS_VECTORCALL __attribute__((target("avx2,fma")))
+NACS_EXPORT() __m128d linearInterpolate2_avx2(__m128d x, uint32_t npoints, const double *points)
+{
+    return _linearInterpolate2_avx2(x, npoints, points);
+}
+
+NACS_VECTORCALL __attribute__((target("avx2,fma")))
+NACS_EXPORT() __m128d linearInterpolate2_avx2(__m128d x, __m128d x0, __m128d dx,
+                                              uint32_t npoints, const double *points)
+{
+    return _linearInterpolate2_avx2((x - x0) / dx, npoints, points);
+}
+
+NACS_VECTORCALL __attribute__((target("avx")))
+NACS_EXPORT() __m256d linearInterpolate4_avx(__m256d x, uint32_t npoints, const double *points)
+{
+    return linearInterpolate4(x, npoints, points);
+}
+
+NACS_VECTORCALL __attribute__((target("avx")))
+NACS_EXPORT() __m256d linearInterpolate4_avx(__m256d x, __m256d x0, __m256d dx,
+                                             uint32_t npoints, const double *points)
+{
+    return linearInterpolate4(x, x0, dx, npoints, points);
+}
+
+NACS_VECTORCALL __attribute__((target("avx2,fma")))
+NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, uint32_t npoints, const double *points)
+{
+    return _linearInterpolate4_avx2(x, npoints, points);
+}
+
+NACS_VECTORCALL __attribute__((target("avx2,fma")))
+NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, __m256d x0, __m256d dx,
+                                              uint32_t npoints, const double *points)
+{
+    return _linearInterpolate4_avx2((x - x0) / dx, npoints, points);
+}
+#  endif
+#  if !NACS_OS_WINDOWS
 __attribute__((target("avx512f,avx512dq")))
 NACS_EXPORT() __m512d linearInterpolate8_avx512f(__m512d x, uint32_t npoints,
                                                  const double *points)
@@ -213,6 +287,7 @@ NACS_EXPORT() __m512d linearInterpolate8_avx512f(__m512d x, __m512d x0, __m512d 
 {
     return linearInterpolate8(x, x0, dx, npoints, points);
 }
+#  endif
 
 #endif
 
