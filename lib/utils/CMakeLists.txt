@@ -1,3 +1,17 @@
+set(get_soname_SOURCES get_soname.cpp)
+add_executable(get_soname ${get_soname_SOURCES})
+if(IS_UNIX)
+  target_link_libraries(get_soname dl)
+endif()
+add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/nacs_lib_names.h"
+  COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/gen_libnames.sh"
+  "${CMAKE_COMMAND}" "$<TARGET_FILE:get_soname>"
+  "${CMAKE_SHARED_LIBRARY_SUFFIX}" "${CMAKE_CURRENT_BINARY_DIR}/nacs_lib_names.h"
+  DEPENDS gen_libnames.sh get_soname)
+add_custom_target(nacs-lib-names ALL
+  DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/nacs_lib_names.h")
+include_directories("${CMAKE_CURRENT_BINARY_DIR}")
+
 set(nacs_utils_HDRS
   container.h
   dlload.h
@@ -71,6 +85,7 @@ add_definitions("-\"DNACS_EXPORT_LIB_utils()=\"")
 
 add_library(nacs-utils SHARED
   ${nacs_utils_SRCS})
+add_dependencies(nacs-utils nacs-lib-names)
 
 if(ENABLE_LLVM)
   # AFAICT llvm_config is pretty broken so just do it ourselves...
