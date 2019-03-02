@@ -16,6 +16,10 @@ set(test_const_stream_SOURCES test_const_stream.cpp)
 add_executable(test-const_stream ${test_const_stream_SOURCES})
 target_link_libraries(test-const_stream nacs-utils)
 
+set(test_dl_SOURCES test_dl.cpp)
+add_executable(test-dl ${test_dl_SOURCES})
+target_link_libraries(test-dl nacs-utils)
+
 set(test_filterqueue_SOURCES test_filterqueue.cpp)
 add_executable(test-filterqueue ${test_filterqueue_SOURCES})
 target_link_libraries(test-filterqueue nacs-utils)
