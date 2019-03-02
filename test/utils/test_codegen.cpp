@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#include "winpath_helper.h"
+
 // This avoid linking to LLVM
 // Without this, LLVM header generates a global variable with
 // weak linkage that links to symbol in libLLVM.

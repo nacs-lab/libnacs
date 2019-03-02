@@ -19,6 +19,9 @@
 #include "ir_p.h"
 #include "interp_p.h"
 #include "mem.h"
+#include "dlload.h"
+
+#include "nacs_lib_names.h"
 
 #include <math.h>
 #include <iostream>
@@ -34,124 +37,213 @@ NACS_EXPORT() double nacs_exp10(double x)
 namespace NaCs {
 namespace IR {
 
+namespace {
+
+static void *get_openlibm_handle()
+{
+    static void *hdl = DL::open(NACS_OPENLIBM_NAME, DL::GLOBAL | DL::LAZY);
+    return hdl;
+}
+
+class LazyLibmFPtr {
+public:
+    LazyLibmFPtr(const char *name, fptr_t fallback)
+        : m_name(name),
+          m_fallback(fallback),
+          m_fptr(nullptr)
+    {
+        assert(fallback);
+    }
+    operator fptr_t()
+    {
+        if (m_fptr)
+            return m_fptr;
+        fptr_t fptr = (fptr_t)DL::sym(get_openlibm_handle(), m_name);
+        if (!fptr)
+            fptr = m_fallback;
+        m_fptr = fptr;
+        return fptr;
+    }
+
+private:
+    const char *m_name;
+    const fptr_t m_fallback;
+    fptr_t m_fptr;
+};
+
+#define DEF_FPTR(name) static LazyLibmFPtr p##name(#name, ::name)
+DEF_FPTR(acos);
+DEF_FPTR(acosh);
+DEF_FPTR(asin);
+DEF_FPTR(asinh);
+DEF_FPTR(atan);
+DEF_FPTR(atanh);
+DEF_FPTR(cbrt);
+DEF_FPTR(ceil);
+DEF_FPTR(cos);
+DEF_FPTR(cosh);
+DEF_FPTR(erf);
+DEF_FPTR(erfc);
+DEF_FPTR(exp);
+#ifdef NACS_HAS_EXP10
+DEF_FPTR(exp10);
+#else
+static LazyLibmFPtr pexp10("exp10", ::nacs_exp10);
+#endif
+DEF_FPTR(exp2);
+DEF_FPTR(expm1);
+DEF_FPTR(abs);
+DEF_FPTR(floor);
+DEF_FPTR(tgamma);
+DEF_FPTR(j0);
+DEF_FPTR(j1);
+DEF_FPTR(lgamma);
+DEF_FPTR(log);
+DEF_FPTR(log10);
+DEF_FPTR(log1p);
+DEF_FPTR(log2);
+DEF_FPTR(rint);
+DEF_FPTR(round);
+DEF_FPTR(sin);
+DEF_FPTR(sinh);
+DEF_FPTR(sqrt);
+DEF_FPTR(tan);
+DEF_FPTR(tanh);
+DEF_FPTR(y0);
+DEF_FPTR(y1);
+#undef DEF_FPTR
+
+#define DEF_FPTR(name)                                                  \
+    static LazyLibmFPtr p##name(#name,                                  \
+                                (fptr_t)(uintptr_t)(double(*)(double, double))(::name))
+DEF_FPTR(atan2);
+DEF_FPTR(copysign);
+DEF_FPTR(fdim);
+DEF_FPTR(fmax);
+DEF_FPTR(fmin);
+DEF_FPTR(fmod);
+DEF_FPTR(hypot);
+DEF_FPTR(pow);
+DEF_FPTR(remainder);
+#undef DEF_FPTR
+
+static LazyLibmFPtr pfma("fma", (fptr_t)(uintptr_t)(double(*)(double, double, double))(::fma));
+static LazyLibmFPtr pldexp("ldexp", (fptr_t)(uintptr_t)(double(*)(double, int))(::ldexp));
+static LazyLibmFPtr pjn("jn", (fptr_t)(uintptr_t)(double(*)(int, double))(::jn));
+static LazyLibmFPtr pyn("yn", (fptr_t)(uintptr_t)(double(*)(int, double))(::yn));
+
+}
+
 static fptr_t getBuiltinPtr(Builtins id)
 {
     switch (id) {
         // f(f)
     case Builtins::acos:
-        return ::acos;
+        return pacos;
     case Builtins::acosh:
-        return ::acosh;
+        return pacosh;
     case Builtins::asin:
-        return ::asin;
+        return pasin;
     case Builtins::asinh:
-        return ::asinh;
+        return pasinh;
     case Builtins::atan:
-        return ::atan;
+        return patan;
     case Builtins::atanh:
-        return ::atanh;
+        return patanh;
     case Builtins::cbrt:
-        return ::cbrt;
+        return pcbrt;
     case Builtins::ceil:
-        return ::ceil;
+        return pceil;
     case Builtins::cos:
-        return ::cos;
+        return pcos;
     case Builtins::cosh:
-        return ::cosh;
+        return pcosh;
     case Builtins::erf:
-        return ::erf;
+        return perf;
     case Builtins::erfc:
-        return ::erfc;
+        return perfc;
     case Builtins::exp:
-        return ::exp;
+        return pexp;
     case Builtins::exp10:
-#ifdef NACS_HAS_EXP10
-        return ::exp10;
-#else
-        return ::nacs_exp10;
-#endif
+        return pexp10;
     case Builtins::exp2:
-        return ::exp2;
+        return pexp2;
     case Builtins::expm1:
-        return ::expm1;
+        return pexpm1;
     case Builtins::abs:
-        return ::abs;
+        return pabs;
     case Builtins::floor:
-        return ::floor;
+        return pfloor;
     case Builtins::gamma: // tgamma
-        return ::tgamma;
+        return ptgamma;
     case Builtins::j0:
-        return ::j0;
+        return pj0;
     case Builtins::j1:
-        return ::j1;
+        return pj1;
     case Builtins::lgamma:
-        return ::lgamma;
+        return plgamma;
     case Builtins::log:
-        return ::log;
+        return plog;
     case Builtins::log10:
-        return ::log10;
+        return plog10;
     case Builtins::log1p:
-        return ::log1p;
+        return plog1p;
     case Builtins::log2:
-        return ::log2;
+        return plog2;
     case Builtins::pow10:
-#ifdef NACS_HAS_EXP10
-        return ::exp10;
-#else
-        return ::nacs_exp10;
-#endif
+        return pexp10;
     case Builtins::rint:
-        return ::rint;
+        return print;
     case Builtins::round:
-        return ::round;
+        return pround;
     case Builtins::sin:
-        return ::sin;
+        return psin;
     case Builtins::sinh:
-        return ::sinh;
+        return psinh;
     case Builtins::sqrt:
-        return ::sqrt;
+        return psqrt;
     case Builtins::tan:
-        return ::tan;
+        return ptan;
     case Builtins::tanh:
-        return ::tanh;
+        return ptanh;
     case Builtins::y0:
-        return ::y0;
+        return py0;
     case Builtins::y1:
-        return ::y1;
+        return py1;
 
         // f(f, f)
     case Builtins::atan2:
-        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::atan2));
+        return patan2;
     case Builtins::copysign:
-        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::copysign));
+        return pcopysign;
     case Builtins::fdim:
-        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::fdim));
+        return pfdim;
     case Builtins::max: // fmax
-        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::fmax));
+        return pfmax;
     case Builtins::min: // fmax
-        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::fmin));
+        return pfmin;
     case Builtins::mod: // fmod
-        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::fmod));
+        return pfmod;
     case Builtins::hypot:
-        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::hypot));
+        return phypot;
     case Builtins::pow:
-        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::pow));
+        return ppow;
     case Builtins::remainder:
-        return fptr_t((uintptr_t)static_cast<double(*)(double, double)>(::remainder));
+        return premainder;
 
         // f(f, f, f)
     case Builtins::fma:
-        return fptr_t((uintptr_t)static_cast<double(*)(double, double, double)>(::fma));
+        return pfma;
 
         // f(f, i)
     case Builtins::ldexp:
-        return fptr_t((uintptr_t)static_cast<double(*)(double, int)>(::ldexp));
+        return pldexp;
 
         // f(i, f)
     case Builtins::jn:
-        return fptr_t((uintptr_t)static_cast<double(*)(int, double)>(::jn));
+        return pjn;
     case Builtins::yn:
-        return fptr_t((uintptr_t)static_cast<double(*)(int, double)>(::yn));
+        return pyn;
     default:
         return nullptr;
     }
