@@ -103,6 +103,13 @@ cmake_c_include_fix_path()
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/lib/utils") # config.h
 
+if(IS_WINDOWS)
+  # Used by python and test
+  cmake_utils_cygpath_m(INSTALL_WINDOWS_BINDIR "${CMAKE_INSTALL_FULL_BINDIR}")
+else()
+  set(INSTALL_WINDOWS_BINDIR "${CMAKE_INSTALL_FULL_BINDIR}")
+endif()
+
 add_subdirectory(lib)
 if(ENABLE_PYWRAPPER)
   add_subdirectory(python)
