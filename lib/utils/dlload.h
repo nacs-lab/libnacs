@@ -39,7 +39,7 @@ enum Flags {
     FIRST = 128
 };
 
-NACS_EXPORT(utils) void *open(const char *filename, Flags flags);
+NACS_EXPORT(utils) void *open(const char *filename, int flags);
 NACS_EXPORT(utils) bool close(void *handle);
 NACS_EXPORT(utils) void *sym(void *handle, const char *symbol);
 

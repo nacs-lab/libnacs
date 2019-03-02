@@ -89,7 +89,7 @@ static bool is_full_path(wchar_t *path, DWORD len)
     return len >= 3 && (path[1] == L':') && is_dir_separator(path[2]);
 }
 
-NACS_EXPORT() void *open(const char *filename, Flags flags)
+NACS_EXPORT() void *open(const char *filename, int flags)
 {
     DWORD len = MultiByteToWideChar(CP_UTF8, 0, filename, -1, nullptr, 0);
     if (!len)
@@ -134,7 +134,39 @@ static void* get_libnacs_handle()
     return hdl;
 }
 
-NACS_EXPORT() void *open(const char *filename, Flags flags)
+#if NACS_OS_DARWIN
+static char const *const extensions[] = {".dylib"};
+#else
+static char const *const extensions[] = {".so"};
+#endif
+static constexpr int n_extensions = sizeof(extensions) / sizeof(char*);
+
+static bool endswith_extension(const char *path)
+{
+    if (!path)
+        return false;
+    size_t len = strlen(path);
+    for (int i = 0; i < n_extensions; i++) {
+        const char *ext = extensions[i];
+        size_t extlen = strlen(ext);
+        // Skip version extensions if present
+        size_t j = len - 1;
+        while (j > 0) {
+            if (path[j] != '.' && (path[j] < '0' || path[j] > '9'))
+                break;
+            j--;
+        }
+        if (j < extlen)
+            continue;
+        if ((j == len - 1 || path[j + 1] == '.') &&
+            memcmp(ext, path + j - extlen + 1, extlen) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void *_open(const char *filename, int flags)
 {
 #  define CONVERT_FLAG(flags, FLAG) (flags & FLAG ? RTLD_ ## FLAG : 0)
     dlerror(); /* Reset error status. */
@@ -152,6 +184,21 @@ NACS_EXPORT() void *open(const char *filename, Flags flags)
                   CONVERT_FLAG(flags, FIRST) |
 #  endif
                   (flags & NOW ? RTLD_NOW : RTLD_LAZY));
+}
+
+NACS_EXPORT() void *open(const char *filename, int flags)
+{
+    if (auto hdl = _open(filename, flags))
+        return hdl;
+    if (!endswith_extension(filename)) {
+        std::string name_str(filename);
+        for (int i = 0; i < n_extensions; i++) {
+            if (auto hdl = _open((name_str + extensions[i]).c_str(), flags)) {
+                return hdl;
+            }
+        }
+    }
+    return nullptr;
 }
 
 NACS_EXPORT() bool close(void *handle)
