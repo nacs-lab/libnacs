@@ -114,9 +114,26 @@ NACS_EXPORT() bool close(void *handle)
 
 NACS_EXPORT() void *sym(void *handle, const char *symbol)
 {
+    if (!handle)
+        handle = (void*)get_libnacs_handle();
     return (void*)GetProcAddress((HMODULE)handle, symbol);
 }
 #else
+static void* get_libnacs_handle()
+{
+    static void* hdl =
+        [] {
+            Dl_info info;
+            if (dladdr((void*)(uintptr_t)&open, &info) && info.dli_fname) {
+                if (auto hdl = dlopen(info.dli_fname, RTLD_NOW)) {
+                    return hdl;
+                }
+            }
+            return dlopen(nullptr, RTLD_NOW);
+        }();
+    return hdl;
+}
+
 NACS_EXPORT() void *open(const char *filename, Flags flags)
 {
 #  define CONVERT_FLAG(flags, FLAG) (flags & FLAG ? RTLD_ ## FLAG : 0)
@@ -147,6 +164,8 @@ NACS_EXPORT() bool close(void *handle)
 
 NACS_EXPORT() void *sym(void *handle, const char *symbol)
 {
+    if (!handle)
+        handle = get_libnacs_handle();
     dlerror(); /* Reset error status. */
     return dlsym(handle, symbol);
 }
