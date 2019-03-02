@@ -37,13 +37,13 @@ NACS_EXPORT() double nacs_exp10(double x)
 namespace NaCs {
 namespace IR {
 
-namespace {
-
-static void *get_openlibm_handle()
+void *get_openlibm_handle()
 {
     static void *hdl = DL::open(NACS_OPENLIBM_NAME, DL::GLOBAL | DL::LAZY);
     return hdl;
 }
+
+namespace {
 
 class LazyLibmFPtr {
 public:

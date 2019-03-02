@@ -37,6 +37,7 @@ enum class BuiltinType : uint8_t {
 
 const char *getBuiltinSymbol(Builtins id);
 BuiltinType getBuiltinType(Builtins id);
+void *get_openlibm_handle();
 
 }
 }

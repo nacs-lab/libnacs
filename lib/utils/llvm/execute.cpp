@@ -19,11 +19,10 @@
 #include "execute.h"
 #include "../number.h"
 #include "../ir_p.h"
+#include "../dlload.h"
 
 #if NACS_OS_WINDOWS
 #  include <windows.h>
-#else
-#  include <dlfcn.h>
 #endif
 
 #include <llvm/Support/MemoryBuffer.h>
@@ -31,17 +30,6 @@
 namespace NaCs {
 namespace LLVM {
 namespace Exe {
-
-#if NACS_OS_WINDOWS
-static HMODULE get_self_hdl()
-{
-    HMODULE handle;
-    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
-                            (LPCWSTR)uintptr_t(get_self_hdl), &handle))
-        return 0;
-    return handle;
-}
-#endif
 
 JITSymbol Resolver::findSymbolInLogicalDylib(const std::string&)
 {
@@ -60,25 +48,23 @@ uintptr_t Resolver::find_extern(const std::string &name)
     if (name == "interp")
         return (uintptr_t)static_cast<double(*)(double, uint32_t, const double*)>(
             linearInterpolate);
+    if (auto addr = DL::sym(IR::get_openlibm_handle(), name.c_str()))
+        return (uintptr_t)addr;
 #ifndef NACS_HAS_EXP10
     if (name == "exp10")
         return (uintptr_t)nacs_exp10;
 #endif
+    if (auto addr = DL::sym(nullptr, name.c_str()))
+        return (uintptr_t)addr;
 #if NACS_OS_WINDOWS
-    static auto self_hdl = get_self_hdl();
-    if (uintptr_t ptr = (uintptr_t)GetProcAddress(self_hdl, name.c_str()))
-        return ptr;
     static auto exe_hdl = GetModuleHandle(nullptr);
     if (uintptr_t ptr = (uintptr_t)GetProcAddress(exe_hdl, name.c_str()))
         return ptr;
     static auto ntdll_hdl = GetModuleHandle("ntdll.dll");
     if (uintptr_t ptr = (uintptr_t)GetProcAddress(ntdll_hdl, name.c_str()))
         return ptr;
-    return 0;
-#else
-    static auto self_hdl = dlopen(nullptr, RTLD_LAZY);
-    return (uintptr_t)dlsym(self_hdl, name.c_str());
 #endif
+    return 0;
 }
 
 NACS_EXPORT() Engine::Engine()
