@@ -984,12 +984,12 @@ int32_t *Builder::addInst(Opcode op, size_t nop, Function::InstRef &inst)
     return &bb[oldlen + 1];
 }
 
-NACS_PROTECTED() void Builder::createRet(int32_t val)
+NACS_EXPORT() void Builder::createRet(int32_t val)
 {
     *addInst(Opcode::Ret, 1) = val;
 }
 
-NACS_PROTECTED() int32_t Builder::getConstInt(int32_t val)
+NACS_EXPORT() int32_t Builder::getConstInt(int32_t val)
 {
     auto map = const_ints;
     auto it = map.find(val);
@@ -1002,7 +1002,7 @@ NACS_PROTECTED() int32_t Builder::getConstInt(int32_t val)
     return id;
 }
 
-NACS_PROTECTED() int32_t Builder::getConstFloat(double val)
+NACS_EXPORT() int32_t Builder::getConstFloat(double val)
 {
     auto map = const_floats;
     auto it = map.find(val);
@@ -1015,7 +1015,7 @@ NACS_PROTECTED() int32_t Builder::getConstFloat(double val)
     return id;
 }
 
-NACS_PROTECTED() int32_t Builder::getConst(TagVal val)
+NACS_EXPORT() int32_t Builder::getConst(TagVal val)
 {
     switch (val.typ) {
     case Type::Bool:
@@ -1036,24 +1036,24 @@ int32_t Builder::newSSA(Type typ)
     return id;
 }
 
-NACS_PROTECTED() int32_t Builder::newBB(void)
+NACS_EXPORT() int32_t Builder::newBB(void)
 {
     int32_t id = (int32_t)m_f.code.size();
     m_f.code.push_back({});
     return id;
 }
 
-NACS_PROTECTED() int32_t &Builder::curBB()
+NACS_EXPORT() int32_t &Builder::curBB()
 {
     return m_cur_bb;
 }
 
-NACS_PROTECTED() void Builder::createBr(int32_t br)
+NACS_EXPORT() void Builder::createBr(int32_t br)
 {
     createBr(Consts::True, br, 0);
 }
 
-NACS_PROTECTED() void Builder::createBr(int32_t cond, int32_t bb1, int32_t bb2)
+NACS_EXPORT() void Builder::createBr(int32_t cond, int32_t bb1, int32_t bb2)
 {
     if (cond == Consts::True) {
         int32_t *ptr = addInst(Opcode::Br, 2);
@@ -1096,22 +1096,22 @@ int32_t Builder::createPromoteOP(Opcode op, int32_t val1, int32_t val2)
     return res;
 }
 
-NACS_PROTECTED() int32_t Builder::createAdd(int32_t val1, int32_t val2)
+NACS_EXPORT() int32_t Builder::createAdd(int32_t val1, int32_t val2)
 {
     return createPromoteOP(Opcode::Add, val1, val2);
 }
 
-NACS_PROTECTED() int32_t Builder::createSub(int32_t val1, int32_t val2)
+NACS_EXPORT() int32_t Builder::createSub(int32_t val1, int32_t val2)
 {
     return createPromoteOP(Opcode::Sub, val1, val2);
 }
 
-NACS_PROTECTED() int32_t Builder::createMul(int32_t val1, int32_t val2)
+NACS_EXPORT() int32_t Builder::createMul(int32_t val1, int32_t val2)
 {
     return createPromoteOP(Opcode::Mul, val1, val2);
 }
 
-NACS_PROTECTED() int32_t Builder::createFDiv(int32_t val1, int32_t val2)
+NACS_EXPORT() int32_t Builder::createFDiv(int32_t val1, int32_t val2)
 {
     if (val1 < 0 && val2 < 0)
         return getConst(evalFDiv(m_f.evalConst(val1), m_f.evalConst(val2)));
@@ -1123,7 +1123,7 @@ NACS_PROTECTED() int32_t Builder::createFDiv(int32_t val1, int32_t val2)
     return res;
 }
 
-NACS_PROTECTED() int32_t Builder::createCmp(CmpType cmptyp, int32_t val1, int32_t val2)
+NACS_EXPORT() int32_t Builder::createCmp(CmpType cmptyp, int32_t val1, int32_t val2)
 {
     if (val1 < 0 && val2 < 0)
         return getConst(evalCmp(cmptyp, m_f.evalConst(val1),
@@ -1137,7 +1137,7 @@ NACS_PROTECTED() int32_t Builder::createCmp(CmpType cmptyp, int32_t val1, int32_
     return res;
 }
 
-NACS_PROTECTED() std::pair<int32_t, Function::InstRef>
+NACS_EXPORT() std::pair<int32_t, Function::InstRef>
 Builder::createPhi(Type typ, int ninputs)
 {
     Function::InstRef inst;
@@ -1149,8 +1149,7 @@ Builder::createPhi(Type typ, int ninputs)
     return std::make_pair(res, inst);
 }
 
-NACS_PROTECTED() int32_t Builder::createCall(Builtins id, int32_t nargs,
-                                             const int32_t *args)
+NACS_EXPORT() int32_t Builder::createCall(Builtins id, int32_t nargs, const int32_t *args)
 {
     switch (getBuiltinType(id)) {
     case BuiltinType::F64_F64:
@@ -1199,8 +1198,8 @@ NACS_PROTECTED() int32_t Builder::createCall(Builtins id, int32_t nargs,
     return res;
 }
 
-NACS_PROTECTED() int32_t Builder::createInterp(int32_t v, double x0, double dx,
-                                               uint32_t npoints, const double *points)
+NACS_EXPORT() int32_t Builder::createInterp(int32_t v, double x0, double dx,
+                                            uint32_t npoints, const double *points)
 {
     auto x0id = getConstFloat(x0);
     auto dxid = getConstFloat(dx);
@@ -1216,7 +1215,7 @@ NACS_PROTECTED() int32_t Builder::createInterp(int32_t v, double x0, double dx,
     return res;
 }
 
-NACS_PROTECTED() int32_t Builder::createConvert(Type typ, int32_t v)
+NACS_EXPORT() int32_t Builder::createConvert(Type typ, int32_t v)
 {
     if (m_f.valType(v) == typ)
         return v;
@@ -1229,7 +1228,7 @@ NACS_PROTECTED() int32_t Builder::createConvert(Type typ, int32_t v)
     return res;
 }
 
-NACS_PROTECTED() int32_t Builder::createSelect(int32_t cond, int32_t val1, int32_t val2)
+NACS_EXPORT() int32_t Builder::createSelect(int32_t cond, int32_t val1, int32_t val2)
 {
     auto ty1 = m_f.valType(val1);
     auto ty2 = m_f.valType(val2);
@@ -1245,7 +1244,7 @@ NACS_PROTECTED() int32_t Builder::createSelect(int32_t cond, int32_t val1, int32
     return res;
 }
 
-NACS_PROTECTED() int32_t Builder::createAnd(int32_t val1, int32_t val2)
+NACS_EXPORT() int32_t Builder::createAnd(int32_t val1, int32_t val2)
 {
     if (val1 < 0) {
         auto c1 = m_f.evalConst(val1).get<bool>();
@@ -1267,7 +1266,7 @@ NACS_PROTECTED() int32_t Builder::createAnd(int32_t val1, int32_t val2)
     return res;
 }
 
-NACS_PROTECTED() int32_t Builder::createOr(int32_t val1, int32_t val2)
+NACS_EXPORT() int32_t Builder::createOr(int32_t val1, int32_t val2)
 {
     if (val1 < 0) {
         auto c1 = m_f.evalConst(val1).get<bool>();
@@ -1289,7 +1288,7 @@ NACS_PROTECTED() int32_t Builder::createOr(int32_t val1, int32_t val2)
     return res;
 }
 
-NACS_PROTECTED() int32_t Builder::createXor(int32_t val1, int32_t val2)
+NACS_EXPORT() int32_t Builder::createXor(int32_t val1, int32_t val2)
 {
     if (val1 < 0) {
         auto c1 = m_f.evalConst(val1).get<bool>();
@@ -1311,7 +1310,7 @@ NACS_PROTECTED() int32_t Builder::createXor(int32_t val1, int32_t val2)
     return res;
 }
 
-NACS_PROTECTED() int32_t Builder::createNot(int32_t val)
+NACS_EXPORT() int32_t Builder::createNot(int32_t val)
 {
     if (val < 0) {
         auto c1 = m_f.evalConst(val).get<bool>();
@@ -1332,7 +1331,7 @@ int32_t Builder::addFloatData(const double *data, uint32_t ndata)
     return res;
 }
 
-NACS_PROTECTED() void Builder::addPhiInput(Function::InstRef phi, int32_t bb, int32_t val)
+NACS_EXPORT() void Builder::addPhiInput(Function::InstRef phi, int32_t bb, int32_t val)
 {
     int32_t *inst = &m_f.code[phi.first][phi.second];
     int32_t nargs = inst[1];

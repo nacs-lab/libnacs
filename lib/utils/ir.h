@@ -288,36 +288,36 @@ public:
     {
         return m_f;
     }
-    NACS_PROTECTED(utils) int32_t getConst(TagVal val);
-    NACS_PROTECTED(utils) int32_t getConstInt(int32_t val);
-    NACS_PROTECTED(utils) int32_t getConstFloat(double val);
+    NACS_EXPORT(utils) int32_t getConst(TagVal val);
+    NACS_EXPORT(utils) int32_t getConstInt(int32_t val);
+    NACS_EXPORT(utils) int32_t getConstFloat(double val);
 
-    NACS_PROTECTED(utils) int32_t newBB(void);
-    NACS_PROTECTED(utils) int32_t &curBB(void);
+    NACS_EXPORT(utils) int32_t newBB(void);
+    NACS_EXPORT(utils) int32_t &curBB(void);
 
-    NACS_PROTECTED(utils) void createRet(int32_t val);
-    NACS_PROTECTED(utils) void createBr(int32_t br);
-    NACS_PROTECTED(utils) void createBr(int32_t cond, int32_t bb1, int32_t bb2);
-    NACS_PROTECTED(utils) int32_t createAdd(int32_t val1, int32_t val2);
-    NACS_PROTECTED(utils) int32_t createSub(int32_t val1, int32_t val2);
-    NACS_PROTECTED(utils) int32_t createMul(int32_t val1, int32_t val2);
-    NACS_PROTECTED(utils) int32_t createFDiv(int32_t val1, int32_t val2);
-    NACS_PROTECTED(utils) int32_t createCmp(CmpType cmptyp, int32_t val1, int32_t val2);
-    NACS_PROTECTED(utils) std::pair<int32_t, Function::InstRef> createPhi(Type typ, int ninputs);
-    NACS_PROTECTED(utils) void addPhiInput(Function::InstRef phi, int32_t bb, int32_t val);
-    NACS_PROTECTED(utils) int32_t createCall(Builtins id, int32_t nargs, const int32_t *args);
+    NACS_EXPORT(utils) void createRet(int32_t val);
+    NACS_EXPORT(utils) void createBr(int32_t br);
+    NACS_EXPORT(utils) void createBr(int32_t cond, int32_t bb1, int32_t bb2);
+    NACS_EXPORT(utils) int32_t createAdd(int32_t val1, int32_t val2);
+    NACS_EXPORT(utils) int32_t createSub(int32_t val1, int32_t val2);
+    NACS_EXPORT(utils) int32_t createMul(int32_t val1, int32_t val2);
+    NACS_EXPORT(utils) int32_t createFDiv(int32_t val1, int32_t val2);
+    NACS_EXPORT(utils) int32_t createCmp(CmpType cmptyp, int32_t val1, int32_t val2);
+    NACS_EXPORT(utils) std::pair<int32_t, Function::InstRef> createPhi(Type typ, int ninputs);
+    NACS_EXPORT(utils) void addPhiInput(Function::InstRef phi, int32_t bb, int32_t val);
+    NACS_EXPORT(utils) int32_t createCall(Builtins id, int32_t nargs, const int32_t *args);
     int32_t createCall(Builtins id, const std::vector<int32_t> &args)
     {
         return createCall(id, (int32_t)args.size(), args.data());
     }
-    NACS_PROTECTED(utils) int32_t createInterp(int32_t v, double x0, double dx, uint32_t npoints,
-                                               const double *points);
-    NACS_PROTECTED(utils) int32_t createConvert(Type typ, int32_t v);
-    NACS_PROTECTED(utils) int32_t createSelect(int32_t cond, int32_t val1, int32_t val2);
-    NACS_PROTECTED(utils) int32_t createAnd(int32_t val1, int32_t val2);
-    NACS_PROTECTED(utils) int32_t createOr(int32_t val1, int32_t val2);
-    NACS_PROTECTED(utils) int32_t createXor(int32_t val1, int32_t val2);
-    NACS_PROTECTED(utils) int32_t createNot(int32_t val);
+    NACS_EXPORT(utils) int32_t createInterp(int32_t v, double x0, double dx, uint32_t npoints,
+                                            const double *points);
+    NACS_EXPORT(utils) int32_t createConvert(Type typ, int32_t v);
+    NACS_EXPORT(utils) int32_t createSelect(int32_t cond, int32_t val1, int32_t val2);
+    NACS_EXPORT(utils) int32_t createAnd(int32_t val1, int32_t val2);
+    NACS_EXPORT(utils) int32_t createOr(int32_t val1, int32_t val2);
+    NACS_EXPORT(utils) int32_t createXor(int32_t val1, int32_t val2);
+    NACS_EXPORT(utils) int32_t createNot(int32_t val);
 private:
     int32_t addFloatData(const double *data, uint32_t ndata);
     int32_t *addInst(Opcode op, size_t nop);

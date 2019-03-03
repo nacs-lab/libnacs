@@ -32,7 +32,7 @@
 namespace NaCs {
 namespace Log {
 
-NACS_PROTECTED() Level level = [] {
+NACS_EXPORT() Level level = [] {
     auto env = getenv("NACS_LOG");
     if (!env)
         return Info;
@@ -51,23 +51,23 @@ NACS_PROTECTED() Level level = [] {
 
 static FILE *log_f = stderr;
 
-NACS_PROTECTED() FILE *getLog()
+NACS_EXPORT() FILE *getLog()
 {
     return log_f;
 }
 
-NACS_PROTECTED() void setLog(FILE *f)
+NACS_EXPORT() void setLog(FILE *f)
 {
     log_f = f ? f : stderr;
 }
 
 static bool print_pid = true;
-NACS_PROTECTED() bool printPID()
+NACS_EXPORT() bool printPID()
 {
     return print_pid;
 }
 
-NACS_PROTECTED() void printPID(bool b)
+NACS_EXPORT() void printPID(bool b)
 {
     print_pid = b;
 }
@@ -77,7 +77,7 @@ static NACS_INLINE bool checkLevel(unsigned _level)
     return _level <= Force && _level >= level;
 }
 
-NACS_PROTECTED() void _logV(Level level, const char *func, const char *fmt, va_list ap)
+NACS_EXPORT() void _logV(Level level, const char *func, const char *fmt, va_list ap)
 {
     NACS_RET_IF_FAIL(checkLevel(level));
     static const char *log_prefixes[] = {
@@ -116,7 +116,7 @@ NACS_PROTECTED() void _logV(Level level, const char *func, const char *fmt, va_l
     fflush(log_f);
 }
 
-NACS_PROTECTED() void _log(Level level, const char *func, const char *fmt, ...)
+NACS_EXPORT() void _log(Level level, const char *func, const char *fmt, ...)
 {
     NACS_RET_IF_FAIL(checkLevel(level));
     va_list ap;
@@ -125,24 +125,24 @@ NACS_PROTECTED() void _log(Level level, const char *func, const char *fmt, ...)
     va_end(ap);
 }
 
-NACS_PROTECTED() void infoV(const char *fmt, va_list ap)
+NACS_EXPORT() void infoV(const char *fmt, va_list ap)
 {
     _logV(Info, nullptr, fmt, ap);
 }
-NACS_PROTECTED() void warnV(const char *fmt, va_list ap)
+NACS_EXPORT() void warnV(const char *fmt, va_list ap)
 {
     _logV(Warn, nullptr, fmt, ap);
 }
-NACS_PROTECTED() void errorV(const char *fmt, va_list ap)
+NACS_EXPORT() void errorV(const char *fmt, va_list ap)
 {
     _logV(Error, nullptr, fmt, ap);
 }
-NACS_PROTECTED() void logV(const char *fmt, va_list ap)
+NACS_EXPORT() void logV(const char *fmt, va_list ap)
 {
     _logV(Force, nullptr, fmt, ap);
 }
 
-NACS_PROTECTED() void info(const char *fmt, ...)
+NACS_EXPORT() void info(const char *fmt, ...)
 {
     NACS_RET_IF_FAIL(checkLevel(Info));
     va_list ap;
@@ -151,7 +151,7 @@ NACS_PROTECTED() void info(const char *fmt, ...)
     va_end(ap);
 }
 
-NACS_PROTECTED() void warn(const char *fmt, ...)
+NACS_EXPORT() void warn(const char *fmt, ...)
 {
     NACS_RET_IF_FAIL(checkLevel(Warn));
     va_list ap;
@@ -160,7 +160,7 @@ NACS_PROTECTED() void warn(const char *fmt, ...)
     va_end(ap);
 }
 
-NACS_PROTECTED() void error(const char *fmt, ...)
+NACS_EXPORT() void error(const char *fmt, ...)
 {
     NACS_RET_IF_FAIL(checkLevel(Error));
     va_list ap;
@@ -169,7 +169,7 @@ NACS_PROTECTED() void error(const char *fmt, ...)
     va_end(ap);
 }
 
-NACS_PROTECTED() void log(const char *fmt, ...)
+NACS_EXPORT() void log(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -179,7 +179,7 @@ NACS_PROTECTED() void log(const char *fmt, ...)
 
 } // Log
 
-NACS_PROTECTED() void backtrace()
+NACS_EXPORT() void backtrace()
 {
 #if !NACS_OS_WINDOWS
     void *buff[1024];

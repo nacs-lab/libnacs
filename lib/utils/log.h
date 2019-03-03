@@ -25,6 +25,14 @@
 namespace NaCs {
 namespace Log {
 
+// Do not use this on windows since the compiler doesn't seem to like the
+// version of `inttypes.h` it finds...
+#if !NACS_OS_WINDOWS
+#  define NACS_PRINTF_FORMA_ATTR(a, b) __attribute__((format(printf, a, b)))
+#else
+#  define NACS_PRINTF_FORMA_ATTR(a, b)
+#endif
+
 typedef enum {
     Debug,
     Info,
@@ -33,32 +41,32 @@ typedef enum {
     Force
 } Level;
 
-extern NACS_PROTECTED(utils) Level level;
+extern NACS_EXPORT(utils) Level level;
 
-NACS_PROTECTED(utils) void setLog(FILE *log_f);
-NACS_PROTECTED(utils) FILE *getLog();
-NACS_PROTECTED(utils) bool printPID();
-NACS_PROTECTED(utils) void printPID(bool b);
+NACS_EXPORT(utils) void setLog(FILE *log_f);
+NACS_EXPORT(utils) FILE *getLog();
+NACS_EXPORT(utils) bool printPID();
+NACS_EXPORT(utils) void printPID(bool b);
 
-NACS_PROTECTED(utils) __attribute__((format(printf, 3, 4)))
+NACS_EXPORT(utils) NACS_PRINTF_FORMA_ATTR(3, 4)
 void _log(Level level, const char *func, const char *fmt, ...);
 
-NACS_PROTECTED(utils) __attribute__((format(printf, 3, 0)))
+NACS_EXPORT(utils) NACS_PRINTF_FORMA_ATTR(3, 0)
 void _logV(Level level, const char *func, const char *fmt, va_list ap);
 
-NACS_PROTECTED(utils) __attribute__((format(printf, 1, 2))) void info(const char *fmt, ...);
-NACS_PROTECTED(utils) __attribute__((format(printf, 1, 2))) void warn(const char *fmt, ...);
-NACS_PROTECTED(utils) __attribute__((format(printf, 1, 2))) void error(const char *fmt, ...);
-NACS_PROTECTED(utils) __attribute__((format(printf, 1, 2))) void log(const char *fmt, ...);
+NACS_EXPORT(utils) NACS_PRINTF_FORMA_ATTR(1, 2) void info(const char *fmt, ...);
+NACS_EXPORT(utils) NACS_PRINTF_FORMA_ATTR(1, 2) void warn(const char *fmt, ...);
+NACS_EXPORT(utils) NACS_PRINTF_FORMA_ATTR(1, 2) void error(const char *fmt, ...);
+NACS_EXPORT(utils) NACS_PRINTF_FORMA_ATTR(1, 2) void log(const char *fmt, ...);
 
-NACS_PROTECTED(utils) __attribute__((format(printf, 1, 0))) void infoV(const char *fmt, va_list ap);
-NACS_PROTECTED(utils) __attribute__((format(printf, 1, 0))) void warnV(const char *fmt, va_list ap);
-NACS_PROTECTED(utils) __attribute__((format(printf, 1, 0))) void errorV(const char *fmt, va_list ap);
-NACS_PROTECTED(utils) __attribute__((format(printf, 1, 0))) void logV(const char *fmt, va_list ap);
+NACS_EXPORT(utils) NACS_PRINTF_FORMA_ATTR(1, 0) void infoV(const char *fmt, va_list ap);
+NACS_EXPORT(utils) NACS_PRINTF_FORMA_ATTR(1, 0) void warnV(const char *fmt, va_list ap);
+NACS_EXPORT(utils) NACS_PRINTF_FORMA_ATTR(1, 0) void errorV(const char *fmt, va_list ap);
+NACS_EXPORT(utils) NACS_PRINTF_FORMA_ATTR(1, 0) void logV(const char *fmt, va_list ap);
 
 } // Log
 
-NACS_PROTECTED(utils) void backtrace();
+NACS_EXPORT(utils) void backtrace();
 
 } // NaCs
 
