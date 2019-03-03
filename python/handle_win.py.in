@@ -1,16 +1,36 @@
 #
 
 import os
+import os.path
 import ctypes
 
-def _open_handle(path):
-    prev_cwd = os.getcwd()
-    try:
-        os.chdir(r"@INSTALL_WINDOWS_BINDIR@")
-        hdl = ctypes.CDLL(path)
-    finally:
-        os.chdir(prev_cwd)
-    return hdl
+from ctypes import wintypes
+
+# Implementation copied from https://stackoverflow.com/a/7586821/904262
+kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+def check_bool(result, func, args):
+    if not result:
+        raise ctypes.WinError(ctypes.get_last_error())
+    return args
+
+kernel32.LoadLibraryExW.errcheck = check_bool
+kernel32.LoadLibraryExW.restype = wintypes.HMODULE
+kernel32.LoadLibraryExW.argtypes = (wintypes.LPCWSTR,
+                                    wintypes.HANDLE,
+                                    wintypes.DWORD)
+
+LOAD_WITH_ALTERED_SEARCH_PATH       = 0x00000008
+
+class CDLLEx(ctypes.CDLL):
+    def __init__(self, name, mode=0, handle=None,
+                 use_errno=True, use_last_error=False):
+        if handle is None:
+            handle = kernel32.LoadLibraryExW(name, None, mode)
+        super().__init__(name, mode, handle, use_errno, use_last_error)
+
+def _open_handle(name):
+    return CDLLEx(os.path.join(r"@INSTALL_WINDOWS_BINDIR@", name),
+                  LOAD_WITH_ALTERED_SEARCH_PATH)
 
 nacs_seq = _open_handle(r"@CMAKE_SHARED_LIBRARY_PREFIX@nacs-seq-@MAJOR_VERSION@.dll")
 nacs_utils = _open_handle(r"@CMAKE_SHARED_LIBRARY_PREFIX@nacs-utils-@MAJOR_VERSION@.dll")
