@@ -21,10 +21,6 @@
 #include "../ir_p.h"
 #include "../dlload.h"
 
-#if NACS_OS_WINDOWS
-#  include <windows.h>
-#endif
-
 #include <llvm/Support/MemoryBuffer.h>
 
 namespace NaCs {
@@ -54,17 +50,7 @@ uintptr_t Resolver::find_extern(const std::string &name)
     if (name == "exp10")
         return (uintptr_t)nacs_exp10;
 #endif
-    if (auto addr = DL::sym(nullptr, name.c_str()))
-        return (uintptr_t)addr;
-#if NACS_OS_WINDOWS
-    static auto exe_hdl = GetModuleHandle(nullptr);
-    if (uintptr_t ptr = (uintptr_t)GetProcAddress(exe_hdl, name.c_str()))
-        return ptr;
-    static auto ntdll_hdl = GetModuleHandle("ntdll.dll");
-    if (uintptr_t ptr = (uintptr_t)GetProcAddress(ntdll_hdl, name.c_str()))
-        return ptr;
-#endif
-    return 0;
+    return (uintptr_t)DL::sym(nullptr, name.c_str());
 }
 
 NACS_EXPORT() Engine::Engine()

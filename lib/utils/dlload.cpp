@@ -112,11 +112,24 @@ NACS_EXPORT() bool close(void *handle)
     return FreeLibrary((HMODULE)handle);
 }
 
+static void *_sym(HMODULE handle, const char *symbol)
+{
+    return (void*)GetProcAddress((HMODULE)handle, symbol);
+}
+
 NACS_EXPORT() void *sym(void *handle, const char *symbol)
 {
-    if (!handle)
-        handle = (void*)get_libnacs_handle();
-    return (void*)GetProcAddress((HMODULE)handle, symbol);
+    if (handle)
+        return _sym((HMODULE)handle, symbol);
+    if (auto res = _sym(get_libnacs_handle(), symbol))
+        return res;
+    static auto exe_hdl = GetModuleHandle(nullptr);
+    if (auto res = _sym(exe_hdl, symbol))
+        return res;
+    static auto ntdll_hdl = GetModuleHandle("ntdll.dll");
+    if (auto res = _sym(ntdll_hdl, symbol))
+        return res;
+    return nullptr;
 }
 #else
 static void* get_libnacs_handle()
