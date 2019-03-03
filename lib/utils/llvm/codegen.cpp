@@ -18,13 +18,16 @@
 
 #include "codegen.h"
 #include "utils.h"
-#include "compile_p.h"
+#include "mergephi.h"
 
 #include "../ir_p.h"
 #include "../number.h"
 
 #include <llvm/ADT/SetVector.h>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/IR/Dominators.h>
+#include <llvm/Transforms/Utils/PromoteMemToReg.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 namespace NaCs {
 namespace LLVM {
@@ -708,6 +711,19 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             builder.CreateUnreachable();
         }
     }
+
+    // 7. Do some optimizations that'll make the IR much easier to analyse
+    //   * Eliminate all the alloca's
+    DominatorTree DT(*f);
+    slots.push_back(prev_bb_var);
+    PromoteMemToReg(slots, DT);
+    //   * Fix our messy phi lowering
+    mergePhi(*f);
+    //   * Eliminate the extra entry block if no one is jumping to it...
+    //     This should make most IR a single BB.
+    if (auto *second_bb = f->getEntryBlock().getSingleSuccessor())
+        MergeBlockIntoPredecessor(second_bb);
+
     return f;
 }
 

@@ -16,17 +16,17 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#ifndef __NACS_UTILS_LLVM_COMPILE_P_H__
-#define __NACS_UTILS_LLVM_COMPILE_P_H__
+#ifndef __NACS_UTILS_LLVM_MERGE_PHI_H__
+#define __NACS_UTILS_LLVM_MERGE_PHI_H__
 
-#include <llvm/Pass.h>
+#include <llvm/IR/Function.h>
 
 namespace NaCs {
 namespace LLVM {
 
 using namespace llvm;
 
-Pass *createMergePhiPass();
+void mergePhi(Function &F);
 
 }
 }

@@ -78,7 +78,7 @@ set(nacs_utils_llvm_SRCS
   llvm/compile.cpp
   llvm/execute.cpp
   llvm/memmgr.cpp
-  llvm/mergephi-pass.cpp
+  llvm/mergephi.cpp
   llvm/utils.cpp)
 
 configure_file(config.h.in config.h @ONLY)

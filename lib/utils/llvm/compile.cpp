@@ -17,7 +17,6 @@
  *************************************************************************/
 
 #include "compile.h"
-#include "compile_p.h"
 
 #include "../utils.h"
 
@@ -49,9 +48,7 @@ void addOptimization(legacy::PassManagerBase &pm)
 {
     pm.add(createCFGSimplificationPass());
     pm.add(createDeadInstEliminationPass());
-    pm.add(createPromoteMemoryToRegisterPass());
     pm.add(createEarlyCSEPass());
-    pm.add(createMergePhiPass());
     pm.add(createDeadInstEliminationPass());
     pm.add(createInstructionCombiningPass());
 
