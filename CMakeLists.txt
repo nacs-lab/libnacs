@@ -89,6 +89,8 @@ if(IS_WINDOWS)
   # Workaround CMake bug for Clang
   set(CMAKE_ASM_COMPILE_OPTIONS_PIC)
   set(CMAKE_ASM_COMPILE_OPTIONS_PIE)
+else()
+  set(LINKER_FLAGS ${LINKER_FLAGS} -Wl,-Bsymbolic)
 endif()
 
 cmake_c_add_flags(CMAKE_C_FLAGS -std=gnu11)
