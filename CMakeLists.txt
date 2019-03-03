@@ -61,6 +61,7 @@ endif()
 if(ENABLE_SIMD)
   find_package(Sleef REQUIRED)
 endif()
+find_package(OpenLibm)
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden -Wconversion
   -fno-math-errno -Wno-sign-conversion -Wno-psabi -D_FILE_OFFSET_BITS=64)
