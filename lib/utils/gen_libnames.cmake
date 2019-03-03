@@ -34,6 +34,5 @@ foreach(name ${NAMES})
   write_file(${name} "${${name}}")
 endforeach()
 
-execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-  "${OUTPUT_FILE}.tmp" "${OUTPUT_FILE}"
-  OUTPUT_QUIET ERROR_QUIET)
+# This is copy_if_different
+configure_file("${OUTPUT_FILE}.tmp" "${OUTPUT_FILE}" COPYONLY)
