@@ -191,6 +191,8 @@ bool MergePhi::processPhiBool(PHINode *phi, Instruction *first_non_phi) const
         p.first->replaceAllUsesWith(p.second);
         p.first->eraseFromParent();
     }
+    if (phi->use_empty())
+        phi->eraseFromParent();
     return changed;
 }
 
@@ -211,8 +213,12 @@ bool MergePhi::mergePhiSelect(BasicBlock &bb) const
         return false;
     assert(first_non_phi);
     bool changed = false;
-    for (auto phi: phis)
-        changed = changed | processPhiBool(phi, first_non_phi);
+    for (auto phi: phis) {
+        if (processPhiBool(phi, first_non_phi)) {
+            first_non_phi = bb.getFirstNonPHI();
+            changed = true;
+        }
+    }
     return changed;
 }
 
@@ -264,6 +270,8 @@ bool MergePhi::processPhiCmp(PHINode *phi, Instruction *first_non_phi) const
         p.first->replaceAllUsesWith(p.second);
         p.first->eraseFromParent();
     }
+    if (phi->use_empty())
+        phi->eraseFromParent();
     return changed;
 }
 
@@ -284,8 +292,12 @@ bool MergePhi::mergePhiCmp(BasicBlock &bb) const
         return false;
     assert(first_non_phi);
     bool changed = false;
-    for (auto phi: phis)
-        changed = changed | processPhiCmp(phi, first_non_phi);
+    for (auto phi: phis) {
+        if (processPhiCmp(phi, first_non_phi)) {
+            first_non_phi = bb.getFirstNonPHI();
+            changed = true;
+        }
+    }
     return changed;
 }
 
@@ -302,6 +314,9 @@ bool MergePhi::mergePhiPhi(BasicBlock &bb) const
             if (!iv || iv->getParent() != phi->getParent())
                 continue;
             phi->setIncomingValue(i, iv->getIncomingValueForBlock(phi->getIncomingBlock(i)));
+            if (iv->use_empty()) {
+                iv->eraseFromParent();
+            }
         }
     }
     return changed;
