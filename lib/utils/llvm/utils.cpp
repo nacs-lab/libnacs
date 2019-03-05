@@ -17,6 +17,10 @@
  *************************************************************************/
 
 #include "utils.h"
+#include "cpu_p.h"
+
+#include <llvm/ADT/Triple.h>
+#include <llvm/Support/Host.h>
 
 namespace NaCs {
 namespace LLVM {
@@ -75,6 +79,54 @@ NACS_EXPORT() LLVMContext *new_context()
 NACS_EXPORT() void delete_context(LLVMContext *ctx)
 {
     delete ctx;
+}
+
+const std::string &get_cpu_arch()
+{
+    static const std::string arch = Triple(sys::getProcessTriple()).getArchName();
+    return arch;
+}
+
+const std::string &get_cpu_name()
+{
+    static const std::string name = sys::getHostCPUName().str();
+    return name;
+}
+
+const std::string &get_cpu_features()
+{
+    static const std::string features =
+        [] {
+            StringMap<bool> HostFeatures;
+            sys::getHostCPUFeatures(HostFeatures);
+            std::string attr;
+            for (auto &ele: HostFeatures) {
+                if (ele.getValue()) {
+                    if (!attr.empty()) {
+                        attr.append(",+");
+                    }
+                    else {
+                        attr.append("+");
+                    }
+                    attr.append(ele.getKey().str());
+                }
+            }
+            // Explicitly disabled features need to be added at the end so that
+            // they are not reenabled by other features that implies them by default.
+            for (auto &ele: HostFeatures) {
+                if (!ele.getValue()) {
+                    if (!attr.empty()) {
+                        attr.append(",-");
+                    }
+                    else {
+                        attr.append("-");
+                    }
+                    attr.append(ele.getKey().str());
+                }
+            }
+            return attr;
+        }();
+    return features;
 }
 
 }

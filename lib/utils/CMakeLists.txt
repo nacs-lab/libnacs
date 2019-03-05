@@ -84,6 +84,8 @@ if(ENABLE_LLVM)
   include_directories(${LLVM_INCLUDE_DIRS})
   set_property(SOURCE ${nacs_utils_llvm_SRCS} APPEND_STRING
     PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
+else()
+  set(nacs_utils_SRCS ${nacs_utils_SRCS} llvm/cpu_nollvm.cpp)
 endif()
 
 add_definitions("-\"DNACS_EXPORT_LIB_utils()=\"")
