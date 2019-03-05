@@ -207,66 +207,6 @@ static inline constexpr decltype(auto) applyTuple(F&& f, Tuple&& t)
                            std::tuple_size<std::decay_t<Tuple>>::value>{});
 }
 
-template<typename T>
-struct StrCache {
-    struct CacheEntry {
-        size_t age;
-        size_t sz;
-        T v;
-    };
-    StrCache(size_t lim)
-        : m_lim(lim),
-          m_cache{},
-          m_id(0),
-          m_totalsz(0)
-    {
-    }
-    const T *get(const std::string &key) const
-    {
-        auto it = m_cache.find(key);
-        if (it == m_cache.end())
-            return nullptr;
-        return &it->second.v;
-    }
-    void ejectOldest()
-    {
-        auto it = m_cache.begin();
-        if (it == m_cache.end()) {
-            m_totalsz = 0;
-            return;
-        }
-        for (auto it2 = it;it2 != m_cache.end();++it2) {
-            if (it2->second.age < it->second.age) {
-                it = it2;
-            }
-        }
-        m_totalsz -= it->second.sz;
-        m_cache.erase(it);
-    }
-    const T *set(const std::string &key, T &&v)
-    {
-        if (const T *r = get(key))
-            return r;
-        size_t sz = v.cacheSize();
-        if (sz >= m_lim)
-            return nullptr;
-        while (sz + m_totalsz > m_lim)
-            ejectOldest();
-        auto &entry = m_cache[key];
-        entry.age = m_id++;
-        entry.sz = sz;
-        entry.v = std::move(v);
-        m_totalsz += sz;
-        return &entry.v;
-    }
-
-private:
-    size_t m_lim;
-    std::map<std::string,CacheEntry> m_cache;
-    size_t m_id;
-    size_t m_totalsz;
-};
-
 }
 
 #endif
