@@ -101,7 +101,6 @@ static NACS_INLINE T assume(T v)
 #endif
 
 namespace CPU {
-// Update codegen version in `ccall.cpp` after changing either `pause` or `wake`
 #ifdef __MIC__
 static NACS_INLINE void pause()
 {
