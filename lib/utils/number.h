@@ -25,6 +25,12 @@
 
 #include <cmath>
 
+#if NACS_CPU_X86 || NACS_CPU_X86_64
+#  include <immintrin.h>
+#elif NACS_CPU_AARCH64
+#  include <arm_neon.h>
+#endif
+
 namespace NaCs {
 
 template<typename T1, typename T2>
@@ -312,6 +318,12 @@ NACS_EXPORT(utils) NACS_VECTORCALL
 __m256d linearInterpolate4_avx2(__m256d x, __m256d x0, __m256d dx,
                                 uint32_t npoints, const double *points);
 #  endif
+#elif NACS_CPU_AARCH64
+NACS_EXPORT(utils) float64x2_t linearInterpolate2_asimd(float64x2_t x, uint32_t npoints,
+                                                        const double *points);
+NACS_EXPORT(utils) float64x2_t linearInterpolate2_asimd(float64x2_t x, float64x2_t x0,
+                                                        float64x2_t dx, uint32_t npoints,
+                                                        const double *points);
 #endif
 
 }

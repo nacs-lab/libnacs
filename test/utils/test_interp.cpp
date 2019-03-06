@@ -168,6 +168,30 @@ __attribute__((target("avx512f,avx512dq"))) void test_avx512()
                                            -0.1, 0.3 / 3, 1.4 / 3, 1.1}, 4, points);
     print_avg(timer, "AVX512<8>", 100000000);
 }
+#elif NACS_CPU_AARCH64
+static void test_asimd()
+{
+    auto res = linearInterpolate2_asimd(float64x2_t{2.3, 3.4}, float64x2_t{2, 2},
+                                        float64x2_t{3, 3}, 4, points);
+    assert(approx(res[0], 0.03));
+    assert(approx(res[1], 0.14));
+    res = linearInterpolate2_asimd(float64x2_t{2, 5}, float64x2_t{2, 2},
+                                   float64x2_t{3, 3}, 4, points);
+    assert(approx(res[0], 0.0));
+    assert(approx(res[1], 0.6));
+
+    res = linearInterpolate2_asimd(float64x2_t{0.3, 1.4} / 3, 4, points);
+    assert(approx(res[0], 0.03));
+    assert(approx(res[1], 0.14));
+    res = linearInterpolate2_asimd(float64x2_t{-0.1, 1.1}, 4, points);
+    assert(approx(res[0], 0.0));
+    assert(approx(res[1], 0.6));
+
+    Timer timer;
+    for (int i = 0; i < 100000000 / 2; i++)
+        linearInterpolate2_asimd(float64x2_t{0.3, 1.4} / 3, 4, points);
+    print_avg(timer, "ASIMD<2>", 100000000);
+}
 #endif
 
 int main()
@@ -202,6 +226,8 @@ int main()
         test_avx2();
     if (has_avx512)
         test_avx512();
+#elif NACS_CPU_AARCH64
+    test_asimd();
 #endif
 
     return 0;

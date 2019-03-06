@@ -18,10 +18,6 @@
 
 #include "number.h"
 
-#if NACS_CPU_X86 || NACS_CPU_X86_64
-#  include <immintrin.h>
-#endif
-
 namespace NaCs {
 
 __attribute__((always_inline))
@@ -290,6 +286,38 @@ NACS_EXPORT() __m512d linearInterpolate8_avx512f(__m512d x, __m512d x0, __m512d 
     return linearInterpolate8(x, x0, dx, npoints, points);
 }
 #  endif
+
+#elif NACS_CPU_AARCH64
+
+static NACS_INLINE float64x2_t linearInterpolate2(float64x2_t x, uint32_t npoints,
+                                                  const double *points)
+{
+    auto und_ok = x > 0;
+    auto ovr_ok = x < 1;
+    auto ok = ovr_ok & und_ok;
+    x = x * (npoints - 1);
+    x = float64x2_t(ok & uint64x2_t(x));
+    auto lo = vcvtq_s64_f64(x);
+    x = x - vcvtq_f64_s64(lo);
+    auto vlohi = vld2q_f64(&points[lo[0]]);
+    vlohi = vld2q_lane_f64(&points[lo[1]], vlohi, 1);
+    auto res = x * vlohi.val[1] + (1 - x) * vlohi.val[0];
+    res = vbslq_f64(uint64x2_t(ovr_ok), res, vld1q_dup_f64(&points[npoints - 1]));
+    return res;
+}
+
+NACS_EXPORT() float64x2_t linearInterpolate2_asimd(float64x2_t x, uint32_t npoints,
+                                                   const double *points)
+{
+    return linearInterpolate2(x, npoints, points);
+}
+
+NACS_EXPORT() float64x2_t linearInterpolate2_asimd(float64x2_t x, float64x2_t x0,
+                                                   float64x2_t dx, uint32_t npoints,
+                                                   const double *points)
+{
+    return linearInterpolate2((x - x0) / dx, npoints, points);
+}
 
 #endif
 
