@@ -319,6 +319,45 @@ NACS_EXPORT() float64x2_t linearInterpolate2_asimd(float64x2_t x, float64x2_t x0
     return linearInterpolate2((x - x0) / dx, npoints, points);
 }
 
+// The following versions are not using a wider vector width but should
+// remove some duplicated instructions and allow better parallel execution.
+// Clang seems to be doing a better job than GCC on this, especially for the x2x4 version.
+NACS_EXPORT() float64x2x2_t linearInterpolate4_asimd(float64x2x2_t x, uint32_t npoints,
+                                                     const double *points)
+{
+    return {linearInterpolate2(x.val[0], npoints, points),
+            linearInterpolate2(x.val[1], npoints, points)};
+}
+
+NACS_EXPORT() float64x2x2_t linearInterpolate4_asimd(float64x2x2_t x, float64x2x2_t x0,
+                                                     float64x2x2_t dx, uint32_t npoints,
+                                                     const double *points)
+{
+    return {linearInterpolate2((x.val[0] - x0.val[0]) / dx.val[0], npoints, points),
+            linearInterpolate2((x.val[1] - x0.val[1]) / dx.val[1], npoints, points)};
+}
+
+NACS_EXPORT() float64x2x4_t linearInterpolate8_asimd(float64x2x4_t x, uint32_t npoints,
+                                                     const double *points)
+{
+    return {linearInterpolate2(x.val[0], npoints, points),
+            linearInterpolate2(x.val[1], npoints, points),
+            linearInterpolate2(x.val[2], npoints, points),
+            linearInterpolate2(x.val[3], npoints, points)};
+}
+
+// Pass `dx` by reference since it needs to go through memory according to the ABI anyway
+// Give the caller more freedom where that memory should be
+NACS_EXPORT() float64x2x4_t linearInterpolate8_asimd(float64x2x4_t x, float64x2x4_t x0,
+                                                     const float64x2x4_t &dx,
+                                                     uint32_t npoints, const double *points)
+{
+    return {linearInterpolate2((x.val[0] - x0.val[0]) / dx.val[0], npoints, points),
+            linearInterpolate2((x.val[1] - x0.val[1]) / dx.val[1], npoints, points),
+            linearInterpolate2((x.val[2] - x0.val[2]) / dx.val[2], npoints, points),
+            linearInterpolate2((x.val[3] - x0.val[3]) / dx.val[3], npoints, points)};
+}
+
 #endif
 
 }

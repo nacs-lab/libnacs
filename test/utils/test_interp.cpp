@@ -171,26 +171,80 @@ __attribute__((target("avx512f,avx512dq"))) void test_avx512()
 #elif NACS_CPU_AARCH64
 static void test_asimd()
 {
-    auto res = linearInterpolate2_asimd(float64x2_t{2.3, 3.4}, float64x2_t{2, 2},
-                                        float64x2_t{3, 3}, 4, points);
-    assert(approx(res[0], 0.03));
-    assert(approx(res[1], 0.14));
-    res = linearInterpolate2_asimd(float64x2_t{2, 5}, float64x2_t{2, 2},
-                                   float64x2_t{3, 3}, 4, points);
-    assert(approx(res[0], 0.0));
-    assert(approx(res[1], 0.6));
+    auto res2 = linearInterpolate2_asimd(float64x2_t{2.3, 3.4}, float64x2_t{2, 2},
+                                         float64x2_t{3, 3}, 4, points);
+    assert(approx(res2[0], 0.03));
+    assert(approx(res2[1], 0.14));
+    res2 = linearInterpolate2_asimd(float64x2_t{2, 5}, float64x2_t{2, 2},
+                                    float64x2_t{3, 3}, 4, points);
+    assert(approx(res2[0], 0.0));
+    assert(approx(res2[1], 0.6));
 
-    res = linearInterpolate2_asimd(float64x2_t{0.3, 1.4} / 3, 4, points);
-    assert(approx(res[0], 0.03));
-    assert(approx(res[1], 0.14));
-    res = linearInterpolate2_asimd(float64x2_t{-0.1, 1.1}, 4, points);
-    assert(approx(res[0], 0.0));
-    assert(approx(res[1], 0.6));
+    res2 = linearInterpolate2_asimd(float64x2_t{0.3, 1.4} / 3, 4, points);
+    assert(approx(res2[0], 0.03));
+    assert(approx(res2[1], 0.14));
+    res2 = linearInterpolate2_asimd(float64x2_t{-0.1, 1.1}, 4, points);
+    assert(approx(res2[0], 0.0));
+    assert(approx(res2[1], 0.6));
+
+    auto res4 = linearInterpolate4_asimd({{float64x2_t{1.0, 2.3}, float64x2_t{3.4, 5.0}}},
+                                         {{float64x2_t{2, 2}, float64x2_t{2, 2}}},
+                                         {{float64x2_t{3, 3}, float64x2_t{3, 3}}}, 4, points);
+    assert(approx(res4.val[0][0], 0.0));
+    assert(approx(res4.val[0][1], 0.03));
+    assert(approx(res4.val[1][0], 0.14));
+    assert(approx(res4.val[1][1], 0.6));
+    res4 = linearInterpolate4_asimd({{float64x2_t{-0.1, 0.3 / 3}, float64x2_t{1.4 / 3, 1.1}}},
+                                    4, points);
+    assert(approx(res4.val[0][0], 0.0));
+    assert(approx(res4.val[0][1], 0.03));
+    assert(approx(res4.val[1][0], 0.14));
+    assert(approx(res4.val[1][1], 0.6));
+
+    auto res8 = linearInterpolate8_asimd(
+        {{float64x2_t{1.0, 2.3}, float64x2_t{3.4, 5.0},
+          float64x2_t{1.0, 2.3}, float64x2_t{3.4, 5.0}}},
+        {{float64x2_t{2, 2}, float64x2_t{2, 2}, float64x2_t{2, 2}, float64x2_t{2, 2}}},
+        {{float64x2_t{3, 3}, float64x2_t{3, 3}, float64x2_t{3, 3}, float64x2_t{3, 3}}},
+        4, points);
+    assert(approx(res8.val[0][0], 0.0));
+    assert(approx(res8.val[0][1], 0.03));
+    assert(approx(res8.val[1][0], 0.14));
+    assert(approx(res8.val[1][1], 0.6));
+    assert(approx(res8.val[2][0], 0.0));
+    assert(approx(res8.val[2][1], 0.03));
+    assert(approx(res8.val[3][0], 0.14));
+    assert(approx(res8.val[3][1], 0.6));
+    res8 = linearInterpolate8_asimd(
+        {{float64x2_t{-0.1, 0.3 / 3}, float64x2_t{1.4 / 3, 1.1},
+          float64x2_t{-0.1, 0.3 / 3}, float64x2_t{1.4 / 3, 1.1}}}, 4, points);
+    assert(approx(res8.val[0][0], 0.0));
+    assert(approx(res8.val[0][1], 0.03));
+    assert(approx(res8.val[1][0], 0.14));
+    assert(approx(res8.val[1][1], 0.6));
+    assert(approx(res8.val[2][0], 0.0));
+    assert(approx(res8.val[2][1], 0.03));
+    assert(approx(res8.val[3][0], 0.14));
+    assert(approx(res8.val[3][1], 0.6));
+
 
     Timer timer;
     for (int i = 0; i < 100000000 / 2; i++)
         linearInterpolate2_asimd(float64x2_t{0.3, 1.4} / 3, 4, points);
     print_avg(timer, "ASIMD<2>", 100000000);
+
+    timer.restart();
+    for (int i = 0; i < 100000000 / 4; i++)
+        linearInterpolate4_asimd({{float64x2_t{-0.1, 0.3 / 3}, float64x2_t{1.4 / 3, 1.1}}},
+                                 4, points);
+    print_avg(timer, "ASIMD<4>", 100000000);
+
+    timer.restart();
+    for (int i = 0; i < 100000000 / 8; i++)
+        linearInterpolate8_asimd(
+            {{float64x2_t{-0.1, 0.3 / 3}, float64x2_t{1.4 / 3, 1.1},
+              float64x2_t{-0.1, 0.3 / 3}, float64x2_t{1.4 / 3, 1.1}}}, 4, points);
+    print_avg(timer, "ASIMD<8>", 100000000);
 }
 #endif
 

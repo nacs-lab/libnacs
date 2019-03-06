@@ -324,6 +324,17 @@ NACS_EXPORT(utils) float64x2_t linearInterpolate2_asimd(float64x2_t x, uint32_t 
 NACS_EXPORT(utils) float64x2_t linearInterpolate2_asimd(float64x2_t x, float64x2_t x0,
                                                         float64x2_t dx, uint32_t npoints,
                                                         const double *points);
+NACS_EXPORT(utils) float64x2x2_t linearInterpolate4_asimd(float64x2x2_t x, uint32_t npoints,
+                                                          const double *points);
+NACS_EXPORT(utils) float64x2x2_t linearInterpolate4_asimd(float64x2x2_t x, float64x2x2_t x0,
+                                                          float64x2x2_t dx, uint32_t npoints,
+                                                          const double *points);
+NACS_EXPORT(utils) float64x2x4_t linearInterpolate8_asimd(float64x2x4_t x, uint32_t npoints,
+                                                          const double *points);
+NACS_EXPORT(utils) float64x2x4_t linearInterpolate8_asimd(float64x2x4_t x, float64x2x4_t x0,
+                                                          const float64x2x4_t &dx,
+                                                          uint32_t npoints,
+                                                          const double *points);
 #endif
 
 }
