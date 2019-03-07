@@ -27,6 +27,7 @@ set(nacs_utils_HDRS
   macros.h
   mem.h
   number.h
+  processor.h
   streams.h
   term.h
   thread.h
@@ -45,6 +46,7 @@ set(nacs_utils_SRCS
   mem.cpp
   number.cpp
   number_simd.S
+  processor.cpp
   streams.cpp
   term.cpp
   timer.cpp
