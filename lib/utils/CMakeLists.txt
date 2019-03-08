@@ -22,6 +22,7 @@ set(nacs_utils_HDRS
   dlload.h
   errors.h
   fd_utils.h
+  features_x86.h
   ir.h
   log.h
   macros.h

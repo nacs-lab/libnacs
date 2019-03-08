@@ -34,6 +34,7 @@ private:
     std::string m_arch;
 };
 
+#if !NACS_CPU_X86 && !NACS_CPU_X86_64
 NACS_EXPORT() const CPUInfo &CPUInfo::get_host()
 {
     static const UnknownCPUInfo host_info(LLVM::get_cpu_arch(),
@@ -41,5 +42,6 @@ NACS_EXPORT() const CPUInfo &CPUInfo::get_host()
                                           LLVM::get_cpu_features());
     return host_info;
 }
+#endif
 
 } // Nacs

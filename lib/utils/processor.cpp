@@ -28,6 +28,57 @@ namespace NaCs {
 
 namespace {
 
+template<typename T1, typename T2, typename T3>
+static inline bool test_bits(T1 v, T2 mask, T3 test)
+{
+    return T3(v & mask) == test;
+}
+
+template<typename T1, typename T2>
+static inline bool test_all_bits(T1 v, T2 mask)
+{
+    return test_bits(v, mask, mask);
+}
+
+template<typename T1, typename T2>
+static inline bool test_nbit(const T1 &bits, T2 _bitidx)
+{
+    auto bitidx = static_cast<uint32_t>(_bitidx);
+    auto u32idx = bitidx / 32;
+    auto bit = bitidx % 32;
+    return (bits[u32idx] & (1 << bit)) != 0;
+}
+
+template<typename T>
+static inline void unset_bits(T &bits)
+{
+    (void)bits;
+}
+
+template<typename T, typename T1, typename... Rest>
+static inline void unset_bits(T &bits, T1 _bitidx, Rest... rest)
+{
+    auto bitidx = static_cast<uint32_t>(_bitidx);
+    auto u32idx = bitidx / 32;
+    auto bit = bitidx % 32;
+    bits[u32idx] = bits[u32idx] & ~uint32_t(1 << bit);
+    unset_bits(bits, rest...);
+}
+
+template<typename T, typename T1>
+static inline void set_bit(T &bits, T1 _bitidx, bool val)
+{
+    auto bitidx = static_cast<uint32_t>(_bitidx);
+    auto u32idx = bitidx / 32;
+    auto bit = bitidx % 32;
+    if (val) {
+        bits[u32idx] = bits[u32idx] | uint32_t(1 << bit);
+    }
+    else {
+        bits[u32idx] = bits[u32idx] & ~uint32_t(1 << bit);
+    }
+}
+
 static inline std::vector<std::string>&
 append_features(std::vector<std::string> &features, const std::string &ext_features)
 {
@@ -61,6 +112,179 @@ static inline std::vector<std::string>&
 append_features(std::vector<std::string> &&features, const std::string &ext_features)
 {
     return append_features(features, ext_features);
+}
+
+template<size_t n>
+struct FeatureList : std::array<uint32_t,n> {
+private:
+    static inline constexpr uint32_t _add_u32(uint32_t mask, uint32_t)
+    {
+        return mask;
+    }
+
+    template<typename T, typename... Rest>
+    static inline constexpr uint32_t _add_u32(uint32_t mask, uint32_t u32idx,
+                                              T bit, Rest... args)
+    {
+        return _add_u32(mask | ((int(bit) >= 0 && int(bit) / 32 == (int)u32idx) ?
+                                (1 << (int(bit) % 32)) : 0),
+                        u32idx, args...);
+    }
+
+    template<typename... Args>
+    static inline constexpr uint32_t _get_u32(uint32_t u32idx, Args... args)
+    {
+        return _add_u32(uint32_t(0), u32idx, args...);
+    }
+
+    template<size_t... I, typename... Args>
+    static inline constexpr FeatureList<n>
+    _get(std::index_sequence<I...>, Args... args)
+    {
+        return FeatureList<n>(_get_u32(I, args...)...);
+    }
+
+    template<size_t... I>
+    inline constexpr FeatureList<n>
+    _or(std::index_sequence<I...>, const FeatureList<n> &other) const
+    {
+        return FeatureList<n>(((*this)[I] | other[I])...);
+    }
+
+    template<size_t... I>
+    inline constexpr FeatureList<n>
+    _and(std::index_sequence<I...>, const FeatureList<n> &other) const
+    {
+        return FeatureList<n>(((*this)[I] & other[I])...);
+    }
+
+    template<size_t... I>
+    inline constexpr FeatureList<n>
+    _not(std::index_sequence<I...>) const
+    {
+        return FeatureList<n>((~(*this)[I])...);
+    }
+
+public:
+    using std::array<uint32_t,n>::array;
+    template<typename... Args>
+    constexpr FeatureList(Args... args)
+        : std::array<uint32_t,n>{args...}
+    {}
+
+    template<typename... Args>
+    static inline constexpr FeatureList<n> get(Args... args)
+    {
+        return _get(std::make_index_sequence<n>(), args...);
+    }
+
+    inline constexpr FeatureList<n> operator|(const FeatureList<n> &other) const
+    {
+        return _or(std::make_index_sequence<n>(), other);
+    }
+
+    inline constexpr FeatureList<n> operator&(const FeatureList<n> &other) const
+    {
+        return _and(std::make_index_sequence<n>(), other);
+    }
+
+    inline constexpr FeatureList<n> operator~() const
+    {
+        return _not(std::make_index_sequence<n>());
+    }
+};
+
+struct FeatureName {
+    const char *name;
+    uint32_t bit; // bit index into a `uint32_t` array;
+    uint32_t llvmver; // 0 if it is available on the oldest LLVM version we support
+};
+
+template<typename CPU, size_t n>
+struct CPUSpec {
+    const char *name;
+    CPU cpu;
+    CPU fallback;
+    uint32_t llvmver;
+    FeatureList<n> features;
+};
+
+struct FeatureDep {
+    uint32_t feature;
+    uint32_t dep;
+};
+
+// Recursively enable all features that the current feature set depends on.
+template<typename FeatureList, typename Deps>
+static inline void enable_depends(FeatureList &features, const Deps &deps)
+{
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (auto &dep: deps) {
+            if (!test_nbit(features, dep.feature) || test_nbit(features, dep.dep))
+                continue;
+            set_bit(features, dep.dep, true);
+            changed = true;
+        }
+    }
+}
+
+// Recursively disable all features that the current feature set does not provide.
+template<typename FeatureList, typename Deps>
+static inline void disable_depends(FeatureList &features, const Deps &deps)
+{
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (auto &dep: deps) {
+            if (!test_nbit(features, dep.feature) || test_nbit(features, dep.dep))
+                continue;
+            unset_bits(features, dep.feature);
+            changed = true;
+        }
+    }
+}
+
+template<typename Specs>
+static auto find_cpu(uint32_t cpu, const Specs &specs) -> decltype(&*std::begin(specs))
+{
+    for (auto &spec: specs) {
+        if (cpu == uint32_t(spec.cpu)) {
+            return &spec;
+        }
+    }
+    return nullptr;
+}
+
+template<typename Specs>
+static auto find_cpu(const char *name, const Specs &specs) -> decltype(&*std::begin(specs))
+{
+    for (auto &spec: specs) {
+        if (strcmp(name, spec.name) == 0) {
+            return &spec;
+        }
+    }
+    return nullptr;
+}
+
+template<typename Specs>
+static const char *find_cpu_name(uint32_t cpu, const Specs &specs)
+{
+    if (auto *spec = find_cpu(cpu, specs))
+        return spec->name;
+    return "generic";
+}
+
+template<typename Features>
+static uint32_t find_feature_bit(const Features &features, const char *str, size_t len)
+{
+    for (auto &feature: features) {
+        if (strncmp(feature.name, str, len) == 0 && feature.name[len] == 0) {
+            return feature.bit;
+        }
+    }
+    return (uint32_t)-1;
 }
 
 } // (anonymous)
@@ -136,6 +360,8 @@ CPUInfo::~CPUInfo()
 
 #include "processor_fallback.cpp"
 
+#include "processor_x86.cpp"
+
 namespace NaCs {
 
 namespace {
@@ -172,6 +398,44 @@ private:
     std::string m_arch;
 };
 
+template<typename FeatureList>
+struct KnownInfoBuilder : InfoBuilder {
+protected:
+    template<typename Features>
+    void _add_feature(const Features &feature_names, bool enable,
+                      const char *feature, size_t len)
+    {
+        auto fbit = find_feature_bit(feature_names, feature, len);
+        if (fbit != (uint32_t)-1) {
+            set_bit(enable ? en : dis, fbit, true);
+            return;
+        }
+        InfoBuilder::add_feature(enable, feature, len);
+    }
+
+    FeatureList en{};
+    FeatureList dis{};
+};
+
+struct X86InfoBuilder : KnownInfoBuilder<X86::FeatureList> {
+    X86InfoBuilder(bool is_x64)
+        : m_is_x64(is_x64)
+    {
+    }
+
+private:
+    void add_feature(bool enable, const char *feature, size_t len) override
+    {
+        _add_feature(X86::Feature::names, enable, feature, len);
+    }
+    CPUInfo *create() override
+    {
+        return new X86::Info(m_is_x64, std::move(name), std::move(features), en, dis);
+    }
+
+    bool m_is_x64;
+};
+
 std::unique_ptr<CPUInfo> InfoBuilder::parse(const char *str)
 {
     bool name_set = false;
@@ -206,6 +470,11 @@ std::unique_ptr<CPUInfo> InfoBuilder::parse(const char *str)
 
 NACS_EXPORT() std::unique_ptr<CPUInfo> CPUInfo::create(const char *arch, const char *str)
 {
+    if (strcmp(arch, "x86_64") == 0 || strcmp(arch, "x86-64") == 0)
+        return X86InfoBuilder(true).parse(str);
+    if (strcmp(arch, "i386") == 0 || strcmp(arch, "i486") == 0 ||
+        strcmp(arch, "i586") == 0 || strcmp(arch, "i686") == 0)
+        return X86InfoBuilder(false).parse(str);
     return UnknownInfoBuilder(arch).parse(str);
 }
 

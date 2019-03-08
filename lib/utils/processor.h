@@ -31,6 +31,16 @@
 
 namespace NaCs {
 
+#define NACS_FEATURE_DEF_NAME(name, bit, llvmver, str) NACS_FEATURE_DEF(name, bit, llvmver)
+#define NACS_FEATURE_DEF(name, bit, llvmver) constexpr int name = bit;
+namespace X86 {
+namespace Feature {
+#include "features_x86.h"
+}
+}
+#undef NACS_FEATURE_DEF
+#undef NACS_FEATURE_DEF_NAME
+
 class CPUInfo {
 public:
     virtual bool test_feature(int bit) const;
