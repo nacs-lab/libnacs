@@ -117,7 +117,7 @@ static NACS_INLINE void pause()
 static NACS_INLINE void wake()
 {
 }
-#elif NACS_CPU_AARCH64 || (NACS_CPU_ARM && __ARM_ARCH >= 7)
+#elif NACS_CPU_AARCH64 || (NACS_CPU_AARCH32 && __ARM_ARCH >= 7)
 static NACS_INLINE void pause()
 {
     __asm__ volatile ("wfe" ::: "memory");
