@@ -16,32 +16,26 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-namespace NaCs {
+// AArch64 features definition
+// hwcap
+NACS_FEATURE_DEF(crypto, 3, 0)
+NACS_FEATURE_DEF(crc, 7, 0)
+NACS_FEATURE_DEF(lse, 8, 0) // ARMv8.1-Atomics
+NACS_FEATURE_DEF(fullfp16, 9, 0)
+NACS_FEATURE_DEF(rdm, 12, 0) // ARMv8.1-SIMD
+NACS_FEATURE_DEF(jscvt, 13, UINT32_MAX) // Linux Kernel HWCAP name
+NACS_FEATURE_DEF(fcma, 14, UINT32_MAX) // Linux Kernel HWCAP name
+NACS_FEATURE_DEF(rcpc, 15, 60000)
+NACS_FEATURE_DEF(dcpop, 16, UINT32_MAX) // Linux Kernel HWCAP name
+// NACS_FEATURE_DEF(dotprod, ???, 60000) // ARMv8.2-DotProd
+// NACS_FEATURE_DEF(ras, ???, 0)
+// NACS_FEATURE_DEF(sve, ???, UINT32_MAX)
 
-class UnknownCPUInfo : public CPUInfo {
-public:
-    UnknownCPUInfo(std::string arch, std::string name, std::string ext_features)
-        : CPUInfo(std::move(name), std::move(ext_features)),
-          m_arch(arch)
-    {}
+// hwcap2
+// NACS_FEATURE_DEF(?, 32 + ?, 0)
 
-private:
-    const char *get_arch() const override
-    {
-        return m_arch.c_str();
-    }
-
-    std::string m_arch;
-};
-
-#if !NACS_CPU_X86 && !NACS_CPU_X86_64 && !NACS_CPU_AARCH32 && !NACS_CPU_AARCH64
-NACS_EXPORT() const CPUInfo &CPUInfo::get_host()
-{
-    static const UnknownCPUInfo host_info(LLVM::get_cpu_arch(),
-                                          LLVM::get_cpu_name(),
-                                          LLVM::get_cpu_features());
-    return host_info;
-}
-#endif
-
-} // Nacs
+// custom bits to match llvm model
+NACS_FEATURE_DEF(v8_1a, 32 * 2 + 0, 0)
+NACS_FEATURE_DEF(v8_2a, 32 * 2 + 1, 0)
+NACS_FEATURE_DEF(v8_3a, 32 * 2 + 2, 60000)
+// NACS_FEATURE_DEF(v8_4a, 32 * 2 + 3, ???)

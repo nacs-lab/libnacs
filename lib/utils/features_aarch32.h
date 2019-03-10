@@ -16,32 +16,29 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-namespace NaCs {
+// AArch32 features definition
+// hwcap
+NACS_FEATURE_DEF(neon, 12, 0)
+NACS_FEATURE_DEF(vfp3, 13, 0)
+// NACS_FEATURE_DEF(vfpv3d16, 14, 0) // d16
+NACS_FEATURE_DEF(vfp4, 16, 0)
+NACS_FEATURE_DEF_NAME(hwdiv_arm, 17, 0, "hwdiv-arm")
+NACS_FEATURE_DEF(hwdiv, 18, 0)
+NACS_FEATURE_DEF(d32, 19, 0) // -d16
 
-class UnknownCPUInfo : public CPUInfo {
-public:
-    UnknownCPUInfo(std::string arch, std::string name, std::string ext_features)
-        : CPUInfo(std::move(name), std::move(ext_features)),
-          m_arch(arch)
-    {}
+// hwcap2
+NACS_FEATURE_DEF(crypto, 32 + 0, 0)
+NACS_FEATURE_DEF(crc, 32 + 4, 0)
+// NACS_FEATURE_DEF(ras, 32 + ???, 0)
+// NACS_FEATURE_DEF(fullfp16, 32 + ???, 0)
 
-private:
-    const char *get_arch() const override
-    {
-        return m_arch.c_str();
-    }
-
-    std::string m_arch;
-};
-
-#if !NACS_CPU_X86 && !NACS_CPU_X86_64 && !NACS_CPU_AARCH32 && !NACS_CPU_AARCH64
-NACS_EXPORT() const CPUInfo &CPUInfo::get_host()
-{
-    static const UnknownCPUInfo host_info(LLVM::get_cpu_arch(),
-                                          LLVM::get_cpu_name(),
-                                          LLVM::get_cpu_features());
-    return host_info;
-}
-#endif
-
-} // Nacs
+// custom bits to match llvm model
+NACS_FEATURE_DEF(aclass, 32 * 2 + 0, 0)
+NACS_FEATURE_DEF(rclass, 32 * 2 + 1, 0)
+NACS_FEATURE_DEF(mclass, 32 * 2 + 2, 0)
+NACS_FEATURE_DEF(v7, 32 * 2 + 3, 0)
+NACS_FEATURE_DEF(v8, 32 * 2 + 4, 0)
+NACS_FEATURE_DEF(v8_1a, 32 * 2 + 5, 0)
+NACS_FEATURE_DEF(v8_2a, 32 * 2 + 6, 0)
+NACS_FEATURE_DEF(v8_3a, 32 * 2 + 7, 60000)
+NACS_FEATURE_DEF(v8_m_main, 32 * 2 + 8, 0)

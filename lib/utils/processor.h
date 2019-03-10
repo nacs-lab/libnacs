@@ -38,6 +38,16 @@ namespace Feature {
 #include "features_x86.h"
 }
 }
+namespace AArch32 {
+namespace Feature {
+#include "features_aarch32.h"
+}
+}
+namespace AArch64 {
+namespace Feature {
+#include "features_aarch64.h"
+}
+}
 #undef NACS_FEATURE_DEF
 #undef NACS_FEATURE_DEF_NAME
 

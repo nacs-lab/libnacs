@@ -22,6 +22,8 @@ set(nacs_utils_HDRS
   dlload.h
   errors.h
   fd_utils.h
+  features_aarch32.h
+  features_aarch64.h
   features_x86.h
   ir.h
   log.h

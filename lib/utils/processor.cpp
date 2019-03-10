@@ -362,6 +362,8 @@ CPUInfo::~CPUInfo()
 
 #include "processor_x86.cpp"
 
+#include "processor_arm.cpp"
+
 namespace NaCs {
 
 namespace {
@@ -436,6 +438,30 @@ private:
     bool m_is_x64;
 };
 
+struct AArch32InfoBuilder : KnownInfoBuilder<AArch32::FeatureList> {
+private:
+    void add_feature(bool enable, const char *feature, size_t len) override
+    {
+        _add_feature(AArch32::Feature::names, enable, feature, len);
+    }
+    CPUInfo *create() override
+    {
+        return new AArch32::Info(std::move(name), std::move(features), en, dis);
+    }
+};
+
+struct AArch64InfoBuilder : KnownInfoBuilder<AArch64::FeatureList> {
+private:
+    void add_feature(bool enable, const char *feature, size_t len) override
+    {
+        _add_feature(AArch64::Feature::names, enable, feature, len);
+    }
+    CPUInfo *create() override
+    {
+        return new AArch64::Info(std::move(name), std::move(features), en, dis);
+    }
+};
+
 std::unique_ptr<CPUInfo> InfoBuilder::parse(const char *str)
 {
     bool name_set = false;
@@ -475,6 +501,10 @@ NACS_EXPORT() std::unique_ptr<CPUInfo> CPUInfo::create(const char *arch, const c
     if (strcmp(arch, "i386") == 0 || strcmp(arch, "i486") == 0 ||
         strcmp(arch, "i586") == 0 || strcmp(arch, "i686") == 0)
         return X86InfoBuilder(false).parse(str);
+    if (strcmp(arch, "arm") == 0 || strcmp(arch, "aarch32") == 0)
+        return AArch32InfoBuilder().parse(str);
+    if (strcmp(arch, "arm64") == 0 || strcmp(arch, "aarch64") == 0)
+        return AArch64InfoBuilder().parse(str);
     return UnknownInfoBuilder(arch).parse(str);
 }
 
