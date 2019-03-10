@@ -16,49 +16,30 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-// This processor detection code is a port of the version I wrote for julia.
-
-#include "utils.h"
-
-#ifndef __NACS_UTILS_PROCESSOR_H__
-#define __NACS_UTILS_PROCESSOR_H__
-
-#include <memory>
-#include <ostream>
-#include <string>
-#include <utility>
-#include <vector>
-
 namespace NaCs {
 
-class CPUInfo {
+class UnknownCPUInfo : public CPUInfo {
 public:
-    virtual bool test_feature(int bit) const;
-    // Largest (vector) register size in bytes.
-    virtual int get_vector_size() const;
-    virtual const char *get_name() const;
-    virtual const char *get_arch() const = 0;
-    virtual std::pair<std::string,std::vector<std::string>>
-    get_llvm_target(uint32_t llvmver) const;
-    virtual ~CPUInfo();
-    virtual void dump(std::ostream&) const;
+    UnknownCPUInfo(std::string arch, std::string name, std::string ext_features)
+        : CPUInfo(std::move(name), std::move(ext_features)),
+          m_arch(arch)
+    {}
 
-    NACS_EXPORT(utils) void dump() const;
-    NACS_EXPORT(utils) operator std::string() const;
-    NACS_EXPORT(utils) void dump_llvm(std::ostream&) const;
-    NACS_EXPORT(utils) void dump_llvm() const;
+private:
+    const char *get_arch() const override
+    {
+        return m_arch.c_str();
+    }
 
-    NACS_EXPORT(utils) static const CPUInfo &get_host();
-    NACS_EXPORT(utils) static std::unique_ptr<CPUInfo> create(const char *arch,
-                                                              const char *str);
-protected:
-    CPUInfo() = default;
-    CPUInfo(std::string name, std::string ext_features);
-
-    std::string name;
-    std::string ext_features;
+    std::string m_arch;
 };
 
+NACS_EXPORT() const CPUInfo &CPUInfo::get_host()
+{
+    static const UnknownCPUInfo host_info(LLVM::get_cpu_arch(),
+                                          LLVM::get_cpu_name(),
+                                          LLVM::get_cpu_features());
+    return host_info;
 }
 
-#endif
+} // Nacs

@@ -21,6 +21,7 @@
 #include "streams.h"
 
 #include <array>
+#include <cstring>
 #include <iostream>
 
 namespace NaCs {
@@ -129,6 +130,83 @@ CPUInfo::CPUInfo(std::string name, std::string ext_features)
 
 CPUInfo::~CPUInfo()
 {
+}
+
+} // NaCs
+
+#include "processor_fallback.cpp"
+
+namespace NaCs {
+
+namespace {
+
+struct InfoBuilder {
+    std::unique_ptr<CPUInfo> parse(const char *str);
+
+protected:
+    virtual void add_feature(bool enable, const char *feature, size_t len)
+    {
+        if (!features.empty())
+            features.push_back(',');
+        features.push_back(enable ? '+' : '-');
+        features.append(feature, len);
+    }
+    virtual CPUInfo *create() = 0;
+
+    std::string name;
+    std::string features;
+};
+
+struct UnknownInfoBuilder : InfoBuilder {
+    UnknownInfoBuilder(std::string arch)
+        : m_arch(std::move(arch))
+    {
+    }
+
+private:
+    CPUInfo *create() override
+    {
+        return new UnknownCPUInfo(std::move(m_arch), std::move(name), std::move(features));
+    }
+
+    std::string m_arch;
+};
+
+std::unique_ptr<CPUInfo> InfoBuilder::parse(const char *str)
+{
+    bool name_set = false;
+    bool done = false;
+    auto start = str;
+    for (auto p = str; !done; p++) {
+        auto c = *p;
+        done = !c;
+        if (!done && c != ',')
+            continue;
+        if (!name_set) {
+            name.append(start, p - start);
+            name_set = true;
+        }
+        else {
+            bool enable = true;
+            if (*start == '+') {
+                start++;
+            }
+            else if (*start == '-') {
+                enable = false;
+                start++;
+            }
+            add_feature(enable, start, p - start);
+        }
+        start = p + 1;
+    }
+    return std::unique_ptr<CPUInfo>(create());
+}
+
+} // (anonymous)
+
+NACS_EXPORT() std::unique_ptr<CPUInfo> CPUInfo::create(const char *arch, const char *str)
+{
+    return UnknownInfoBuilder(arch).parse(str);
 }
 
 } // NaCs
