@@ -1097,6 +1097,7 @@ static std::pair<int,char> get_elf_arch(void)
 static std::pair<int,bool> feature_arch_version(const AArch::FeatureList &feature)
 {
 #if NACS_CPU_AARCH64
+    (void)feature;
     return std::make_pair(8, false);
 #else
     if (test_nbit(feature, AArch::Feature::v8))
@@ -1110,6 +1111,7 @@ static std::pair<int,bool> feature_arch_version(const AArch::FeatureList &featur
 static CPU generic_for_arch(std::pair<int,bool> arch)
 {
 #if NACS_CPU_AARCH64
+    (void)arch;
     return CPU::generic;
 #else
 #  if defined(__ARM_ARCH_PROFILE)
