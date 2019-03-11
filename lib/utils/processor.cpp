@@ -307,7 +307,8 @@ const char *CPUInfo::get_name() const
 void CPUInfo::dump(std::ostream &stm) const
 {
     stm << name;
-    for (auto &feature: append_features({}, ext_features)) {
+    auto features = append_features({}, ext_features);
+    for (auto &feature: features) {
         stm << "," << feature;
     }
 }
@@ -331,8 +332,10 @@ NACS_EXPORT() void CPUInfo::dump_llvm(std::ostream &stm) const
     stm << "CPU: " << target.first << std::endl;
     stm << "Features:";
     bool first = true;
-    for (auto &feature: target.second)
+    for (auto &feature: target.second) {
         stm << (first ? " " : ", ") << feature;
+        first = false;
+    }
     stm << std::endl;
 }
 
