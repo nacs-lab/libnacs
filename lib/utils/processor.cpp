@@ -299,9 +299,9 @@ int CPUInfo::get_vector_size() const
     return 8;
 }
 
-const char *CPUInfo::get_name() const
+NACS_EXPORT() const std::string &CPUInfo::get_name() const
 {
-    return name.c_str();
+    return name;
 }
 
 void CPUInfo::dump(std::ostream &stm) const

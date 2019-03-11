@@ -412,9 +412,10 @@ private:
             return 16;
         return 8;
     }
-    const char *get_arch() const final override
+    const std::string &get_arch() const final override
     {
-        return "arm";
+        static const std::string name = "arm";
+        return name;
     }
     void dump(std::ostream &stm) const override
     {
@@ -676,9 +677,10 @@ private:
     {
         return 16;
     }
-    const char *get_arch() const final override
+    const std::string &get_arch() const final override
     {
-        return "aarch64";
+        static const std::string name = "aarch64";
+        return name;
     }
     void dump(std::ostream &stm) const override
     {

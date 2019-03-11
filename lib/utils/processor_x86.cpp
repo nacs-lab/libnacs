@@ -258,9 +258,11 @@ private:
         // Require sse2
         return 16;
     }
-    const char *get_arch() const final override
+    const std::string &get_arch() const final override
     {
-        return m_is_x64 ? "x86-64" : "i386";
+        static const std::string name_64 = "x86-64";
+        static const std::string name_32 = "i386";
+        return m_is_x64 ? name_64 : name_32;
     }
     void dump(std::ostream &stm) const override
     {

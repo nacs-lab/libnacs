@@ -26,9 +26,9 @@ public:
     {}
 
 private:
-    const char *get_arch() const override
+    const std::string &get_arch() const override
     {
-        return m_arch.c_str();
+        return m_arch;
     }
 
     std::string m_arch;
