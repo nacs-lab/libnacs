@@ -20,12 +20,41 @@
 #include "../number.h"
 #include "../ir_p.h"
 #include "../dlload.h"
+#include "../processor.h"
 
 #include <llvm/Support/MemoryBuffer.h>
 
 namespace NaCs {
 namespace LLVM {
 namespace Exe {
+
+// Clang is not happy if we redeclare the function even if it's in a function local scope
+// since it moves all the declarations to the global scope...
+// Give them different names to work around that.
+// Thanks to http://zwizwa.be/-/c/20100825-142132
+#define __asm_sym(var_suffix, name)                     \
+    ([] {                                               \
+         extern void asm_sym ## var_suffix() asm(name); \
+         return asm_sym ## var_suffix;                  \
+     }())
+// Indirection to make sure `__COUNTER__` is expanded correctly.
+#define _asm_sym(var_suffix, name) __asm_sym(var_suffix, name)
+#define asm_sym(name) _asm_sym(__COUNTER__, name)
+
+#ifdef ENABLE_SIMD
+#  if NACS_CPU_X86 || NACS_CPU_X86_64
+#    if NACS_OS_WINDOWS && NACS_CPU_X86_64
+#      define VEC_SUFFIX(x) "@@" #x
+#    elif NACS_OS_WINDOWS
+#      error "SIMD not supported on Win32"
+#    else
+#      define VEC_SUFFIX(x)
+#    endif
+#  elif NACS_CPU_AARCH64
+#  else
+#    error "SIMD not supported"
+#  endif
+#endif
 
 JITSymbol Resolver::findSymbolInLogicalDylib(const std::string&)
 {
@@ -50,6 +79,44 @@ uintptr_t Resolver::find_extern(const std::string &name)
 #ifndef NACS_HAS_EXP10
     if (name == "exp10")
         return (uintptr_t)nacs_exp10;
+#endif
+#ifdef ENABLE_SIMD
+#  if NACS_CPU_X86 || NACS_CPU_X86_64
+    // We need this to convience gcc to find the correct symbol on windows.
+    static const auto &host_info = CPUInfo::get_host();
+    if (name == "interp.2") {
+        auto addr = asm_sym("_ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd" VEC_SUFFIX(32));
+        if (host_info.test_feature(X86::Feature::avx2))
+            addr = asm_sym("_ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd" VEC_SUFFIX(32));
+        return (uintptr_t)addr;
+    }
+    else if (name == "interp.4") {
+        auto addr = asm_sym("_ZN4NaCs22linearInterpolate4_avxEDv4_djPKd" VEC_SUFFIX(48));
+        if (host_info.test_feature(X86::Feature::avx2))
+            addr = asm_sym("_ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd" VEC_SUFFIX(48));
+        return (uintptr_t)addr;
+    }
+#    if !NACS_OS_WINDOWS
+    else if (name == "interp.8") {
+        __m512d(*addr)(__m512d, uint32_t, const double*);
+        addr = linearInterpolate8_avx512f;
+        return (uintptr_t)addr;
+    }
+#    endif
+#  elif NACS_CPU_AARCH64
+    if (name == "interp.2") {
+        return (uintptr_t)static_cast<float64x2_t(*)(float64x2_t, uint32_t, const double*)>(
+            linearInterpolate2_asimd);
+    }
+    else if (name == "interp.2x2") {
+        return (uintptr_t)static_cast<float64x2x2_t(*)(float64x2x2_t, uint32_t, const double*)>(
+            linearInterpolate4_asimd);
+    }
+    else if (name == "interp.2x4") {
+        return (uintptr_t)static_cast<float64x2x4_t(*)(float64x2x4_t, uint32_t, const double*)>(
+            linearInterpolate8_asimd);
+    }
+#  endif
 #endif
     return (uintptr_t)DL::sym(nullptr, name.c_str());
 }
