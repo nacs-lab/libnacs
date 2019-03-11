@@ -44,8 +44,9 @@ uintptr_t Resolver::find_extern(const std::string &name)
     if (name == "interp")
         return (uintptr_t)static_cast<double(*)(double, uint32_t, const double*)>(
             linearInterpolate);
-    if (auto addr = DL::sym(IR::get_openlibm_handle(), name.c_str()))
-        return (uintptr_t)addr;
+    if (auto openlibm_hdl = IR::get_openlibm_handle())
+        if (auto addr = DL::sym(openlibm_hdl, name.c_str()))
+            return (uintptr_t)addr;
 #ifndef NACS_HAS_EXP10
     if (name == "exp10")
         return (uintptr_t)nacs_exp10;

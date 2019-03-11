@@ -58,7 +58,9 @@ public:
     {
         if (m_fptr)
             return m_fptr;
-        fptr_t fptr = (fptr_t)DL::sym(get_openlibm_handle(), m_name);
+        fptr_t fptr = nullptr;
+        if (auto hdl = get_openlibm_handle())
+            fptr = (fptr_t)DL::sym(hdl, m_name);
         if (!fptr)
             fptr = m_fallback;
         m_fptr = fptr;
