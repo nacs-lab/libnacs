@@ -565,6 +565,13 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             case IR::Builtins::round:
                 emit_intrinsic_f64(Intrinsic::round);
                 break;
+            case IR::Builtins::mod: {
+                assert(nargs == 2);
+                auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
+                auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
+                lres = builder.CreateFRem(arg1, arg2);
+                break;
+            }
             default: {
                 auto sym = IR::getBuiltinSymbol(id);
                 if (!sym) {
