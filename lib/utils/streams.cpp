@@ -216,9 +216,9 @@ auto const_streambuf::seekpos(pos_type pos, std::ios_base::openmode which) -> po
 {
     if (which != std::ios_base::in)
         return pos_type(-1);
-    if (m_begin + pos > m_end)
+    if (m_begin + std::streamoff(pos) > m_end)
         return pos_type(-1);
-    m_current = m_begin + pos;
+    m_current = m_begin + std::streamoff(pos);
     return pos;
 }
 
