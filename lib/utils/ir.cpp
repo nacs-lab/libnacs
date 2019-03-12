@@ -94,7 +94,7 @@ static LazyLibmFPtr pexp10("exp10", ::nacs_exp10);
 #endif
 DEF_FPTR(exp2);
 DEF_FPTR(expm1);
-DEF_FPTR(abs);
+DEF_FPTR(fabs);
 DEF_FPTR(floor);
 DEF_FPTR(tgamma);
 DEF_FPTR(j0);
@@ -173,7 +173,7 @@ static fptr_t getBuiltinPtr(Builtins id)
     case Builtins::expm1:
         return pexpm1;
     case Builtins::abs:
-        return pabs;
+        return pfabs;
     case Builtins::floor:
         return pfloor;
     case Builtins::gamma: // tgamma
