@@ -36,7 +36,8 @@ using namespace llvm;
 
 struct Wrapper {
     enum ArgType : uint8_t {
-        Closure
+        Closure = 0,
+        ByRef = 1 << 0,
     };
     struct Arg {
         ArgType type;
@@ -44,9 +45,19 @@ struct Wrapper {
     };
     bool closure = false;
     std::map<uint32_t,Arg> arg_map{};
-    void add_closure(uint32_t arg, uint32_t idx)
+    Wrapper &add_closure(uint32_t arg, uint32_t idx)
     {
         arg_map.emplace(arg, Arg{Closure, idx});
+        return *this;
+    }
+    Wrapper &add_byref(uint32_t arg)
+    {
+        arg_map.emplace(arg, Arg{ByRef, 0});
+        return *this;
+    }
+    Wrapper &add_ret_ref()
+    {
+        return add_byref(uint32_t(-1));
     }
 };
 

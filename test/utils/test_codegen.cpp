@@ -472,8 +472,8 @@ int main()
         assert(f12(1.3, vals) == 0.0);
 
         LLVM::Codegen::Wrapper wrap2{true};
-        wrap2.add_closure(1, 0);
-        wrap2.add_closure(0, 1);
+        wrap2.add_closure(1, 0)
+            .add_closure(0, 1);
         auto test2 = gettest(builder.get(), wrap2);
         auto f2 = (double(*)(IR::GenVal*))test2.get_ptr();
         vals[0] = IR::TagVal(1.3).val;
@@ -484,6 +484,46 @@ int main()
         vals[0] = IR::TagVal(1.0).val;
         vals[1] = IR::TagVal(1.3).val;
         assert(f2(vals) == 0.0);
+
+        LLVM::Codegen::Wrapper wrap_ref{false};
+        wrap_ref.add_byref(0);
+        auto test_ref = gettest(builder.get(), wrap_ref);
+        auto f_ref = (double(*)(const double&, double))test_ref.get_ptr();
+        assert(f_ref(2.3, 1.3) == -1.71);
+        assert(f_ref(2.3, 10.0) == -51.3);
+        assert(f_ref(1.3, 1.0) == 0.0);
+
+        LLVM::Codegen::Wrapper wrap_ret_ref{false};
+        wrap_ret_ref.add_ret_ref();
+        auto test_ret_ref = gettest(builder.get(), wrap_ret_ref);
+        auto f_ret_ref = (void(*)(double&, double, double))test_ret_ref.get_ptr();
+        {
+            double res;
+            f_ret_ref(res, 2.3, 1.3);
+            assert(res == -1.71);
+            f_ret_ref(res, 2.3, 10.0);
+            assert(res == -51.3);
+            f_ret_ref(res, 1.3, 1.0);
+            assert(res == 0.0);
+        }
+
+        LLVM::Codegen::Wrapper wrap_ret_ref1{false};
+        wrap_ret_ref1.add_byref(0);
+        wrap_ret_ref1.add_ret_ref();
+        auto test_ret_ref1 = gettest(builder.get(), wrap_ret_ref1);
+        auto f_ret_ref1 = (void(*)(double&, const double&, double))test_ret_ref1.get_ptr();
+        {
+            // Test that aliasing works.
+            double res = 2.3;
+            f_ret_ref1(res, res, 1.3);
+            assert(res == -1.71);
+            res = 2.3;
+            f_ret_ref1(res, res, 10.0);
+            assert(res == -51.3);
+            res = 1.3;
+            f_ret_ref1(res, res, 1.0);
+            assert(res == 0.0);
+        }
     }
 
     {

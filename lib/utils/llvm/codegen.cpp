@@ -240,6 +240,17 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     auto nargs = fty->getNumParams();
     auto rt = fty->getReturnType();
     SmallVector<Type*, 8> fsig;
+    bool ret_ref = false;
+    auto ret_spec = spec.arg_map.find(uint32_t(-1));
+    if (ret_spec != spec.arg_map.end()) {
+        if (ret_spec->second.type == Wrapper::Closure)
+            return nullptr;
+        if (ret_spec->second.type & Wrapper::ByRef) {
+            fsig.push_back(rt->getPointerTo());
+            rt = Type::getVoidTy(func->getContext());
+            ret_ref = true;
+        }
+    }
     for (unsigned i = 0; i < nargs; i++) {
         auto arg_spec = spec.arg_map.find(i);
         auto argt = fty->getParamType(i);
@@ -251,6 +262,9 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             if (!spec.closure)
                 return nullptr;
             // Nothing to do with this argument
+        }
+        else if (arg_spec->second.type & Wrapper::ByRef) {
+            fsig.push_back(argt->getPointerTo());
         }
         else {
             // Unknown argument type
@@ -266,7 +280,8 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     wrapf->setVisibility(GlobalValue::ProtectedVisibility);
     wrapf->addFnAttr(Attribute::NoRecurse);
     wrapf->addFnAttr(Attribute::NoUnwind);
-    wrapf->addFnAttr(Attribute::ReadOnly);
+    if (!ret_ref)
+        wrapf->addFnAttr(Attribute::ReadOnly);
 
     BasicBlock *b0 = BasicBlock::Create(m_ctx, "top", wrapf);
     IRBuilder<> builder(b0);
@@ -276,6 +291,8 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     auto argit = wrapf->arg_end();
     auto clarg = spec.closure ? &*(--argit) : nullptr;
     argit = wrapf->arg_begin();
+    if (ret_ref)
+        ++argit;
     uint32_t max_offset = 0;
     for (unsigned i = 0, j = 0; i < nargs; i++) {
         auto arg_spec = spec.arg_map.find(i);
@@ -284,17 +301,25 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             j++;
             continue;
         }
-        // Only type for now.
-        assert(arg_spec->second.type == Wrapper::Closure);
-        auto offset = arg_spec->second.idx;
-        auto argt = fty->getParamType(i);
-        auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(T_i8, clarg, offset * 8),
-                                         argt->getPointerTo());
-        max_offset = max(max_offset, offset + 1);
-        auto load = builder.CreateLoad(argt, ptr);
-        load->setAlignment(8);
-        load->setMetadata(LLVMContext::MD_tbaa, tbaa_const);
-        call_args[i] = load;
+        if (arg_spec->second.type == Wrapper::Closure) {
+            auto offset = arg_spec->second.idx;
+            auto argt = fty->getParamType(i);
+            auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(T_i8, clarg, offset * 8),
+                                             argt->getPointerTo());
+            max_offset = max(max_offset, offset + 1);
+            auto load = builder.CreateLoad(argt, ptr);
+            load->setAlignment(8);
+            load->setMetadata(LLVMContext::MD_tbaa, tbaa_const);
+            call_args[i] = load;
+        }
+        else if (arg_spec->second.type & Wrapper::ByRef) {
+            auto arg = &*(argit + j);
+            j++;
+            auto argt = fty->getParamType(i);
+            // Allow aliasing.
+            auto load = builder.CreateLoad(argt, arg);
+            call_args[i] = load;
+        }
     }
     if (max_offset) {
         assert(spec.closure);
@@ -302,7 +327,13 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
         wrapf->addDereferenceableParamAttr(fsig.size() - 1, max_offset * 8);
     }
     auto res = builder.CreateCall(func, call_args);
-    builder.CreateRet(res);
+    if (ret_ref) {
+        builder.CreateStore(res, &*wrapf->arg_begin());
+        builder.CreateRetVoid();
+    }
+    else {
+        builder.CreateRet(res);
+    }
     return wrapf;
 }
 
