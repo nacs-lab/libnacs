@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "compile.h"
+#include "vector_abi.h"
 
 #include "../utils.h"
 
@@ -52,6 +53,7 @@ void addOptimization(legacy::PassManagerBase &pm)
     pm.add(createDeadInstEliminationPass());
     pm.add(createInstructionCombiningPass());
 
+    pm.add(createVectorABIPass());            // Fix vector ABI
     pm.add(createAlwaysInlinerLegacyPass());  // Respect always_inline
     pm.add(createInstructionCombiningPass()); // Cleanup for scalarrepl.
     pm.add(createSROAPass());                 // Break up aggregate allocas

@@ -19,6 +19,7 @@
 #include "codegen.h"
 #include "utils.h"
 #include "mergephi.h"
+#include "vectorize.h"
 
 #include "../ir_p.h"
 #include "../number.h"
@@ -235,6 +236,23 @@ Value *Context::emit_cmp(IRBuilder<> &builder, IR::CmpType cmptyp,
 NACS_EXPORT()
 Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &spec)
 {
+    if (spec.vector_size > 1) {
+        SmallVector<unsigned, 8> vec_args;
+        bool vec_only = true;
+        for (auto &arg: spec.arg_map) {
+            if (arg.second.type & Wrapper::Vector)
+                vec_args.push_back(arg.first);
+            vec_only = vec_only && (arg.second.type == Wrapper::Vector);
+        }
+        func = vectorizeFunction(*func, name, spec.vector_size, vec_args, vec_only);
+        if (vec_only || !func)
+            return func;
+        // We need to rename the vectorized function since we want the exported function
+        // to have the right name. This should be fine since this function
+        // is private and is never exposed to the caller.
+        func->setName(name + ".vec");
+    }
+
     // 1. Create function signature
     auto fty = func->getFunctionType();
     assert(!fty->isVarArg());
@@ -268,8 +286,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             fsig.push_back(argt->getPointerTo());
         }
         else {
-            // Unknown argument type
-            return nullptr;
+            fsig.push_back(argt);
         }
     }
     if (spec.closure)
@@ -321,6 +338,10 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             // Allow aliasing.
             auto load = builder.CreateLoad(argt, arg);
             call_args[i] = load;
+        }
+        else {
+            call_args[i] = &*(argit + j);
+            j++;
         }
     }
     if (max_offset) {

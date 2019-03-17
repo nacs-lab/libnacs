@@ -83,8 +83,12 @@ if(ENABLE_LLVM)
   add_executable(test-codegen ${test_codegen_SOURCES})
   target_link_libraries(test-codegen nacs-utils)
 
-  set_property(TARGET test-codegen APPEND
+  set(test_vec_codegen_SOURCES test_vec_codegen.cpp)
+  add_executable(test-vec_codegen ${test_vec_codegen_SOURCES})
+  target_link_libraries(test-vec_codegen nacs-utils)
+
+  set_property(TARGET test-codegen test-vec_codegen APPEND
     PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
-  set_property(SOURCE ${test_codegen_SOURCES} APPEND_STRING
+  set_property(SOURCE ${test_codegen_SOURCES} ${test_vec_codegen_SOURCES} APPEND_STRING
     PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
 endif()

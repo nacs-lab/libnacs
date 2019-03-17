@@ -38,12 +38,14 @@ struct Wrapper {
     enum ArgType : uint8_t {
         Closure = 0,
         ByRef = 1 << 0,
+        Vector = 1 << 1,
     };
     struct Arg {
-        ArgType type;
-        uint32_t idx;
+        ArgType type{ArgType(0)};
+        uint32_t idx{0};
     };
     bool closure = false;
+    unsigned vector_size = 1;
     std::map<uint32_t,Arg> arg_map{};
     Wrapper &add_closure(uint32_t arg, uint32_t idx)
     {
@@ -52,12 +54,19 @@ struct Wrapper {
     }
     Wrapper &add_byref(uint32_t arg)
     {
-        arg_map.emplace(arg, Arg{ByRef, 0});
+        auto &spec = arg_map[arg];
+        spec.type = ArgType(spec.type | ByRef);
         return *this;
     }
     Wrapper &add_ret_ref()
     {
         return add_byref(uint32_t(-1));
+    }
+    Wrapper &add_vector(uint32_t arg)
+    {
+        auto &spec = arg_map[arg];
+        spec.type = ArgType(spec.type | Vector);
+        return *this;
     }
 };
 

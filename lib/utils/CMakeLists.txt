@@ -79,7 +79,9 @@ set(nacs_utils_llvm_SRCS
   llvm/execute.cpp
   llvm/memmgr.cpp
   llvm/mergephi.cpp
-  llvm/utils.cpp)
+  llvm/utils.cpp
+  llvm/vector_abi.cpp
+  llvm/vectorize.cpp)
 
 configure_file(config.h.in config.h @ONLY)
 set(nacs_utils_HDRS ${nacs_utils_HDRS} "${CMAKE_CURRENT_BINARY_DIR}/config.h")
