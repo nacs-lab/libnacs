@@ -28,6 +28,7 @@
 #include "../../lib/utils/llvm/execute.h"
 #include "../../lib/utils/llvm/utils.h"
 #include "../../lib/utils/number.h"
+#include "../../lib/utils/streams.h"
 #include "../../lib/utils/timer.h"
 #include <assert.h>
 #include <iostream>
@@ -35,14 +36,6 @@
 #include <math.h>
 
 using namespace NaCs;
-
-template<typename T>
-static std::string sprint(T &&v)
-{
-    std::stringstream stm;
-    stm << std::forward<T>(v);
-    return stm.str();
-}
 
 template<typename T>
 static void test_str_eq(T &&v, std::string val)

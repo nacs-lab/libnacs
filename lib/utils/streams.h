@@ -296,6 +296,14 @@ static inline std::istream &ignore_space(std::istream &stm)
     return stm;
 }
 
+template<typename T>
+static std::string sprint(T &&v)
+{
+    string_ostream stm;
+    stm << std::forward<T>(v);
+    return stm.get_buf();
+}
+
 }
 
 #endif
