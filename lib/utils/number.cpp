@@ -20,13 +20,35 @@
 
 namespace NaCs {
 
+#if NACS_CPU_X86 || NACS_CPU_X86_64
+
+static inline double _maxd(double x, double y)
+{
+    return _mm_max_sd(_mm_set_sd(x), _mm_set_sd(y))[0];
+}
+
+#elif NACS_CPU_AARCH64
+
+static inline double _maxd(double x, double y)
+{
+    return vmaxnm_f64(float64x1_t{x}, float64x1_t{y})[0];
+}
+
+#else
+
+static inline double _maxd(double x, double y)
+{
+    return x > y ? x : y;
+}
+
+#endif
+
 __attribute__((always_inline))
 static inline double _linearInterpolate(double x, uint32_t npoints, const double *points)
 {
-    if (unlikely(x <= 0))
-        return points[0];
     if (unlikely(x >= 1))
         return points[npoints - 1];
+    x = _maxd(x, 0);
     x = x * (npoints - 1);
     int lo = (int)x;
     x = x - lo;
@@ -60,18 +82,15 @@ static inline __m128d linearInterpolate2(__m128d x, uint32_t npoints, const doub
 __attribute__((target("avx2,fma"), always_inline))
 static inline __m128d _linearInterpolate2_avx2(__m128d x, uint32_t npoints, const double *points)
 {
-    auto und_ok = (__m128)(x > 0);
-    auto ovr_ok = (__m128)(x < 1);
+    auto end_pt = _mm_set1_pd(points[npoints - 1]);
+    auto ovr_ok = (__m128d)(x < 1);
+    x = _mm_max_pd(x, _mm_set1_pd(0));
     x = x * (npoints - 1);
     auto lo = _mm_cvttpd_epi32(x);
     x = x - _mm_cvtepi32_pd(lo);
-    auto ok = (__m128d)_mm_and_ps(ovr_ok, und_ok);
-    auto vlo = _mm_mask_i32gather_pd(_mm_undefined_pd(), points, lo, ok, 8);
-    auto vhi = _mm_mask_i32gather_pd(_mm_undefined_pd(), (points + 1), lo, ok, 8);
-    auto res = x * vhi + (1 - x) * vlo;
-    res = _mm_blendv_pd(_mm_set1_pd(points[0]), res, (__m128d)und_ok);
-    res = _mm_blendv_pd(_mm_set1_pd(points[npoints - 1]), res, (__m128d)ovr_ok);
-    return res;
+    auto vlo = _mm_mask_i32gather_pd(end_pt, points, lo, ovr_ok, 8);
+    auto vhi = _mm_mask_i32gather_pd(end_pt, (points + 1), lo, ovr_ok, 8);
+    return x * vhi + (1 - x) * vlo;
 }
 
 typedef int v4si __attribute__((__vector_size__(16)));
@@ -79,17 +98,16 @@ typedef int v4si __attribute__((__vector_size__(16)));
 __attribute__((target("avx"), always_inline, flatten))
 static inline __m256d linearInterpolate4(__m256d x, uint32_t npoints, const double *points)
 {
-    auto und_ok = (__m256)(x > 0);
     auto ovr_ok = (__m256)(x < 1);
+    x = _mm256_max_pd(x, _mm256_set1_pd(0));
     x = x * (npoints - 1);
-    x = (__m256d)_mm256_and_ps((__m256)x, _mm256_and_ps(ovr_ok, und_ok));
+    x = (__m256d)_mm256_and_ps((__m256)x, ovr_ok);
     auto lo = (v4si)_mm256_cvttpd_epi32(x);
     x = x - _mm256_cvtepi32_pd((__m128i)lo);
     auto vlo = (__m256d){points[lo[0]], points[lo[1]], points[lo[2]], points[lo[3]]};
     auto vhi = (__m256d){points[lo[0] + 1], points[lo[1] + 1],
                          points[lo[2] + 1], points[lo[3] + 1]};
     auto res = x * vhi + (1 - x) * vlo;
-    res = _mm256_blendv_pd(_mm256_broadcast_sd(points), res, (__m256d)und_ok);
     res = _mm256_blendv_pd(_mm256_broadcast_sd(&points[npoints - 1]), res, (__m256d)ovr_ok);
     return res;
 }
@@ -105,36 +123,29 @@ __attribute__((target("avx2,fma"), always_inline))
 static inline __m256d _linearInterpolate4_avx2(__m256d x, uint32_t npoints,
                                                const double *points)
 {
-    auto und_ok = (__m256)(x > 0);
-    auto ovr_ok = (__m256)(x < 1);
+    auto end_pt = _mm256_broadcast_sd(&points[npoints - 1]);
+    auto ovr_ok = (__m256d)(x < 1);
+    x = _mm256_max_pd(x, _mm256_set1_pd(0));
     x = x * (npoints - 1);
     auto lo = _mm256_cvttpd_epi32(x);
     x = x - _mm256_cvtepi32_pd(lo);
-    auto ok = (__m256d)_mm256_and_ps(ovr_ok, und_ok);
-    auto vlo = _mm256_mask_i32gather_pd(_mm256_undefined_pd(), points, lo, ok, 8);
-    auto vhi = _mm256_mask_i32gather_pd(_mm256_undefined_pd(), (points + 1), lo, ok, 8);
-    auto res = x * vhi + (1 - x) * vlo;
-    res = _mm256_blendv_pd(_mm256_broadcast_sd(points), res, (__m256d)und_ok);
-    res = _mm256_blendv_pd(_mm256_broadcast_sd(&points[npoints - 1]), res, (__m256d)ovr_ok);
-    return res;
+    auto vlo = _mm256_mask_i32gather_pd(end_pt, points, lo, ovr_ok, 8);
+    auto vhi = _mm256_mask_i32gather_pd(end_pt, (points + 1), lo, ovr_ok, 8);
+    return x * vhi + (1 - x) * vlo;
 }
 
 __attribute__((target("avx512f,avx512dq"), always_inline, flatten))
 static inline __m512d linearInterpolate8(__m512d x, uint32_t npoints, const double *points)
 {
-    auto und_ok = _mm512_cmp_pd_mask(x, _mm512_set1_pd(0), _CMP_GT_OS);
+    auto end_pt = _mm512_set1_pd(points[npoints - 1]);
     auto ovr_ok = _mm512_cmp_pd_mask(x, _mm512_set1_pd(1), _CMP_LT_OS);
+    x = _mm512_max_pd(x, _mm512_set1_pd(0));
     x = x * (npoints - 1);
     auto lo = _mm512_cvttpd_epi32(x);
     x = x - _mm512_cvtepi32_pd(lo);
-    __mmask8 ok = und_ok & ovr_ok;
-    auto vlo = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, lo, points, 8);
-    auto vhi = _mm512_mask_i32gather_pd(_mm512_undefined_pd(), ok, lo,
-                                        (points + 1), 8);
-    auto res = x * vhi + (1 - x) * vlo;
-    res = _mm512_mask_blend_pd(und_ok, _mm512_set1_pd(points[0]), res);
-    res = _mm512_mask_blend_pd(ovr_ok, _mm512_set1_pd(points[npoints - 1]), res);
-    return res;
+    auto vlo = _mm512_mask_i32gather_pd(end_pt, ovr_ok, lo, points, 8);
+    auto vhi = _mm512_mask_i32gather_pd(end_pt, ovr_ok, lo, (points + 1), 8);
+    return x * vhi + (1 - x) * vlo;
 }
 
 __attribute__((target("avx512f,avx512dq"), always_inline, flatten))
@@ -292,11 +303,10 @@ NACS_EXPORT() __m512d linearInterpolate8_avx512f(__m512d x, __m512d x0, __m512d 
 static NACS_INLINE float64x2_t linearInterpolate2(float64x2_t x, uint32_t npoints,
                                                   const double *points)
 {
-    auto und_ok = x > 0;
     auto ovr_ok = x < 1;
-    auto ok = ovr_ok & und_ok;
+    x = vmaxnmq_f64(x, vdupq_n_f64(0));
     x = x * (npoints - 1);
-    x = float64x2_t(ok & uint64x2_t(x));
+    x = float64x2_t(ovr_ok & uint64x2_t(x));
     auto lo = vcvtq_s64_f64(x);
     x = x - vcvtq_f64_s64(lo);
     auto vlohi = vld2q_f64(&points[lo[0]]);
