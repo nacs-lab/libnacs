@@ -265,31 +265,23 @@ _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48:
 //         vxorpd        %xmm1, %xmm1, %xmm1
 //         leal          -1(%rdx), %eax
 //         vbroadcastsd  .Ldouble1_v4(%rip), %zmm2
-//         vcmppd        $14, %zmm1, %zmm0, %k1
+//         vbroadcastsd  (%r8,%rax,8), %zmm5
+//         vcmpltpd      %zmm2, %zmm0, %k1
+//         vmaxpd        %zmm1, %zmm0, %zmm0
 //         vxorpd        %xmm1, %xmm1, %xmm1
-//         vxorpd        %xmm4, %xmm4, %xmm4
 //         vcvtsi2sdq    %rax, %xmm1, %xmm1
-//         vcmppd        $1, %zmm2, %zmm0, %k2
-//         vxorpd        %xmm5, %xmm5, %xmm5
-//         kmovb         %k1, %r9d
-//         kmovb         %k2, %ecx
-//         andl          %ecx, %r9d
+//         kmovb         %k1, %k2
 //         vbroadcastsd  %xmm1, %zmm1
-//         kmovb         %r9d, %k4
-//         kmovb         %r9d, %k3
-//         vmulpd        %zmm0, %zmm1, %zmm0
-//         vcvttpd2dq    %zmm0, %ymm1
-//         vcvtdq2pd     %ymm1, %zmm3
-//         vsubpd        %zmm3, %zmm0, %zmm0
-//         vgatherdpd    (%r8,%ymm1,8), %zmm4{%k4}
-//         vgatherdpd    8(%r8,%ymm1,8), %zmm5{%k3}
-//         vbroadcastsd  (%r8), %zmm1
-//         vsubpd        %zmm0, %zmm2, %zmm2
-//         vmulpd        %zmm4, %zmm2, %zmm2
-//         vfmadd132pd   %zmm5, %zmm2, %zmm0
-//         vmovapd       %zmm0, %zmm1{%k1}
-//         vbroadcastsd  (%r8,%rax,8), %zmm0
-//         vmovapd       %zmm1, %zmm0{%k2}
+//         vmulpd        %zmm0, %zmm1, %zmm1
+//         vcvttpd2dq    %zmm1, %ymm4
+//         vcvtdq2pd     %ymm4, %zmm3
+//         vsubpd        %zmm3, %zmm1, %zmm3
+//         vmovapd       %zmm5, %zmm1
+//         vgatherdpd    (%r8,%ymm4,8), %zmm5{%k2}
+//         vgatherdpd    8(%r8,%ymm4,8), %zmm1{%k1}
+//         vsubpd        %zmm3, %zmm2, %zmm0
+//         vmulpd        %zmm5, %zmm0, %zmm0
+//         vfmadd231pd   %zmm1, %zmm3, %zmm0
 //         ret
 //         .seh_endproc
 
