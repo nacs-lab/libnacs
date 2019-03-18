@@ -128,38 +128,30 @@ _ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32:
         // and `_ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64`
         // assumes that this function does not touch `%rcx`.
         // Using the scratch area
-        vmovapd     %xmm7, 24(%rsp)
-        .seh_savexmm %xmm7, 24
         vmovaps     %xmm6, 8(%rsp)
         .seh_savexmm %xmm6, 8
         .seh_endprologue
-        leal        -1(%rdx), %eax
-        vxorpd      %xmm1, %xmm1, %xmm1
         vmovapd     .Ldouble1_v4(%rip), %xmm2
         vxorpd      %xmm3, %xmm3, %xmm3
-        vcvtsi2sdq  %rax, %xmm1, %xmm1
-        vcmpltpd    %xmm0, %xmm3, %xmm3
-        vcmpltpd    %xmm2, %xmm0, %xmm6
-        vxorpd      %xmm5, %xmm5, %xmm5
-        vmovddup    %xmm1, %xmm1
-        vmulpd      %xmm0, %xmm1, %xmm1
-        vcvttpd2dqx %xmm1, %xmm7
-        vcvtdq2pd   %xmm7, %xmm0
-        vsubpd      %xmm0, %xmm1, %xmm1
-        vandps      %xmm3, %xmm6, %xmm0
-        vmovapd     %xmm0, %xmm4
-        vgatherdpd  %xmm4, (%r8,%xmm7,8), %xmm5
+        addl        $-1, %edx
+        vmovddup    (%r8,%rdx,8), %xmm1
+        vmaxpd      %xmm3, %xmm0, %xmm3
         vxorpd      %xmm4, %xmm4, %xmm4
-        vgatherdpd  %xmm0, 8(%r8,%xmm7,8), %xmm4
-        vsubpd      %xmm1, %xmm2, %xmm2
-        vmovddup    (%r8), %xmm0
-        vmulpd      %xmm5, %xmm2, %xmm2
-        vfmadd132pd %xmm4, %xmm2, %xmm1
-        vblendvpd   %xmm3, %xmm1, %xmm0, %xmm1
-        vmovddup    (%r8,%rax,8), %xmm0
-        vblendvpd   %xmm6, %xmm1, %xmm0, %xmm0
+        vcvtsi2sdq  %rdx, %xmm4, %xmm4
+        vmovddup    %xmm4, %xmm4
+        vmulpd      %xmm3, %xmm4, %xmm3
+        vcvttpd2dq  %xmm3, %xmm4
+        vcvtdq2pd   %xmm4, %xmm5
+        vcmpltpd    %xmm2, %xmm0, %xmm0
+        vsubpd      %xmm5, %xmm3, %xmm3
+        vmovapd     %xmm1, %xmm5
+        vmovapd     %xmm0, %xmm6
+        vgatherdpd  %xmm6, (%r8,%xmm4,8), %xmm5
+        vgatherdpd  %xmm0, 8(%r8,%xmm4,8), %xmm1
+        vsubpd      %xmm3, %xmm2, %xmm0
+        vmulpd      %xmm0, %xmm5, %xmm0
+        vfmadd231pd %xmm1, %xmm3, %xmm0
         vmovaps     8(%rsp), %xmm6
-        vmovaps     24(%rsp), %xmm7
         ret
         .seh_endproc
 
@@ -174,26 +166,20 @@ _ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32:
 _ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48:
         // The wrapper function below `_ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd`,
         // and `_ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112`
-        // assumes that this function does not touch `%r11`.
-        // Using the scratch area
-        vmovapd       %xmm7, 24(%rsp)
-        .seh_savexmm %xmm7, 24
-        vmovaps       %xmm6, 8(%rsp)
-        .seh_savexmm %xmm6, 8
+        // assumes that this function does not touch `%r11` and does not use the stack.
         .seh_endprologue
-        leal          -1(%rdx), %r9d
-        vxorpd        %xmm2, %xmm2, %xmm2
-        vmovapd       .Ldouble1_v4(%rip), %ymm6
-        vxorpd        %xmm4, %xmm4, %xmm4
-        vcvtsi2sdq    %r9, %xmm2, %xmm2
-        vcmpltpd      %ymm0, %ymm4, %ymm4
-        vcmpltpd      %ymm6, %ymm0, %ymm5
-        vmovddup      %xmm2, %xmm2
-        vandps        %ymm4, %ymm5, %ymm3
-        vinsertf128   $1, %xmm2, %ymm2, %ymm2
-        vmulpd        %ymm0, %ymm2, %ymm1
-        vandps        %ymm3, %ymm1, %ymm1
-        vcvttpd2dqy   %ymm1, %xmm2
+        lea           -0x1(%rdx), %r9d
+        vxorpd        %xmm1, %xmm1, %xmm1
+        vmovapd       .Ldouble1_v4(%rip), %ymm5
+        vcmpltpd      %ymm5, %ymm0, %ymm4
+        vmaxpd        %ymm1, %ymm0, %ymm0
+        vxorpd        %xmm1, %xmm1, %xmm1
+        vcvtsi2sd     %r9, %xmm1, %xmm1
+        vmovddup      %xmm1, %xmm1
+        vinsertf128   $1, %xmm1, %ymm1, %ymm1
+        vmulpd        %ymm0, %ymm1, %ymm1
+        vandps        %ymm4, %ymm1, %ymm1
+        vcvttpd2dq    %ymm1, %xmm2
         vpextrd       $2, %xmm2, %edx
         vcvtdq2pd     %xmm2, %ymm0
         vmovd         %xmm2, %ecx
@@ -209,21 +195,17 @@ _ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48:
         vmovhpd       8(%r8,%rax,8), %xmm2, %xmm0
         vmovsd        8(%r8,%rcx,8), %xmm2
         vmovhpd       8(%r8,%r10,8), %xmm2, %xmm2
-        vinsertf128   $0x1, %xmm0, %ymm2, %ymm2
+        vinsertf128   $1, %xmm0, %ymm2, %ymm2
         vmovhpd       (%r8,%rax,8), %xmm3, %xmm0
         vmovsd        (%r8,%rcx,8), %xmm3
         vmulpd        %ymm1, %ymm2, %ymm2
-        vsubpd        %ymm1, %ymm6, %ymm1
+        vsubpd        %ymm1, %ymm5, %ymm1
         vmovhpd       (%r8,%r10,8), %xmm3, %xmm3
-        vinsertf128   $0x1, %xmm0, %ymm3, %ymm3
-        vbroadcastsd  (%r8), %ymm0
+        vinsertf128   $1, %xmm0, %ymm3, %ymm3
+        vbroadcastsd  (%r8,%r9,8), %ymm0
         vmulpd        %ymm1, %ymm3, %ymm1
         vaddpd        %ymm1, %ymm2, %ymm1
-        vblendvpd     %ymm4, %ymm1, %ymm0, %ymm1
-        vbroadcastsd  (%r8,%r9,8), %ymm0
-        vblendvpd     %ymm5, %ymm1, %ymm0, %ymm0
-        vmovaps       8(%rsp), %xmm6
-        vmovaps       24(%rsp), %xmm7
+        vblendvpd     %ymm4, %ymm1, %ymm0, %ymm0
         ret
         .seh_endproc
 
@@ -240,38 +222,30 @@ _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48:
         // and `_ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112`
         // assumes that this function does not touch `%rcx`.
         // Using the scratch area
-        vmovapd       %xmm7, 24(%rsp)
-        .seh_savexmm %xmm7, 24
-        vmovaps       %xmm6, 8(%rsp)
+        vmovaps      %xmm6, 8(%rsp)
         .seh_savexmm %xmm6, 8
         .seh_endprologue
-        leal          -1(%rdx), %eax
-        vxorpd        %xmm1, %xmm1, %xmm1
-        vmovapd       .Ldouble1_v4(%rip), %ymm2
-        vxorpd        %xmm3, %xmm3, %xmm3
-        vcvtsi2sdq    %rax, %xmm1, %xmm1
-        vcmpltpd      %ymm0, %ymm3, %ymm3
-        vcmpltpd      %ymm2, %ymm0, %ymm6
-        vxorpd        %xmm5, %xmm5, %xmm5
-        vbroadcastsd  %xmm1, %ymm1
-        vmulpd        %ymm0, %ymm1, %ymm1
-        vcvttpd2dqy   %ymm1, %xmm7
-        vcvtdq2pd     %xmm7, %ymm0
-        vsubpd        %ymm0, %ymm1, %ymm1
-        vandps        %ymm3, %ymm6, %ymm0
-        vmovapd       %ymm0, %ymm4
-        vgatherdpd    %ymm4, (%r8,%xmm7,8), %ymm5
-        vxorpd        %xmm4, %xmm4, %xmm4
-        vgatherdpd    %ymm0, 8(%r8,%xmm7,8), %ymm4
-        vsubpd        %ymm1, %ymm2, %ymm2
-        vbroadcastsd  (%r8), %ymm0
-        vmulpd        %ymm5, %ymm2, %ymm2
-        vfmadd132pd   %ymm4, %ymm2, %ymm1
-        vblendvpd     %ymm3, %ymm1, %ymm0, %ymm1
-        vbroadcastsd  (%r8,%rax,8), %ymm0
-        vblendvpd     %ymm6, %ymm1, %ymm0, %ymm0
-        vmovaps       8(%rsp), %xmm6
-        vmovaps       24(%rsp), %xmm7
+        vmovapd      .Ldouble1_v4(%rip), %ymm2
+        vxorpd       %xmm3, %xmm3, %xmm3
+        addl         $-1, %edx
+        vbroadcastsd (%r8,%rdx,8), %ymm1
+        vmaxpd       %ymm3, %ymm0, %ymm3
+        vxorpd       %xmm4, %xmm4, %xmm4
+        vcvtsi2sdq   %rdx, %xmm4, %xmm4
+        vbroadcastsd %xmm4, %ymm4
+        vmulpd       %ymm3, %ymm4, %ymm3
+        vcvttpd2dqy  %ymm3, %xmm4
+        vcvtdq2pd    %xmm4, %ymm5
+        vcmpltpd     %ymm2, %ymm0, %ymm0
+        vsubpd       %ymm5, %ymm3, %ymm3
+        vmovapd      %ymm1, %ymm5
+        vmovapd      %ymm0, %ymm6
+        vgatherdpd   %ymm6, (%r8,%xmm4,8), %ymm5
+        vgatherdpd   %ymm0, 8(%r8,%xmm4,8), %ymm1
+        vsubpd       %ymm3, %ymm2, %ymm0
+        vmulpd       %ymm0, %ymm5, %ymm0
+        vfmadd231pd  %ymm1, %ymm3, %ymm0
+        vmovaps      8(%rsp), %xmm6
         ret
         .seh_endproc
 
@@ -496,10 +470,10 @@ _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd:
         .seh_proc _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd
 _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd:
         // Assumes that `_ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48`
-        // does not touch `%r11`.
+        // does not touch `%r11` and does not use the stack.
         // Also assumes that the caller knows about avx so we don't need `vzeroupper`
-        subq    $40, %rsp
-        .seh_stackalloc 40
+        // subq    $40, %rsp
+        // .seh_stackalloc 40
         .seh_endprologue
         movq    %rcx, %r11
         vmovaps (%rdx), %ymm0
@@ -507,7 +481,7 @@ _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd:
         movq    %r9, %r8
         callq   _ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48
         vmovaps %ymm0, (%r11)
-        addq    $40, %rsp
+        // addq    $40, %rsp
         ret
         .seh_endproc
 
