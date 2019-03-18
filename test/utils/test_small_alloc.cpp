@@ -144,7 +144,7 @@ private:
 };
 
 template<size_t nstatic>
-__attribute__((noinline)) void benchmark(size_t nlive, size_t ncycle)
+NACS_NOINLINE void benchmark(size_t nlive, size_t ncycle)
 {
     std::vector<int*> pointers(nlive, nullptr);
     SmallAllocator<int,nstatic> allocator;

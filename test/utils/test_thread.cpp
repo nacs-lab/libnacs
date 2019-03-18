@@ -130,8 +130,7 @@ struct test_thread_lock {
     }
 };
 
-static void __attribute__((noinline))
-f()
+static NACS_NOINLINE void f()
 {
     asm("");
 }

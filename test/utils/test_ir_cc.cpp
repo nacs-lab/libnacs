@@ -44,7 +44,7 @@ class ArgSetBase {
 public:
     template<typename T> T get(int i) const;
     template<typename Res>
-    __attribute__((noinline)) void test(Res res, int i, IR::Type t) const
+    NACS_NOINLINE void test(Res res, int i, IR::Type t) const
     {
         switch (t) {
         case IR::Type::Bool:

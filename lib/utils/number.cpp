@@ -22,29 +22,28 @@ namespace NaCs {
 
 #if NACS_CPU_X86 || NACS_CPU_X86_64
 
-static inline double _maxd(double x, double y)
+static NACS_INLINE double _maxd(double x, double y)
 {
     return _mm_max_sd(_mm_set_sd(x), _mm_set_sd(y))[0];
 }
 
 #elif NACS_CPU_AARCH64
 
-static inline double _maxd(double x, double y)
+static NACS_INLINE double _maxd(double x, double y)
 {
     return vmaxnm_f64(float64x1_t{x}, float64x1_t{y})[0];
 }
 
 #else
 
-static inline double _maxd(double x, double y)
+static NACS_INLINE double _maxd(double x, double y)
 {
     return x > y ? x : y;
 }
 
 #endif
 
-__attribute__((always_inline))
-static inline double _linearInterpolate(double x, uint32_t npoints, const double *points)
+static NACS_INLINE double _linearInterpolate(double x, uint32_t npoints, const double *points)
 {
     if (unlikely(x >= 1))
         return points[npoints - 1];
@@ -70,8 +69,7 @@ NACS_EXPORT() double linearInterpolate(double x, double x0, double dx,
 
 #if NACS_CPU_X86 || NACS_CPU_X86_64
 
-__attribute__((always_inline))
-static inline __m128d linearInterpolate2(__m128d x, uint32_t npoints, const double *points)
+static NACS_INLINE __m128d linearInterpolate2(__m128d x, uint32_t npoints, const double *points)
 {
     // From benchmark, on a Skylake CPU, this is actually faster than a vectorized version.
     // (This has higher instruction count but a even higher IPC)
@@ -79,8 +77,9 @@ static inline __m128d linearInterpolate2(__m128d x, uint32_t npoints, const doub
             _linearInterpolate(x[1], npoints, points)};
 }
 
-__attribute__((target("avx2,fma"), always_inline))
-static inline __m128d _linearInterpolate2_avx2(__m128d x, uint32_t npoints, const double *points)
+__attribute__((target("avx2,fma")))
+static NACS_INLINE __m128d _linearInterpolate2_avx2(__m128d x, uint32_t npoints,
+                                                    const double *points)
 {
     auto end_pt = _mm_set1_pd(points[npoints - 1]);
     auto ovr_ok = (__m128d)(x < 1);
@@ -95,8 +94,8 @@ static inline __m128d _linearInterpolate2_avx2(__m128d x, uint32_t npoints, cons
 
 typedef int v4si __attribute__((__vector_size__(16)));
 
-__attribute__((target("avx"), always_inline, flatten))
-static inline __m256d linearInterpolate4(__m256d x, uint32_t npoints, const double *points)
+__attribute__((target("avx"), flatten))
+static NACS_INLINE __m256d linearInterpolate4(__m256d x, uint32_t npoints, const double *points)
 {
     auto ovr_ok = (__m256)(x < 1);
     x = _mm256_max_pd(x, _mm256_set1_pd(0));
@@ -112,16 +111,16 @@ static inline __m256d linearInterpolate4(__m256d x, uint32_t npoints, const doub
     return res;
 }
 
-__attribute__((target("avx"), always_inline, flatten))
-static inline __m256d linearInterpolate4(__m256d x, __m256d x0, __m256d dx,
-                                         uint32_t npoints, const double *points)
+__attribute__((target("avx"), flatten))
+static NACS_INLINE __m256d linearInterpolate4(__m256d x, __m256d x0, __m256d dx,
+                                              uint32_t npoints, const double *points)
 {
     return linearInterpolate4((x - x0) / dx, npoints, points);
 }
 
-__attribute__((target("avx2,fma"), always_inline))
-static inline __m256d _linearInterpolate4_avx2(__m256d x, uint32_t npoints,
-                                               const double *points)
+__attribute__((target("avx2,fma")))
+static NACS_INLINE __m256d _linearInterpolate4_avx2(__m256d x, uint32_t npoints,
+                                                    const double *points)
 {
     auto end_pt = _mm256_broadcast_sd(&points[npoints - 1]);
     auto ovr_ok = (__m256d)(x < 1);
@@ -134,8 +133,8 @@ static inline __m256d _linearInterpolate4_avx2(__m256d x, uint32_t npoints,
     return x * vhi + (1 - x) * vlo;
 }
 
-__attribute__((target("avx512f,avx512dq"), always_inline, flatten))
-static inline __m512d linearInterpolate8(__m512d x, uint32_t npoints, const double *points)
+__attribute__((target("avx512f,avx512dq"), flatten))
+static NACS_INLINE __m512d linearInterpolate8(__m512d x, uint32_t npoints, const double *points)
 {
     auto end_pt = _mm512_set1_pd(points[npoints - 1]);
     auto ovr_ok = _mm512_cmp_pd_mask(x, _mm512_set1_pd(1), _CMP_LT_OS);
@@ -148,9 +147,9 @@ static inline __m512d linearInterpolate8(__m512d x, uint32_t npoints, const doub
     return x * vhi + (1 - x) * vlo;
 }
 
-__attribute__((target("avx512f,avx512dq"), always_inline, flatten))
-static inline __m512d linearInterpolate8(__m512d x, __m512d x0, __m512d dx,
-                                         uint32_t npoints, const double *points)
+__attribute__((target("avx512f,avx512dq"), flatten))
+static NACS_INLINE __m512d linearInterpolate8(__m512d x, __m512d x0, __m512d dx,
+                                              uint32_t npoints, const double *points)
 {
     return linearInterpolate8((x - x0) / dx, npoints, points);
 }
