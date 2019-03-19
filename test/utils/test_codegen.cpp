@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2019 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,17 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "winpath_helper.h"
+#include "codegen_helper.h"
 
-// This avoid linking to LLVM
-// Without this, LLVM header generates a global variable with
-// weak linkage that links to symbol in libLLVM.
-#define LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING 1
-
-#include "../../lib/utils/llvm/codegen.h"
-#include "../../lib/utils/llvm/compile.h"
-#include "../../lib/utils/llvm/execute.h"
-#include "../../lib/utils/llvm/utils.h"
 #include "../../lib/utils/number.h"
 #include "../../lib/utils/streams.h"
 #include "../../lib/utils/timer.h"
@@ -34,8 +25,6 @@
 #include <iostream>
 #include <sstream>
 #include <math.h>
-
-using namespace NaCs;
 
 template<typename T>
 static void test_str_eq(T &&v, std::string val)
@@ -49,79 +38,9 @@ static void test_str_eq(T &&v, std::string val)
     abort();
 }
 
-struct LLVMTest {
-    LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func)
-        : mod(LLVM::new_module("", ll_ctx)),
-          engine(engine)
-    {
-        LLVM::Codegen::Context ctx(mod);
-        f = ctx.emit_function(func, "0");
-        auto fty = f->getFunctionType();
-        assert(!fty->isVarArg());
-        for (auto argt: fty->params()) {
-            assert(argt == ctx.T_i8 || argt == ctx.T_i32 || argt == ctx.T_f64);
-        }
-    }
-    LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func,
-             const LLVM::Codegen::Wrapper &wrapper)
-        : mod(LLVM::new_module("", ll_ctx)),
-          engine(engine)
-    {
-        LLVM::Codegen::Context ctx(mod);
-        auto f0 = ctx.emit_function(func, "1", false);
-        auto fty0 = f0->getFunctionType();
-        assert(!fty0->isVarArg());
-        for (auto argt: fty0->params())
-            assert(argt == ctx.T_i8 || argt == ctx.T_i32 || argt == ctx.T_f64);
-        f = ctx.emit_wrapper(f0, "0", wrapper);
-    }
-    LLVMTest(LLVMTest&&) = default;
-    LLVMTest &operator=(LLVMTest&&) = default;
-    LLVMTest &opt()
-    {
-        LLVM::Compile::optimize(mod);
-        return *this;
-    }
-    LLVMTest &print()
-    {
-        LLVM::dump(mod);
-        return *this;
-    }
-    void *get_ptr()
-    {
-        llvm::SmallVector<char,0> vec;
-        auto res = LLVM::Compile::emit_objfile(vec, LLVM::Compile::get_native_target(),
-                                               mod);
-        assert(res);
-        auto obj_id = engine.load(&vec[0], vec.size());
-        obj_ids.push_back(obj_id);
-        assert(obj_id);
-        return engine.get_symbol("0");
-    }
-    ~LLVMTest()
-    {
-        for (auto id: obj_ids) {
-            engine.free(id);
-        }
-        LLVM::delete_module(mod);
-    }
-    llvm::Module *mod;
-    LLVM::Exe::Engine &engine;
-    llvm::Function *f = nullptr;
-    std::vector<uint64_t> obj_ids;
-};
-
 int main()
 {
-    LLVM::Exe::Engine engine;
-    std::unique_ptr<llvm::LLVMContext,void(*)(llvm::LLVMContext*)>
-        llvm_ctx(LLVM::new_context(), LLVM::delete_context);
-
-    auto gettest = [&] (auto ...args) {
-        return LLVMTest(*llvm_ctx, engine, args...);
-    };
-
-    auto exectx = IR::ExeContext::get();
+    TestCtx ctx;
 
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
@@ -131,13 +50,9 @@ int main()
                     "L0:\n"
                     "  ret Float64 %0\n"
                     "}");
-        auto f = exectx->getFunc<double(double)>(builder.get());
-        assert(f(1.2) == 1.2);
-        assert(f(4.2) == 4.2);
-        auto test = gettest(builder.get());
-        auto f2 = (double(*)(double))test.get_ptr();
-        assert(f2(1.2) == 1.2);
-        assert(f2(4.2) == 4.2);
+        test_codegen<double(double)>(ctx, builder.get(),
+                                     test_set(1.2, 1.2),
+                                     test_set(4.2, 4.2));
     }
 
     {
@@ -147,11 +62,7 @@ int main()
                     "L0:\n"
                     "  ret Bool false\n"
                     "}");
-        auto f = exectx->getFunc<bool()>(builder.get());
-        assert(f() == false);
-        auto test = gettest(builder.get());
-        auto f2 = (bool(*)())test.get_ptr();
-        assert(f2() == false);
+        test_codegen<bool()>(ctx, builder.get(), test_set(false));
     }
 
     {
@@ -161,11 +72,7 @@ int main()
                     "L0:\n"
                     "  ret Float64 1.1\n"
                     "}");
-        auto f = exectx->getFunc<double()>(builder.get());
-        assert(f() == 1.1);
-        auto test = gettest(builder.get());
-        auto f2 = (double(*)())test.get_ptr();
-        assert(f2() == 1.1);
+        test_codegen<double()>(ctx, builder.get(), test_set(1.1));
     }
 
     {
@@ -175,11 +82,7 @@ int main()
                     "L0:\n"
                     "  ret Int32 42\n"
                     "}");
-        auto f = exectx->getFunc<int()>(builder.get());
-        assert(f() == 42);
-        auto test = gettest(builder.get());
-        auto f2 = (int(*)())test.get_ptr();
-        assert(f2() == 42);
+        test_codegen<int()>(ctx, builder.get(), test_set(42));
     }
 
     {
@@ -200,13 +103,9 @@ int main()
                     "L2:\n"
                     "  ret Float64 3.4\n"
                     "}");
-        auto f = exectx->getFunc<double(bool, double)>(builder.get());
-        assert(f(true, 1.3) == 1.3);
-        assert(f(false, 1.3) == 3.4);
-        auto test = gettest(builder.get());
-        auto f2 = (double(*)(bool, double))test.get_ptr();
-        assert(f2(true, 1.3) == 1.3);
-        assert(f2(false, 1.3) == 3.4);
+        test_codegen<double(bool, double)>(ctx, builder.get(),
+                                           test_set(1.3, true, 1.3),
+                                           test_set(3.4, false, 1.3));
     }
 
     {
@@ -223,11 +122,8 @@ int main()
                     "  Float64 %4 = sub Float64 %2, Float64 %3\n"
                     "  ret Float64 %4\n"
                     "}");
-        auto f = exectx->getFunc<double(double, double)>(builder.get());
-        assert(f(2.3, 1.3) == -1.71);
-        auto test = gettest(builder.get());
-        auto f2 = (double(*)(double, double))test.get_ptr();
-        assert(f2(2.3, 1.3) == -1.71);
+        test_codegen<double(double, double)>(ctx, builder.get(),
+                                             test_set(-1.71, 2.3, 1.3));
     }
 
     {
@@ -240,11 +136,8 @@ int main()
                     "  Float64 %2 = fdiv Int32 %0, Int32 %1\n"
                     "  ret Float64 %2\n"
                     "}");
-        auto f = exectx->getFunc<double(int, int)>(builder.get());
-        assert(f(3, 2) == 1.5);
-        auto test = gettest(builder.get());
-        auto f2 = (double(*)(int, int))test.get_ptr();
-        assert(f2(3, 2) == 1.5);
+        test_codegen<double(int, int)>(ctx, builder.get(),
+                                       test_set(1.5, 3, 2));
     }
 
     {
@@ -267,13 +160,9 @@ int main()
                     "L2:\n"
                     "  ret Int32 %0\n"
                     "}");
-        auto f = exectx->getFunc<double(int, double)>(builder.get());
-        assert(f(20, 1.3) == 1.3);
-        assert(f(-10, 1.3) == -10);
-        auto test = gettest(builder.get());
-        auto f2 = (double(*)(int, double))test.get_ptr();
-        assert(f2(20, 1.3) == 1.3);
-        assert(f2(-10, 1.3) == -10);
+        test_codegen<double(int, double)>(ctx, builder.get(),
+                                          test_set(1.3, 20, 1.3),
+                                          test_set(-10, -10, 1.3));
     }
 
     {
@@ -308,16 +197,17 @@ int main()
                     "L2:\n"
                     "  ret Int32 %5\n"
                     "}");
-        auto f = exectx->getFunc<int(int, int)>(builder.get());
-        assert(f(1, 3) == 6);
+        auto test = test_codegen<int(int, int)>(ctx, builder.get(),
+                                                test_set(6, 1, 3),
+                                                test_set(500499, 2, 1000));
+
+        auto f = test.get_interp_func();
         Timer timer;
-        assert(f(2, 1000) == 500499);
+        f(2, 1000);
         timer.print();
-        auto test = gettest(builder.get());
-        auto f2 = (int(*)(int, int))test.get_ptr();
-        assert(f2(1, 3) == 6);
+        auto f2 = test.get_llvm_func();
         timer.restart();
-        assert(f2(2, 1000) == 500499);
+        f2(2, 1000);
         timer.print();
     }
 
@@ -335,16 +225,16 @@ int main()
                     "  Float64 %4 = add Float64 %3, Float64 %2\n"
                     "  ret Float64 %4\n"
                     "}");
-        auto f1 = exectx->getFunc<double(int)>(builder.get());
-        assert(f1(1) == sin(1) + sin(2));
-        assert(f1(2) == sin(4) + sin(2));
+        auto test = test_codegen<double(int), true>(ctx, builder.get(),
+                                                    test_set(sin(1) + sin(2), 1),
+                                                    test_set(sin(4) + sin(2), 2));
 
+        auto f1 = test.get_interp_func();
         Timer timer;
         for (int i = 0;i < 1000000;i++)
             f1(1);
         timer.print();
-        auto test = gettest(builder.get());
-        auto f2 = (double(*)(int))test.get_ptr();
+        auto f2 = test.get_llvm_func();
         timer.restart();
         for (int i = 0;i < 1000000;i++)
             f2(1);
@@ -367,8 +257,7 @@ int main()
                     "  Float64 %2 = fdiv Float64 %3, Float64 1\n"
                     "  ret Float64 %2\n"
                     "}");
-        auto test = gettest(newfunc);
-        test.get_ptr();
+        test_codegen<double(double, double)>(ctx, newfunc, test_set(3, 2, 3));
     }
 
     {
@@ -381,15 +270,11 @@ int main()
                     "  Float64 %1 = interp [2, (4) +3] (Float64 %0) {0, 0.1, 0.2, 0.6}\n"
                     "  ret Float64 %1\n"
                     "}");
-        auto f = exectx->getFunc<double(double)>(builder.get());
-        assert(fabs(f(2.3) - linearInterpolate(2.3, 2, 3, 4, data)) < 1e-10);
-        assert(fabs(f(3.5) - linearInterpolate(3.5, 2, 3, 4, data)) < 1e-10);
-        assert(fabs(f(4.4) - linearInterpolate(4.4, 2, 3, 4, data)) < 1e-10);
-        auto test = gettest(builder.get());
-        auto f2 = (double(*)(double))test.get_ptr();
-        assert(fabs(f2(2.3) - linearInterpolate(2.3, 2, 3, 4, data)) < 1e-10);
-        assert(fabs(f2(3.5) - linearInterpolate(3.5, 2, 3, 4, data)) < 1e-10);
-        assert(fabs(f2(4.4) - linearInterpolate(4.4, 2, 3, 4, data)) < 1e-10);
+        test_codegen<double(double), true>(
+            ctx, builder.get(),
+            test_set(linearInterpolate(2.3, 2, 3, 4, data), 2.3),
+            test_set(linearInterpolate(3.5, 2, 3, 4, data), 3.5),
+            test_set(linearInterpolate(4.4, 2, 3, 4, data), 4.4));
     }
 
     {
@@ -404,13 +289,7 @@ int main()
                     "  Float64 %2 = add Float64 %3, Float64 %1\n"
                     "  ret Float64 %2\n"
                     "}");
-        auto test = gettest(newfunc);
-        auto f = (double(*)(double, double))test
-            // .print()
-            // .opt()
-            // .print()
-            .get_ptr();
-        assert(f(1.5, 2) == 4.25);
+        test_codegen<double(double, double)>(ctx, newfunc, test_set(4.25, 1.5, 2));
     }
 
     {
@@ -427,95 +306,93 @@ int main()
                     "  Float64 %4 = sub Float64 %2, Float64 %3\n"
                     "  ret Float64 %4\n"
                     "}");
-        auto fi = exectx->getFunc<double(double, double)>(builder.get());
-        assert(fi(2.3, 1.3) == -1.71);
-
-        auto test = gettest(builder.get());
-        auto f = (double(*)(double, double))test.get_ptr();
-        assert(f(2.3, 1.3) == -1.71);
+        auto test = test_codegen<double(double, double)>(ctx, builder.get(),
+                                                         test_set(-1.71, 2.3, 1.3),
+                                                         test_set(-51.3, 2.3, 10.0),
+                                                         test_set(0.0, 1.3, 1.0));
 
         LLVM::Codegen::Wrapper wrap0{true};
-        auto test0 = gettest(builder.get(), wrap0);
+        auto test0 = test.get_llvm_test(wrap0);
         auto f0 = (double(*)(double, double, IR::GenVal*))test0.get_ptr();
-        assert(f0(2.3, 1.3, nullptr) == -1.71);
-        assert(f0(2.3, 10.0, nullptr) == -51.3);
-        assert(f0(1.3, 1.0, nullptr) == 0.0);
+        test.test_res(-1.71, "NULL closure", f0(2.3, 1.3, nullptr), 2.3, 1.3);
+        test.test_res(-51.3, "NULL closure", f0(2.3, 10.0, nullptr), 2.3, 10.0);
+        test.test_res(0.0, "NULL closure", f0(1.3, 1.0, nullptr), 1.3, 1.0);
 
         IR::GenVal vals[2];
 
         LLVM::Codegen::Wrapper wrap11{true};
         wrap11.add_closure(0, 0);
-        auto test11 = gettest(builder.get(), wrap11);
+        auto test11 = test.get_llvm_test(wrap11);
         auto f11 = (double(*)(double, IR::GenVal*))test11.get_ptr();
         vals[0] = IR::TagVal(2.3).val;
-        assert(f11(1.3, vals) == -1.71);
-        assert(f11(10.0, vals) == -51.3);
+        test.test_res(-1.71, "Closure 11", f11(1.3, vals), 2.3, 1.3);
+        test.test_res(-51.3, "Closure 11", f11(10.0, vals), 2.3, 10.0);
         vals[0] = IR::TagVal(1.3).val;
-        assert(f11(1.0, vals) == 0.0);
+        test.test_res(0.0, "Closure 11", f11(1.0, vals), 1.3, 1.0);
 
         LLVM::Codegen::Wrapper wrap12{true};
         wrap12.add_closure(1, 0);
-        auto test12 = gettest(builder.get(), wrap12);
+        auto test12 = test.get_llvm_test(wrap12);
         auto f12 = (double(*)(double, IR::GenVal*))test12.get_ptr();
         vals[0] = IR::TagVal(1.3).val;
-        assert(f12(2.3, vals) == -1.71);
+        test.test_res(-1.71, "Closure 12", f12(2.3, vals), 2.3, 1.3);
         vals[0] = IR::TagVal(10.0).val;
-        assert(f12(2.3, vals) == -51.3);
+        test.test_res(-51.3, "Closure 12", f12(2.3, vals), 2.3, 10.0);
         vals[0] = IR::TagVal(1.0).val;
-        assert(f12(1.3, vals) == 0.0);
+        test.test_res(0.0, "Closure 12", f12(1.3, vals), 1.3, 1.0);
 
         LLVM::Codegen::Wrapper wrap2{true};
         wrap2.add_closure(1, 0)
             .add_closure(0, 1);
-        auto test2 = gettest(builder.get(), wrap2);
+        auto test2 = test.get_llvm_test(wrap2);
         auto f2 = (double(*)(IR::GenVal*))test2.get_ptr();
         vals[0] = IR::TagVal(1.3).val;
         vals[1] = IR::TagVal(2.3).val;
-        assert(f2(vals) == -1.71);
+        test.test_res(-1.71, "Closure 2", f2(vals), 2.3, 1.3);
         vals[0] = IR::TagVal(10.0).val;
-        assert(f2(vals) == -51.3);
+        test.test_res(-51.3, "Closure 2", f2(vals), 2.3, 10.0);
         vals[0] = IR::TagVal(1.0).val;
         vals[1] = IR::TagVal(1.3).val;
-        assert(f2(vals) == 0.0);
+        test.test_res(0.0, "Closure 2", f2(vals), 1.3, 1.0);
 
         LLVM::Codegen::Wrapper wrap_ref{false};
         wrap_ref.add_byref(0);
-        auto test_ref = gettest(builder.get(), wrap_ref);
+        auto test_ref = test.get_llvm_test(wrap_ref);
         auto f_ref = (double(*)(const double&, double))test_ref.get_ptr();
-        assert(f_ref(2.3, 1.3) == -1.71);
-        assert(f_ref(2.3, 10.0) == -51.3);
-        assert(f_ref(1.3, 1.0) == 0.0);
+        test.test_res(-1.71, "By ref", f_ref(2.3, 1.3), 2.3, 1.3);
+        test.test_res(-51.3, "By ref", f_ref(2.3, 10.0), 2.3, 10.0);
+        test.test_res(0.0, "By ref", f_ref(1.3, 1.0), 1.3, 1.0);
 
         LLVM::Codegen::Wrapper wrap_ret_ref{false};
         wrap_ret_ref.add_ret_ref();
-        auto test_ret_ref = gettest(builder.get(), wrap_ret_ref);
+        auto test_ret_ref = test.get_llvm_test(wrap_ret_ref);
         auto f_ret_ref = (void(*)(double&, double, double))test_ret_ref.get_ptr();
         {
             double res;
             f_ret_ref(res, 2.3, 1.3);
-            assert(res == -1.71);
+            test.test_res(-1.71, "Ref return", res, 2.3, 1.3);
             f_ret_ref(res, 2.3, 10.0);
-            assert(res == -51.3);
+            test.test_res(-51.3, "Ref return", res, 2.3, 10.0);
             f_ret_ref(res, 1.3, 1.0);
-            assert(res == 0.0);
+            test.test_res(0.0, "Ref return", res, 1.3, 1.0);
         }
 
         LLVM::Codegen::Wrapper wrap_ret_ref1{false};
         wrap_ret_ref1.add_byref(0);
         wrap_ret_ref1.add_ret_ref();
-        auto test_ret_ref1 = gettest(builder.get(), wrap_ret_ref1);
+        auto test_ret_ref1 = test.get_llvm_test(wrap_ret_ref1);
         auto f_ret_ref1 = (void(*)(double&, const double&, double))test_ret_ref1.get_ptr();
         {
             // Test that aliasing works.
             double res = 2.3;
             f_ret_ref1(res, res, 1.3);
-            assert(res == -1.71);
+            test.test_res(-1.71, "Alias return", res, 2.3, 1.3);
             res = 2.3;
             f_ret_ref1(res, res, 10.0);
-            assert(res == -51.3);
+            test.test_res(-51.3, "Alias return", res, 2.3, 10.0);
             res = 1.3;
             f_ret_ref1(res, res, 1.0);
-            assert(res == 0.0);
+            test.test_res(0.0, "Alias return", res, 1.3, 1.0);
         }
     }
 
@@ -528,14 +405,9 @@ int main()
                     "  Float64 %3 = select Bool %0, Int32 %1, Float64 %2\n"
                     "  ret Float64 %3\n"
                     "}");
-        auto f = exectx->getFunc<double(bool, int, double)>(builder.get());
-        assert(f(true, 1, 2.3) == 1.0);
-        assert(f(false, 1, 2.3) == 2.3);
-
-        auto test = gettest(builder.get());
-        auto f2 = (double(*)(bool, int, double))test.get_ptr();
-        assert(f2(true, 1, 2.3) == 1.0);
-        assert(f2(false, 1, 2.3) == 2.3);
+        test_codegen<double(bool, int, double)>(ctx, builder.get(),
+                                                test_set(1.0, true, 1, 2.3),
+                                                test_set(2.3, false, 1, 2.3));
     }
 
     {
@@ -546,14 +418,10 @@ int main()
                     "  Int32 %1 = convert(Float64 %0)\n"
                     "  ret Int32 %1\n"
                     "}");
-        auto f = exectx->getFunc<int(double)>(builder.get());
-        assert(f(2.3) == 2);
-        assert(f(10) == 10);
-
-        auto test = gettest(builder.get());
-        auto f2 = (int(*)(double))test.get_ptr();
-        assert(f2(2.3) == 2);
-        assert(f2(10) == 10);
+        test_codegen<int(double)>(ctx, builder.get(),
+                                  test_set(2, 2.3),
+                                  test_set(2, 2.9),
+                                  test_set(10, 10));
     }
 
     {
@@ -569,14 +437,10 @@ int main()
                     "  Float64 %5 = select Bool %0, Float64 %3, Float64 %4\n"
                     "  ret Float64 %5\n"
                     "}");
-        auto f = exectx->getFunc<double(bool, int, double)>(builder.get());
-        assert(f(true, 1, 2.3) == cos(1));
-        assert(f(false, 1, 2.3) == sin(2.3));
-
-        auto test = gettest(builder.get());
-        auto f2 = (double(*)(bool, int, double))test.get_ptr();
-        assert(f2(true, 1, 2.3) == cos(1));
-        assert(f2(false, 1, 2.3) == sin(2.3));
+        test_codegen<double(bool, int, double), true>(
+            ctx, builder.get(),
+            test_set(cos(1), true, 1, 2.3),
+            test_set(sin(2.3), false, 1, 2.3));
     }
 
     return 0;

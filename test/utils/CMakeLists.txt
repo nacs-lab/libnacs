@@ -83,7 +83,8 @@ if(ENABLE_LLVM)
   add_executable(test-codegen ${test_codegen_SOURCES})
   target_link_libraries(test-codegen nacs-utils)
 
-  set_property(TARGET test-codegen PROPERTY ${LLVM_INCLUDE_DIRS})
+  set_property(TARGET test-codegen APPEND
+    PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
   set_property(SOURCE ${test_codegen_SOURCES} APPEND_STRING
     PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
 endif()
