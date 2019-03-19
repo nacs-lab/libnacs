@@ -354,46 +354,6 @@ int main()
         vals[0] = IR::TagVal(1.0).val;
         vals[1] = IR::TagVal(1.3).val;
         test.test_res(0.0, "Closure 2", f2(vals), 1.3, 1.0);
-
-        LLVM::Codegen::Wrapper wrap_ref{false};
-        wrap_ref.add_byref(0);
-        auto test_ref = test.get_llvm_test(wrap_ref);
-        auto f_ref = (double(*)(const double&, double))test_ref.get_ptr();
-        test.test_res(-1.71, "By ref", f_ref(2.3, 1.3), 2.3, 1.3);
-        test.test_res(-51.3, "By ref", f_ref(2.3, 10.0), 2.3, 10.0);
-        test.test_res(0.0, "By ref", f_ref(1.3, 1.0), 1.3, 1.0);
-
-        LLVM::Codegen::Wrapper wrap_ret_ref{false};
-        wrap_ret_ref.add_ret_ref();
-        auto test_ret_ref = test.get_llvm_test(wrap_ret_ref);
-        auto f_ret_ref = (void(*)(double&, double, double))test_ret_ref.get_ptr();
-        {
-            double res;
-            f_ret_ref(res, 2.3, 1.3);
-            test.test_res(-1.71, "Ref return", res, 2.3, 1.3);
-            f_ret_ref(res, 2.3, 10.0);
-            test.test_res(-51.3, "Ref return", res, 2.3, 10.0);
-            f_ret_ref(res, 1.3, 1.0);
-            test.test_res(0.0, "Ref return", res, 1.3, 1.0);
-        }
-
-        LLVM::Codegen::Wrapper wrap_ret_ref1{false};
-        wrap_ret_ref1.add_byref(0);
-        wrap_ret_ref1.add_ret_ref();
-        auto test_ret_ref1 = test.get_llvm_test(wrap_ret_ref1);
-        auto f_ret_ref1 = (void(*)(double&, const double&, double))test_ret_ref1.get_ptr();
-        {
-            // Test that aliasing works.
-            double res = 2.3;
-            f_ret_ref1(res, res, 1.3);
-            test.test_res(-1.71, "Alias return", res, 2.3, 1.3);
-            res = 2.3;
-            f_ret_ref1(res, res, 10.0);
-            test.test_res(-51.3, "Alias return", res, 2.3, 10.0);
-            res = 1.3;
-            f_ret_ref1(res, res, 1.0);
-            test.test_res(0.0, "Alias return", res, 1.3, 1.0);
-        }
     }
 
     {

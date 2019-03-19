@@ -168,6 +168,20 @@ static void _test_res(T1 res, T2 exp, const char *name, IR::Function &func,
     abort();
 }
 
+template<class Tuple, std::size_t... I>
+static inline constexpr decltype(auto)
+tie_tuple_impl(Tuple &t, std::index_sequence<I...>)
+{
+    return std::tie(std::get<I>(t)...);
+}
+
+template<class Tuple>
+static inline constexpr decltype(auto) tie_tuple(Tuple &t)
+{
+    return tie_tuple_impl(t, std::make_index_sequence<
+                          std::tuple_size<std::decay_t<Tuple>>::value>{});
+}
+
 }
 
 template<typename FT>
@@ -203,7 +217,11 @@ static void test_res(Res exp, const char *name, IR::Function &func,
 }
 
 template<typename FT, bool approx>
-struct CodegenTest {
+struct CodegenTest;
+
+template<typename Res, typename... Args, bool approx>
+struct CodegenTest<Res(Args...), approx> {
+    using FT = Res(Args...);
     TestCtx &ctx;
     IR::Function &func;
     std::vector<TestSet<FT>> cases;
@@ -228,10 +246,11 @@ struct CodegenTest {
         for (auto &_case: cases) {
             _test(f_comp, _case, "Compiled");
         }
+        test_ref();
     }
 
-    template<typename T1, typename Res, typename... Args>
-    void test_res(Res exp, const char *name, T1 res, Args... args)
+    template<typename T1, typename T2, typename... Args2>
+    void test_res(T2 exp, const char *name, T1 res, Args2... args)
     {
         detail::_test_res<approx>(res, exp, name, func, std::make_tuple(args...));
     }
@@ -244,12 +263,69 @@ struct CodegenTest {
     {
         return (FT*)_get_llvm_test().get_ptr();
     }
-    template<typename... Args>
-    LLVMTest get_llvm_test(Args&&... args)
+    template<typename... Args2>
+    LLVMTest get_llvm_test(Args2&&... args)
     {
-        return ctx.get_llvm_test(func, std::forward<Args>(args)...);
+        return ctx.get_llvm_test(func, std::forward<Args2>(args)...);
     }
 private:
+    void test_ref()
+    {
+        LLVM::Codegen::Wrapper ret_ref{false};
+        ret_ref.add_ret_ref();
+        auto test_ret_ref = get_llvm_test(ret_ref);
+        auto f_ret_ref = (void(*)(Res&, Args...))test_ret_ref.get_ptr();
+        for (auto &_case: cases) {
+            Res res;
+            auto args = std::tuple_cat(std::tie(res), _case.args);
+            applyTuple(f_ret_ref, args);
+            detail::_test_res<approx>(res, _case.res, "Ref return", func, _case.args);
+        }
+        constexpr uint32_t nargs = sizeof...(Args);
+        if (!nargs)
+            return;
+        LLVM::Codegen::Wrapper ref{false};
+        for (uint32_t i = 0; i < nargs; i++)
+            ref.add_byref(i);
+        auto test_ref = get_llvm_test(ref);
+        auto f_ref = (Res(*)(const Args&...))test_ref.get_ptr();
+        for (auto &_case: cases)
+            _test(f_ref, _case, "By ref");
+        ref.add_ret_ref();
+        auto test_ref2 = get_llvm_test(ref);
+        auto f_ref2 = (void(*)(Res&,const Args&...))test_ref2.get_ptr();
+        for (auto &_case: cases) {
+            Res res;
+            auto args = std::tuple_cat(std::tie(res), _case.args);
+            applyTuple(f_ref2, args);
+            detail::_test_res<approx>(res, _case.res, "Ref return and params", func, _case.args);
+
+            test_ref_alias(f_ref2, _case, std::make_index_sequence<nargs>());
+        }
+    }
+    template<size_t... I, typename F>
+    void test_ref_alias(F &&f, const TestSet<FT> &tc, std::index_sequence<I...>)
+    {
+        int l[] = {(test_ref_alias_i<I>(f, tc), 0)...};
+        (void)l;
+    }
+    template<size_t i, typename F>
+    std::enable_if_t<
+        std::is_same<std::tuple_element_t<i, std::tuple<Args...>>,
+                     Res>::value> test_ref_alias_i(F &&f, const TestSet<FT> &tc)
+    {
+        auto args = tc.args;
+        auto callargs = std::tuple_cat(std::tie(std::get<i>(args)), detail::tie_tuple(args));
+        applyTuple(f, callargs);
+        detail::_test_res<approx>(std::get<i>(args), tc.res,
+                                  "Alias return", func, tc.args);
+    }
+    template<size_t i, typename F>
+    std::enable_if_t<
+        !std::is_same<std::tuple_element_t<i, std::tuple<Args...>>,
+                      Res>::value> test_ref_alias_i(F&&, const TestSet<FT>&)
+    {
+    }
     LLVMTest &_get_llvm_test()
     {
         if (!llvm_test)
