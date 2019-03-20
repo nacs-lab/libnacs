@@ -197,7 +197,7 @@ struct TestSet<Res(Args...)> {
           args(args...)
     {}
     template<typename Res2, typename... Args2>
-    TestSet(const TestSet<Res2, Args2...> &case2)
+    TestSet(const TestSet<Res2(Args2...)> &case2)
         : res(case2.res),
           args(case2.args)
     {}
