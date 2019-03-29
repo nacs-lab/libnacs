@@ -351,7 +351,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
 
     // 2. Create function
     auto f = Function::Create(ftype, _export ? GlobalValue::ExternalLinkage :
-                              GlobalValue::InternalLinkage, name, m_mod);
+                              GlobalValue::PrivateLinkage, name, m_mod);
     if (_export)
         f->setVisibility(GlobalValue::ProtectedVisibility);
     f->addFnAttr(Attribute::AlwaysInline);
@@ -676,7 +676,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             ArrayRef<double> dataref(&func.float_table[data_offset], ndata);
             auto table = ConstantDataArray::get(m_ctx, dataref);
             Constant *datap = new GlobalVariable(*m_mod, table->getType(), true,
-                                                 GlobalValue::InternalLinkage, table,
+                                                 GlobalValue::PrivateLinkage, table,
                                                  ".L.nacs." + std::to_string(m_counter++));
             cast<GlobalVariable>(datap)->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
             datap = ConstantExpr::getBitCast(datap, T_f64->getPointerTo());
