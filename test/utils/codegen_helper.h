@@ -32,6 +32,7 @@
 #include "../../lib/utils/llvm/utils.h"
 
 #include <vector>
+#include <fstream>
 
 namespace {
 
@@ -75,13 +76,19 @@ struct LLVMTest {
         LLVM::dump(mod);
         return *this;
     }
-    void *get_ptr()
+    void *get_ptr(const char *name=nullptr)
     {
         assert(f);
         llvm::SmallVector<char,0> vec;
         auto res = LLVM::Compile::emit_objfile(vec, LLVM::Compile::get_native_target(),
                                                mod);
         assert(res);
+        if (name && *name) {
+            std::fstream stm(name, std::ios_base::out);
+            if (stm) {
+                stm.write(&vec[0], vec.size());
+            }
+        }
         auto obj_id = engine.load(&vec[0], vec.size());
         obj_ids.push_back(obj_id);
         assert(obj_id);
@@ -259,9 +266,9 @@ struct CodegenTest<Res(Args...), approx> {
     {
         return ctx.ir->getFunc<FT>(func);
     }
-    FT *get_llvm_func()
+    FT *get_llvm_func(const char *name=nullptr)
     {
-        return (FT*)_get_llvm_test().get_ptr();
+        return (FT*)_get_llvm_test().get_ptr(name);
     }
     template<typename... Args2>
     LLVMTest get_llvm_test(Args2&&... args)
