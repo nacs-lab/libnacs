@@ -62,6 +62,7 @@ Constant *Context::ensurePureFunc(StringRef name, FunctionType *ft, bool canread
         return f;
     }
     Function *f = Function::Create(ft, GlobalValue::ExternalLinkage, name, m_mod);
+    f->addFnAttr(Attribute::Speculatable);
     f->addFnAttr(Attribute::NoRecurse);
     f->addFnAttr(Attribute::NoUnwind);
     if (canread) {
@@ -278,6 +279,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     // 2. Create function
     auto wrapf = Function::Create(wrapf_type, GlobalValue::ExternalLinkage, name, m_mod);
     wrapf->setVisibility(GlobalValue::ProtectedVisibility);
+    wrapf->addFnAttr(Attribute::Speculatable);
     wrapf->addFnAttr(Attribute::NoRecurse);
     wrapf->addFnAttr(Attribute::NoUnwind);
     if (!ret_ref)
@@ -355,6 +357,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
     if (_export)
         f->setVisibility(GlobalValue::ProtectedVisibility);
     f->addFnAttr(Attribute::AlwaysInline);
+    f->addFnAttr(Attribute::Speculatable);
     f->addFnAttr(Attribute::NoRecurse);
     f->addFnAttr(Attribute::NoUnwind);
     f->addFnAttr(Attribute::ReadOnly);
