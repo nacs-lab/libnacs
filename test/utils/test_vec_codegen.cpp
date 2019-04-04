@@ -144,6 +144,45 @@ vec_type_t<T, N> broadcast(T v)
     return _broadcast(std::make_index_sequence<N>{}, v);
 }
 
+template<size_t ...vargi>
+static inline constexpr bool num_in_pack(size_t num)
+{
+    constexpr size_t idxs[] = {vargi...};
+    for (size_t i = 0; i < sizeof...(vargi); i++) {
+        if (idxs[i] == num) {
+            return true;
+        }
+    }
+    return false;
+}
+
+template<typename Seq, typename F, size_t vsize, size_t ...vargi>
+struct _vec_sig;
+
+template<typename Res, typename... Args, size_t vsize, size_t ...vargi,
+         size_t ...I>
+struct _vec_sig<std::index_sequence<I...>, Res(Args...), vsize, vargi...> {
+    using sarg_tuple_t = std::tuple<Args...>;
+    template<size_t i>
+    using sarg_t = std::tuple_element_t<i, sarg_tuple_t>;
+    template<size_t i>
+    using varg_t = api_type_t<sarg_t<i>,vsize>;
+    template<size_t i>
+    using arg_t = std::conditional_t<num_in_pack<vargi...>(i), varg_t<i>, sarg_t<i>>;
+    using func = api_type_t<Res,vsize>(arg_t<I>...) NACS_VECTORCALL;
+    using func_ra = api_type_t<Res,vsize>(arg_t<I>&...) NACS_VECTORCALL;
+    using func_rr = void(api_type_t<Res,vsize>&,arg_t<I>...) NACS_VECTORCALL;
+    using func_rra = void(api_type_t<Res,vsize>&,arg_t<I>&...);
+};
+
+template<typename F, size_t vsize, size_t ...vargi>
+struct vec_sig;
+
+template<typename Res, typename... Args, size_t vsize, size_t ...vargi>
+struct vec_sig<Res(Args...), vsize, vargi...> :
+    _vec_sig<std::make_index_sequence<sizeof...(Args)>, Res(Args...), vsize, vargi...> {
+};
+
 template<typename FT, bool approx>
 struct VecCodegenTest;
 
@@ -166,6 +205,17 @@ struct VecCodegenTest<Res(Args...), approx> : CodegenTest<Res(Args...), approx> 
         _test_vec_ret_ref<2>();
         _test_vec_ret_ref<4>();
         _test_vec_ret_ref<8>();
+    }
+    template<size_t ...options>
+    void test_vec_arg()
+    {
+        _test_vec_arg(std::index_sequence<options...>{},
+                      std::index_sequence<>{});
+    }
+    void test_vec_allarg()
+    {
+        _test_vec_arg(std::make_index_sequence<sizeof...(Args)>{},
+                      std::index_sequence<>{});
     }
 private:
     template<size_t vsize>
@@ -219,6 +269,217 @@ private:
                 }
             });
     }
+    template<size_t i, size_t vsize, size_t ...vargi, typename F, typename... Args2>
+    std::enable_if_t<i == 0> _foreach_vecarg(F &&f, Args2&&... args2)
+    {
+        f(std::forward<Args2>(args2)...);
+    }
+    template<size_t i, size_t vsize, size_t ...vargi, typename F, typename... Args2>
+    std::enable_if_t<(i > 0) && !num_in_pack<vargi...>(i - 1)>
+    _foreach_vecarg(F &&f, Args2&&... args2)
+    {
+        auto &_arg = std::get<i - 1>(this->args);
+        for (auto v: _arg) {
+            _foreach_vecarg<i - 1, vsize, vargi...>(std::forward<F>(f), v,
+                                                    std::forward<Args2>(args2)...);
+        }
+    }
+    template<size_t i, size_t vsize, size_t ...vargi, typename F, typename... Args2>
+    std::enable_if_t<(i > 0) && num_in_pack<vargi...>(i - 1)>
+    _foreach_vecarg(F &&f, Args2&&... args2)
+    {
+        using ele_t = typename vec_sig<Res(Args...), vsize, vargi...>::template sarg_t<i - 1>;
+        auto &_arg = std::get<i - 1>(this->args);
+        auto arg_sz = _arg.size();
+        for (size_t j = 0; j < arg_sz; j++) {
+            api_type_t<ele_t, vsize> v;
+            for (size_t k = 0; k < vsize; k++)
+                v[k] = _arg[(k + j) % arg_sz];
+            _foreach_vecarg<i - 1, vsize, vargi...>(std::forward<F>(f), v,
+                                                    std::forward<Args2>(args2)...);
+        }
+    }
+    template<size_t vsize, size_t ...vargi, typename F>
+    void foreach_vecarg(F &&f)
+    {
+        _foreach_vecarg<sizeof...(Args), vsize, vargi...>(std::forward<F>(f));
+    }
+    template<size_t I, size_t ...vargi, typename Arg>
+    std::enable_if_t<!num_in_pack<vargi...>(I), Arg> get_sarg(Arg arg, size_t)
+    {
+        return arg;
+    }
+    template<size_t I, size_t ...vargi, typename Arg>
+    auto get_sarg(Arg arg, size_t i)
+        -> std::enable_if_t<num_in_pack<vargi...>(I),
+                            std::remove_reference_t<decltype(arg[i])>>
+    {
+        return arg[i];
+    }
+    template<size_t varg0, size_t ...vargi>
+    void _test_vec_arg(std::index_sequence<>, std::index_sequence<varg0, vargi...>)
+    {
+        _test_vec_arg2<varg0, vargi...>();
+    }
+    void _test_vec_arg(std::index_sequence<>, std::index_sequence<>)
+    {
+    }
+    template<size_t option0, size_t ...options, size_t ...vargi>
+    void _test_vec_arg(std::index_sequence<option0, options...>,
+                       std::index_sequence<vargi...>)
+    {
+        _test_vec_arg(std::index_sequence<options...>{},
+                      std::index_sequence<vargi...>{});
+        _test_vec_arg(std::index_sequence<options...>{},
+                      std::index_sequence<option0, vargi...>{});
+    }
+    template<size_t ...vargi>
+    void _test_vec_arg2()
+    {
+        _test_vec_arg1<2, vargi...>(std::make_index_sequence<sizeof...(Args)>{});
+        _test_vec_arg1<4, vargi...>(std::make_index_sequence<sizeof...(Args)>{});
+        _test_vec_arg1<8, vargi...>(std::make_index_sequence<sizeof...(Args)>{});
+    }
+    template<size_t vsize, size_t ...vargi, size_t ...I>
+    void _test_vec_arg1(std::index_sequence<I...> x)
+    {
+        _test_vec_arg_byval<vsize, vargi...>(x);
+        _test_vec_arg_refarg<vsize, vargi...>(x);
+        _test_vec_arg_refret<vsize, vargi...>(x);
+        _test_vec_arg_refall<vsize, vargi...>(x);
+    }
+    template<size_t vsize, size_t ...vargi, size_t ...I>
+    void _test_vec_arg_byval(std::index_sequence<I...>)
+    {
+        LLVM::Codegen::Wrapper vec{false};
+        vec.vector_size = vsize;
+        int l[] = {(vec.add_vector(vargi), 0)...};
+        (void)l;
+        auto test_vec = this->get_llvm_test(vec);
+        if (!test_vec.f) {
+            std::cerr << "Vectorizing argument failed." << std::endl;
+            abort();
+        }
+        if (vsize * 8 > (unsigned)host_info.get_vector_size())
+            return;
+#if !REF_VEC_ONLY
+        using vs = vec_sig<Res(Args...), vsize, vargi...>;
+        auto fptr = test_vec.get_ptr();
+        foreach_vecarg<vsize, vargi...>(
+            [&] (typename vs::template arg_t<I>... args) {
+                api_type_t<Res, vsize> vres;
+                vec_runner<vsize>::run(
+                    [&] {
+                        auto f = (typename vs::func*)fptr;
+                        vres = f(args...);
+                    });
+                for (size_t i = 0; i < vsize; i++) {
+                    test_res("Vector arguments", vres[i],
+                             get_sarg<I, vargi...>(args, i)...);
+                }
+            });
+#endif
+    }
+    template<size_t vsize, size_t ...vargi, size_t ...I>
+    void _test_vec_arg_refarg(std::index_sequence<I...>)
+    {
+        LLVM::Codegen::Wrapper vec{false};
+        vec.vector_size = vsize;
+        int l[] = {(vec.add_vector(vargi), 0)...};
+        (void)l;
+        for (size_t i = 0; i < sizeof...(Args); i++)
+            vec.add_byref(i);
+        auto test_vec = this->get_llvm_test(vec);
+        if (!test_vec.f) {
+            std::cerr << "Vectorizing argument failed." << std::endl;
+            abort();
+        }
+        if (vsize * 8 > (unsigned)host_info.get_vector_size())
+            return;
+#if !REF_VEC_ONLY
+        using vs = vec_sig<Res(Args...), vsize, vargi...>;
+        auto fptr = test_vec.get_ptr();
+        foreach_vecarg<vsize, vargi...>(
+            [&] (typename vs::template arg_t<I>... args) {
+                api_type_t<Res, vsize> vres;
+                vec_runner<vsize>::run(
+                    [&] {
+                        auto f = (typename vs::func_ra*)fptr;
+                        vres = f(args...);
+                    });
+                for (size_t i = 0; i < vsize; i++) {
+                    test_res("Vector arguments byref", vres[i],
+                             get_sarg<I, vargi...>(args, i)...);
+                }
+            });
+#endif
+    }
+    template<size_t vsize, size_t ...vargi, size_t ...I>
+    void _test_vec_arg_refret(std::index_sequence<I...>)
+    {
+        LLVM::Codegen::Wrapper vec{false};
+        vec.vector_size = vsize;
+        int l[] = {(vec.add_vector(vargi), 0)...};
+        (void)l;
+        vec.add_ret_ref();
+        auto test_vec = this->get_llvm_test(vec);
+        if (!test_vec.f) {
+            std::cerr << "Vectorizing argument failed." << std::endl;
+            abort();
+        }
+        if (vsize * 8 > (unsigned)host_info.get_vector_size())
+            return;
+#if !REF_VEC_ONLY
+        using vs = vec_sig<Res(Args...), vsize, vargi...>;
+        auto fptr = test_vec.get_ptr();
+        foreach_vecarg<vsize, vargi...>(
+            [&] (typename vs::template arg_t<I>... args) {
+                api_type_t<Res, vsize> vres;
+                vec_runner<vsize>::run(
+                    [&] {
+                        auto f = (typename vs::func_rr*)fptr;
+                        f(vres, args...);
+                    });
+                for (size_t i = 0; i < vsize; i++) {
+                    test_res("Vector arguments ret ref", vres[i],
+                             get_sarg<I, vargi...>(args, i)...);
+                }
+            });
+#endif
+    }
+    template<size_t vsize, size_t ...vargi, size_t ...I>
+    void _test_vec_arg_refall(std::index_sequence<I...>)
+    {
+        LLVM::Codegen::Wrapper vec{false};
+        vec.vector_size = vsize;
+        int l[] = {(vec.add_vector(vargi), 0)...};
+        (void)l;
+        for (size_t i = 0; i < sizeof...(Args); i++)
+            vec.add_byref(i);
+        vec.add_ret_ref();
+        auto test_vec = this->get_llvm_test(vec);
+        if (!test_vec.f) {
+            std::cerr << "Vectorizing argument failed." << std::endl;
+            abort();
+        }
+        if (vsize * 8 > (unsigned)host_info.get_vector_size())
+            return;
+        using vs = vec_sig<Res(Args...), vsize, vargi...>;
+        auto fptr = test_vec.get_ptr();
+        foreach_vecarg<vsize, vargi...>(
+            [&] (typename vs::template arg_t<I>... args) {
+                api_type_t<Res, vsize> vres;
+                vec_runner<vsize>::run(
+                    [&] {
+                        auto f = (typename vs::func_rra*)fptr;
+                        f(vres, args...);
+                    });
+                for (size_t i = 0; i < vsize; i++) {
+                    test_res("Vector arguments ref all", vres[i],
+                             get_sarg<I, vargi...>(args, i)...);
+                }
+            });
+    }
 };
 
 template<typename FT, bool approx=false>
@@ -236,8 +497,9 @@ int main()
                     "L0:\n"
                     "  ret Float64 %0\n"
                     "}");
-        TestVec<double(double)>([] (double v) { return v; },
-                                {1.2, 4.2}, ctx, builder.get());
+        auto test = TestVec<double(double)>([] (double v) { return v; },
+                                            {1.2, 4.2}, ctx, builder.get());
+        test->test_vec_allarg();
     }
 
     {
@@ -302,8 +564,9 @@ int main()
                     "  Float64 %1 = add Float64 3.4, Float64 %0\n"
                     "  ret Float64 %1\n"
                     "}");
-        TestVec<double(double)>([] (double v) { return 3.4 + v; },
-                                {-1.71, 2.3, 1.3}, ctx, builder.get());
+        auto test = TestVec<double(double)>([] (double v) { return 3.4 + v; },
+                                            {-1.71, 2.3, 1.3}, ctx, builder.get());
+        test->test_vec_allarg();
     }
 
     {
@@ -320,11 +583,12 @@ int main()
                     "  Float64 %4 = sub Float64 %2, Float64 %3\n"
                     "  ret Float64 %4\n"
                     "}");
-        TestVec<double(double, double), true>(
+        auto test = TestVec<double(double, double), true>(
             [] (double v0, double v1) {
                 auto v2 = 3.4 + v0;
                 return v2 - v2 * v1;
             }, {-1.71, 2.3, 1.3}, {-1.71, 2.3, 1.3}, ctx, builder.get());
+        test->test_vec_allarg();
     }
 
     {
@@ -337,9 +601,10 @@ int main()
                     "  Float64 %2 = fdiv Int32 %0, Int32 %1\n"
                     "  ret Float64 %2\n"
                     "}");
-        TestVec<double(int, int)>(
+        auto test = TestVec<double(int, int)>(
             [] (int v0, int v1) { return double(v0) / v1; },
             {2, 3, 4}, {1, 2, 3}, ctx, builder.get());
+        test->test_vec_allarg();
     }
 
     {
@@ -413,11 +678,12 @@ int main()
                     "  Float64 %4 = sub Float64 %2, Float64 %3\n"
                     "  ret Float64 %4\n"
                     "}");
-        TestVec<double(double, double), true>(
+        auto test = TestVec<double(double, double), true>(
             [] (double t, double len) {
                 double v2 = (3.4 + t);
                 return v2 - v2 * len;
             }, {2.3, 1.3}, {1.3, 10, 1.0}, ctx, builder.get());
+        test->test_vec_allarg();
     }
 
     {
@@ -429,9 +695,10 @@ int main()
                     "  Float64 %3 = select Bool %0, Int32 %1, Float64 %2\n"
                     "  ret Float64 %3\n"
                     "}");
-        TestVec<double(bool, int, double)>(
+        auto test = TestVec<double(bool, int, double)>(
             [] (bool b, int i, double v) { return b ? i : v; },
             {true, false}, {1, 2}, {1.2, 2.3}, ctx, builder.get());
+        test->test_vec_allarg();
     }
 
     {
@@ -442,8 +709,9 @@ int main()
                     "  Int32 %1 = convert(Float64 %0)\n"
                     "  ret Int32 %1\n"
                     "}");
-        TestVec<int(double)>([] (double v) { return (int)v; },
-                             {2.3, 2.9, 10}, ctx, builder.get());
+        auto test = TestVec<int(double)>([] (double v) { return (int)v; },
+                                         {2.3, 2.9, 10}, ctx, builder.get());
+        test->test_vec_allarg();
     }
 
     {
