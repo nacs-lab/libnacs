@@ -26,18 +26,6 @@
 #include <sstream>
 #include <math.h>
 
-template<typename T>
-static void test_str_eq(T &&v, std::string val)
-{
-    auto str = sprint(std::forward<T>(v));
-    if (val == str)
-        return;
-    std::cerr << "Test failed:" << std::endl;
-    std::cerr << "  Expect: \"" << val << "\"" << std::endl;
-    std::cerr << "  Got: \"" << str << "\"" << std::endl;
-    abort();
-}
-
 int main()
 {
     TestCtx ctx;
@@ -50,8 +38,8 @@ int main()
                     "L0:\n"
                     "  ret Float64 %0\n"
                     "}");
-        Codegen<double(double)>::test(ctx, builder.get(), [] (double v) { return v; },
-                                      {1.2, 4.2});
+        TestCodegen<double(double)>([] (double v) { return v; },
+                                    {1.2, 4.2}, ctx, builder.get());
     }
 
     {
@@ -61,7 +49,7 @@ int main()
                     "L0:\n"
                     "  ret Bool false\n"
                     "}");
-        Codegen<bool()>::test(ctx, builder.get(), [] { return false; });
+        TestCodegen<bool()>([] { return false; }, ctx, builder.get());
     }
 
     {
@@ -71,7 +59,7 @@ int main()
                     "L0:\n"
                     "  ret Float64 1.1\n"
                     "}");
-        Codegen<double()>::test(ctx, builder.get(), [] { return 1.1; });
+        TestCodegen<double()>([] { return 1.1; }, ctx, builder.get());
     }
 
     {
@@ -81,7 +69,7 @@ int main()
                     "L0:\n"
                     "  ret Int32 42\n"
                     "}");
-        Codegen<int()>::test(ctx, builder.get(), [] { return 42; });
+        TestCodegen<int()>([] { return 42; }, ctx, builder.get());
     }
 
     {
@@ -102,10 +90,9 @@ int main()
                     "L2:\n"
                     "  ret Float64 3.4\n"
                     "}");
-        Codegen<double(bool, double)>::test(ctx, builder.get(),
-                                            [] (bool b, double v) {
-                                                return b ? v : 3.4;
-                                            }, {false, true}, {1.3, 4.5});
+        TestCodegen<double(bool, double)>([] (bool b, double v) {
+                                              return b ? v : 3.4;
+                                          }, {false, true}, {1.3, 4.5}, ctx, builder.get());
     }
 
     {
@@ -122,12 +109,11 @@ int main()
                     "  Float64 %4 = sub Float64 %2, Float64 %3\n"
                     "  ret Float64 %4\n"
                     "}");
-        Codegen<double(double, double), true>::test(
-            ctx, builder.get(),
+        TestCodegen<double(double, double), true>(
             [] (double v0, double v1) {
                 auto v2 = 3.4 + v0;
                 return v2 - v2 * v1;
-            }, {-1.71, 2.3, 1.3}, {-1.71, 2.3, 1.3});
+            }, {-1.71, 2.3, 1.3}, {-1.71, 2.3, 1.3}, ctx, builder.get());
     }
 
     {
@@ -140,9 +126,9 @@ int main()
                     "  Float64 %2 = fdiv Int32 %0, Int32 %1\n"
                     "  ret Float64 %2\n"
                     "}");
-        Codegen<double(int, int)>::test(
-            ctx, builder.get(),
-            [] (int v0, int v1) { return double(v0) / v1; }, {2, 3, 4}, {1, 2, 3});
+        TestCodegen<double(int, int)>(
+            [] (int v0, int v1) { return double(v0) / v1; },
+            {2, 3, 4}, {1, 2, 3}, ctx, builder.get());
     }
 
     {
@@ -165,9 +151,8 @@ int main()
                     "L2:\n"
                     "  ret Int32 %0\n"
                     "}");
-        Codegen<double(int, double)>::test(
-            ctx, builder.get(),
-            [] (int i, double v) { return i > v ? v : i; }, {20, -10}, {1.3, 5.6});
+        TestCodegen<double(int, double)>([] (int i, double v) { return i > v ? v : i; },
+                                         {20, -10}, {1.3, 5.6}, ctx, builder.get());
     }
 
     {
@@ -202,21 +187,19 @@ int main()
                     "L2:\n"
                     "  ret Int32 %5\n"
                     "}");
-        auto test = Codegen<int(int, int)>::test(ctx, builder.get(),
-                                                 [] (int a, int b) {
-                                                     int s = 0;
-                                                     for (; a <= b; a++)
-                                                         s += a;
-                                                     return s;
-                                                 },
-                                                 {1, 2},
-                                                 {3, 1000});
+        auto test = TestCodegen<int(int, int)>(
+            [] (int a, int b) {
+                int s = 0;
+                for (; a <= b; a++)
+                    s += a;
+                return s;
+            }, {1, 2}, {3, 1000}, ctx, builder.get());
 
-        auto f = test.get_interp_func();
+        auto f = test->get_interp_func();
         Timer timer;
         f(2, 1000);
         timer.print();
-        auto f2 = test.get_llvm_func();
+        auto f2 = test->get_llvm_func();
         timer.restart();
         f2(2, 1000);
         timer.print();
@@ -236,16 +219,15 @@ int main()
                     "  Float64 %4 = add Float64 %3, Float64 %2\n"
                     "  ret Float64 %4\n"
                     "}");
-        auto test = Codegen<double(int), true>::test(
-            ctx, builder.get(),
-            [] (int v) { return sin(v) + sin(2 * v); }, {1, 2});
+        auto test = TestCodegen<double(int), true>(
+            [] (int v) { return sin(v) + sin(2 * v); }, {1, 2}, ctx, builder.get());
 
-        auto f1 = test.get_interp_func();
+        auto f1 = test->get_interp_func();
         Timer timer;
         for (int i = 0;i < 1000000;i++)
             f1(1);
         timer.print();
-        auto f2 = test.get_llvm_func();
+        auto f2 = test->get_llvm_func();
         timer.restart();
         for (int i = 0;i < 1000000;i++)
             f2(1);
@@ -268,11 +250,10 @@ int main()
                     "  Float64 %2 = fdiv Float64 %3, Float64 1\n"
                     "  ret Float64 %2\n"
                     "}");
-        Codegen<double(double, double)>::test(
-            ctx, newfunc,
-            [] (double t, double len) {
+        TestCodegen<double(double, double)>(
+            [] (double t, double) {
                 return (1 - t) + 2 * t;
-            }, {2, 3, 4}, {3, 4, 5, 6});
+            }, {2, 3, 4}, {3, 4, 5, 6}, ctx, newfunc);
     }
 
     {
@@ -285,10 +266,9 @@ int main()
                     "  Float64 %1 = interp [2, (4) +3] (Float64 %0) {0, 0.1, 0.2, 0.6}\n"
                     "  ret Float64 %1\n"
                     "}");
-        Codegen<double(double), true>::test(
-            ctx, builder.get(),
+        TestCodegen<double(double), true>(
             [&] (double x) { return linearInterpolate(x, 2, 3, 4, data); },
-            {0.7, 2.3, 3.5, 4.4, 5.5});
+            {0.7, 2.3, 3.5, 4.4, 5.5}, ctx, builder.get());
     }
 
     {
@@ -304,10 +284,10 @@ int main()
                     "  ret Float64 %2\n"
                     "}");
         const double interp_data[] = {1, 2, 2.5, 1};
-        Codegen<double(double, double)>::test(
-            ctx, newfunc, [&] (double x, double y) {
-                              return linearInterpolate(x, 1, 1, 4, interp_data) + y;
-                          }, {0.1, 1.5, 2.3}, {2, 3, 5});
+        TestCodegen<double(double, double)>(
+            [&] (double x, double y) {
+                return linearInterpolate(x, 1, 1, 4, interp_data) + y;
+            }, {0.1, 1.5, 2.3}, {2, 3, 5}, ctx, newfunc);
     }
 
     {
@@ -324,55 +304,55 @@ int main()
                     "  Float64 %4 = sub Float64 %2, Float64 %3\n"
                     "  ret Float64 %4\n"
                     "}");
-        auto test = Codegen<double(double, double), true>::test(
-            ctx, builder.get(), [] (double t, double len) {
-                                    double v2 = (3.4 + t);
-                                    return v2 - v2 * len;
-                                }, {2.3, 1.3}, {1.3, 10, 1.0});
+        auto test = TestCodegen<double(double, double), true>(
+            [] (double t, double len) {
+                double v2 = (3.4 + t);
+                return v2 - v2 * len;
+            }, {2.3, 1.3}, {1.3, 10, 1.0}, ctx, builder.get());
 
         LLVM::Codegen::Wrapper wrap0{true};
-        auto test0 = test.get_llvm_test(wrap0);
+        auto test0 = test->get_llvm_test(wrap0);
         auto f0 = (double(*)(double, double, IR::GenVal*))test0.get_ptr();
-        test.test_res("NULL closure", f0(2.3, 1.3, nullptr), 2.3, 1.3);
-        test.test_res("NULL closure", f0(2.3, 10.0, nullptr), 2.3, 10.0);
-        test.test_res("NULL closure", f0(1.3, 1.0, nullptr), 1.3, 1.0);
+        test->test_res("NULL closure", f0(2.3, 1.3, nullptr), 2.3, 1.3);
+        test->test_res("NULL closure", f0(2.3, 10.0, nullptr), 2.3, 10.0);
+        test->test_res("NULL closure", f0(1.3, 1.0, nullptr), 1.3, 1.0);
 
         IR::GenVal vals[2];
 
         LLVM::Codegen::Wrapper wrap11{true};
         wrap11.add_closure(0, 0);
-        auto test11 = test.get_llvm_test(wrap11);
+        auto test11 = test->get_llvm_test(wrap11);
         auto f11 = (double(*)(double, IR::GenVal*))test11.get_ptr();
         vals[0] = IR::TagVal(2.3).val;
-        test.test_res("Closure 11", f11(1.3, vals), 2.3, 1.3);
-        test.test_res("Closure 11", f11(10.0, vals), 2.3, 10.0);
+        test->test_res("Closure 11", f11(1.3, vals), 2.3, 1.3);
+        test->test_res("Closure 11", f11(10.0, vals), 2.3, 10.0);
         vals[0] = IR::TagVal(1.3).val;
-        test.test_res("Closure 11", f11(1.0, vals), 1.3, 1.0);
+        test->test_res("Closure 11", f11(1.0, vals), 1.3, 1.0);
 
         LLVM::Codegen::Wrapper wrap12{true};
         wrap12.add_closure(1, 0);
-        auto test12 = test.get_llvm_test(wrap12);
+        auto test12 = test->get_llvm_test(wrap12);
         auto f12 = (double(*)(double, IR::GenVal*))test12.get_ptr();
         vals[0] = IR::TagVal(1.3).val;
-        test.test_res("Closure 12", f12(2.3, vals), 2.3, 1.3);
+        test->test_res("Closure 12", f12(2.3, vals), 2.3, 1.3);
         vals[0] = IR::TagVal(10.0).val;
-        test.test_res("Closure 12", f12(2.3, vals), 2.3, 10.0);
+        test->test_res("Closure 12", f12(2.3, vals), 2.3, 10.0);
         vals[0] = IR::TagVal(1.0).val;
-        test.test_res("Closure 12", f12(1.3, vals), 1.3, 1.0);
+        test->test_res("Closure 12", f12(1.3, vals), 1.3, 1.0);
 
         LLVM::Codegen::Wrapper wrap2{true};
         wrap2.add_closure(1, 0)
             .add_closure(0, 1);
-        auto test2 = test.get_llvm_test(wrap2);
+        auto test2 = test->get_llvm_test(wrap2);
         auto f2 = (double(*)(IR::GenVal*))test2.get_ptr();
         vals[0] = IR::TagVal(1.3).val;
         vals[1] = IR::TagVal(2.3).val;
-        test.test_res("Closure 2", f2(vals), 2.3, 1.3);
+        test->test_res("Closure 2", f2(vals), 2.3, 1.3);
         vals[0] = IR::TagVal(10.0).val;
-        test.test_res("Closure 2", f2(vals), 2.3, 10.0);
+        test->test_res("Closure 2", f2(vals), 2.3, 10.0);
         vals[0] = IR::TagVal(1.0).val;
         vals[1] = IR::TagVal(1.3).val;
-        test.test_res("Closure 2", f2(vals), 1.3, 1.0);
+        test->test_res("Closure 2", f2(vals), 1.3, 1.0);
     }
 
     {
@@ -384,9 +364,9 @@ int main()
                     "  Float64 %3 = select Bool %0, Int32 %1, Float64 %2\n"
                     "  ret Float64 %3\n"
                     "}");
-        Codegen<double(bool, int, double)>::test(
-            ctx, builder.get(), [] (bool b, int i, double v) { return b ? i : v; },
-            {true, false}, {1, 2}, {1.2, 2.3});
+        TestCodegen<double(bool, int, double)>(
+            [] (bool b, int i, double v) { return b ? i : v; },
+            {true, false}, {1, 2}, {1.2, 2.3}, ctx, builder.get());
     }
 
     {
@@ -397,8 +377,8 @@ int main()
                     "  Int32 %1 = convert(Float64 %0)\n"
                     "  ret Int32 %1\n"
                     "}");
-        Codegen<int(double)>::test(ctx, builder.get(), [] (double v) { return (int)v; },
-                                   {2.3, 2.9, 10});
+        TestCodegen<int(double)>([] (double v) { return (int)v; },
+                                 {2.3, 2.9, 10}, ctx, builder.get());
     }
 
     {
@@ -414,10 +394,10 @@ int main()
                     "  Float64 %5 = select Bool %0, Float64 %3, Float64 %4\n"
                     "  ret Float64 %5\n"
                     "}");
-        Codegen<double(bool, int, double), true>::test(
-            ctx, builder.get(), [] (bool b, int i, double v) {
-                                    return b ? cos(i) : sin(v);
-                                }, {true, false}, {1, 2}, {2.3, 3.8});
+        TestCodegen<double(bool, int, double), true>(
+            [] (bool b, int i, double v) {
+                return b ? cos(i) : sin(v);
+            }, {true, false}, {1, 2}, {2.3, 3.8}, ctx, builder.get());
     }
 
     return 0;
