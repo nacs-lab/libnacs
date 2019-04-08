@@ -175,45 +175,6 @@ static void _test_res(T1 res, T2 exp, const char *name, IR::Function &func,
     abort();
 }
 
-template<class Tuple, std::size_t... I>
-static inline constexpr decltype(auto)
-tie_tuple_impl(Tuple &t, std::index_sequence<I...>)
-{
-    return std::tie(std::get<I>(t)...);
-}
-
-template<class Tuple>
-static inline constexpr decltype(auto) tie_tuple(Tuple &t)
-{
-    return tie_tuple_impl(t, std::make_index_sequence<
-                          std::tuple_size<std::decay_t<Tuple>>::value>{});
-}
-
-}
-
-template<typename FT>
-struct TestSet;
-
-template<typename Res, typename... Args>
-struct TestSet<Res(Args...)> {
-    Res res;
-    std::tuple<Args...> args;
-    template<typename Res2, typename... Args2>
-    TestSet(Res2 res, Args2 ...args)
-        : res(res),
-          args(args...)
-    {}
-    template<typename Res2, typename... Args2>
-    TestSet(const TestSet<Res2(Args2...)> &case2)
-        : res(case2.res),
-          args(case2.args)
-    {}
-};
-
-template<typename Res, typename... Args>
-static TestSet<Res(Args...)> test_set(Res res, Args ...args)
-{
-    return TestSet<Res(Args...)>(res, args...);
 }
 
 template<bool approx=false, typename T1, typename Res, typename... Args>
@@ -223,43 +184,44 @@ static void test_res(Res exp, const char *name, IR::Function &func,
     detail::_test_res<approx>(res, exp, name, func, std::make_tuple(args...));
 }
 
-template<typename FT, bool approx>
+template<typename FT, bool approx, typename Fexp>
 struct CodegenTest;
 
-template<typename Res, typename... Args, bool approx>
-struct CodegenTest<Res(Args...), approx> {
+template<typename Res, typename... Args, bool approx, typename Fexp>
+struct CodegenTest<Res(Args...), approx, Fexp> {
     using FT = Res(Args...);
     TestCtx &ctx;
     IR::Function &func;
-    std::vector<TestSet<FT>> cases;
+    Fexp fexp;
+    std::tuple<std::vector<Args>...> args;
+
     std::unique_ptr<LLVMTest> llvm_test;
 
-    template<typename... Cases>
-    CodegenTest(TestCtx &ctx, IR::Function &func, Cases ..._cases)
+    CodegenTest(TestCtx &ctx, IR::Function &func, Fexp &&f, std::vector<Args> ...args)
         : ctx(ctx),
           func(func),
-          cases{_cases...}
+          fexp(std::forward<Fexp>(f)),
+          args(std::move(args)...)
     {
     }
 
     void test()
     {
         auto f_interp = get_interp_func();
-        for (auto &_case: cases) {
-            _test(f_interp, _case, "Interpreted");
-        }
-
+        foreach_args([&] (Args... args) {
+                         _test(f_interp, "Interpreted", args...);
+                     });
         auto f_comp = get_llvm_func();
-        for (auto &_case: cases) {
-            _test(f_comp, _case, "Compiled");
-        }
+        foreach_args([&] (Args... args) {
+                         _test(f_comp, "Compiled", args...);
+                     });
         test_ref();
     }
 
-    template<typename T1, typename T2, typename... Args2>
-    void test_res(T2 exp, const char *name, T1 res, Args2... args)
+    template<typename T1, typename... Args2>
+    void test_res(const char *name, T1 res, Args2... args)
     {
-        detail::_test_res<approx>(res, exp, name, func, std::make_tuple(args...));
+        detail::_test_res<approx>(res, fexp(args...), name, func, std::make_tuple(args...));
     }
 
     auto get_interp_func() -> decltype(ctx.ir->getFunc<FT>(func))
@@ -275,19 +237,36 @@ struct CodegenTest<Res(Args...), approx> {
     {
         return ctx.get_llvm_test(func, std::forward<Args2>(args)...);
     }
+    template<typename F>
+    void foreach_args(F &&f)
+    {
+        _foreach_args<sizeof...(Args)>(std::forward<F>(f));
+    }
 private:
+    template<size_t i, typename F, typename... Args2>
+    std::enable_if_t<i == 0> _foreach_args(F &&f, Args2&&... args2)
+    {
+        f(std::forward<Args2>(args2)...);
+    }
+    template<size_t i, typename F, typename... Args2>
+    std::enable_if_t<(i > 0)> _foreach_args(F &&f, Args2&&... args2)
+    {
+        auto &_arg = std::get<i - 1>(args);
+        for (auto v: _arg) {
+            _foreach_args<i - 1>(std::forward<F>(f), v, std::forward<Args2>(args2)...);
+        }
+    }
     void test_ref()
     {
         LLVM::Codegen::Wrapper ret_ref{false};
         ret_ref.add_ret_ref();
         auto test_ret_ref = get_llvm_test(ret_ref);
         auto f_ret_ref = (void(*)(Res&, Args...))test_ret_ref.get_ptr();
-        for (auto &_case: cases) {
-            Res res;
-            auto args = std::tuple_cat(std::tie(res), _case.args);
-            applyTuple(f_ret_ref, args);
-            detail::_test_res<approx>(res, _case.res, "Ref return", func, _case.args);
-        }
+        foreach_args([&] (Args ...args) {
+                         Res res;
+                         f_ret_ref(res, args...);
+                         test_res("Ref return", res, args...);
+                     });
         constexpr uint32_t nargs = sizeof...(Args);
         if (!nargs)
             return;
@@ -296,41 +275,44 @@ private:
             ref.add_byref(i);
         auto test_ref = get_llvm_test(ref);
         auto f_ref = (Res(*)(const Args&...))test_ref.get_ptr();
-        for (auto &_case: cases)
-            _test(f_ref, _case, "By ref");
+        foreach_args([&] (Args ...args) {
+                         _test(f_ref, "By ref", args...);
+                     });
         ref.add_ret_ref();
         auto test_ref2 = get_llvm_test(ref);
         auto f_ref2 = (void(*)(Res&,const Args&...))test_ref2.get_ptr();
-        for (auto &_case: cases) {
-            Res res;
-            auto args = std::tuple_cat(std::tie(res), _case.args);
-            applyTuple(f_ref2, args);
-            detail::_test_res<approx>(res, _case.res, "Ref return and params", func, _case.args);
-
-            test_ref_alias(f_ref2, _case, std::make_index_sequence<nargs>());
-        }
+        foreach_args([&] (Args ...args) {
+                         Res res;
+                         f_ref2(res, args...);
+                         test_res("Ref return and params", res, args...);
+                         test_ref_alias(f_ref2, std::make_index_sequence<nargs>(), args...);
+                     });
     }
     template<size_t... I, typename F>
-    void test_ref_alias(F &&f, const TestSet<FT> &tc, std::index_sequence<I...>)
+    void test_ref_alias(F &&f, std::index_sequence<I...>, Args... args)
     {
-        int l[] = {(test_ref_alias_i<I>(f, tc), 0)...};
+        int l[] = {(test_ref_alias_i<I>(f, args...), 0)...};
         (void)l;
+    }
+    template<size_t i, typename F>
+    void _test_ref_alias_i(F &&f, Args... args, Args... args2)
+    {
+        auto &res = std::get<i>(std::tuple<Args&...>(args...));
+        f(res, args...);
+        test_res("Alias return", res, args2...);
     }
     template<size_t i, typename F>
     std::enable_if_t<
         std::is_same<std::tuple_element_t<i, std::tuple<Args...>>,
-                     Res>::value> test_ref_alias_i(F &&f, const TestSet<FT> &tc)
+                     Res>::value> test_ref_alias_i(F &&f, Args... args)
     {
-        auto args = tc.args;
-        auto callargs = std::tuple_cat(std::tie(std::get<i>(args)), detail::tie_tuple(args));
-        applyTuple(f, callargs);
-        detail::_test_res<approx>(std::get<i>(args), tc.res,
-                                  "Alias return", func, tc.args);
+        // Copy arguments since we'll override them.
+        _test_ref_alias_i<i>(f, args..., args...);
     }
     template<size_t i, typename F>
     std::enable_if_t<
         !std::is_same<std::tuple_element_t<i, std::tuple<Args...>>,
-                      Res>::value> test_ref_alias_i(F&&, const TestSet<FT>&)
+                      Res>::value> test_ref_alias_i(F&&, Args... args)
     {
     }
     LLVMTest &_get_llvm_test()
@@ -340,20 +322,28 @@ private:
         return *llvm_test;
     }
     template<typename F>
-    void _test(F &&f, const TestSet<FT> &tc, const char *name)
+    void _test(F &&f, const char *name, Args... args)
     {
-        auto res = applyTuple(std::forward<F>(f), tc.args);
-        detail::_test_res<approx>(res, tc.res, name, func, tc.args);
+        auto res = std::forward<F>(f)(args...);
+        test_res(name, res, args...);
     }
 };
 
-template<typename FT, bool approx=false, typename... Cases>
-static CodegenTest<FT, approx> test_codegen(TestCtx &ctx, IR::Function &func, Cases ...cases)
-{
-    CodegenTest<FT, approx> test{ctx, func, cases...};
-    test.test();
-    return test;
-}
+template<typename FT, bool approx=false>
+struct Codegen;
+
+template<typename Res, typename ...Args, bool approx>
+struct Codegen<Res(Args...), approx> {
+    template<typename Fexp>
+    static CodegenTest<Res(Args...), approx, Fexp>
+    test(TestCtx &ctx, IR::Function &func, Fexp &&f, std::vector<Args> ...args)
+    {
+        CodegenTest<Res(Args...), approx, Fexp> test(ctx, func, std::forward<Fexp>(f),
+                                                     std::move(args)...);
+        test.test();
+        return test;
+    }
+};
 
 }
 
