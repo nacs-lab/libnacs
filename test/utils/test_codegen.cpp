@@ -313,9 +313,8 @@ int main()
         LLVM::Codegen::Wrapper wrap0{true};
         auto test0 = test->get_llvm_test(wrap0);
         auto f0 = (double(*)(double, double, IR::GenVal*))test0.get_ptr();
-        test->test_res("NULL closure", f0(2.3, 1.3, nullptr), 2.3, 1.3);
-        test->test_res("NULL closure", f0(2.3, 10.0, nullptr), 2.3, 10.0);
-        test->test_res("NULL closure", f0(1.3, 1.0, nullptr), 1.3, 1.0);
+        test->testeach_args([&] (double a, double b) { return f0(a, b, nullptr); },
+                            "NULL closure");
 
         IR::GenVal vals[2];
 
@@ -323,36 +322,30 @@ int main()
         wrap11.add_closure(0, 0);
         auto test11 = test->get_llvm_test(wrap11);
         auto f11 = (double(*)(double, IR::GenVal*))test11.get_ptr();
-        vals[0] = IR::TagVal(2.3).val;
-        test->test_res("Closure 11", f11(1.3, vals), 2.3, 1.3);
-        test->test_res("Closure 11", f11(10.0, vals), 2.3, 10.0);
-        vals[0] = IR::TagVal(1.3).val;
-        test->test_res("Closure 11", f11(1.0, vals), 1.3, 1.0);
+        test->testeach_args([&] (double a, double b) {
+                                vals[0] = IR::TagVal(a).val;
+                                return f11(b, vals);
+                            }, "Closure 11");
 
         LLVM::Codegen::Wrapper wrap12{true};
         wrap12.add_closure(1, 0);
         auto test12 = test->get_llvm_test(wrap12);
         auto f12 = (double(*)(double, IR::GenVal*))test12.get_ptr();
-        vals[0] = IR::TagVal(1.3).val;
-        test->test_res("Closure 12", f12(2.3, vals), 2.3, 1.3);
-        vals[0] = IR::TagVal(10.0).val;
-        test->test_res("Closure 12", f12(2.3, vals), 2.3, 10.0);
-        vals[0] = IR::TagVal(1.0).val;
-        test->test_res("Closure 12", f12(1.3, vals), 1.3, 1.0);
+        test->testeach_args([&] (double a, double b) {
+                                vals[0] = IR::TagVal(b).val;
+                                return f12(a, vals);
+                            }, "Closure 12");
 
         LLVM::Codegen::Wrapper wrap2{true};
         wrap2.add_closure(1, 0)
             .add_closure(0, 1);
         auto test2 = test->get_llvm_test(wrap2);
         auto f2 = (double(*)(IR::GenVal*))test2.get_ptr();
-        vals[0] = IR::TagVal(1.3).val;
-        vals[1] = IR::TagVal(2.3).val;
-        test->test_res("Closure 2", f2(vals), 2.3, 1.3);
-        vals[0] = IR::TagVal(10.0).val;
-        test->test_res("Closure 2", f2(vals), 2.3, 10.0);
-        vals[0] = IR::TagVal(1.0).val;
-        vals[1] = IR::TagVal(1.3).val;
-        test->test_res("Closure 2", f2(vals), 1.3, 1.0);
+        test->testeach_args([&] (double a, double b) {
+                                vals[0] = IR::TagVal(b).val;
+                                vals[1] = IR::TagVal(a).val;
+                                return f2(vals);
+                            }, "Closure 2");
     }
 
     {

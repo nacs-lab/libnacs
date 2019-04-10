@@ -128,10 +128,7 @@ struct IRTest<Res(Args...), approx> {
 
     void test()
     {
-        auto f_interp = get_interp_func();
-        foreach_args([&] (Args... args) {
-                         test_call("Interpreted", f_interp, args...);
-                     });
+        testeach_args(get_interp_func(), "Interpreted");
     }
 
     template<typename T1, typename... Args2>
@@ -152,22 +149,30 @@ struct IRTest<Res(Args...), approx> {
     }
 
     template<typename F>
+    void testeach_args(F &&f, const char *name)
+    {
+        foreach_args([&] (Args... args) {
+                         test_call(name, f, args...);
+                     });
+    }
+
+    template<typename F>
     void test_call(const char *name, F &&f, Args... args)
     {
         test_res(name, std::forward<F>(f)(args...), args...);
     }
 private:
     template<size_t i, typename F, typename... Args2>
-    std::enable_if_t<i == 0> _foreach_args(F &&f, Args2&&... args2)
+    std::enable_if_t<i == 0> _foreach_args(F &&f, Args2... args2)
     {
-        f(std::forward<Args2>(args2)...);
+        f(args2...);
     }
     template<size_t i, typename F, typename... Args2>
-    std::enable_if_t<(i > 0)> _foreach_args(F &&f, Args2&&... args2)
+    std::enable_if_t<(i > 0)> _foreach_args(F &&f, Args2... args2)
     {
         auto &_arg = std::get<i - 1>(args);
         for (auto v: _arg) {
-            _foreach_args<i - 1>(std::forward<F>(f), v, std::forward<Args2>(args2)...);
+            _foreach_args<i - 1>(std::forward<F>(f), v, args2...);
         }
     }
 };

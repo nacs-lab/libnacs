@@ -223,9 +223,7 @@ int main()
         IR::Function newfunc(data);
         test_str_eq(newfunc, sprint(builder.get()));
         auto f2 = ctx->getFunc<double(int)>(newfunc);
-        test->foreach_args([&] (int v) {
-                               test->test_res("Serialized", f2(v), v);
-                           });
+        test->testeach_args(f2, "Serialized");
         Timer timer;
         for (int i = 0;i < 1000000;i++)
             f2(1);

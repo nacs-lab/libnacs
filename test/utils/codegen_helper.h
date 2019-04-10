@@ -132,6 +132,7 @@ struct CodegenTest<Res(Args...), approx> : IRTest<Res(Args...), approx> {
     using SuperT::foreach_args;
     using SuperT::test_call;
     using SuperT::test_res;
+    using SuperT::testeach_args;
 
     TestCtx &ctx;
     std::unique_ptr<LLVMTest> llvm_test;
@@ -146,10 +147,7 @@ struct CodegenTest<Res(Args...), approx> : IRTest<Res(Args...), approx> {
     void test()
     {
         SuperT::test();
-        auto f_comp = get_llvm_func();
-        foreach_args([&] (Args... args) {
-                         test_call("Compiled", f_comp, args...);
-                     });
+        testeach_args(get_llvm_func(), "Compiled");
         test_ref();
     }
 
@@ -169,11 +167,11 @@ private:
         ret_ref.add_ret_ref();
         auto test_ret_ref = get_llvm_test(ret_ref);
         auto f_ret_ref = (void(*)(Res&, Args...))test_ret_ref.get_ptr();
-        foreach_args([&] (Args ...args) {
-                         Res res;
-                         f_ret_ref(res, args...);
-                         test_res("Ref return", res, args...);
-                     });
+        testeach_args([&] (Args ...args) {
+                          Res res;
+                          f_ret_ref(res, args...);
+                          return res;
+                      }, "Ref return");
         constexpr uint32_t nargs = sizeof...(Args);
         if (!nargs)
             return;
@@ -181,10 +179,7 @@ private:
         for (uint32_t i = 0; i < nargs; i++)
             ref.add_byref(i);
         auto test_ref = get_llvm_test(ref);
-        auto f_ref = (Res(*)(const Args&...))test_ref.get_ptr();
-        foreach_args([&] (Args ...args) {
-                         test_call("By ref", f_ref, args...);
-                     });
+        testeach_args((Res(*)(const Args&...))test_ref.get_ptr(), "By ref");
         ref.add_ret_ref();
         auto test_ref2 = get_llvm_test(ref);
         auto f_ref2 = (void(*)(Res&,const Args&...))test_ref2.get_ptr();
