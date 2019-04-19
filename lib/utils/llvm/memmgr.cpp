@@ -238,7 +238,7 @@ public:
                 continue;
             if (!protectPage((char*)info_it->first - info.size, info.size,
                              exec ? Prot::RX : Prot::RO))
-                throw checkErrno(-1, "Cannot set page protection");
+                checkErrno(-1, "Cannot set page protection");
             info.wraddr = (void*)-1;
         }
         m_cur_blocks.clear();
@@ -322,7 +322,7 @@ public:
     {
         for (auto nb: m_new_blocks) {
             if (!protectPage(nb.first, nb.second, exec ? Prot::RX : Prot::RO)) {
-                throw checkErrno(-1, "Cannot set page protection");
+                checkErrno(-1, "Cannot set page protection");
             }
         }
         m_new_blocks.clear();

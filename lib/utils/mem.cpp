@@ -341,7 +341,8 @@ free_end:
     m_maxoffset = id;
     if (m_filesize - m_maxoffset > m_region_sz) {
         m_filesize = alignTo(m_maxoffset, m_region_sz);
-        ftruncate(m_fd, m_filesize);
+        int res = ftruncate(m_fd, m_filesize);
+        (void)res;
         return;
     }
 free_mem:
