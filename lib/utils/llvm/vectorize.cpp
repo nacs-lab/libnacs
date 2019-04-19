@@ -231,7 +231,7 @@ struct Vectorizer {
                     auto intrin = Intrinsic::getDeclaration(const_cast<Module*>(F.getParent()),
                                                             id, {vty});
                     SmallVector<Value*, 4> args;
-                    for (const auto &op: call->args())
+                    for (const auto &op: call->arg_operands())
                         args.push_back(map_val(op.get(), true));
                     add_vec_inst(builder.CreateCall(intrin, args));
                     continue;
@@ -255,7 +255,7 @@ struct Vectorizer {
                     argt = VectorType::get(argt, vec_size);
                 auto vfty = FunctionType::get(vty, argts, false);
                 SmallVector<Value*, 4> args;
-                for (const auto &op: call->args())
+                for (const auto &op: call->arg_operands())
                     args.push_back(map_val(op.get(), true));
                 auto new_callee = Codegen::ensurePureExtern(new_f->getParent(),
                                                             vfty, new_name);
@@ -356,7 +356,12 @@ private:
     }
 
     const Function &F;
+#if LLVM_VERSION_MAJOR >= 7
+    // SmallSet is not iteratable on LLVM 6.0
     SmallSet<unsigned, 8> vec_args{};
+#else
+    std::set<unsigned> vec_args{};
+#endif
     SmallPtrSet<const Instruction*, 16> vec_insts{};
 };
 
