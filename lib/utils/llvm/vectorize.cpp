@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "vectorize.h"
+#include "utils.h"
 
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/SmallSet.h>
@@ -215,6 +216,20 @@ struct Vectorizer {
                 Value *a = map_val(cast->getOperand(0), true);
                 add_vec_inst(builder.CreateCast(cast->getOpcode(), a, dest_ty));
             }
+            else if (auto *call = dyn_cast<CallInst>(&inst)) {
+                auto ty = call->getType();
+                auto vty = VectorType::get(ty, vec_size);
+                auto callee = call->getCalledFunction();
+                if (auto id = callee->getIntrinsicID()) {
+                    auto intrin = Intrinsic::getDeclaration(const_cast<Module*>(F.getParent()),
+                                                            id, {vty});
+                    SmallVector<Value*, 4> args;
+                    for (const auto &op: call->args())
+                        args.push_back(map_val(op.get(), true));
+                    add_vec_inst(builder.CreateCall(intrin, args));
+                    continue;
+                }
+            }
             else {
                 llvm_unreachable("Unhandled instruction!");
             }
@@ -224,6 +239,32 @@ struct Vectorizer {
     }
 
 private:
+    bool vectorizeableCall(const CallInst *inst) const
+    {
+        auto ty = inst->getType();
+        if (!ty->isDoubleTy())
+            return false;
+        auto callee = inst->getCalledFunction();
+        if (!callee)
+            return false;
+        static constexpr Intrinsic::ID ids[] = {
+            Intrinsic::sqrt, Intrinsic::sin, Intrinsic::cos, Intrinsic::pow,
+            Intrinsic::exp, Intrinsic::exp2, Intrinsic::log, Intrinsic::log2,
+            Intrinsic::log10, Intrinsic::fma, Intrinsic::fabs, Intrinsic::minnum,
+            Intrinsic::maxnum, Intrinsic::copysign, Intrinsic::floor, Intrinsic::ceil,
+            Intrinsic::rint, Intrinsic::round};
+        if (auto id = callee->getIntrinsicID()) {
+            for (auto i: ids) {
+                if (id == i) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        // TODO: non-intrinsic libm functions, interpolate
+        return false;
+    }
+
     bool scan_bb(const BasicBlock &bb)
     {
         // FIXME: Ignoring phi node for now
@@ -266,7 +307,8 @@ private:
             // if (isa<UnaryOperator>(inst))
             //     continue;
 #endif
-            // FIXME: No call allowed for now.
+            if (isa<CallInst>(inst) && vectorizeableCall(cast<CallInst>(inst)))
+                continue;
             return false;
         }
         return true;

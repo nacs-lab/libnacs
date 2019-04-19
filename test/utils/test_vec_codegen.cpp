@@ -645,8 +645,9 @@ int main()
                     "  Float64 %4 = add Float64 %3, Float64 %2\n"
                     "  ret Float64 %4\n"
                     "}");
-        TestVec<double(int), true>(
+        auto test = TestVec<double(int), true>(
             [] (int v) { return sin(v) + sin(2 * v); }, {1, 2}, ctx, builder.get());
+        test->test_vec_allarg();
     }
 
     {
@@ -727,10 +728,11 @@ int main()
                     "  Float64 %5 = select Bool %0, Float64 %3, Float64 %4\n"
                     "  ret Float64 %5\n"
                     "}");
-        TestVec<double(bool, int, double), true>(
+        auto test = TestVec<double(bool, int, double), true>(
             [] (bool b, int i, double v) {
                 return b ? cos(i) : sin(v);
             }, {true, false}, {1, 2}, {2.3, 3.8}, ctx, builder.get());
+        test->test_vec_allarg();
     }
 
     return 0;
