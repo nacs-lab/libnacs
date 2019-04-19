@@ -18,6 +18,7 @@
 
 #include "compile.h"
 #include "vector_abi.h"
+#include "lower_vector.h"
 
 #include "../utils.h"
 
@@ -95,6 +96,9 @@ void addOptimization(legacy::PassManagerBase &pm)
     pm.add(createLoopDeletionPass());          // Delete dead loops
     pm.add(createJumpThreadingPass());         // Thread jumps
     pm.add(createInstructionCombiningPass());   // Clean up after SLP loop vectorizer
+
+    pm.add(createLowerVectorPass());
+    pm.add(createAlwaysInlinerLegacyPass());  // Inlining for lower vector pass
 
     pm.add(createAggressiveDCEPass());         // Delete dead instructions
     pm.add(createGlobalDCEPass());

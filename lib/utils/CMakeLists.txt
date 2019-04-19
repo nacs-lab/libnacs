@@ -77,6 +77,7 @@ set(nacs_utils_llvm_SRCS
   llvm/codegen.cpp
   llvm/compile.cpp
   llvm/execute.cpp
+  llvm/lower_vector.cpp
   llvm/memmgr.cpp
   llvm/mergephi.cpp
   llvm/utils.cpp

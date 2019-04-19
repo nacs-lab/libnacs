@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "codegen.h"
+#include "codegen_p.h"
 #include "utils.h"
 #include "mergephi.h"
 #include "vectorize.h"
@@ -33,6 +34,28 @@
 namespace NaCs {
 namespace LLVM {
 namespace Codegen {
+
+Constant *ensurePureExtern(Module *M, FunctionType *ft, StringRef name, bool canread)
+{
+    if (auto f = M->getNamedValue(name)) {
+        auto pft = ft->getPointerTo();
+        if (f->getType() != pft)
+            return ConstantExpr::getBitCast(f, pft);
+        return f;
+    }
+    Function *f = Function::Create(ft, GlobalValue::ExternalLinkage, name, M);
+    f->addFnAttr(Attribute::Speculatable);
+    f->addFnAttr(Attribute::NoRecurse);
+    f->addFnAttr(Attribute::NoUnwind);
+    if (canread) {
+        f->addFnAttr(Attribute::ReadOnly);
+        f->addFnAttr(Attribute::ArgMemOnly);
+    }
+    else {
+        f->addFnAttr(Attribute::ReadNone);
+    }
+    return f;
+}
 
 Context::Context(Module *mod)
     : m_mod(mod),
@@ -56,24 +79,7 @@ Context::Context(Module *mod)
 
 Constant *Context::ensurePureFunc(StringRef name, FunctionType *ft, bool canread) const
 {
-    if (auto f = m_mod->getNamedValue(name)) {
-        auto pft = ft->getPointerTo();
-        if (f->getType() != pft)
-            return ConstantExpr::getBitCast(f, pft);
-        return f;
-    }
-    Function *f = Function::Create(ft, GlobalValue::ExternalLinkage, name, m_mod);
-    f->addFnAttr(Attribute::Speculatable);
-    f->addFnAttr(Attribute::NoRecurse);
-    f->addFnAttr(Attribute::NoUnwind);
-    if (canread) {
-        f->addFnAttr(Attribute::ReadOnly);
-        f->addFnAttr(Attribute::ArgMemOnly);
-    }
-    else {
-        f->addFnAttr(Attribute::ReadNone);
-    }
-    return f;
+    return ensurePureExtern(m_mod, ft, name, canread);
 }
 
 Type *Context::llvm_ty(IR::Type ty) const
