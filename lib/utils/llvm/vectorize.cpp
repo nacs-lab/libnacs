@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "vectorize.h"
+#include "codegen_p.h"
 #include "utils.h"
 
 #include <llvm/ADT/SmallPtrSet.h>
@@ -101,6 +102,12 @@ static bool isTriviallyVectorizable(const Function &F, const SmallVectorImpl<uns
     }
     return true;
 }
+
+static constexpr const char *const libm_names[] = {
+    "acos", "acosh", "asin", "asinh", "atan", "atanh", "cbrt", "cosh",
+    "erf", "erfc", "exp10", "expm1", "tgamma", "lgamma", "log1p", "sinh",
+    "tan", "tanh", "atan2", "fdim", "hypot", "ldexp"
+};
 
 struct Vectorizer {
     Vectorizer(const Function &_F, const SmallVectorImpl<unsigned> &_vec_args)
@@ -229,6 +236,30 @@ struct Vectorizer {
                     add_vec_inst(builder.CreateCall(intrin, args));
                     continue;
                 }
+                auto fty = callee->getFunctionType();
+                auto name = callee->getName();
+                std::string new_name = name.str() + "." + std::to_string(vec_size);
+                if (name == "interp") {
+                    auto vfty = FunctionType::get(vty, {vty, fty->getParamType(1),
+                                                        fty->getParamType(2)}, false);
+                    auto interp_f = Codegen::ensurePureExtern(new_f->getParent(),
+                                                              vfty, new_name, true);
+                    add_vec_inst(builder.CreateCall(interp_f,
+                                                    {map_val(call->getArgOperand(0), true),
+                                                     call->getArgOperand(1),
+                                                     call->getArgOperand(2)}));
+                    continue;
+                }
+                SmallVector<Type*, 4> argts(fty->param_begin(), fty->param_end());
+                for (auto &argt: argts)
+                    argt = VectorType::get(argt, vec_size);
+                auto vfty = FunctionType::get(vty, argts, false);
+                SmallVector<Value*, 4> args;
+                for (const auto &op: call->args())
+                    args.push_back(map_val(op.get(), true));
+                auto new_callee = Codegen::ensurePureExtern(new_f->getParent(),
+                                                            vfty, new_name);
+                add_vec_inst(builder.CreateCall(new_callee, args));
             }
             else {
                 llvm_unreachable("Unhandled instruction!");
@@ -239,6 +270,15 @@ struct Vectorizer {
     }
 
 private:
+    bool is_val_vector(const Value *val) const
+    {
+        if (auto arg = dyn_cast<Argument>(val))
+            return vec_args.count(arg->getArgNo());
+        if (auto inst = dyn_cast<Instruction>(val))
+            return vec_insts.count(inst);
+        return false;
+    }
+
     bool vectorizeableCall(const CallInst *inst) const
     {
         auto ty = inst->getType();
@@ -252,7 +292,7 @@ private:
             Intrinsic::exp, Intrinsic::exp2, Intrinsic::log, Intrinsic::log2,
             Intrinsic::log10, Intrinsic::fma, Intrinsic::fabs, Intrinsic::minnum,
             Intrinsic::maxnum, Intrinsic::copysign, Intrinsic::floor, Intrinsic::ceil,
-            Intrinsic::rint, Intrinsic::round};
+            Intrinsic::rint, Intrinsic::round, Intrinsic::fmuladd};
         if (auto id = callee->getIntrinsicID()) {
             for (auto i: ids) {
                 if (id == i) {
@@ -261,7 +301,17 @@ private:
             }
             return false;
         }
-        // TODO: non-intrinsic libm functions, interpolate
+        auto fname = callee->getName();
+        if (fname == "interp" && inst->getNumArgOperands() == 3 &&
+            !is_val_vector(inst->getArgOperand(1)) &&
+            !is_val_vector(inst->getArgOperand(2))) {
+            return true;
+        }
+        for (auto libm_name: libm_names) {
+            if (fname == libm_name) {
+                return true;
+            }
+        }
         return false;
     }
 
@@ -282,17 +332,8 @@ private:
                 return false;
             bool has_vec = false;
             for (auto *op: inst->operand_values()) {
-                if (auto arg = dyn_cast<Argument>(op)) {
-                    if (vec_args.count(arg->getArgNo())) {
-                        has_vec = true;
-                        break;
-                    }
-                }
-                else if (auto inst_op = dyn_cast<Instruction>(op)) {
-                    if (vec_insts.count(inst_op)) {
-                        has_vec = true;
-                        break;
-                    }
+                if ((has_vec = is_val_vector(op))) {
+                    break;
                 }
             }
             if (!has_vec)

@@ -660,9 +660,13 @@ int main()
                     "  Float64 %1 = interp [2, (4) +3] (Float64 %0) {0, 0.1, 0.2, 0.6}\n"
                     "  ret Float64 %1\n"
                     "}");
-        TestVec<double(double), true>(
+        auto test = TestVec<double(double), true>(
             [&] (double x) { return linearInterpolate(x, 2, 3, 4, data); },
             {0.7, 2.3, 3.5, 4.4, 5.5}, ctx, builder.get());
+#ifndef __clang__
+        // Clang's version of interpolate is wrong so ignore this...
+        test->test_vec_allarg();
+#endif
     }
 
     {
