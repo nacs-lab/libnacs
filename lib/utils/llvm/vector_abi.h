@@ -27,6 +27,7 @@ namespace LLVM {
 using namespace llvm;
 
 Pass *createVectorABIPass();
+bool fixVectorABI(Function &F);
 
 }
 }

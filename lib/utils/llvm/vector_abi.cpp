@@ -58,9 +58,15 @@ struct VectorABIPass : public ModulePass {
     VectorABIPass()
         : ModulePass(ID)
     {}
+    static bool run_on_function(Function &F);
 
 private:
     bool runOnModule(Module &M) override;
+    static bool handle_x86_func(const DataLayout &DL, VectorType *T_v128,
+                                Function &f, bool is_win);
+    static bool handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32,
+                                    Function &f);
+
     // Rename the current function and set to private linkage
     // Create a new function with signature `new_fty` that inherits
     // the linkage of the old function and returns it.
@@ -161,206 +167,244 @@ bool VectorABIPass::is_vector_func(Function &F, bool export_only)
     return false;
 }
 
-bool VectorABIPass::x86_abi(Module &M, bool is_win32)
+bool VectorABIPass::handle_x86_func(const DataLayout &DL, VectorType *T_v128,
+                                    Function &f, bool is_win32)
 {
-    auto &DL = M.getDataLayout();
-    auto T_v128 = VectorType::get(Type::getInt32Ty(M.getContext()), 4);
-    for (auto &f: M) {
-        if (!is_vector_func(f, !is_win32))
-            continue;
-        if (is_win32) {
-            f.setCallingConv(CallingConv::X86_VectorCall);
-            for (const auto &use: f.uses()) {
-                // We can replace this with CallBase on later version of LLVM.
-                // We don't use any other kind of call instructions though so it doesn't
-                // really matter...
-                if (auto inst = dyn_cast<CallInst>(use.getUser())) {
-                    if (inst->getCalledFunction() == &f) {
-                        inst->setCallingConv(CallingConv::X86_VectorCall);
-                    }
-                }
-            }
-            auto link = f.getLinkage();
-            if (link == GlobalValue::PrivateLinkage ||
-                link == GlobalValue::InternalLinkage) {
-                continue;
-            }
-        }
+    if (!is_vector_func(f, !is_win32))
+        return false;
+    if (is_win32) {
+        if (f.getCallingConv() == CallingConv::X86_VectorCall)
+            return false;
         // Mark function processed.
         f.addFnAttr("nacs.vector_abi", "");
-        // For size less than 16 extend to 16 and pass as vector.
-        // For longer vector, pass as is.
-        auto ft = f.getFunctionType();
-        Type *ret = ft->getReturnType();
-        bool fix_ret = false;
-        SmallVector<Type*, 8> argts;
-        SmallVector<unsigned, 8> tofix;
-        if (ret->isVectorTy()) {
-            if (DL.getTypeSizeInBits(ret) < 128) {
-                fix_ret = true;
-                ret = T_v128;
-            }
-        }
-        for (auto t: ft->params()) {
-            if (!t->isVectorTy() || DL.getTypeSizeInBits(t) >= 128) {
-                argts.push_back(t);
-                continue;
-            }
-            tofix.push_back(argts.size());
-            argts.push_back(T_v128);
-        }
-        if (tofix.empty() && !fix_ret)
-            continue;
-        auto new_fty = FunctionType::get(ret, argts, false);
-        auto newf = clone_to_api(f, new_fty);
-        if (f.empty()) {
-            // Declaration of external vector ABI functions
-            BasicBlock *b0 = BasicBlock::Create(f.getContext(), "top", &f);
-            IRBuilder<> builder(b0);
-            SmallVector<Value*, 8> args(argts.size());
-            uint32_t fix_i = 0;
-            for (auto &arg: f.args()) {
-                auto argno = arg.getArgNo();
-                if (fix_i >= tofix.size() || tofix[fix_i] != argno) {
-                    args[argno] = &arg;
-                    continue;
+        f.setCallingConv(CallingConv::X86_VectorCall);
+        for (const auto &use: f.uses()) {
+            // We can replace this with CallBase on later version of LLVM.
+            // We don't use any other kind of call instructions though so it doesn't
+            // really matter...
+            if (auto inst = dyn_cast<CallInst>(use.getUser())) {
+                if (inst->getCalledFunction() == &f) {
+                    inst->setCallingConv(CallingConv::X86_VectorCall);
                 }
-                args[argno] = cast_vector(builder, T_v128, &arg, DL);
-                fix_i++;
             }
-            Value *res = builder.CreateCall(newf, args);
-            if (fix_ret)
-                res = cast_vector(builder, cast<VectorType>(ft->getReturnType()), res, DL);
-            if (res->getType()->isVoidTy()) {
-                builder.CreateRetVoid();
-            }
-            else {
-                builder.CreateRet(res);
-            }
+        }
+        auto link = f.getLinkage();
+        if (link == GlobalValue::PrivateLinkage ||
+            link == GlobalValue::InternalLinkage) {
+            return true;
+        }
+    }
+    // For size less than 16 extend to 16 and pass as vector.
+    // For longer vector, pass as is.
+    auto ft = f.getFunctionType();
+    Type *ret = ft->getReturnType();
+    bool fix_ret = false;
+    SmallVector<Type*, 8> argts;
+    SmallVector<unsigned, 8> tofix;
+    if (ret->isVectorTy()) {
+        if (DL.getTypeSizeInBits(ret) < 128) {
+            fix_ret = true;
+            ret = T_v128;
+        }
+    }
+    for (auto t: ft->params()) {
+        if (!t->isVectorTy() || DL.getTypeSizeInBits(t) >= 128) {
+            argts.push_back(t);
             continue;
         }
-        BasicBlock *b0 = BasicBlock::Create(newf->getContext(), "top", newf);
+        tofix.push_back(argts.size());
+        argts.push_back(T_v128);
+    }
+    if (tofix.empty() && !fix_ret)
+        return is_win32;
+    // Mark function processed. Already marked on windows.
+    if (!is_win32)
+        f.addFnAttr("nacs.vector_abi", "");
+    auto new_fty = FunctionType::get(ret, argts, false);
+    auto newf = clone_to_api(f, new_fty);
+    if (f.empty()) {
+        // Declaration of external vector ABI functions
+        BasicBlock *b0 = BasicBlock::Create(f.getContext(), "top", &f);
         IRBuilder<> builder(b0);
         SmallVector<Value*, 8> args(argts.size());
         uint32_t fix_i = 0;
-        for (auto &arg: newf->args()) {
+        for (auto &arg: f.args()) {
             auto argno = arg.getArgNo();
             if (fix_i >= tofix.size() || tofix[fix_i] != argno) {
                 args[argno] = &arg;
                 continue;
             }
-            args[argno] = cast_vector(builder, cast<VectorType>(ft->getParamType(argno)),
-                                      &arg, DL);
+            args[argno] = cast_vector(builder, T_v128, &arg, DL);
             fix_i++;
         }
-        Value *res = builder.CreateCall(&f, args);
+        Value *res = builder.CreateCall(newf, args);
         if (fix_ret)
-            res = cast_vector(builder, T_v128, res, DL);
+            res = cast_vector(builder, cast<VectorType>(ft->getReturnType()), res, DL);
         if (res->getType()->isVoidTy()) {
             builder.CreateRetVoid();
         }
         else {
             builder.CreateRet(res);
         }
+        return true;
     }
-    return false;
+    BasicBlock *b0 = BasicBlock::Create(newf->getContext(), "top", newf);
+    IRBuilder<> builder(b0);
+    SmallVector<Value*, 8> args(argts.size());
+    uint32_t fix_i = 0;
+    for (auto &arg: newf->args()) {
+        auto argno = arg.getArgNo();
+        if (fix_i >= tofix.size() || tofix[fix_i] != argno) {
+            args[argno] = &arg;
+            continue;
+        }
+        args[argno] = cast_vector(builder, cast<VectorType>(ft->getParamType(argno)),
+                                  &arg, DL);
+        fix_i++;
+    }
+    Value *res = builder.CreateCall(&f, args);
+    if (fix_ret)
+        res = cast_vector(builder, T_v128, res, DL);
+    if (res->getType()->isVoidTy()) {
+        builder.CreateRetVoid();
+    }
+    else {
+        builder.CreateRet(res);
+    }
+    return true;
+}
+
+bool VectorABIPass::x86_abi(Module &M, bool is_win32)
+{
+    auto &DL = M.getDataLayout();
+    auto T_v128 = VectorType::get(Type::getInt32Ty(M.getContext()), 4);
+    bool changed = false;
+    for (auto &f: M)
+        changed |= handle_x86_func(DL, T_v128, f, is_win32);
+    return changed;
+}
+
+bool VectorABIPass::handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32,
+                                        Function &f)
+{
+    if (!is_vector_func(f, true))
+        return false;
+    // * Return value
+    //   Pass as is.
+    // * Arguments
+    //   For size <= 4, ext and bitcast to i32
+    //   For longer vector (size <= 16), round size up to 8/16.
+    auto ft = f.getFunctionType();
+    Type *ret = ft->getReturnType();
+    SmallVector<Type*, 8> argts;
+    SmallVector<unsigned, 8> tofix;
+    for (auto t: ft->params()) {
+        if (!t->isVectorTy()) {
+            argts.push_back(t);
+            continue;
+        }
+        auto argsz = DL.getTypeSizeInBits(t);
+        if (argsz < 32) {
+            tofix.push_back(argts.size());
+            argts.push_back(T_i32);
+        }
+        else if ((argsz & (argsz - 1)) != 0) {
+            // Check if power of two
+            tofix.push_back(argts.size());
+            // Now find the next power of 2
+            auto sz = 1 << (32 - __builtin_clz(argsz));
+            auto ele = cast<VectorType>(t)->getElementType();
+            auto elesz = DL.getTypeSizeInBits(t);
+            if (sz % elesz == 0) {
+                argts.push_back(VectorType::get(ele, sz / elesz));
+            }
+            else {
+                argts.push_back(VectorType::get(Type::getInt8Ty(ele->getContext()),
+                                                sz / 8));
+            }
+        }
+    }
+    if (tofix.empty())
+        return false;
+    // Mark function processed.
+    f.addFnAttr("nacs.vector_abi", "");
+    auto new_fty = FunctionType::get(ret, argts, false);
+    auto newf = clone_to_api(f, new_fty);
+    if (f.empty()) {
+        // Declaration of external vector ABI functions
+        BasicBlock *b0 = BasicBlock::Create(f.getContext(), "top", &f);
+        IRBuilder<> builder(b0);
+        SmallVector<Value*, 8> args(argts.size());
+        uint32_t fix_i = 0;
+        for (auto &arg: f.args()) {
+            auto argno = arg.getArgNo();
+            if (fix_i >= tofix.size() || tofix[fix_i] != argno) {
+                args[argno] = &arg;
+                continue;
+            }
+            args[argno] = cast_vector(builder, cast<VectorType>(argts[argno]), &arg, DL);
+            fix_i++;
+        }
+        Value *res = builder.CreateCall(newf, args);
+        if (res->getType()->isVoidTy()) {
+            builder.CreateRetVoid();
+        }
+        else {
+            builder.CreateRet(res);
+        }
+        return true;
+    }
+    BasicBlock *b0 = BasicBlock::Create(newf->getContext(), "top", newf);
+    IRBuilder<> builder(b0);
+    SmallVector<Value*, 8> args(argts.size());
+    uint32_t fix_i = 0;
+    for (auto &arg: newf->args()) {
+        auto argno = arg.getArgNo();
+        if (fix_i >= tofix.size() || tofix[fix_i] != argno) {
+            args[argno] = &arg;
+            continue;
+        }
+        args[argno] = cast_vector(builder, cast<VectorType>(ft->getParamType(argno)),
+                                  &arg, DL);
+        fix_i++;
+    }
+    Value *res = builder.CreateCall(&f, args);
+    if (res->getType()->isVoidTy()) {
+        builder.CreateRetVoid();
+    }
+    else {
+        builder.CreateRet(res);
+    }
+    return true;
 }
 
 bool VectorABIPass::aarch64_abi(Module &M)
 {
     auto &DL = M.getDataLayout();
     auto T_i32 = Type::getInt32Ty(M.getContext());
-    for (auto &f: M) {
-        if (!is_vector_func(f, true))
-            continue;
-        // Mark function processed.
-        f.addFnAttr("nacs.vector_abi", "");
-        // * Return value
-        //   Pass as is.
-        // * Arguments
-        //   For size <= 4, ext and bitcast to i32
-        //   For longer vector (size <= 16), round size up to 8/16.
-        auto ft = f.getFunctionType();
-        Type *ret = ft->getReturnType();
-        SmallVector<Type*, 8> argts;
-        SmallVector<unsigned, 8> tofix;
-        for (auto t: ft->params()) {
-            if (!t->isVectorTy()) {
-                argts.push_back(t);
-                continue;
-            }
-            auto argsz = DL.getTypeSizeInBits(t);
-            if (argsz < 32) {
-                tofix.push_back(argts.size());
-                argts.push_back(T_i32);
-            }
-            else if ((argsz & (argsz - 1)) != 0) {
-                // Check if power of two
-                tofix.push_back(argts.size());
-                // Now find the next power of 2
-                auto sz = 1 << (32 - __builtin_clz(argsz));
-                auto ele = cast<VectorType>(t)->getElementType();
-                auto elesz = DL.getTypeSizeInBits(t);
-                if (sz % elesz == 0) {
-                    argts.push_back(VectorType::get(ele, sz / elesz));
-                }
-                else {
-                    argts.push_back(VectorType::get(Type::getInt8Ty(ele->getContext()),
-                                                    sz / 8));
-                }
-            }
-        }
-        if (tofix.empty())
-            continue;
-        auto new_fty = FunctionType::get(ret, argts, false);
-        auto newf = clone_to_api(f, new_fty);
-        if (f.empty()) {
-            // Declaration of external vector ABI functions
-            BasicBlock *b0 = BasicBlock::Create(f.getContext(), "top", &f);
-            IRBuilder<> builder(b0);
-            SmallVector<Value*, 8> args(argts.size());
-            uint32_t fix_i = 0;
-            for (auto &arg: f.args()) {
-                auto argno = arg.getArgNo();
-                if (fix_i >= tofix.size() || tofix[fix_i] != argno) {
-                    args[argno] = &arg;
-                    continue;
-                }
-                args[argno] = cast_vector(builder, cast<VectorType>(argts[argno]), &arg, DL);
-                fix_i++;
-            }
-            Value *res = builder.CreateCall(newf, args);
-            if (res->getType()->isVoidTy()) {
-                builder.CreateRetVoid();
-            }
-            else {
-                builder.CreateRet(res);
-            }
-            continue;
-        }
-        BasicBlock *b0 = BasicBlock::Create(newf->getContext(), "top", newf);
-        IRBuilder<> builder(b0);
-        SmallVector<Value*, 8> args(argts.size());
-        uint32_t fix_i = 0;
-        for (auto &arg: newf->args()) {
-            auto argno = arg.getArgNo();
-            if (fix_i >= tofix.size() || tofix[fix_i] != argno) {
-                args[argno] = &arg;
-                continue;
-            }
-            args[argno] = cast_vector(builder, cast<VectorType>(ft->getParamType(argno)),
-                                      &arg, DL);
-            fix_i++;
-        }
-        Value *res = builder.CreateCall(&f, args);
-        if (res->getType()->isVoidTy()) {
-            builder.CreateRetVoid();
-        }
-        else {
-            builder.CreateRet(res);
-        }
+    bool changed = false;
+    for (auto &f: M)
+        changed |= handle_aarch64_func(DL, T_i32, f);
+    return changed;
+}
+
+bool VectorABIPass::run_on_function(Function &F)
+{
+    auto *M = F.getParent();
+    assert(M && "Function must have a parent");
+    Triple triple(M->getTargetTriple());
+    auto &DL = M->getDataLayout();
+    switch (triple.getArch()) {
+    case Triple::x86:
+    case Triple::x86_64:
+        return handle_x86_func(DL, VectorType::get(Type::getInt32Ty(M->getContext()), 4),
+                               F, triple.getOS() == Triple::Win32);
+    case Triple::aarch64:
+    case Triple::aarch64_be:
+        return handle_aarch64_func(DL, Type::getInt32Ty(M->getContext()), F);
+    default:
+        return false;
     }
-    return false;
 }
 
 bool VectorABIPass::runOnModule(Module &M)
@@ -388,6 +432,11 @@ static RegisterPass<VectorABIPass> X("VectorABI", "Fixing Vector ABI Pass",
 Pass *createVectorABIPass()
 {
     return new VectorABIPass();
+}
+
+bool fixVectorABI(Function &F)
+{
+    return VectorABIPass::run_on_function(F);
 }
 
 }
