@@ -27,35 +27,35 @@ namespace LLVM {
 
 using namespace llvm;
 
-NACS_EXPORT() void dump(Value *v)
+NACS_EXPORT() void dump(const Value *v)
 {
     v->print(dbgs(), true);
     dbgs() << "\n";
 }
 
-NACS_EXPORT() void dump(Type *v)
+NACS_EXPORT() void dump(const Type *v)
 {
     v->print(dbgs(), true);
     dbgs() << "\n";
 }
 
-NACS_EXPORT() void dump(Function *f)
+NACS_EXPORT() void dump(const Function *f)
 {
     f->print(dbgs(), nullptr, false, true);
 }
 
-NACS_EXPORT() void dump(Module *m)
+NACS_EXPORT() void dump(const Module *m)
 {
     m->print(dbgs(), nullptr);
 }
 
-NACS_EXPORT() void dump(Metadata *m)
+NACS_EXPORT() void dump(const Metadata *m)
 {
     m->print(dbgs());
     dbgs() << "\n";
 }
 
-NACS_EXPORT() void dump(DebugLoc *dbg)
+NACS_EXPORT() void dump(const DebugLoc *dbg)
 {
     dbg->print(dbgs());
     dbgs() << "\n";

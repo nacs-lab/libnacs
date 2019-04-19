@@ -35,12 +35,12 @@
 namespace NaCs {
 namespace LLVM {
 
-NACS_EXPORT(utils) void dump(llvm::Value *v);
-NACS_EXPORT(utils) void dump(llvm::Type *v);
-NACS_EXPORT(utils) void dump(llvm::Function *f);
-NACS_EXPORT(utils) void dump(llvm::Module *m);
-NACS_EXPORT(utils) void dump(llvm::Metadata *m);
-NACS_EXPORT(utils) void dump(llvm::DebugLoc *dbg);
+NACS_EXPORT(utils) void dump(const llvm::Value *v);
+NACS_EXPORT(utils) void dump(const llvm::Type *v);
+NACS_EXPORT(utils) void dump(const llvm::Function *f);
+NACS_EXPORT(utils) void dump(const llvm::Module *m);
+NACS_EXPORT(utils) void dump(const llvm::Metadata *m);
+NACS_EXPORT(utils) void dump(const llvm::DebugLoc *dbg);
 
 // The following functions are provided so that the user does not need to link to LLVM.
 // This is useful/needed when we statically linking LLVM and cannot
