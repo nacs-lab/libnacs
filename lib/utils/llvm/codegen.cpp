@@ -565,7 +565,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             const auto args = pc;
             pc += nargs;
             SmallVector<Value*, 4> largs{(size_t)nargs};
-            for (unsigned i = 0; i < nargs; i++)
+            for (int i = 0; i < nargs; i++)
                 largs[i] = emit_val(args[i]);
             auto emit_intrinsic =
                 [&] (Intrinsic::ID intrinsic, unsigned _nargs) {
