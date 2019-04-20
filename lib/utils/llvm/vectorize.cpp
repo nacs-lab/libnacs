@@ -187,9 +187,12 @@ struct Vectorizer {
                 add_vec_inst(v);
             }
 #if LLVM_VERSION_MAJOR >= 8
-            else if (auto *uop = dyn_cast<UnaryOperator>(&inst)) {
+            // Can't use `dyn_cast<UnaryOperator>`
+            // since `UnaryOperator` does not implement classof as of LLVM 8.0.
+            else if (inst.isUnaryOp()) {
+                auto *uop = cast<UnaryOperator>(&inst);
                 auto *a = map_val(uop->getOperand(0), true);
-                // Not supported by IRBuilder yet.
+                // Not supported by IRBuilder yet (LLVM 8.0).
                 auto *v = UnaryOperator::Create(uop->getOpcode(), a);
                 builder.Insert(v);
                 v->copyIRFlags(uop);
@@ -356,7 +359,9 @@ private:
                 continue;
 #if LLVM_VERSION_MAJOR >= 8
             // LLVM 8 have got its first unary operator
-            if (isa<UnaryOperator>(inst))
+            // Can't use `isa<UnaryOperator>`
+            // since `UnaryOperator` does not implement classof as of LLVM 8.0.
+            if (inst->isUnaryOp())
                 continue;
 #endif
             if (isa<CallInst>(inst) && vectorizeableCall(cast<CallInst>(inst)))
