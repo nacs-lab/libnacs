@@ -739,5 +739,27 @@ int main()
         test->test_vec_allarg();
     }
 
+    {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64, IR::Type::Float64});
+        auto v2 = builder.createCall(IR::Builtins::erf, {0});
+        auto v3 = builder.createCall(IR::Builtins::sinh, {1});
+        auto v4 = builder.createAdd(v2, v3);
+        builder.createRet(builder.createCall(IR::Builtins::atan2, {v2, v4}));
+        test_str_eq(builder.get(), "Float64 (Float64 %0, Float64 %1) {\n"
+                    "L0:\n"
+                    "  Float64 %2 = call erf(Float64 %0)\n"
+                    "  Float64 %3 = call sinh(Float64 %1)\n"
+                    "  Float64 %4 = add Float64 %2, Float64 %3\n"
+                    "  Float64 %5 = call atan2(Float64 %2, Float64 %4)\n"
+                    "  ret Float64 %5\n"
+                    "}");
+        auto test = TestVec<double(double, double), true>(
+            [] (double v0, double v1) {
+                auto v2 = erf(v0);
+                return atan2(v2, v2 + sinh(v1));
+            }, {-1.4, 0.1, 0.5}, {-0.4, -0.5, 0.9, 1.4}, ctx, builder.get());
+        test->test_vec_allarg();
+    }
+
     return 0;
 }
