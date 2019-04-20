@@ -186,6 +186,16 @@ struct Vectorizer {
                     new_binop->copyIRFlags(binop);
                 add_vec_inst(v);
             }
+#if LLVM_VERSION_MAJOR >= 8
+            else if (auto *uop = dyn_cast<UnaryOperator>(&inst)) {
+                auto *a = map_val(uop->getOperand(0), true);
+                // Not supported by IRBuilder yet.
+                auto *v = UnaryOperator::Create(uop->getOpcode(), a);
+                builder.Insert(v);
+                v->copyIRFlags(uop);
+                add_vec_inst(v);
+            }
+#endif
             else if (auto *cmp = dyn_cast<CmpInst>(&inst)) {
                 Value *a = map_val(cmp->getOperand(0), true);
                 Value *b = map_val(cmp->getOperand(1), true);
@@ -345,10 +355,9 @@ private:
                 isa<GetElementPtrInst>(inst) || isa<SelectInst>(inst) || isa<CastInst>(inst))
                 continue;
 #if LLVM_VERSION_MAJOR >= 8
-            // Disable for now since IRBuilder doesn't have support for this yet...
-            // // LLVM 8 have got its first unary operator
-            // if (isa<UnaryOperator>(inst))
-            //     continue;
+            // LLVM 8 have got its first unary operator
+            if (isa<UnaryOperator>(inst))
+                continue;
 #endif
             if (isa<CallInst>(inst) && vectorizeableCall(cast<CallInst>(inst)))
                 continue;
