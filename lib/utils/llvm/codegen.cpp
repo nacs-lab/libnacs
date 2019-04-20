@@ -150,6 +150,10 @@ Value *Context::emit_convert(IRBuilder<> &builder, IR::Type ty, Value *val) cons
 
 Value *Context::emit_add(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const
 {
+    if ((isa<Constant>(val1) && cast<Constant>(val1)->isZeroValue()))
+        return emit_convert(builder, ty, val2);
+    if ((isa<Constant>(val2) && cast<Constant>(val2)->isZeroValue()))
+        return emit_convert(builder, ty, val1);
     switch (ty) {
     case IR::Type::Int32:
         return builder.CreateAdd(emit_convert(builder, ty, val1),
@@ -164,6 +168,8 @@ Value *Context::emit_add(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *
 
 Value *Context::emit_sub(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const
 {
+    if ((isa<Constant>(val2) && cast<Constant>(val2)->isZeroValue()))
+        return emit_convert(builder, ty, val1);
     switch (ty) {
     case IR::Type::Int32:
         return builder.CreateSub(emit_convert(builder, ty, val1),
@@ -180,9 +186,15 @@ Value *Context::emit_mul(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *
 {
     switch (ty) {
     case IR::Type::Int32:
+        if ((isa<Constant>(val1) && cast<Constant>(val1)->isZeroValue()) ||
+            (isa<Constant>(val2) && cast<Constant>(val2)->isZeroValue()))
+            return Constant::getNullValue(T_i32);
         return builder.CreateMul(emit_convert(builder, ty, val1),
                                  emit_convert(builder, ty, val2));
     case IR::Type::Float64:
+        if ((isa<Constant>(val1) && cast<Constant>(val1)->isZeroValue()) ||
+            (isa<Constant>(val2) && cast<Constant>(val2)->isZeroValue()))
+            return Constant::getNullValue(T_f64);
         return builder.CreateFMul(emit_convert(builder, ty, val1),
                                   emit_convert(builder, ty, val2));
     default:
