@@ -70,6 +70,7 @@ Context::Context(Module *mod)
       F_f64_f64i32(FunctionType::get(T_f64, {T_f64, T_i32}, false)),
       F_f64_i32f64(FunctionType::get(T_f64, {T_i32, T_f64}, false)),
       F_f64_f64i32pf64(FunctionType::get(T_f64, {T_f64, T_i32, T_f64->getPointerTo()}, false)),
+      V_undefbool(UndefValue::get(T_bool)),
       m_mdbuilder(m_ctx),
       tbaa_root(m_mdbuilder.createTBAARoot("nacs_tbaa"))
 {
@@ -154,15 +155,15 @@ Value *Context::emit_add(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *
         return emit_convert(builder, ty, val2);
     if ((isa<Constant>(val2) && cast<Constant>(val2)->isZeroValue()))
         return emit_convert(builder, ty, val1);
+    val1 = emit_convert(builder, ty, val1);
+    val2 = emit_convert(builder, ty, val2);
     switch (ty) {
     case IR::Type::Int32:
-        return builder.CreateAdd(emit_convert(builder, ty, val1),
-                                 emit_convert(builder, ty, val2));
+        return builder.CreateAdd(val1, val2);
     case IR::Type::Float64:
-        return builder.CreateFAdd(emit_convert(builder, ty, val1),
-                                  emit_convert(builder, ty, val2));
+        return builder.CreateFAdd(val1, val2);
     default:
-        return UndefValue::get(llvm_ty(ty));
+        return V_undefbool;
     }
 }
 
@@ -170,35 +171,32 @@ Value *Context::emit_sub(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *
 {
     if ((isa<Constant>(val2) && cast<Constant>(val2)->isZeroValue()))
         return emit_convert(builder, ty, val1);
+    val1 = emit_convert(builder, ty, val1);
+    val2 = emit_convert(builder, ty, val2);
     switch (ty) {
     case IR::Type::Int32:
-        return builder.CreateSub(emit_convert(builder, ty, val1),
-                                 emit_convert(builder, ty, val2));
+        return builder.CreateSub(val1, val2);
     case IR::Type::Float64:
-        return builder.CreateFSub(emit_convert(builder, ty, val1),
-                                  emit_convert(builder, ty, val2));
+        return builder.CreateFSub(val1, val2);
     default:
-        return UndefValue::get(llvm_ty(ty));
+        return V_undefbool;
     }
 }
 
 Value *Context::emit_mul(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const
 {
+    if ((isa<Constant>(val1) && cast<Constant>(val1)->isZeroValue()) ||
+        (isa<Constant>(val2) && cast<Constant>(val2)->isZeroValue()))
+        return Constant::getNullValue(llvm_ty(ty));
+    val1 = emit_convert(builder, ty, val1);
+    val2 = emit_convert(builder, ty, val2);
     switch (ty) {
     case IR::Type::Int32:
-        if ((isa<Constant>(val1) && cast<Constant>(val1)->isZeroValue()) ||
-            (isa<Constant>(val2) && cast<Constant>(val2)->isZeroValue()))
-            return Constant::getNullValue(T_i32);
-        return builder.CreateMul(emit_convert(builder, ty, val1),
-                                 emit_convert(builder, ty, val2));
+        return builder.CreateMul(val1, val2);
     case IR::Type::Float64:
-        if ((isa<Constant>(val1) && cast<Constant>(val1)->isZeroValue()) ||
-            (isa<Constant>(val2) && cast<Constant>(val2)->isZeroValue()))
-            return Constant::getNullValue(T_f64);
-        return builder.CreateFMul(emit_convert(builder, ty, val1),
-                                  emit_convert(builder, ty, val2));
+        return builder.CreateFMul(val1, val2);
     default:
-        return UndefValue::get(llvm_ty(ty));
+        return V_undefbool;
     }
 }
 
@@ -477,7 +475,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
         pc++;
         const auto res = *pc;
         pc++;
-        Value *lres;
+        Value *lres = V_undefbool;
         switch (op) {
         case IR::Opcode::Ret: {
             auto val = emit_val(res);
@@ -527,7 +525,6 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
                 lres = emit_fdiv(builder, val1, val2);
                 break;
             default:
-                lres = UndefValue::get(llvm_ty(func.vals[res]));
                 break;
             }
             break;
@@ -547,10 +544,8 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             pc++;
             const auto args = pc;
             pc += 2 * nargs;
-            if (nargs == 0) {
-                lres = UndefValue::get(llvm_ty(func.vals[res]));
+            if (nargs == 0)
                 break;
-            }
             lres = emit_val(args[1]);
             lres = emit_convert(builder, func.vals[res], lres);
             for (int i = 1;i < nargs;i++) {
@@ -569,138 +564,125 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             pc++;
             const auto args = pc;
             pc += nargs;
-            auto emit_intrinsic_f64 = [&] (Intrinsic::ID intrinsic) {
-                assert(nargs == 1);
-                auto intrin = Intrinsic::getDeclaration(m_mod, intrinsic, {T_f64});
-                auto arg = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
-                lres = builder.CreateCall(intrin, arg);
-            };
-            auto emit_intrinsic_f64f64 = [&] (Intrinsic::ID intrinsic) {
-                assert(nargs == 2);
-                auto intrin = Intrinsic::getDeclaration(m_mod, intrinsic, {T_f64});
-                auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
-                auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
-                lres = builder.CreateCall(intrin, {arg1, arg2});
-            };
-            auto emit_intrinsic_f64f64f64 = [&] (Intrinsic::ID intrinsic) {
-                assert(nargs == 3);
-                auto intrin = Intrinsic::getDeclaration(m_mod, intrinsic, {T_f64});
-                auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
-                auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
-                auto arg3 = emit_convert(builder, IR::Type::Float64, emit_val(args[2]));
-                lres = builder.CreateCall(intrin, {arg1, arg2, arg3});
-            };
+            SmallVector<Value*, 4> largs{(size_t)nargs};
+            for (unsigned i = 0; i < nargs; i++)
+                largs[i] = emit_val(args[i]);
+            auto emit_intrinsic =
+                [&] (Intrinsic::ID intrinsic, unsigned _nargs) {
+                    assert(nargs == _nargs);
+                    auto intrin = Intrinsic::getDeclaration(m_mod, intrinsic, {T_f64});
+                    for (unsigned i = 0; i < _nargs; i++)
+                        largs[i] = emit_convert(builder, IR::Type::Float64, largs[i]);
+                    lres = builder.CreateCall(intrin, largs);
+                };
             switch (id) {
             case IR::Builtins::sqrt:
-                emit_intrinsic_f64(Intrinsic::sqrt);
+                emit_intrinsic(Intrinsic::sqrt, 1);
                 break;
             case IR::Builtins::sin:
-                emit_intrinsic_f64(Intrinsic::sin);
+                emit_intrinsic(Intrinsic::sin, 1);
                 break;
             case IR::Builtins::cos:
-                emit_intrinsic_f64(Intrinsic::cos);
+                emit_intrinsic(Intrinsic::cos, 1);
                 break;
             case IR::Builtins::pow:
-                emit_intrinsic_f64f64(Intrinsic::pow);
+                emit_intrinsic(Intrinsic::pow, 2);
                 break;
             case IR::Builtins::exp:
-                emit_intrinsic_f64(Intrinsic::exp);
+                emit_intrinsic(Intrinsic::exp, 1);
                 break;
             case IR::Builtins::exp2:
-                emit_intrinsic_f64(Intrinsic::exp2);
+                emit_intrinsic(Intrinsic::exp2, 1);
                 break;
             case IR::Builtins::log:
-                emit_intrinsic_f64(Intrinsic::log);
+                emit_intrinsic(Intrinsic::log, 1);
                 break;
             case IR::Builtins::log2:
-                emit_intrinsic_f64(Intrinsic::log2);
+                emit_intrinsic(Intrinsic::log2, 1);
                 break;
             case IR::Builtins::log10:
-                emit_intrinsic_f64(Intrinsic::log10);
+                emit_intrinsic(Intrinsic::log10, 1);
                 break;
             case IR::Builtins::fma:
-                emit_intrinsic_f64f64f64(Intrinsic::fma);
+                emit_intrinsic(Intrinsic::fma, 3);
                 break;
             case IR::Builtins::abs:
-                emit_intrinsic_f64(Intrinsic::fabs);
+                emit_intrinsic(Intrinsic::fabs, 1);
                 break;
             case IR::Builtins::min:
-                emit_intrinsic_f64f64(Intrinsic::minnum);
+                emit_intrinsic(Intrinsic::minnum, 2);
                 break;
             case IR::Builtins::max:
-                emit_intrinsic_f64f64(Intrinsic::maxnum);
+                emit_intrinsic(Intrinsic::maxnum, 2);
                 break;
             case IR::Builtins::copysign:
-                emit_intrinsic_f64f64(Intrinsic::copysign);
+                emit_intrinsic(Intrinsic::copysign, 2);
                 break;
             case IR::Builtins::floor:
-                emit_intrinsic_f64(Intrinsic::floor);
+                emit_intrinsic(Intrinsic::floor, 1);
                 break;
             case IR::Builtins::ceil:
-                emit_intrinsic_f64(Intrinsic::ceil);
+                emit_intrinsic(Intrinsic::ceil, 1);
                 break;
             case IR::Builtins::rint:
-                emit_intrinsic_f64(Intrinsic::rint);
+                emit_intrinsic(Intrinsic::rint, 1);
                 break;
             case IR::Builtins::round:
-                emit_intrinsic_f64(Intrinsic::round);
+                emit_intrinsic(Intrinsic::round, 1);
                 break;
             case IR::Builtins::mod: {
                 assert(nargs == 2);
-                auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
-                auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
+                auto arg1 = emit_convert(builder, IR::Type::Float64, largs[0]);
+                auto arg2 = emit_convert(builder, IR::Type::Float64, largs[1]);
                 lres = builder.CreateFRem(arg1, arg2);
                 break;
             }
             default: {
                 auto sym = IR::getBuiltinSymbol(id);
-                if (!sym) {
-                    lres = UndefValue::get(llvm_ty(func.vals[res]));
+                if (!sym)
                     break;
-                }
+                Constant *callee = nullptr;
                 switch (IR::getBuiltinType(id)) {
                 case IR::BuiltinType::F64_F64: {
                     assert(nargs == 1);
-                    auto callee = ensurePureFunc(sym, F_f64_f64);
-                    auto arg = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
-                    lres = builder.CreateCall(callee, arg);
+                    callee = ensurePureFunc(sym, F_f64_f64);
+                    largs[0] = emit_convert(builder, IR::Type::Float64, largs[0]);
                     break;
                 }
                 case IR::BuiltinType::F64_F64F64: {
                     assert(nargs == 2);
-                    auto callee = ensurePureFunc(sym, F_f64_f64f64);
-                    auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
-                    auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
-                    lres = builder.CreateCall(callee, {arg1, arg2});
+                    callee = ensurePureFunc(sym, F_f64_f64f64);
+                    largs[0] = emit_convert(builder, IR::Type::Float64, largs[0]);
+                    largs[1] = emit_convert(builder, IR::Type::Float64, largs[1]);
                     break;
                 }
                 case IR::BuiltinType::F64_F64F64F64: {
                     assert(nargs == 3);
-                    auto callee = ensurePureFunc(sym, F_f64_f64f64f64);
-                    auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
-                    auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
-                    auto arg3 = emit_convert(builder, IR::Type::Float64, emit_val(args[2]));
-                    lres = builder.CreateCall(callee, {arg1, arg2, arg3});
+                    callee = ensurePureFunc(sym, F_f64_f64f64f64);
+                    largs[0] = emit_convert(builder, IR::Type::Float64, largs[0]);
+                    largs[1] = emit_convert(builder, IR::Type::Float64, largs[1]);
+                    largs[2] = emit_convert(builder, IR::Type::Float64, largs[2]);
                     break;
                 }
                 case IR::BuiltinType::F64_F64I32: {
                     assert(nargs == 2);
-                    auto callee = ensurePureFunc(sym, F_f64_f64i32);
-                    auto arg1 = emit_convert(builder, IR::Type::Float64, emit_val(args[0]));
-                    auto arg2 = emit_convert(builder, IR::Type::Int32, emit_val(args[1]));
-                    lres = builder.CreateCall(callee, {arg1, arg2});
+                    callee = ensurePureFunc(sym, F_f64_f64i32);
+                    largs[0] = emit_convert(builder, IR::Type::Float64, largs[0]);
+                    largs[1] = emit_convert(builder, IR::Type::Int32, largs[1]);
                     break;
                 }
                 case IR::BuiltinType::F64_I32F64: {
                     assert(nargs == 2);
-                    auto callee = ensurePureFunc(sym, F_f64_i32f64);
-                    auto arg1 = emit_convert(builder, IR::Type::Int32, emit_val(args[0]));
-                    auto arg2 = emit_convert(builder, IR::Type::Float64, emit_val(args[1]));
-                    lres = builder.CreateCall(callee, {arg1, arg2});
+                    callee = ensurePureFunc(sym, F_f64_i32f64);
+                    largs[0] = emit_convert(builder, IR::Type::Int32, largs[0]);
+                    largs[1] = emit_convert(builder, IR::Type::Float64, largs[1]);
                     break;
                 }
                 default:
-                    lres = UndefValue::get(llvm_ty(func.vals[res]));
+                    break;
+                }
+                if (likely(callee)) {
+                    lres = builder.CreateCall(callee, largs);
                 }
             }
                 break;
@@ -775,7 +757,6 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             break;
         }
         default:
-            lres = UndefValue::get(llvm_ty(func.vals[res]));
             break;
         }
         builder.CreateStore(emit_convert(builder, func.vals[res], lres), slots[res]);

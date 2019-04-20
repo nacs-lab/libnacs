@@ -103,6 +103,7 @@ public:
     FunctionType *F_f64_i32f64;
     FunctionType *F_f64_f64i32pf64;
 private:
+    UndefValue *V_undefbool;
     MDBuilder m_mdbuilder;
     MDNode *tbaa_root;
     MDNode *tbaa_const;
