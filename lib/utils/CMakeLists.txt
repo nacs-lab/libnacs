@@ -70,10 +70,12 @@ foreach(link IN LISTS nacs_utils_LINKS)
   set(nacs_utils_LINKS_FLAGS "${nacs_utils_LINKS_FLAGS} -l${link}")
 endforeach()
 set(nacs_utils_llvm_HDRS
+  llvm/analysis.h
   llvm/codegen.h
   llvm/compile.h
   llvm/utils.h)
 set(nacs_utils_llvm_SRCS
+  llvm/analysis.cpp
   llvm/codegen.cpp
   llvm/compile.cpp
   llvm/execute.cpp

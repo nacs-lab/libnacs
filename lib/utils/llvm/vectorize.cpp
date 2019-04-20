@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "vectorize.h"
+#include "analysis.h"
 #include "codegen_p.h"
 #include "utils.h"
 
@@ -28,6 +29,8 @@
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/Transforms/Utils/ValueMapper.h>
+
+#include <algorithm>
 
 namespace NaCs {
 namespace LLVM {
@@ -92,15 +95,8 @@ static void trivialVectorize(const Function &F, Function *new_f, unsigned vec_si
 
 static bool isTriviallyVectorizable(const Function &F, const SmallVectorImpl<unsigned> &vec_args)
 {
-    if (vec_args.empty())
-        return true;
-    auto args = F.arg_begin();
-    for (auto i: vec_args) {
-        if (!(args + i)->use_empty()) {
-            return false;
-        }
-    }
-    return true;
+    return std::all_of(vec_args.begin(), vec_args.end(),
+                       [&] (auto i) { return Analysis::argument_unused(F, i); });
 }
 
 static constexpr const char *const libm_names[] = {
