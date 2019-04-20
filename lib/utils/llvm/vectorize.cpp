@@ -233,7 +233,9 @@ struct Vectorizer {
                     SmallVector<Value*, 4> args;
                     for (const auto &op: call->arg_operands())
                         args.push_back(map_val(op.get(), true));
-                    add_vec_inst(builder.CreateCall(intrin, args));
+                    auto new_call = builder.CreateCall(intrin, args);
+                    new_call->copyIRFlags(call);
+                    add_vec_inst(new_call);
                     continue;
                 }
                 auto fty = callee->getFunctionType();

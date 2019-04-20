@@ -392,6 +392,10 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
     BasicBlock *b0 = BasicBlock::Create(m_ctx, "top", f);
     IRBuilder<> builder(b0);
     FastMathFlags fmf;
+    fmf.setNoNaNs(true);
+    fmf.setNoInfs(true);
+    fmf.setNoSignedZeros(true);
+    fmf.setAllowReciprocal(true);
     fmf.setAllowContract(true);
     builder.setFastMathFlags(fmf);
 
