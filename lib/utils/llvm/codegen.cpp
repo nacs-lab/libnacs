@@ -406,7 +406,9 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
     fmf.setNoInfs();
     fmf.setNoSignedZeros();
     fmf.setAllowReciprocal();
+#if LLVM_VERSION_MAJOR >= 7
     fmf.setAllowContract();
+#endif
     builder.setFastMathFlags(fmf);
 
     // 3. Create variable slots
