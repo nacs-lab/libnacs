@@ -71,7 +71,7 @@ NACS_EXPORT() void max_sideband_ratios(double eta, int orders, double *ratios)
 {
     double m0 = sideband(eta, 0, 1);
     for (int i = 0; i < orders; i++) {
-        ratios[i] = m0 = find_max_sideband(eta, i + 1);
+        ratios[i] = m0 / find_max_sideband(eta, i + 1);
     }
 }
 
