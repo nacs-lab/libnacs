@@ -30,18 +30,24 @@ namespace NaCs {
 namespace LLVM {
 namespace Exe {
 
+#define __asm_sym_real(var_suffix, name, suffix, type)                  \
+    ([] {                                                               \
+         extern auto asm_sym ## var_suffix type asm(name) suffix;       \
+         return (void(*)())asm_sym ## var_suffix;                       \
+     }())
+#define asm_sym_real(var_suffix, name, suffix, type...)                 \
+    NACS_SWITCH(type, __asm_sym_real(var_suffix, name, suffix, type),   \
+                __asm_sym_real(var_suffix, name, suffix, () -> void))
+
 // Clang is not happy if we redeclare the function even if it's in a function local scope
 // since it moves all the declarations to the global scope...
 // Give them different names to work around that.
 // Thanks to http://zwizwa.be/-/c/20100825-142132
-#define __asm_sym(var_suffix, name)                     \
-    ([] {                                               \
-         extern void asm_sym ## var_suffix() asm(name); \
-         return asm_sym ## var_suffix;                  \
-     }())
+#define __asm_sym(var_suffix, name, type...)    \
+    asm_sym_real(var_suffix, name, , ##type)
 // Indirection to make sure `__COUNTER__` is expanded correctly.
-#define _asm_sym(var_suffix, name) __asm_sym(var_suffix, name)
-#define asm_sym(name) _asm_sym(__COUNTER__, name)
+#define _asm_sym(var_suffix, name, type...) __asm_sym(var_suffix, name, ##type)
+#define asm_sym(name, type...) _asm_sym(__COUNTER__, name, ##type)
 #define __asm_sym_w(var_suffix, name)                                   \
     ([] {                                                               \
          extern void asm_sym ## var_suffix() asm(name) __attribute__((weak)); \
@@ -173,15 +179,19 @@ uintptr_t Resolver::find_extern(const std::string &name)
 #  if NACS_CPU_X86 || NACS_CPU_X86_64
     // We need this to convience gcc to find the correct symbol on windows.
     if (name == "interp.2") {
-        auto addr = asm_sym("_ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd" VEC_SUFFIX(32));
+        auto addr = asm_sym("_ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd" VEC_SUFFIX(32),
+                            (__m128d, uint32_t, const double*) -> __m128d);
         if (host_info.test_feature(X86::Feature::avx2))
-            addr = asm_sym("_ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd" VEC_SUFFIX(32));
+            addr = asm_sym("_ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd" VEC_SUFFIX(32),
+                           (__m128d, uint32_t, const double*) -> __m128d);
         return (uintptr_t)addr;
     }
     else if (name == "interp.4") {
-        auto addr = asm_sym("_ZN4NaCs22linearInterpolate4_avxEDv4_djPKd" VEC_SUFFIX(48));
+        auto addr = asm_sym("_ZN4NaCs22linearInterpolate4_avxEDv4_djPKd" VEC_SUFFIX(48),
+                            (__m256d, uint32_t, const double*) -> __m256d);
         if (host_info.test_feature(X86::Feature::avx2))
-            addr = asm_sym("_ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd" VEC_SUFFIX(48));
+            addr = asm_sym("_ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd" VEC_SUFFIX(48),
+                           (__m256d, uint32_t, const double*) -> __m256d);
         return (uintptr_t)addr;
     }
 #    if !NACS_OS_WINDOWS
