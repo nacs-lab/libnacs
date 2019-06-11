@@ -56,6 +56,11 @@ public:
             assert(m_pend - padding > m_base);
         }
     }
+    ~AllocatorTester()
+    {
+        m_allocator->~Allocator();
+        ::free(m_palloc);
+    }
     void test(size_t nrun)
     {
         for (size_t i = 0; i < nrun; i++)
