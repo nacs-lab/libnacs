@@ -48,14 +48,11 @@ namespace Exe {
 // Indirection to make sure `__COUNTER__` is expanded correctly.
 #define _asm_sym(var_suffix, name, type...) __asm_sym(var_suffix, name, ##type)
 #define asm_sym(name, type...) _asm_sym(__COUNTER__, name, ##type)
-#define __asm_sym_w(var_suffix, name)                                   \
-    ([] {                                                               \
-         extern void asm_sym ## var_suffix() asm(name) __attribute__((weak)); \
-         return asm_sym ## var_suffix;                                  \
-     }())
+#define __asm_sym_w(var_suffix, name, type...)                          \
+    asm_sym_real(var_suffix, name, __attribute__((weak)), ##type)
 // Indirection to make sure `__COUNTER__` is expanded correctly.
-#define _asm_sym_w(var_suffix, name) __asm_sym_w(var_suffix, name)
-#define asm_sym_w(name) _asm_sym_w(__COUNTER__, name)
+#define _asm_sym_w(var_suffix, name, type...) __asm_sym_w(var_suffix, name, ##type)
+#define asm_sym_w(name, type...) _asm_sym_w(__COUNTER__, name, ##type)
 
 #ifdef ENABLE_SIMD
 #  if NACS_CPU_X86 || NACS_CPU_X86_64
