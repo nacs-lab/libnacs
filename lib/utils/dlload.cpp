@@ -89,7 +89,7 @@ static bool is_full_path(wchar_t *path, DWORD len)
     return len >= 3 && (path[1] == L':') && is_dir_separator(path[2]);
 }
 
-NACS_EXPORT() void *open(const char *filename, int flags)
+NACS_EXPORT() void *open(const char *filename, int)
 {
     DWORD len = MultiByteToWideChar(CP_UTF8, 0, filename, -1, nullptr, 0);
     if (!len)
