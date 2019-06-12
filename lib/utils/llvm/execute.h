@@ -40,13 +40,22 @@ using ResolverBase = LegacyJITSymbolResolver;
 using ResolverBase = JITSymbolResolver;
 #endif
 
+class Engine;
+
 class Resolver : public ResolverBase {
+    using cb_t = std::function<uintptr_t(const std::string&)>;
+    class SetCB;
 public:
     Resolver() = default;
+
 private:
     JITSymbol findSymbolInLogicalDylib(const std::string&) override;
     JITSymbol findSymbol(const std::string &name) override;
     uintptr_t find_extern(const std::string &name);
+
+    const cb_t *m_cb = nullptr;
+
+    friend class Engine;
 };
 
 /**
@@ -176,8 +185,10 @@ class Engine {
 public:
     NACS_EXPORT(utils) Engine();
     NACS_EXPORT(utils) ~Engine();
-    NACS_EXPORT(utils) uint64_t load(const object::ObjectFile &O);
-    NACS_EXPORT(utils) uint64_t load(const char *p, size_t len);
+    NACS_EXPORT(utils) uint64_t load(const object::ObjectFile &O,
+                                     const Resolver::cb_t &cb=Resolver::cb_t());
+    NACS_EXPORT(utils) uint64_t load(const char *p, size_t len,
+                                     const Resolver::cb_t &cb=Resolver::cb_t());
     // Must be called before `free`ing any other files after the `load`.
     NACS_EXPORT(utils) void *get_symbol(StringRef name);
     // This does not invalidates pointers from any other files

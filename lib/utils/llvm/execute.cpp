@@ -147,10 +147,25 @@ namespace Exe {
     _check_sleef_di(host_info, sleef_sym, var, sym)
 #endif
 
-    JITSymbol Resolver::findSymbolInLogicalDylib(const std::string&)
+struct Resolver::SetCB {
+    SetCB(Resolver &resolver, const cb_t *cb)
+        : m_resolver(resolver)
     {
-        return nullptr;
+        m_resolver.m_cb = cb;
     }
+
+    ~SetCB()
+    {
+        m_resolver.m_cb = nullptr;
+    }
+private:
+    Resolver &m_resolver;
+};
+
+JITSymbol Resolver::findSymbolInLogicalDylib(const std::string&)
+{
+    return nullptr;
+}
 
 JITSymbol Resolver::findSymbol(const std::string &name)
 {
@@ -161,6 +176,11 @@ JITSymbol Resolver::findSymbol(const std::string &name)
 
 uintptr_t Resolver::find_extern(const std::string &name)
 {
+    if (m_cb) {
+        if (auto ptr = (*m_cb)(name)) {
+            return ptr;
+        }
+    }
     if (name == "interp")
         return (uintptr_t)static_cast<double(*)(double, uint32_t, const double*)>(
             linearInterpolate);
@@ -274,11 +294,12 @@ void Engine::reset_dyld()
     m_dyld.reset(new RuntimeDyld(m_memmgr, m_resolver));
 }
 
-NACS_EXPORT() uint64_t Engine::load(const object::ObjectFile &obj)
+NACS_EXPORT() uint64_t Engine::load(const object::ObjectFile &obj, const Resolver::cb_t &cb)
 {
     if (!m_dyld)
         reset_dyld();
     auto id = m_memmgr.new_group();
+    Resolver::SetCB setter(m_resolver, cb ? &cb : nullptr);
     if (!m_dyld->loadObject(obj)) {
         m_memmgr.free_group(id);
         return 0;
@@ -287,13 +308,13 @@ NACS_EXPORT() uint64_t Engine::load(const object::ObjectFile &obj)
     return id;
 }
 
-NACS_EXPORT() uint64_t Engine::load(const char *p, size_t len)
+NACS_EXPORT() uint64_t Engine::load(const char *p, size_t len, const Resolver::cb_t &cb)
 {
     MemoryBufferRef buff(StringRef(p, len), "");
     auto obj = object::ObjectFile::createObjectFile(buff);
     if (!obj)
         return 0;
-    return load(*(*obj));
+    return load(*(*obj), cb);
 }
 
 NACS_EXPORT() void *Engine::get_symbol(StringRef name)
