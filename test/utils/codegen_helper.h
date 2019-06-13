@@ -44,7 +44,9 @@ struct LLVMTest {
           engine(engine)
     {
         LLVM::Codegen::Context ctx(mod);
-        f = ctx.emit_function(func, "0");
+        LLVM::Codegen::Context::data_map_t data_map;
+        f = ctx.emit_function(func, "0", &data_map);
+        populate_data(func, data_map);
         auto fty = f->getFunctionType();
         assert(!fty->isVarArg());
         for (auto argt: fty->params()) {
@@ -57,7 +59,9 @@ struct LLVMTest {
           engine(engine)
     {
         LLVM::Codegen::Context ctx(mod);
-        auto f0 = ctx.emit_function(func, "1", false);
+        LLVM::Codegen::Context::data_map_t data_map;
+        auto f0 = ctx.emit_function(func, "1", false, &data_map);
+        populate_data(func, data_map);
         auto fty0 = f0->getFunctionType();
         assert(!fty0->isVarArg());
         for (auto argt: fty0->params())
@@ -89,7 +93,13 @@ struct LLVMTest {
                 stm.write(&vec[0], vec.size());
             }
         }
-        auto obj_id = engine.load(&vec[0], vec.size());
+        auto cb = [&] (auto &name) {
+            auto it = data.find(name);
+            if (it == data.end())
+                return (uintptr_t)0;
+            return (uintptr_t)&it->second[0];
+        };
+        auto obj_id = engine.load(&vec[0], vec.size(), cb);
         obj_ids.push_back(obj_id);
         assert(obj_id);
         return engine.get_symbol("0");
@@ -104,6 +114,16 @@ struct LLVMTest {
     LLVM::Exe::Engine &engine;
     llvm::Function *f = nullptr;
     std::vector<uint64_t> obj_ids;
+    std::map<std::string,std::vector<double>> data;
+private:
+    void populate_data(const IR::Function &func,
+                       LLVM::Codegen::Context::data_map_t &data_map)
+    {
+        for (auto &it: data_map) {
+            auto ptr = &func.float_table[it.second.first];
+            data[it.first] = std::vector<double>(ptr, ptr + it.second.second);
+        }
+    }
 };
 
 struct TestCtx {
