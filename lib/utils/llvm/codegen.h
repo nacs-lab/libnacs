@@ -72,11 +72,22 @@ struct Wrapper {
 
 class Context {
 public:
+    using data_map_t = std::map<std::string,std::pair<uint32_t,uint32_t>>;
     NACS_EXPORT(utils) Context(Module *mod);
     NACS_EXPORT(utils) Function *emit_wrapper(Function *func,
                                               StringRef name, const Wrapper &spec);
+    // If `data` is not `NULL`, the constant data needed by the compiled code
+    // (e.g. for interpolation) will be managed by the caller.
+    // The offset (in size of `uint32_t`) and size of the data in the `func`'s constant table
+    // will be stored under the symbol name in the map. The caller is responsible
+    // for passing that info to the runtime loader so that the data is accessible by the code.
     NACS_EXPORT(utils) Function *emit_function(const IR::Function &func,
-                                               StringRef name, bool _export=true);
+                                               StringRef name, bool _export=true,
+                                               data_map_t *data=nullptr);
+    inline Function *emit_function(const IR::Function &func, StringRef name, data_map_t *data)
+    {
+        return emit_function(func, name, true, data);
+    }
 private:
     Type *llvm_ty(IR::Type ty) const;
     Type *llvm_argty(IR::Type ty) const;

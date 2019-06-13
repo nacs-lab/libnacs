@@ -377,7 +377,8 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
 }
 
 NACS_EXPORT()
-Function *Context::emit_function(const IR::Function &func, StringRef name, bool _export)
+Function *Context::emit_function(const IR::Function &func, StringRef name, bool _export,
+                                 data_map_t *data_map)
 {
     auto nargs = func.nargs;
     auto nslots = func.vals.size();
@@ -471,6 +472,25 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
         else {
             return emit_const(func.evalConst(id));
         }
+    };
+    auto emit_interp_data = [&] (uint32_t data_offset, uint32_t ndata) -> Constant* {
+        if (!data_map) {
+            // Inlined data in the object file.
+            ArrayRef<double> dataref(&func.float_table[data_offset], ndata);
+            auto table = ConstantDataArray::get(m_ctx, dataref);
+            Constant *datap = new GlobalVariable(*m_mod, table->getType(), true,
+                                                 GlobalValue::PrivateLinkage, table,
+                                                 ".L.nacs." + std::to_string(m_counter++));
+            cast<GlobalVariable>(datap)->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+            return datap;
+        }
+        // Manage the data externally so that they can be shared between multiple object
+        // files more easily.
+        auto name = "nacs.data." + std::to_string(m_counter++);
+        (*data_map)[name] = {data_offset, ndata};
+        // `[0 x double]` is what clang uses for `extern double[]` global in C.
+        return new GlobalVariable(*m_mod, ArrayType::get(T_f64, 0), true,
+                                  GlobalValue::ExternalLinkage, nullptr, name);
     };
     while (pc && end > pc) {
         const auto op = IR::Opcode(*pc);
@@ -703,18 +723,13 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             auto ndata = *pc;
             pc++;
 
-            ArrayRef<double> dataref(&func.float_table[data_offset], ndata);
-            auto table = ConstantDataArray::get(m_ctx, dataref);
-            Constant *datap = new GlobalVariable(*m_mod, table->getType(), true,
-                                                 GlobalValue::PrivateLinkage, table,
-                                                 ".L.nacs." + std::to_string(m_counter++));
-            cast<GlobalVariable>(datap)->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-            datap = ConstantExpr::getBitCast(datap, T_f64->getPointerTo());
+            auto datap = ConstantExpr::getBitCast(emit_interp_data(data_offset, ndata),
+                                                  T_f64->getPointerTo());
             input = builder.CreateFSub(input, x0);
             input = builder.CreateFDiv(input, dx);
             auto interp_f = ensurePureFunc("interp", F_f64_f64i32pf64, true);
             lres = builder.CreateCall(interp_f, {input,
-                        ConstantInt::get(T_i32, ndata), datap});
+                                                 ConstantInt::get(T_i32, ndata), datap});
             break;
         }
         case IR::Opcode::Convert: {
