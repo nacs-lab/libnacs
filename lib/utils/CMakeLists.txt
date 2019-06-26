@@ -108,12 +108,16 @@ add_dependencies(nacs-utils nacs-lib-names)
 
 if(ENABLE_LLVM)
   if(STATIC_LLVM)
-    # AFAICT llvm_config is pretty broken so just do it ourselves...
-    # Statically linking LLVM is needed on windows since we want to be loaded into LLVM
-    # that ships it own version of LLVM that is probably not compatible with ours.
-    set(LLVM_CONFIG_FLAGS --link-static)
-    execute_process(COMMAND llvm-config --libs ${LLVM_CONFIG_FLAGS} OUTPUT_VARIABLE llvm_libs)
-    string(STRIP "${llvm_libs}" llvm_libs)
+    # The list below is obtained from trail-and-error.
+    # I somehow couldn't find a very clear document on which function
+    # belongs to which library...
+    set(llvm_libs LLVMCodeGen LLVMExecutionEngine LLVMPasses)
+    foreach(target ${LLVM_TARGETS_TO_BUILD})
+      if(TARGET "LLVM${target}AsmParser")
+        set(llvm_libs ${llvm_libs} "LLVM${target}AsmParser")
+      endif()
+      set(llvm_libs ${llvm_libs} "LLVM${target}CodeGen")
+    endforeach()
   else()
     set(llvm_libs LLVM)
   endif()
