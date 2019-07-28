@@ -20,6 +20,10 @@ set(test_cpu_SOURCES test_cpu.cpp)
 add_executable(test-cpu ${test_cpu_SOURCES})
 target_link_libraries(test-cpu nacs-utils)
 
+set(test_datapipe_SOURCES test_datapipe.cpp)
+add_executable(test-datapipe ${test_datapipe_SOURCES})
+target_link_libraries(test-datapipe nacs-utils)
+
 set(test_dl_SOURCES test_dl.cpp)
 add_executable(test-dl ${test_dl_SOURCES})
 target_link_libraries(test-dl nacs-utils)
