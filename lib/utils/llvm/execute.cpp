@@ -147,7 +147,8 @@ namespace Exe {
     _check_sleef_di(host_info, sleef_sym, var, sym)
 #endif
 
-struct Resolver::SetCB {
+class Resolver::SetCB {
+public:
     SetCB(Resolver &resolver, const cb_t *cb)
         : m_resolver(resolver)
     {
