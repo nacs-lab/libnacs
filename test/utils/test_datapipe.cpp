@@ -28,7 +28,7 @@
 
 using namespace NaCs;
 
-constexpr uint32_t pipe_sz = 4096 * 128;
+constexpr size_t pipe_sz = 4096 * 128;
 struct Pipe : DataPipe<uint64_t> {
     Pipe()
         : DataPipe<uint64_t>(buff, pipe_sz)
@@ -41,18 +41,18 @@ void push_data(Pipe &pipe, size_t n)
 {
     size_t i = 0;
     while (true) {
-        uint32_t sz;
+        size_t sz;
         uint64_t *ptr;
         while (true) {
             ptr = pipe.get_write_ptr(&sz);
             if (sz <= 7 && sz > 0)
                 pipe.sync_writer();
-            sz &= ~(uint32_t)7;
+            sz &= ~(size_t)7;
             if (sz != 0)
                 break;
             CPU::pause();
         }
-        for (uint32_t j = 0; j < sz; j++) {
+        for (size_t j = 0; j < sz; j++) {
             ptr[j] = i;
             i++;
         }
@@ -69,18 +69,18 @@ void check_data(Pipe &pipe, size_t n)
 {
     size_t i = 0;
     while (true) {
-        uint32_t sz;
+        size_t sz;
         const uint64_t *ptr;
         while (true) {
             ptr = pipe.get_read_ptr(&sz);
             if (sz <= 7 && sz > 0)
                 pipe.sync_reader();
-            sz &= ~(uint32_t)7;
+            sz &= ~(size_t)7;
             if (sz != 0)
                 break;
             CPU::pause();
         }
-        for (uint32_t j = 0; j < sz; j++) {
+        for (size_t j = 0; j < sz; j++) {
             assert(ptr[j] == i);
             i++;
         }

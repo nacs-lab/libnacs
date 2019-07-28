@@ -104,7 +104,7 @@ public:
 template<typename T>
 class DataPipe {
 public:
-    DataPipe(T *buff, uint32_t buff_sz, uint32_t max_block_sz=4096 / sizeof(T))
+    DataPipe(T *buff, size_t buff_sz, size_t max_block_sz=4096 / sizeof(T))
         : m_reader_cache(buff, buff_sz, max_block_sz),
           m_writer_cache(buff, buff_sz, max_block_sz)
     {
@@ -115,13 +115,13 @@ public:
     // Interface for the consumer of the data
     // This function does thte same thing as `get_write_buff`.
     // Prefered to be called by the reader.
-    inline const T *get_read_buff(uint32_t *sz=nullptr) const
+    inline const T *get_read_buff(size_t *sz=nullptr) const
     {
         if (sz)
             *sz = m_reader_cache.buff_sz;
         return m_reader_cache.buff;
     }
-    inline const T *get_read_ptr(uint32_t *sz)
+    inline const T *get_read_ptr(size_t *sz)
     {
         auto buff_sz = m_reader_cache.buff_sz;
         auto read_p = m_reader_cache.read;
@@ -132,7 +132,7 @@ public:
                        m_reader_cache.max_block_sz);
         return &m_reader_cache.buff[read_p];
     }
-    inline void read_size(uint32_t sz)
+    inline void read_size(size_t sz)
     {
         auto buff_sz = m_reader_cache.buff_sz;
         m_reader_cache.read = (m_reader_cache.read + sz) & (buff_sz - 1);
@@ -141,13 +141,13 @@ public:
     // Interface for the generator of the data
     // This function does thte same thing as `get_read_buff`.
     // Prefered to be called by the writer.
-    inline const T *get_write_buff(uint32_t *sz=nullptr) const
+    inline const T *get_write_buff(size_t *sz=nullptr) const
     {
         if (sz)
             *sz = m_writer_cache.buff_sz;
         return m_writer_cache.buff;
     }
-    inline T *get_write_ptr(uint32_t *sz)
+    inline T *get_write_ptr(size_t *sz)
     {
         auto buff_sz = m_writer_cache.buff_sz;
         auto write_p = m_writer_cache.write;
@@ -158,7 +158,7 @@ public:
                        m_writer_cache.max_block_sz);
         return &m_writer_cache.buff[write_p];
     }
-    inline void wrote_size(uint32_t sz)
+    inline void wrote_size(size_t sz)
     {
         auto buff_sz = m_writer_cache.buff_sz;
         m_writer_cache.write = (m_writer_cache.write + sz) & (buff_sz - 1);
@@ -167,7 +167,7 @@ public:
     // Return `true` if the reader is no more than `sz` behind the writer
     // Useful to limit buffering to ensure that the writer can change setting with low
     // latency.
-    inline bool check_reader(uint32_t sz)
+    inline bool check_reader(size_t sz)
     {
         auto buff_sz = m_writer_cache.buff_sz;
         auto write_p = m_writer_cache.write;
@@ -196,7 +196,7 @@ public:
     }
 
 private:
-    inline uint32_t get_avail_sz(uint32_t start, uint32_t end, uint32_t buff_sz)
+    inline size_t get_avail_sz(size_t start, size_t end, size_t buff_sz)
     {
         if (start < end)
             return end - start;
@@ -207,11 +207,11 @@ private:
 
     struct Cache {
         T *const buff;
-        const uint32_t buff_sz;
-        const uint32_t max_block_sz;
-        uint32_t write = 0;
-        uint32_t read = 0;
-        Cache(T *buff, uint32_t buff_sz, uint32_t max_block_sz)
+        const size_t buff_sz;
+        const size_t max_block_sz;
+        size_t write = 0;
+        size_t read = 0;
+        Cache(T *buff, size_t buff_sz, size_t max_block_sz)
             : buff(buff),
               buff_sz(buff_sz),
               max_block_sz(max_block_sz)
@@ -219,7 +219,7 @@ private:
         }
     };
     // Read pointer, write by reader, read by writer
-    std::atomic<uint32_t> m_read_ptr __attribute__ ((aligned(64))) {0};
+    std::atomic<size_t> m_read_ptr __attribute__ ((aligned(64))) {0};
     // Cached value of the read/write pointers for the reader
     // This value should be in the cache of the reader and can be read/write with minimum
     // cache conflict.
@@ -227,7 +227,7 @@ private:
     Cache m_reader_cache __attribute__ ((aligned(64)));
     // Write pointer, write by writer, read by reader
     // m_read_ptr == m_write_ptr means that the buffer is empty.
-    std::atomic<uint32_t> m_write_ptr __attribute__ ((aligned(64))) {0};
+    std::atomic<size_t> m_write_ptr __attribute__ ((aligned(64))) {0};
     // Cached value of the read/write pointers for the writer
     // This value should be in the cache of the writer and can be read/write with minimum
     // cache conflict.
