@@ -172,11 +172,11 @@ public:
         auto buff_sz = m_writer_cache.buff_sz;
         auto write_p = m_writer_cache.write;
         auto read_p = m_writer_cache.read;
-        if ((write_p - read_p) & (buff_sz - 1) <= sz)
+        if (((write_p - read_p) & (buff_sz - 1)) <= sz)
             return true;
         sync_writer();
         read_p = m_writer_cache.read;
-        return (write_p - read_p) & (buff_sz - 1) <= sz;
+        return ((write_p - read_p) & (buff_sz - 1)) <= sz;
     }
 
     // The reader/writer should call these functions
