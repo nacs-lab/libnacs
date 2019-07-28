@@ -118,25 +118,29 @@ public:
     inline const T *get_read_buff(size_t *sz=nullptr) const
     {
         if (sz)
-            *sz = m_reader_cache.buff_sz;
-        return m_reader_cache.buff;
+            *sz = m_reader_cache.buff_sz_mask + 1;
+        return &m_reader_cache.buff;
     }
     inline const T *get_read_ptr(size_t *sz)
     {
-        auto buff_sz = m_reader_cache.buff_sz;
-        auto read_p = m_reader_cache.read;
-        if (read_p == m_reader_cache.write)
+        auto cache = m_reader_cache;
+        auto write_p = cache.write;
+        if (cache.read == write_p) {
             sync_reader();
-        auto write_p = m_reader_cache.write;
-        *sz = std::min(get_avail_sz(read_p, write_p, buff_sz),
-                       m_reader_cache.max_block_sz);
-        return &m_reader_cache.buff[read_p];
+            write_p = m_reader_cache.write;
+        }
+        *sz = std::min(get_avail_sz(cache.read, write_p, cache.buff_sz_mask + 1),
+                       cache.max_block_sz);
+        return &cache.buff + cache.read;
     }
     inline void read_size(size_t sz)
     {
-        auto buff_sz = m_reader_cache.buff_sz;
-        m_reader_cache.read = (m_reader_cache.read + sz) & (buff_sz - 1);
-        m_read_ptr.store(m_reader_cache.read, std::memory_order_release);
+        auto cache = m_reader_cache;
+        auto read_p = (cache.read + sz) & cache.buff_sz_mask;
+        m_read_ptr.store(read_p, std::memory_order_release);
+        m_reader_cache.read = read_p;
+        assume(m_reader_cache.buff_sz_mask == cache.buff_sz_mask);
+        assume(m_reader_cache.max_block_sz == cache.max_block_sz);
     }
     // Interface for the generator of the data
     // This function does thte same thing as `get_read_buff`.
@@ -144,39 +148,42 @@ public:
     inline const T *get_write_buff(size_t *sz=nullptr) const
     {
         if (sz)
-            *sz = m_writer_cache.buff_sz;
-        return m_writer_cache.buff;
+            *sz = m_writer_cache.buff_sz_mask + 1;
+        return &m_writer_cache.buff;
     }
     inline T *get_write_ptr(size_t *sz)
     {
-        auto buff_sz = m_writer_cache.buff_sz;
-        auto write_p = m_writer_cache.write;
-        if (write_p == ((m_writer_cache.read - 1) & (buff_sz - 1)))
+        auto cache = m_writer_cache;
+        auto read_p = (cache.read - 1) & cache.buff_sz_mask;
+        if (cache.write == read_p) {
             sync_writer();
-        auto read_p = (m_writer_cache.read - 1) & (buff_sz - 1);
-        *sz = std::min(get_avail_sz(write_p, read_p, buff_sz),
-                       m_writer_cache.max_block_sz);
-        return &m_writer_cache.buff[write_p];
+            read_p = (m_writer_cache.read - 1) & cache.buff_sz_mask;
+        }
+        *sz = std::min(get_avail_sz(cache.write, read_p, cache.buff_sz_mask + 1),
+                       cache.max_block_sz);
+        return &cache.buff + cache.write;
     }
     inline void wrote_size(size_t sz)
     {
-        auto buff_sz = m_writer_cache.buff_sz;
-        m_writer_cache.write = (m_writer_cache.write + sz) & (buff_sz - 1);
-        m_write_ptr.store(m_writer_cache.write, std::memory_order_release);
+        auto cache = m_writer_cache;
+        auto write_p = (cache.write + sz) & cache.buff_sz_mask;
+        m_write_ptr.store(write_p, std::memory_order_release);
+        m_writer_cache.write = write_p;
+        assume(m_writer_cache.buff_sz_mask == cache.buff_sz_mask);
+        assume(m_writer_cache.max_block_sz == cache.max_block_sz);
     }
     // Return `true` if the reader is no more than `sz` behind the writer
     // Useful to limit buffering to ensure that the writer can change setting with low
     // latency.
     inline bool check_reader(size_t sz)
     {
-        auto buff_sz = m_writer_cache.buff_sz;
-        auto write_p = m_writer_cache.write;
+        auto cache = m_writer_cache;
         auto read_p = m_writer_cache.read;
-        if (((write_p - read_p) & (buff_sz - 1)) <= sz)
+        if (((cache.write_p - read_p) & cache.buff_sz_mask) <= sz)
             return true;
         sync_writer();
         read_p = m_writer_cache.read;
-        return ((write_p - read_p) & (buff_sz - 1)) <= sz;
+        return ((cache.write_p - read_p) & cache.buff_sz_mask) <= sz;
     }
 
     // The reader/writer should call these functions
@@ -188,11 +195,19 @@ public:
     // but can have negative effect on performance.
     inline void sync_reader()
     {
+        auto cache = m_reader_cache;
         m_reader_cache.write = m_write_ptr.load(std::memory_order_acquire);
+        assume(m_reader_cache.buff_sz_mask == cache.buff_sz_mask);
+        assume(m_reader_cache.max_block_sz == cache.max_block_sz);
+        assume(m_reader_cache.read == cache.read);
     }
     inline void sync_writer()
     {
+        auto cache = m_writer_cache;
         m_writer_cache.read = m_read_ptr.load(std::memory_order_acquire);
+        assume(m_writer_cache.buff_sz_mask == cache.buff_sz_mask);
+        assume(m_writer_cache.max_block_sz == cache.max_block_sz);
+        assume(m_writer_cache.write == cache.write);
     }
 
 private:
@@ -206,14 +221,14 @@ private:
     }
 
     struct Cache {
-        T *const buff;
-        const size_t buff_sz;
+        T &buff; // It is more clear for the compiler that this field is immutable this way.
+        const size_t buff_sz_mask;
         const size_t max_block_sz;
         size_t write = 0;
         size_t read = 0;
         Cache(T *buff, size_t buff_sz, size_t max_block_sz)
-            : buff(buff),
-              buff_sz(buff_sz),
+            : buff(*buff),
+              buff_sz_mask(buff_sz - 1),
               max_block_sz(max_block_sz)
         {
         }
