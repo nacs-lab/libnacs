@@ -234,7 +234,7 @@ private:
         auto fptr = test_vec.get_ptr();
         foreach_args(
             [&] (Args... args) {
-                api_type_t<Res, vsize> vres;
+                api_type_t<Res, vsize> vres{};
                 vec_runner<vsize>::run(
                     [&] {
                         auto f = (api_type_t<Res, vsize>(*)(Args...) NACS_VECTORCALL)fptr;
@@ -367,7 +367,7 @@ private:
         auto fptr = test_vec.get_ptr();
         foreach_vecarg<vsize, vargi...>(
             [&] (typename vs::template arg_t<I>... args) {
-                api_type_t<Res, vsize> vres;
+                api_type_t<Res, vsize> vres{};
                 vec_runner<vsize>::run(
                     [&] {
                         auto f = (typename vs::func*)fptr;
@@ -401,7 +401,7 @@ private:
         auto fptr = test_vec.get_ptr();
         foreach_vecarg<vsize, vargi...>(
             [&] (typename vs::template arg_t<I>... args) {
-                api_type_t<Res, vsize> vres;
+                api_type_t<Res, vsize> vres{};
                 vec_runner<vsize>::run(
                     [&] {
                         auto f = (typename vs::func_ra*)fptr;
@@ -434,7 +434,7 @@ private:
         auto fptr = test_vec.get_ptr();
         foreach_vecarg<vsize, vargi...>(
             [&] (typename vs::template arg_t<I>... args) {
-                api_type_t<Res, vsize> vres;
+                api_type_t<Res, vsize> vres{};
                 vec_runner<vsize>::run(
                     [&] {
                         auto f = (typename vs::func_rr*)fptr;
@@ -468,7 +468,7 @@ private:
         auto fptr = test_vec.get_ptr();
         foreach_vecarg<vsize, vargi...>(
             [&] (typename vs::template arg_t<I>... args) {
-                api_type_t<Res, vsize> vres;
+                api_type_t<Res, vsize> vres{};
                 vec_runner<vsize>::run(
                     [&] {
                         auto f = (typename vs::func_rra*)fptr;
