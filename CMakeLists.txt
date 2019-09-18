@@ -52,7 +52,13 @@ if(HAS_EXP10)
 endif()
 
 if(ENABLE_LLVM)
-  find_package(LLVM REQUIRED CONFIG)
+  # LLVM uses the path of the cmake file to determine the llvm install prefix.
+  # Since `PATH` might contain `/bin` which will be reduced to `/`,
+  # and since `/lib` is often symlinked to `/usr/lib` these days,
+  # cmake could find the llvm config file from `/lib` first instead of `/usr/lib`.
+  # This causes the include path to be wrong (`/include` instead of `/usr/include`)
+  # Disable searching though `PATH` to fix this.
+  find_package(LLVM REQUIRED CONFIG NO_SYSTEM_ENVIRONMENT_PATH)
 
   message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
