@@ -93,9 +93,14 @@ set(nacs_utils_HDRS ${nacs_utils_HDRS} "${CMAKE_CURRENT_BINARY_DIR}/config.h")
 
 if(ENABLE_LLVM)
   set(nacs_utils_SRCS ${nacs_utils_SRCS} ${nacs_utils_llvm_SRCS})
-  include_directories(${LLVM_INCLUDE_DIRS})
   set_property(SOURCE ${nacs_utils_llvm_SRCS} APPEND_STRING
     PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
+  if(${CMAKE_VERSION} VERSION_LESS "3.11.0")
+    include_directories(${LLVM_INCLUDE_DIRS})
+  else()
+    set_property(SOURCE ${nacs_utils_llvm_SRCS} APPEND
+      PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+  endif()
 else()
   set(nacs_utils_SRCS ${nacs_utils_SRCS} llvm/cpu_nollvm.cpp)
 endif()
