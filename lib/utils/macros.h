@@ -169,6 +169,9 @@
 #  define NACS_PROTECTED(lib...) NACS_SWITCH(lib, , __attribute__((visibility("protected"))))
 #  define NACS_INTERNAL __attribute__((visibility("internal")))
 #endif
+// These helps editor auto indent in certain cases...
+#define NACS_EXPORT_ NACS_EXPORT()
+#define NACS_PROTECTED_ NACS_PROTECTED()
 
 /**
  * \def NACS_BEGIN_DECLS

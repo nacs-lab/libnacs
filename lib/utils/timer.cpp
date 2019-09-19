@@ -24,8 +24,7 @@
 
 namespace NaCs {
 
-NACS_EXPORT() uint64_t
-getTime()
+NACS_EXPORT() uint64_t getTime()
 {
     timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
@@ -57,8 +56,7 @@ NACS_EXPORT() uint64_t getCoarseRes()
     return uint64_t(t.tv_sec) * 1000 * 1000 * 1000 + t.tv_nsec;
 }
 
-NACS_EXPORT() uint64_t
-getElapse(uint64_t prev)
+NACS_EXPORT() uint64_t getElapse(uint64_t prev)
 {
     return getTime() - prev;
 }

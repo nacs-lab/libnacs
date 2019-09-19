@@ -29,7 +29,7 @@ using namespace NaCs;
 
 namespace Kernel {
 
-NACS_EXPORT()
+NACS_EXPORT_
 DMABufferBase::DMABufferBase(size_t size)
     : m_buff(nullptr),
       m_size(0)

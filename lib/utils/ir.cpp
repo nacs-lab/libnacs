@@ -892,7 +892,7 @@ NACS_EXPORT() std::vector<uint32_t> Function::serialize(void) const
     return res;
 }
 
-NACS_EXPORT() Function::Function(const uint32_t *data, size_t sz)
+NACS_EXPORT_ Function::Function(const uint32_t *data, size_t sz)
     : ret(Type(data[0])),
       nargs(data[1]),
       vals{},
@@ -930,7 +930,7 @@ NACS_EXPORT() Function::Function(const uint32_t *data, size_t sz)
     return;
 }
 
-NACS_EXPORT() Function::Function(const uint8_t *data, size_t sz)
+NACS_EXPORT_ Function::Function(const uint8_t *data, size_t sz)
     : ret(Type(Mem::load_unalign<uint32_t>(data, 0))),
       nargs(Mem::load_unalign<uint32_t>(data, 1)),
       vals{},

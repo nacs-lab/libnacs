@@ -435,8 +435,8 @@ Wavemeter::parse(std::istream &stm, size_t *sz, double tstart, double tend)
     return {&*it1, &seg->datas[idx1]};
 }
 
-NACS_EXPORT() Wavemeter::Wavemeter(double lo, double hi)
-: m_lo(lo), m_hi(hi)
+NACS_EXPORT_ Wavemeter::Wavemeter(double lo, double hi)
+    : m_lo(lo), m_hi(hi)
 {
 }
 
