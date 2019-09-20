@@ -12,6 +12,16 @@ set(nacs_seq_SRCS
   zynq/parser.cpp
   zynq/legacy_seq.cpp)
 set(nacs_seq_LINKS)
+set(nacs_seq_llvm_HDRS
+  env.h)
+set(nacs_seq_llvm_SRCS
+  env.cpp
+  var.cpp)
+
+if(ENABLE_LLVM)
+  set(nacs_seq_SRCS ${nacs_seq_SRCS} ${nacs_seq_llvm_SRCS})
+  set(nacs_seq_HDRS ${nacs_seq_HDRS} ${nacs_seq_llvm_HDRS})
+endif()
 
 if(SEQ_IN_UTILS)
   add_library(nacs-seq SHARED anchor.cpp)
@@ -23,11 +33,33 @@ if(SEQ_IN_UTILS)
   endforeach()
 
   target_link_libraries(nacs-utils PUBLIC ${nacs_seq_LINKS})
+
+  if(ENABLE_LLVM)
+    set_property(TARGET nacs-utils APPEND_STRING
+      PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
+    set_property(TARGET nacs-utils APPEND_STRING
+      PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+  endif()
 else()
   add_library(nacs-seq SHARED
     ${nacs_seq_SRCS})
 
   target_link_libraries(nacs-seq PUBLIC nacs-utils ${nacs_seq_LINKS})
+
+  if(ENABLE_LLVM)
+    set_property(SOURCE ${nacs_seq_llvm_SRCS} APPEND_STRING
+      PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
+    # The INCLUDE_DIRECTORIES source property conflicts with the include directories
+    # from imported target. Don't use it until it's fixed.
+    # See https://gitlab.kitware.com/cmake/cmake/-/issues/22033
+    if(TRUE) # (${CMAKE_VERSION} VERSION_LESS "3.11.0")
+      include_directories(${LLVM_INCLUDE_DIRS})
+    else()
+      set_property(SOURCE ${nacs_seq_llvm_SRCS} APPEND
+        PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+    endif()
+    target_link_libraries(nacs-seq PRIVATE LLVM)
+  endif()
 endif()
 
 set_target_properties(nacs-seq PROPERTIES
