@@ -87,6 +87,19 @@ int main()
     assert(v3->varid() == 2);
     assert(v4->varid() == 3);
 
+    env.gc();
+
+    assert(env.num_vars() == 2);
+
+    assert(v1->used(true));
+    assert(v3->used(true));
+
+    assert(v1->used(false));
+    assert(!v3->used(false));
+
+    assert(v1->varid() == 0);
+    assert(v3->varid() == 1);
+
     // std::cout << env << std::endl;
 
     return 0;
