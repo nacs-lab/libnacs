@@ -22,14 +22,16 @@
 
 #include <stdexcept>
 
+#include <llvm/Support/raw_os_ostream.h>
+
 namespace NaCs::Seq {
 
 NACS_EXPORT() IR::Type Var::type() const
 {
     if (is_const())
-        return m_value.constant.typ;
+        return get_const().typ;
     if (is_extern())
-        return m_value.ext.first;
+        return get_extern().first;
     assert(is_call());
     auto f = get_callee();
     if (!f.is_llvm)
@@ -62,6 +64,81 @@ void Var::assign_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreea
     m_is_extern = false;
     m_value.func.is_llvm = true;
     m_value.func.llvm = func;
+}
+
+NACS_EXPORT() std::ostream &operator<<(std::ostream &stm, const Arg &arg)
+{
+    if (arg.is_const()) {
+        stm << arg.get_const();
+    }
+    else if (arg.is_var()) {
+        stm << '%' << arg.get_var()->varid();
+    }
+    else if (arg.is_arg()) {
+        stm << "arg[" << arg.get_arg() << ']';
+    }
+    else {
+        stm << "<undef>";
+    }
+    return stm;
+}
+
+NACS_EXPORT() void Var::print(std::ostream &stm, bool newline) const
+{
+    auto id = varid();
+    if (m_extern_ref > 0)
+        stm << '*';
+    if (id < 0) {
+        stm << "%<invalid_ref>";
+        if (newline)
+            stm << std::endl;
+        return;
+    }
+    stm << '%' << id;
+    if (nfreeargs()) {
+        stm << '(';
+        for (int i = 0; i < nfreeargs(); i++) {
+            if (i != 0)
+                stm << ", ";
+            stm << "arg[" << i << ']';
+        }
+        stm << ')';
+    }
+    stm << " = ";
+    if (is_const()) {
+        stm << get_const();
+        if (newline)
+            stm << std::endl;
+        return;
+    }
+    else if (is_extern()) {
+        stm << get_extern().first << " extern(0x"
+            << std::hex << get_extern().second << ')' << std::dec;
+        if (newline)
+            stm << std::endl;
+        return;
+    }
+    auto f = get_callee();
+    stm << type();
+    if (f.is_llvm) {
+        stm << " llvm:";
+        llvm::raw_os_ostream lstm(stm);
+        f.llvm->printAsOperand(lstm, false);
+    }
+    else {
+        stm << " %" << f.var->varid();
+    }
+    stm << '(';
+    auto nargs = args().size();
+    for (size_t i = 0; i < nargs; i++) {
+        if (i != 0)
+            stm << ", ";
+        stm << args()[i];
+    }
+    stm << ')';
+    if (newline) {
+        stm << std::endl;
+    }
 }
 
 }
