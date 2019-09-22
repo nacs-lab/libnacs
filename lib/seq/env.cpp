@@ -250,6 +250,21 @@ NACS_EXPORT() void Env::compute_varuse()
     m_varuse_dirty = false;
 }
 
+NACS_EXPORT() void Env::gc()
+{
+    compute_varuse();
+    for (auto _var = m_vars; _var;) {
+        auto var = _var;
+        _var = _var->m_next;
+        if (var->m_extern_ref > 0 || var->m_used)
+            continue;
+        var->release();
+        m_varid_dirty = true;
+    }
+    // Remove unused variables should not affect varuse.
+    assert(!m_varuse_dirty);
+}
+
 NACS_EXPORT() void Env::print(std::ostream &stm) const
 {
     llvm::SmallVector<Var*, 32> vars(begin(), end());

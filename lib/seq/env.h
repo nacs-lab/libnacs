@@ -393,6 +393,7 @@ public:
     }
 
     int num_vars() const;
+    void gc();
     void print(std::ostream &stm) const;
 
 private:
