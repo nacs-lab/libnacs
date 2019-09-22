@@ -86,5 +86,18 @@ TEST_CASE("Env") {
     REQUIRE(v3->varid() == 2);
     REQUIRE(v4->varid() == 3);
 
+    env.gc();
+
+    REQUIRE(env.num_vars() == 2);
+
+    REQUIRE(v1->used(true));
+    REQUIRE(v3->used(true));
+
+    REQUIRE(v1->used(false));
+    REQUIRE(!v3->used(false));
+
+    REQUIRE(v1->varid() == 0);
+    REQUIRE(v3->varid() == 1);
+
     // std::cout << env << std::endl;
 }
