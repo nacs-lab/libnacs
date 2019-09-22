@@ -156,6 +156,8 @@ public:
 
     Ref ref()
     {
+        if (!m_extern_ref)
+            varuse_dirty();
         m_extern_ref++;
         return Ref(this);
     }
@@ -205,8 +207,12 @@ public:
         return m_value.func;
     }
     IR::Type type() const;
+    int varid() const;
+    bool used(bool ext) const;
 
 private:
+    // The following functions are only used in optimizations or to create new variables
+    // and does not need to explicitly invalidate varuse.
     void set_arg(int i, Arg arg)
     {
         m_args[i] = arg;
@@ -259,8 +265,12 @@ private:
     void unref()
     {
         // Be **VERY** careful since this function can `delete this`.
-        if (--m_extern_ref > 0 || m_in_env)
+        if (--m_extern_ref > 0)
             return;
+        if (m_in_env) {
+            varuse_dirty();
+            return;
+        }
         delete this;
     }
     void release()
@@ -273,6 +283,7 @@ private:
             delete this;
         }
     }
+    void varuse_dirty();
 
     Env &m_env;
     Var **m_prev{nullptr};
@@ -281,6 +292,12 @@ private:
     // and shouldn't be optimized out completely.
     // (Also it won't be freed when env is freed).
     uint32_t m_extern_ref{0};
+    // Variable ID. Lazily computed from the list of variable in the env.
+    int m_varid;
+    // Whether this variable is used by other variables that are used by external reference.
+    // This will be `false` if `m_extern_ref > 0` but no other variable uses this.
+    bool m_used;
+
     // If `m_in_env` `false` the var is not associate with a env anymore.
     bool m_in_env{true};
 
@@ -361,17 +378,49 @@ public:
 
 private:
     Var *new_var();
+    void compute_varid();
+    void compute_varuse();
 
     std::unique_ptr<llvm::Module> m_llvm_mod;
     Var *m_vars{nullptr};
+
+    bool m_varid_dirty{false};
+    bool m_varuse_dirty{false};
+    friend class Var;
 };
+
+inline int Var::varid() const
+{
+    if (!m_in_env)
+        return -1;
+    if (m_env.m_varid_dirty)
+        m_env.compute_varid();
+    return m_varid;
+}
+
+inline void Var::varuse_dirty()
+{
+    if (m_in_env) {
+        m_env.m_varuse_dirty = true;
+    }
+}
+
+inline bool Var::used(bool ext) const
+{
+    if (!m_in_env)
+        return false;
+    if (ext && m_extern_ref > 0)
+        return true;
+    if (m_env.m_varuse_dirty)
+        m_env.compute_varuse();
+    return m_used;
+}
 
 inline int Env::num_vars() const
 {
-    int n = 0;
-    for (auto var NACS_UNUSED: *this)
-        n++;
-    return n;
+    if (!m_vars)
+        return 0;
+    return m_vars->varid() + 1;
 }
 
 }
