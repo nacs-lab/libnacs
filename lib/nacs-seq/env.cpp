@@ -19,6 +19,9 @@
 #include "env.h"
 
 #include "../nacs-utils/llvm/utils.h"
+#include "../nacs-utils/streams.h"
+
+#include <llvm/Support/raw_os_ostream.h>
 
 namespace NaCs::Seq {
 
@@ -134,7 +137,7 @@ NACS_EXPORT() void Env::compute_varuse()
         }
     }
     auto ref_empty = [] (Var *var) {
-        if (!var->m_args.empty())
+        if (!var->args().empty())
             return false;
         if (!var->is_call())
             return true;
@@ -150,7 +153,7 @@ NACS_EXPORT() void Env::compute_varuse()
             }
             return nullptr;
         }
-        auto arg = var->m_args[idx];
+        auto arg = var->args()[idx];
         return arg.is_var() ? arg.get_var() : nullptr;
     };
 
@@ -165,7 +168,7 @@ NACS_EXPORT() void Env::compute_varuse()
         ssize_t idx = -1;
         auto next = [&] {
             // Next argument
-            if (++idx < (ssize_t)var->m_args.size())
+            if (++idx < (ssize_t)var->args().size())
                 return true;
             // Done
             if (stack.empty())
@@ -184,7 +187,7 @@ NACS_EXPORT() void Env::compute_varuse()
                 return next();
             // Save the next one to be processed to the stack
             // If we are already at the last one, we don't need to do anything.
-            if (idx + 1 < (ssize_t)var->m_args.size())
+            if (idx + 1 < (ssize_t)var->args().size())
                 stack.emplace_back(var, idx + 1);
             var = new_var;
             idx = -1;
@@ -195,6 +198,54 @@ NACS_EXPORT() void Env::compute_varuse()
     }
 
     m_varuse_dirty = false;
+}
+
+NACS_EXPORT() void Env::print(std::ostream &stm) const
+{
+    llvm::SmallVector<Var*, 32> vars(begin(), end());
+    if (vars.empty()) {
+        stm << "Variables: <empty>" << std::endl;
+    }
+    else {
+        stm << "Variables: <" << vars.size() << ">" << std::endl;
+    }
+    for (auto it = vars.rbegin(), end = vars.rend(); it != end; ++it) {
+        stm << "  ";
+        (*it)->print(stm);
+        stm << std::endl;
+    }
+    stm << std::endl;
+    if (!llvm_module()) {
+        stm << "LLVM: <null>" << std::endl;
+    }
+    else {
+        stm << "LLVM:";
+        string_ostream sstm;
+        llvm::raw_os_ostream lstm(sstm);
+        llvm_module()->print(lstm, nullptr);
+        auto str = sstm.get_buf();
+        auto p = &str[0];
+        auto end = p + str.size();
+        for (; p < end && *p == '\n'; p++) {
+        }
+        if (p < end) {
+            stm << std::endl;
+            while (p < end) {
+                auto lend = (char*)memchr(p, '\n', end - p);
+                stm.write("  ", 2);
+                if (!lend) {
+                    stm.write(p, end - p);
+                    stm.put('\n');
+                    break;
+                }
+                stm.write(p, lend + 1 - p);
+                p = lend + 1;
+            }
+        }
+        else {
+            stm << " <empty>" << std::endl;
+        }
+    }
 }
 
 }
