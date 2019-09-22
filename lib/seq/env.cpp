@@ -42,6 +42,7 @@ NACS_INTERNAL Var *Env::new_var()
     var->m_prev = &m_vars;
     var->m_next = m_vars;
     m_vars = var;
+    m_varid_dirty = true;
     return var;
 }
 
@@ -109,6 +110,91 @@ NACS_EXPORT() Var *Env::new_extern(std::pair<IR::Type,uint64_t> ext)
     auto var = new_var();
     var->assign_extern(ext);
     return var;
+}
+
+NACS_EXPORT() void Env::compute_varid()
+{
+    int nvars = 0;
+    for (auto var NACS_UNUSED: *this)
+        nvars++;
+    for (auto var: *this)
+        var->m_varid = --nvars;
+    m_varid_dirty = false;
+    assert(nvars == 0);
+}
+
+NACS_EXPORT() void Env::compute_varuse()
+{
+    // Collect all roots.
+    llvm::SmallVector<Var*, 16> roots;
+    for (auto var: *this) {
+        var->m_used = false;
+        if (var->m_extern_ref > 0) {
+            roots.push_back(var);
+        }
+    }
+    auto ref_empty = [] (Var *var) {
+        if (!var->m_args.empty())
+            return false;
+        if (!var->is_call())
+            return true;
+        return var->get_callee().is_llvm;
+    };
+    auto get_ref = [] (Var *var, ssize_t idx) -> Var* {
+        if (idx < 0) {
+            if (var->is_call()) {
+                auto f = var->get_callee();
+                if (!f.is_llvm) {
+                    return assume(f.var);
+                }
+            }
+            return nullptr;
+        }
+        auto arg = var->m_args[idx];
+        return arg.is_var() ? arg.get_var() : nullptr;
+    };
+
+    // Mark starting from roots
+    // Use a manual stack for better optimization and less actual stack usage so that
+    // we don't need to worry about stack overflow.
+    // All items on the stack is inbound (see `push` below) `pop` does not need bounds check
+    llvm::SmallVector<std::pair<Var*,size_t>, 16> stack;
+    for (auto var: roots) {
+        if (ref_empty(var))
+            continue;
+        ssize_t idx = -1;
+        auto next = [&] {
+            // Next argument
+            if (++idx < (ssize_t)var->m_args.size())
+                return true;
+            // Done
+            if (stack.empty())
+                return false;
+            std::tie(var, idx) = stack.pop_back_val();
+            return true;
+        };
+        auto iterate = [&] {
+            auto new_var = get_ref(var, idx);
+            if (!new_var || new_var->m_used)
+                return next();
+            new_var->m_used = true;
+            // If this is a externally and internally referenced variable,
+            // it'll be scanned from the root so we can stop here.
+            if (new_var->m_extern_ref > 0 || ref_empty(new_var))
+                return next();
+            // Save the next one to be processed to the stack
+            // If we are already at the last one, we don't need to do anything.
+            if (idx + 1 < (ssize_t)var->m_args.size())
+                stack.emplace_back(var, idx + 1);
+            var = new_var;
+            idx = -1;
+            return true;
+        };
+        while (iterate()) {
+        }
+    }
+
+    m_varuse_dirty = false;
 }
 
 }
