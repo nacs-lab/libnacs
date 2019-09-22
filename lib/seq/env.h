@@ -128,6 +128,8 @@ private:
 };
 static_assert(sizeof(Arg) == 8 * 2, "Check alignment.");
 
+std::ostream &operator<<(std::ostream &stm, const Arg &arg);
+
 class Var {
     // The user cannot mutate this freely.
     // Each variable can only refer to a variable added before it.
@@ -207,6 +209,7 @@ public:
     IR::Type type() const;
     int varid() const;
     bool used(bool ext) const;
+    void print(std::ostream &stm, bool newline=false) const;
 
 private:
     // The following functions are only used in optimizations or to create new variables
@@ -309,7 +312,14 @@ private:
     } m_value;
     llvm::SmallVector<Arg, 4> m_args{};
     friend class Env;
+    friend std::ostream &operator<<(std::ostream &stm, const Arg &arg);
 };
+
+static inline std::ostream &operator<<(std::ostream &stm, const Var &var)
+{
+    var.print(stm);
+    return stm;
+}
 
 class Env {
 public:
@@ -373,6 +383,7 @@ public:
     }
 
     int num_vars() const;
+    void print(std::ostream &stm) const;
 
 private:
     Var *new_var();
@@ -419,6 +430,12 @@ inline int Env::num_vars() const
     if (!m_vars)
         return 0;
     return m_vars->varid() + 1;
+}
+
+static inline std::ostream &operator<<(std::ostream &stm, const Env &env)
+{
+    env.print(stm);
+    return stm;
 }
 
 }
