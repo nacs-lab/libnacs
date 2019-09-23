@@ -19,6 +19,8 @@
 #include "analysis.h"
 #include "utils.h"
 
+#include <llvm/IR/Instructions.h>
+
 namespace NaCs {
 namespace LLVM {
 namespace Analysis {
@@ -30,6 +32,27 @@ NACS_EXPORT(utils) bool argument_unused(const Function &f, unsigned argno)
 {
     auto args = f.arg_begin();
     return (args + argno)->use_empty();
+}
+
+NACS_EXPORT(utils) Constant *returns_const(const Function &f)
+{
+    if (!f.isSpeculatable() && !(f.doesNotThrow() && f.onlyReadsMemory()))
+        return nullptr;
+    Constant *ret_val = nullptr;
+    for (const BasicBlock &bb: f) {
+        auto ret_inst = dyn_cast<ReturnInst>(bb.getTerminator());
+        if (!ret_inst)
+            continue;
+        auto new_ret_val = dyn_cast<Constant>(ret_inst->getReturnValue());
+        // Not returning a Constant.
+        if (!new_ret_val)
+            return nullptr;
+        // Returning a different Constant.
+        if (ret_val && ret_val != new_ret_val)
+            return nullptr;
+        ret_val = new_ret_val;
+    }
+    return ret_val;
 }
 
 }
