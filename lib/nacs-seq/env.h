@@ -22,6 +22,7 @@
 #include <nacs-utils/utils.h>
 #include <nacs-utils/ir.h>
 
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 
 #include <iterator>
@@ -213,9 +214,19 @@ public:
         return m_value.func;
     }
     IR::Type type() const;
+    llvm::Type *llvm_type() const;
     int varid() const;
     bool used(bool ext) const;
     void print(std::ostream &stm, bool newline=false) const;
+    bool argument_unused(int idx) const;
+    // Return the variable that this one is a copy of
+    // (i.e. zero argument call of another variable)
+    Var *get_assigned_var() const
+    {
+        if (is_call() && !get_callee().is_llvm && nfreeargs() == 0)
+            return get_callee().var;
+        return nullptr;
+    }
 
 private:
     // The following functions are only used in optimizations or to create new variables
@@ -253,6 +264,15 @@ private:
         m_args.clear();
     }
     void fill_args(llvm::ArrayRef<Arg> args, int nfreeargs);
+
+    bool inline_callee();
+    bool optimize_call();
+    void optimize_llvmf(llvm::Function *f);
+    // Remove unnecessary arguments:
+    // * Inline constant arguments (this should also remove unused ones)
+    // * Remove duplicated arguments
+    bool reduce_args();
+
     Var(Env &env)
         : m_env{env}
     {
@@ -396,6 +416,7 @@ public:
 
     int num_vars() const;
     void gc();
+    void optimize();
     void print(std::ostream &stm) const;
 
 private:
@@ -403,6 +424,10 @@ private:
     Var *new_var();
     void compute_varid();
     void compute_varuse();
+    // Optimize each variables (functions) individually based only on the
+    // arguments and callee without information about the global call graph.
+    bool optimize_local();
+    void finalize_vars();
 
     std::unique_ptr<llvm::Module> m_llvm_mod;
     std::unique_ptr<LLVM::Codegen::Context> m_cgctx;
