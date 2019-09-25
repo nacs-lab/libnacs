@@ -18,12 +18,18 @@
 
 #include "env.h"
 
+#include "../utils/llvm/analysis.h"
 #include "../utils/llvm/codegen.h"
+#include "../utils/llvm/global_rename.h"
 #include "../utils/llvm/utils.h"
 #include "../utils/streams.h"
 
 #include <llvm/ADT/StringMap.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Verifier.h>
 #include <llvm/Support/raw_os_ostream.h>
+#include <llvm/Transforms/IPO.h>
 
 #include <vector>
 
@@ -263,6 +269,211 @@ NACS_EXPORT() void Env::gc()
     }
     // Remove unused variables should not affect varuse.
     assert(!m_varuse_dirty);
+}
+
+bool Env::optimize_local()
+{
+    assert(!m_varid_dirty);
+    if (!m_vars)
+        return false;
+    bool changed = false;
+    // 0: unhandled
+    // 1: working on it
+    // 2: done
+    llvm::SmallVector<uint8_t, 64> var_states(m_vars->m_varid + 1, 0); // nvars
+    llvm::SmallVector<std::pair<Var*,ssize_t>, 16> stack;
+    ssize_t idx;
+    Var *var;
+    auto next = [&] {
+        // Next argument
+        if (++idx <= (ssize_t)var->args().size())
+            return true;
+        var_states[var->m_varid] = 2;
+        // Done
+        if (stack.empty())
+            return false;
+        std::tie(var, idx) = stack.pop_back_val();
+        return true;
+    };
+    auto visit_field = [&] (Var *new_var) {
+        auto &vs = var_states[new_var->m_varid];
+        if (vs == 2)
+            return next();
+        if (!new_var->is_call()) {
+            vs = 2;
+            return next();
+        }
+        if (vs == 1)
+            throw std::runtime_error("Dependency loop detected.");
+        vs = 1;
+        if (idx + 1 <= (ssize_t)var->args().size()) {
+            stack.emplace_back(var, idx + 1);
+        }
+        else {
+            var_states[var->m_varid] = 2;
+        }
+        var = new_var;
+        idx = -2;
+        return true;
+    };
+    auto iterate = [&] {
+        if (idx == -2) {
+            // Optimize callee
+            assert(var->is_call());
+            auto f = var->get_callee();
+            if (!f.is_llvm)
+                return visit_field(f.var);
+            return next();
+        }
+        else if (idx == -1) {
+            // Check callee
+            changed |= var->inline_callee();
+            return next();
+        }
+        else if (idx < (ssize_t)var->args().size()) {
+            // Optimize arguments
+            // This must be a call since there are at least 1 argument.
+            assert(var->is_call());
+            auto f = var->get_callee();
+            if (f.is_llvm) {
+                if (LLVM::Analysis::argument_unused(*f.llvm, idx)) {
+                    // Unused, ignore.
+                    changed |= !var->args()[idx].is_const();
+                    var->set_arg(idx, Arg::create_const(false));
+                    return next();
+                }
+            }
+            else {
+                if (f.var->argument_unused(idx)) {
+                    // Unused, ignore.
+                    changed |= !var->args()[idx].is_const();
+                    var->set_arg(idx, Arg::create_const(false));
+                    return next();
+                }
+            }
+            auto &arg = var->args()[idx];
+            if (!arg.is_var())
+                return next();
+            auto arg_var = arg.get_var();
+            if (arg_var->is_const()) {
+                var->set_arg(idx, Arg::create_const(arg_var->get_const()));
+                changed = true;
+                return next();
+            }
+            return visit_field(arg_var);
+        }
+        else {
+            // Check arguments
+            if (!var->is_call())
+                return next();
+            bool has_arg = false;
+            // There could be constant variable argument again
+            // since the argument var optimization might have optimized
+            // the variable to a constant
+            // Normalize that first.
+            for (size_t i = 0; i < var->args().size(); i++) {
+                auto &arg = var->args()[i];
+                if (arg.is_arg()) {
+                    has_arg = true;
+                    continue;
+                }
+                if (!arg.is_var())
+                    continue;
+                auto arg_var = arg.get_var();
+                if (arg_var->is_const()) {
+                    var->set_arg(i, Arg::create_const(arg_var->get_const()));
+                    changed = true;
+                }
+                else if (auto copy = arg_var->get_assigned_var()) {
+                    var->set_arg(i, Arg::create_var(copy));
+                    changed = true;
+                }
+            }
+            // We don't want to surprise the user with mismatch argument number.
+            // However, we allowe it in the special case where none of the arguments are used.
+            if (!has_arg && var->nfreeargs() != 0) {
+                var->m_n_freeargs = 0;
+                changed = true;
+            }
+            // Now all of the non-const arguments are used by the function
+            // and all of the constant arguments are stored as constant `Arg`
+            // (instead of `Arg` of constant `Var`)
+            // We can execute the function iff all the arguments are constant.
+            if (var->optimize_call()) {
+                changed = true;
+                if (var->is_call()) {
+                    // If `Var::optimize_call` returns `true`,
+                    // we have changed the LLVM function
+                    // and should check the arguments property again
+                    // if it is still a call.
+                    // See the `test_return_arg_indirect` test case.
+                    idx = -1;
+                    return next();
+                }
+            }
+            return next();
+        }
+    };
+    for (auto root: *this) {
+        if (root->m_extern_ref <= 0)
+            continue;
+        if (!root->is_call()) {
+            var_states[root->m_varid] = 2;
+            continue;
+        }
+        auto &vs = var_states[root->m_varid];
+        // We are just starting a cycle so there shouldn't be nothing in progress.
+        assert(vs != 1);
+        // Already processed
+        if (vs == 2)
+            continue;
+        var = root;
+        idx = -2;
+        vs = 1;
+        while (iterate()) {
+        }
+    }
+    return changed;
+}
+
+NACS_EXPORT() void Env::optimize()
+{
+    if (!m_vars)
+        return;
+
+    // Initialize variable ID eagerly so the optimization functions don't need to check
+    if (m_varid_dirty)
+        compute_varid();
+    optimize_local();
+    gc();
+    // TODO: global dependency optimization
+
+    // We don't use any LLVM global info for optimization so we only need to do the LLVM
+    // global DCE once.
+    for (auto &go: llvm_module()->global_objects()) {
+        if (!go.isDeclaration()) {
+            go.setLinkage(llvm::GlobalValue::PrivateLinkage);
+        }
+    }
+    for (auto var: *this) {
+        if (!var->is_call())
+            continue;
+        auto f = var->get_callee();
+        if (!f.is_llvm)
+            continue;
+        f.llvm->setLinkage(llvm::GlobalValue::ExternalLinkage);
+        f.llvm->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+    }
+    llvm::legacy::PassManager PM;
+#ifndef NDEBUG
+    PM.add(llvm::createVerifierPass());
+#endif
+    PM.add(llvm::createGlobalDCEPass());
+    // Shorten all global names since we don't care what they are
+    // and this should slightly reduce the compiled binary size.
+    PM.add(LLVM::createGlobalRenamePass());
+
+    PM.run(*llvm_module());
 }
 
 NACS_EXPORT() void Env::print(std::ostream &stm) const

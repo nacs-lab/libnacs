@@ -55,6 +55,7 @@ int main()
         return env.new_call(builder.get(), {Seq::Arg::create_var(v1),
                 Seq::Arg::create_arg(0), Seq::Arg::create_arg(0)}, 1);
     }()->ref();
+    assert(!v3->argument_unused(0));
     test_str_eq(*v3, "*%2(arg[0]) = Float64 llvm:@f(%0, arg[0], arg[0])");
     auto v4 = env.new_extern({IR::Type::Float64, -1});
     test_str_eq(*v4, "%3 = Float64 extern(0xffffffffffffffff)");
