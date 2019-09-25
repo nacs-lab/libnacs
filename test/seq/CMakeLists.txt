@@ -23,4 +23,5 @@ if(ENABLE_LLVM)
   endfunction()
 
   add_llvm_test(env)
+  add_llvm_test(optimize)
 endif()
