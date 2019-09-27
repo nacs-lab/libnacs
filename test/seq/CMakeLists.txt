@@ -22,3 +22,15 @@ add_seq_test(schedule NOTEST)
 add_seq_test(cmdlist_parse NOTEST)
 add_test(NAME test/normal/seq/cmdlist_parse
   COMMAND test-cmdlist_parse ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(ENABLE_LLVM)
+  function(add_llvm_test target)
+    add_seq_test(${ARGV})
+    set_property(TARGET test-${target} APPEND
+      PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+    set_property(TARGET test-${target} APPEND_STRING
+      PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
+  endfunction()
+
+  add_llvm_test(env)
+endif()
