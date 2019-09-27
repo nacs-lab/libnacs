@@ -473,24 +473,25 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             return emit_const(func.evalConst(id));
         }
     };
-    auto emit_interp_data = [&] (uint32_t data_offset, uint32_t ndata) -> Constant* {
+    auto emit_interp_data = [&] (uint32_t data_offset, uint32_t ndata) {
         if (!data_map) {
             // Inlined data in the object file.
             ArrayRef<double> dataref(&func.float_table[data_offset], ndata);
             auto table = ConstantDataArray::get(m_ctx, dataref);
-            Constant *datap = new GlobalVariable(*m_mod, table->getType(), true,
-                                                 GlobalValue::PrivateLinkage, table,
-                                                 ".L.nacs." + std::to_string(m_counter++));
-            cast<GlobalVariable>(datap)->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+            auto datap = new GlobalVariable(*m_mod, table->getType(), true,
+                                            GlobalValue::PrivateLinkage, table,
+                                            ".L.nacs." + std::to_string(m_counter++));
+            datap->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
             return datap;
         }
         // Manage the data externally so that they can be shared between multiple object
         // files more easily.
-        auto name = "nacs.data." + std::to_string(m_counter++);
-        (*data_map)[name] = {data_offset, ndata};
+        auto name = std::string(f->getName()) + "." + std::to_string(m_counter++);
         // `[0 x double]` is what clang uses for `extern double[]` global in C.
-        return new GlobalVariable(*m_mod, ArrayType::get(T_f64, 0), true,
-                                  GlobalValue::ExternalLinkage, nullptr, name);
+        auto res = new GlobalVariable(*m_mod, ArrayType::get(T_f64, 0), true,
+                                      GlobalValue::ExternalLinkage, nullptr, name);
+        data_map->emplace(res->getName(), std::make_pair(data_offset, ndata));
+        return res;
     };
     while (pc && end > pc) {
         const auto op = IR::Opcode(*pc);
