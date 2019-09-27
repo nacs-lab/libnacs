@@ -12,3 +12,15 @@ endfunction()
 
 add_seq_test(schedule)
 add_seq_test(cmdlist_parse)
+
+if(ENABLE_LLVM)
+  function(add_llvm_test target)
+    add_seq_test(${ARGV})
+    set_property(TARGET test-${target} APPEND
+      PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+    set_property(TARGET test-${target} APPEND_STRING
+      PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
+  endfunction()
+
+  add_llvm_test(env)
+endif()
