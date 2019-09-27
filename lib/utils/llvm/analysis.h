@@ -32,6 +32,8 @@ using namespace llvm;
 NACS_EXPORT(utils) bool argument_unused(const Function &f, unsigned argno);
 // Check if the function always returns a constant without side-effect.
 NACS_EXPORT(utils) Constant *returns_const(const Function &f);
+// Check if the function always returns an argument without side-effect.
+NACS_EXPORT(utils) Argument *returns_argument(const Function &f);
 
 }
 }

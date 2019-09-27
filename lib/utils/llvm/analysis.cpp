@@ -55,6 +55,27 @@ NACS_EXPORT(utils) Constant *returns_const(const Function &f)
     return ret_val;
 }
 
+NACS_EXPORT(utils) Argument *returns_argument(const Function &f)
+{
+    if (!f.isSpeculatable() && !(f.doesNotThrow() && f.onlyReadsMemory()))
+        return nullptr;
+    Argument *ret_val = nullptr;
+    for (const BasicBlock &bb: f) {
+        auto ret_inst = dyn_cast<ReturnInst>(bb.getTerminator());
+        if (!ret_inst)
+            continue;
+        auto new_ret_val = dyn_cast<Argument>(ret_inst->getReturnValue());
+        // Not returning an argument.
+        if (!new_ret_val)
+            return nullptr;
+        // Returning a different argument
+        if (ret_val && ret_val != new_ret_val)
+            return nullptr;
+        ret_val = new_ret_val;
+    }
+    return ret_val;
+}
+
 }
 }
 }
