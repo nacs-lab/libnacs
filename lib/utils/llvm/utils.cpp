@@ -21,6 +21,7 @@
 
 #include <llvm/ADT/Triple.h>
 #include <llvm/Support/Host.h>
+#include <llvm/Transforms/Utils/Cloning.h>
 
 namespace NaCs {
 namespace LLVM {
@@ -96,6 +97,100 @@ NACS_EXPORT() IR::Type get_ir_type(llvm::Type *typ, bool apitype)
     }
     return IR::Type::_Min;
 }
+
+NACS_EXPORT_ FunctionMover::FunctionMover(Module *dest)
+    : ValueMaterializer(), m_vmap(), m_dest(dest), m_lazy_funcs(0)
+{
+}
+
+NACS_EXPORT() FunctionMover::~FunctionMover()
+{
+}
+
+NACS_INTERNAL Function *FunctionMover::queue_proto(Function *F)
+{
+    assert(!F->isDeclaration());
+    auto newf = Function::Create(F->getFunctionType(), Function::ExternalLinkage,
+                                 F->getName(), m_dest);
+    m_lazy_funcs.push_back(F);
+    m_vmap[F] = newf;
+    return newf;
+}
+
+NACS_INTERNAL void FunctionMover::clone_body(Function *F)
+{
+    auto newf = (Function*)(Value*)m_vmap[F];
+    assert(newf);
+
+    auto destit = newf->arg_begin();
+    for (auto &arg: F->args()) {
+        destit->setName(arg.getName()); // Copy the name over...
+        m_vmap[&arg] = &*(destit++); // Add mapping to m_vmap
+    }
+
+    SmallVector<ReturnInst*, 8> Returns;
+    CloneFunctionInto(newf, F, m_vmap, true, Returns, "", nullptr, nullptr, this);
+}
+
+NACS_EXPORT() Function *FunctionMover::clone_function(Function *F)
+{
+    auto newf = (Function*)MapValue(F, m_vmap, RF_None, nullptr, this);
+    resolve_lazy();
+    return newf;
+}
+
+NACS_INTERNAL void FunctionMover::resolve_lazy()
+{
+    while (!m_lazy_funcs.empty()) {
+        clone_body(m_lazy_funcs.pop_back_val());
+    }
+}
+
+NACS_INTERNAL Value *FunctionMover::clone_proto(Function *F)
+{
+    auto newf = m_dest->getFunction(F->getName());
+    if (!newf) {
+        newf = Function::Create(F->getFunctionType(), Function::ExternalLinkage,
+                                F->getName(), m_dest);
+        // FunctionType does not include any attributes. Copy them over manually
+        // as codegen may make decisions based on the presence of certain attributes
+        newf->copyAttributesFrom(F);
+    }
+    return newf;
+}
+
+NACS_INTERNAL Value *FunctionMover::materialize(Value *V)
+{
+    if (auto F = dyn_cast<Function>(V)) {
+        if (F->getParent() == m_dest)
+            return F;
+        if (F->isIntrinsic() || F->isDeclaration())
+            return clone_proto(F);
+        return queue_proto(F);
+    }
+    else if (auto GV = dyn_cast<GlobalVariable>(V)) {
+        if (auto oldGV = m_dest->getGlobalVariable(GV->getName()))
+            return oldGV;
+        auto newGV = new GlobalVariable(*m_dest,
+                                        GV->getType()->getElementType(),
+                                        GV->isConstant(),
+                                        GV->getLinkage(),
+                                        NULL,
+                                        GV->getName(),
+                                        NULL,
+                                        GV->getThreadLocalMode(),
+                                        GV->getType()->getPointerAddressSpace());
+        newGV->copyAttributesFrom(GV);
+        if (GV->isDeclaration())
+            return newGV;
+        if (GV->hasInitializer()) {
+            Value *C = MapValue(GV->getInitializer(), m_vmap, RF_None, NULL, this);
+            newGV->setInitializer(cast<Constant>(C));
+        }
+        return newGV;
+    }
+    return nullptr;
+};
 
 const std::string &get_cpu_arch()
 {

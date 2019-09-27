@@ -29,6 +29,7 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Value.h>
 #include <llvm/Support/Debug.h>
+#include <llvm/Transforms/Utils/ValueMapper.h>
 
 #define NACS_LLVM_VER (LLVM_VERSION_MAJOR * 10000 + LLVM_VERSION_MINOR * 100 \
                        + LLVM_VERSION_PATCH)
@@ -52,6 +53,29 @@ NACS_EXPORT(utils) void delete_module(llvm::Module*);
 NACS_EXPORT(utils) llvm::LLVMContext *new_context();
 NACS_EXPORT(utils) void delete_context(llvm::LLVMContext*);
 NACS_EXPORT(utils) IR::Type get_ir_type(llvm::Type*, bool apitype=true);
+
+/**
+ * Clone a function from one module to another alone with all its dependencies.
+ * Simplified from the one in julia.
+ */
+class FunctionMover final : public llvm::ValueMaterializer {
+public:
+    FunctionMover(llvm::Module *dest);
+    ~FunctionMover();
+    llvm::Function *clone_function(llvm::Function *F);
+
+private:
+    llvm::ValueToValueMapTy m_vmap;
+    llvm::Module *m_dest;
+    llvm::SmallVector<llvm::Function*, 16> m_lazy_funcs;
+
+    llvm::Function *queue_proto(llvm::Function *F);
+    void clone_body(llvm::Function *F);
+    void resolve_lazy();
+    llvm::Value *clone_proto(llvm::Function *F);
+
+    llvm::Value *materialize(llvm::Value *V) override;
+};
 
 }
 }
