@@ -20,6 +20,8 @@
 
 #include "../utils/llvm/analysis.h"
 #include "../utils/llvm/codegen.h"
+#include "../utils/llvm/compile.h"
+#include "../utils/llvm/execute.h"
 #include "../utils/llvm/inst_simplify.h"
 #include "../utils/llvm/utils.h"
 
@@ -464,7 +466,59 @@ bool Var::optimize_call()
         optimize_llvmf(get_callee().llvm);
     }
     changed |= inline_callee();
-    return changed;
+    // Optimized to constant or copy of another variable.
+    if (!is_call() || !get_callee().is_llvm)
+        return changed;
+    if (!args().empty())
+        return changed;
+    // Zero arguments: try compiling and running the function.
+    auto f = get_callee().llvm;
+    // We can run the function without side effects.
+    if (!f->isSpeculatable() && !(f->doesNotThrow() && f->onlyReadsMemory()))
+        return changed;
+    // Make sure that we understand the type
+    IR::Type typ = LLVM::get_ir_type(f->getReturnType());
+    if (!uint8_t(typ))
+        return changed;
+    auto llvm_mod = m_env.llvm_module();
+    auto &llvm_ctx = llvm_mod->getContext();
+    llvm::Module temp_mod("", llvm_ctx);
+    // Copy the function and its dependencies to a temporary module for compilation.
+    LLVM::FunctionMover mover(&temp_mod);
+    auto newf = mover.clone_function(f);
+    llvm::SmallVector<char,0> vec;
+    // Emit object file, no need to optimize since we are only calling it once.
+    auto res = LLVM::Compile::emit_objfile(vec, LLVM::Compile::get_native_target(),
+                                           &temp_mod, false);
+    // Allow compilation failure here
+    if (!res)
+        return changed;
+    LLVM::Exe::Engine engine;
+    auto obj_id = engine.load(&vec[0], vec.size(), m_env.cg_context()->get_extern_resolver());
+    if (!obj_id)
+        return changed;
+    auto sym = engine.get_symbol(newf->getName());
+    if (!sym) {
+        engine.free(obj_id);
+        return changed;
+    }
+    IR::TagVal val;
+    switch (typ) {
+    case IR::Type::Bool:
+        val = ((bool(*)())sym)();
+        break;
+    case IR::Type::Int32:
+        val = ((int(*)())sym)();
+        break;
+    case IR::Type::Float64:
+        val = ((double(*)())sym)();
+        break;
+    default:
+        return changed;
+    }
+    engine.free(obj_id);
+    assign_const(val);
+    return true;
 }
 
 }
