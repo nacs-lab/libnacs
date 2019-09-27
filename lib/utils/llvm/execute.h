@@ -47,6 +47,7 @@ class Resolver : public ResolverBase {
     class SetCB;
 public:
     Resolver() = default;
+    static uintptr_t resolve_ir_sym(const std::string &name);
 
 private:
     JITSymbol findSymbolInLogicalDylib(const std::string&) override;

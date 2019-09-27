@@ -175,13 +175,8 @@ JITSymbol Resolver::findSymbol(const std::string &name)
     return nullptr;
 }
 
-uintptr_t Resolver::find_extern(const std::string &name)
+NACS_EXPORT() uintptr_t Resolver::resolve_ir_sym(const std::string &name)
 {
-    if (m_cb) {
-        if (auto ptr = (*m_cb)(name)) {
-            return ptr;
-        }
-    }
     if (name == "interp")
         return (uintptr_t)static_cast<double(*)(double, uint32_t, const double*)>(
             linearInterpolate);
@@ -279,6 +274,16 @@ uintptr_t Resolver::find_extern(const std::string &name)
     check_sleef_di(host_info, name, ldexp);
 #endif
     return (uintptr_t)DL::sym(nullptr, name.c_str());
+}
+
+uintptr_t Resolver::find_extern(const std::string &name)
+{
+    if (m_cb) {
+        if (auto ptr = (*m_cb)(name)) {
+            return ptr;
+        }
+    }
+    return resolve_ir_sym(name);
 }
 
 NACS_EXPORT() Engine::Engine()

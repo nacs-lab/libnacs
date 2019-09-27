@@ -18,6 +18,7 @@
 
 #include "compile.h"
 #include "vector_abi.h"
+#include "inst_simplify.h"
 #include "lower_vector.h"
 
 #include "../utils.h"
@@ -35,7 +36,6 @@
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #if LLVM_VERSION_MAJOR >= 7
-#  include <llvm/Transforms/Scalar/InstSimplifyPass.h>
 #  include <llvm/Transforms/Utils.h>
 #endif
 #include <llvm/Transforms/Vectorize.h>
@@ -79,11 +79,7 @@ void addOptimization(legacy::PassManagerBase &pm)
     pm.add(createSCCPPass());                 // Constant prop with SCCP
 
     pm.add(createSinkingPass()); ////////////// ****
-#if LLVM_VERSION_MAJOR >= 7
-    pm.add(createInstSimplifyLegacyPass());///////// ****
-#else
-    pm.add(createInstructionSimplifierPass());///////// ****
-#endif
+    pm.add(createNaCsInstSimplifyPass()); // TODO support external symbol
     pm.add(createInstructionCombiningPass());
     pm.add(createJumpThreadingPass());         // Thread jumps
     pm.add(createDeadStoreEliminationPass());  // Delete dead stores
