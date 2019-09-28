@@ -38,6 +38,8 @@ enum class Type : uint8_t {
     _Max,
 };
 
+NACS_EXPORT(utils) std::ostream &operator<<(std::ostream &stm, const Type &typ);
+
 constexpr static inline bool validate(Type typ)
 {
     return typ < Type::_Max && typ > Type::_Min;

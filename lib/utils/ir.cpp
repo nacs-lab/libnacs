@@ -516,6 +516,12 @@ static inline const char *typeName(Type typ)
     }
 }
 
+NACS_EXPORT() std::ostream &operator<<(std::ostream &stm, const Type &typ)
+{
+    stm << typeName(typ);
+    return stm;
+}
+
 static inline const char *opName(Opcode op)
 {
     switch (op) {
@@ -578,7 +584,7 @@ static inline const char *cmpName(CmpType cmp)
 
 NACS_EXPORT() std::ostream &operator<<(std::ostream &stm, const TagVal &val)
 {
-    stm << typeName(val.typ) << " ";
+    stm << val.typ << " ";
     switch (val.typ) {
     case Type::Bool:
         stm << (val.val.b ? "true" : "false");
@@ -632,7 +638,7 @@ NACS_EXPORT() Type Function::valType(int32_t id) const
 
 void Function::printVal(std::ostream &stm, int32_t id) const
 {
-    stm << typeName(valType(id)) << " ";
+    stm << valType(id) << " ";
     printValName(stm, id);
 }
 
@@ -845,11 +851,11 @@ void Function::printBB(std::ostream &stm, const BB &bb) const
 
 NACS_EXPORT() std::ostream &operator<<(std::ostream &stm, const Function &f)
 {
-    stm << typeName(f.ret) << " (";
+    stm << f.ret << " (";
     for (int i = 0;i < f.nargs;i++) {
         if (i != 0)
             stm << ", ";
-        stm << typeName(f.valType(i)) << " ";
+        stm << f.valType(i) << " ";
         f.printValName(stm, i);
     }
     stm << ") {" << std::endl;
