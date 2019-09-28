@@ -27,6 +27,10 @@
 #include <iterator>
 #include <memory>
 
+namespace NaCs::LLVM::Codegen {
+class Context;
+}
+
 namespace NaCs::Seq {
 
 class Env;
@@ -363,6 +367,7 @@ public:
         Var *m_var;
     };
 
+    Env(std::unique_ptr<LLVM::Codegen::Context> cgctx);
     Env(llvm::LLVMContext &llvm_ctx);
     ~Env();
 
@@ -378,21 +383,28 @@ public:
     Var *new_const(IR::TagVal c);
     Var *new_call(Var *func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
     Var *new_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
+    Var *new_call(const IR::Function &func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
     Var *new_extern(std::pair<IR::Type,uint64_t> ext);
     llvm::Module *llvm_module() const
     {
         return m_llvm_mod.get();
+    }
+    LLVM::Codegen::Context *cg_context() const
+    {
+        return m_cgctx.get();
     }
 
     int num_vars() const;
     void print(std::ostream &stm) const;
 
 private:
+    Var *_new_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs);
     Var *new_var();
     void compute_varid();
     void compute_varuse();
 
     std::unique_ptr<llvm::Module> m_llvm_mod;
+    std::unique_ptr<LLVM::Codegen::Context> m_cgctx;
     Var *m_vars{nullptr};
 
     bool m_varid_dirty{false};
