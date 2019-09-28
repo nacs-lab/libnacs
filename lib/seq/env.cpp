@@ -18,15 +18,53 @@
 
 #include "env.h"
 
+#include "../utils/llvm/codegen.h"
 #include "../utils/llvm/utils.h"
 #include "../utils/streams.h"
 
+#include <llvm/ADT/StringMap.h>
 #include <llvm/Support/raw_os_ostream.h>
+
+#include <vector>
 
 namespace NaCs::Seq {
 
+namespace {
+struct DefaultCGContext: LLVM::Codegen::CachedContext {
+    DefaultCGContext(llvm::LLVMContext &llvm_ctx)
+        : LLVM::Codegen::CachedContext(llvm_ctx)
+    {
+    }
+private:
+    bool use_extern_data() const override
+    {
+        return true;
+    }
+    void add_extern_data(llvm::StringRef name, const void *_data, size_t size) override
+    {
+        auto data = (const double*)_data;
+        m_data[name] = std::vector<double>{data, data + size / sizeof(double)};
+    }
+    uintptr_t get_extern_data(llvm::StringRef name) override
+    {
+        auto it = m_data.find(name);
+        if (it != m_data.end())
+            return (uintptr_t)&it->second[0];
+        return 0;
+    }
+    llvm::StringMap<std::vector<double>> m_data;
+};
+}
+
+NACS_EXPORT_ Env::Env(std::unique_ptr<LLVM::Codegen::Context> cgctx)
+    : m_llvm_mod(new llvm::Module("", cgctx->get_context())),
+      m_cgctx(std::move(cgctx))
+{
+    m_cgctx->set_module(m_llvm_mod.get());
+}
+
 NACS_EXPORT_ Env::Env(llvm::LLVMContext &llvm_ctx)
-    : m_llvm_mod(new llvm::Module("", llvm_ctx))
+    : Env(std::make_unique<DefaultCGContext>(llvm_ctx))
 {
 }
 
@@ -87,6 +125,17 @@ static bool check_type(llvm::Type *ty)
     return uint8_t(LLVM::get_ir_type(ty)) > 0;
 }
 
+NACS_INTERNAL Var *Env::_new_call(llvm::Function *func, llvm::ArrayRef<Arg> args,
+                                  int nfreeargs)
+{
+    if (func->arg_size() != args.size())
+        throw std::invalid_argument("Argument number mismatch");
+    check_args(args, nfreeargs);
+    auto var = new_var();
+    var->assign_call(func, args, nfreeargs);
+    return var;
+}
+
 NACS_EXPORT() Var *Env::new_call(llvm::Function *func, llvm::ArrayRef<Arg> args,
                                  int nfreeargs)
 {
@@ -100,12 +149,13 @@ NACS_EXPORT() Var *Env::new_call(llvm::Function *func, llvm::ArrayRef<Arg> args,
             throw std::invalid_argument("Invalid argumentt type.");
         }
     }
-    if (func->arg_size() != args.size())
-        throw std::invalid_argument("Argument number mismatch");
-    check_args(args, nfreeargs);
-    auto var = new_var();
-    var->assign_call(func, args, nfreeargs);
-    return var;
+    return _new_call(func, args, nfreeargs);
+}
+
+NACS_EXPORT() Var *Env::new_call(const IR::Function &func, llvm::ArrayRef<Arg> args,
+                                 int nfreeargs)
+{
+    return _new_call(cg_context()->emit_function(func, "f"), args, nfreeargs);
 }
 
 NACS_EXPORT() Var *Env::new_extern(std::pair<IR::Type,uint64_t> ext)
