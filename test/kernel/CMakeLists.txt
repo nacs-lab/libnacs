@@ -1,13 +1,15 @@
 #
 
-set(test_getver_SOURCES test_getver.cpp)
-add_executable(test-getver ${test_getver_SOURCES})
-target_link_libraries(test-getver nacs-kernel)
+function(add_kernel_test target)
+  if(${ARGC} EQUAL 1)
+    set(SOURCES "test_${target}.cpp")
+  else()
+    set(SOURCES ${ARGN})
+  endif()
+  add_executable(test-${target} ${SOURCES})
+  target_link_libraries(test-${target} nacs-kernel)
+endfunction()
 
-set(test_pulse_ctl_SOURCES test_pulse_ctl.cpp)
-add_executable(test-pulse_ctl ${test_pulse_ctl_SOURCES})
-target_link_libraries(test-pulse_ctl nacs-kernel)
-
-# set(test_dma_buff_SOURCES test_dma_buff.cpp)
-# add_executable(test-dma_buff ${test_dma_buff_SOURCES})
-# target_link_libraries(test-dma_buff nacs-kernel)
+add_kernel_test(getver)
+add_kernel_test(pulse_ctl)
+# add_kernel_test(dma_buff)

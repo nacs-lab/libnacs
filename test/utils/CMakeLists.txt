@@ -1,98 +1,52 @@
 #
 
-set(test_anyptr_SOURCES test_anyptr.cpp)
-add_executable(test-anyptr ${test_anyptr_SOURCES})
-target_link_libraries(test-anyptr nacs-utils)
+function(add_utils_test target)
+  if(${ARGC} EQUAL 1)
+    set(SOURCES "test_${target}.cpp")
+  else()
+    set(SOURCES ${ARGN})
+  endif()
+  add_executable(test-${target} ${SOURCES})
+  target_link_libraries(test-${target} nacs-utils)
+endfunction()
 
-set(test_bits_SOURCES test_bits.cpp)
-add_executable(test-bits ${test_bits_SOURCES})
-target_link_libraries(test-bits nacs-utils)
+add_utils_test(anyptr)
+add_utils_test(bits)
+add_utils_test(buff_streams)
+add_utils_test(const_stream)
+add_utils_test(cpu)
+add_utils_test(datapipe)
+add_utils_test(dl)
+add_utils_test(filterqueue)
+add_utils_test(fixedqueue)
+add_utils_test(interp)
 
-set(test_buff_streams_SOURCES test_buff_streams.cpp)
-add_executable(test-buff_streams ${test_buff_streams_SOURCES})
-target_link_libraries(test-buff_streams nacs-utils)
-
-set(test_const_stream_SOURCES test_const_stream.cpp)
-add_executable(test-const_stream ${test_const_stream_SOURCES})
-target_link_libraries(test-const_stream nacs-utils)
-
-set(test_cpu_SOURCES test_cpu.cpp)
-add_executable(test-cpu ${test_cpu_SOURCES})
-target_link_libraries(test-cpu nacs-utils)
-
-set(test_datapipe_SOURCES test_datapipe.cpp)
-add_executable(test-datapipe ${test_datapipe_SOURCES})
-target_link_libraries(test-datapipe nacs-utils)
-
-set(test_dl_SOURCES test_dl.cpp)
-add_executable(test-dl ${test_dl_SOURCES})
-target_link_libraries(test-dl nacs-utils)
-
-set(test_filterqueue_SOURCES test_filterqueue.cpp)
-add_executable(test-filterqueue ${test_filterqueue_SOURCES})
-target_link_libraries(test-filterqueue nacs-utils)
-
-set(test_fixedqueue_SOURCES test_fixedqueue.cpp)
-add_executable(test-fixedqueue ${test_fixedqueue_SOURCES})
-target_link_libraries(test-fixedqueue nacs-utils)
-
-set(test_interp_SOURCES test_interp.cpp)
-add_executable(test-interp ${test_interp_SOURCES})
-target_link_libraries(test-interp nacs-utils)
-
-set(test_ir_SOURCES test_ir.cpp)
-add_executable(test-ir ${test_ir_SOURCES})
-target_link_libraries(test-ir nacs-utils)
-
-set(test_ir_cc_SOURCES test_ir_cc.cpp)
 foreach(TESTSET RANGE 8)
-  add_executable("test-ir_cc-${TESTSET}" ${test_ir_cc_SOURCES})
-  target_link_libraries("test-ir_cc-${TESTSET}" nacs-utils)
+  add_utils_test(ir_cc-${TESTSET} test_ir_cc.cpp)
   set_target_properties("test-ir_cc-${TESTSET}" PROPERTIES
     COMPILE_DEFINITIONS "IR_CC_TESTSET=${TESTSET}")
 endforeach()
 
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
-  set(test_phy_addr_SOURCES test_phy_addr.cpp)
-  add_executable(test-phy_addr ${test_phy_addr_SOURCES})
-  target_link_libraries(test-phy_addr nacs-utils)
+  add_utils_test(phy_addr)
 endif()
 
-set(test_small_alloc_SOURCES test_small_alloc.cpp)
-add_executable(test-small_alloc ${test_small_alloc_SOURCES})
-target_link_libraries(test-small_alloc nacs-utils)
-
-set(test_syntax_error_SOURCES test_syntax_error.cpp)
-add_executable(test-syntax_error ${test_syntax_error_SOURCES})
-target_link_libraries(test-syntax_error nacs-utils)
-
-set(test_term_SOURCES test_term.cpp)
-add_executable(test-term ${test_term_SOURCES})
-target_link_libraries(test-term nacs-utils)
-
-set(test_thread_SOURCES test_thread.cpp)
-add_executable(test-thread ${test_thread_SOURCES})
-target_link_libraries(test-thread nacs-utils)
-
-set(test_wavemeter_SOURCES test_wavemeter.cpp)
-add_executable(test-wavemeter ${test_wavemeter_SOURCES})
-target_link_libraries(test-wavemeter nacs-utils)
-
-set(test_wavemeter2_SOURCES test_wavemeter2.cpp)
-add_executable(test-wavemeter2 ${test_wavemeter2_SOURCES})
-target_link_libraries(test-wavemeter2 nacs-utils)
+add_utils_test(small_alloc)
+add_utils_test(syntax_error)
+add_utils_test(term)
+add_utils_test(thread)
+add_utils_test(wavemeter)
+add_utils_test(wavemeter2)
 
 if(ENABLE_LLVM)
-  set(test_codegen_SOURCES test_codegen.cpp)
-  add_executable(test-codegen ${test_codegen_SOURCES})
-  target_link_libraries(test-codegen nacs-utils)
+  function(add_llvm_test target)
+    add_utils_test(${ARGV})
+    set_property(TARGET test-${target} APPEND
+      PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+    set_property(TARGET test-${target} APPEND_STRING
+      PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
+  endfunction()
 
-  set(test_vec_codegen_SOURCES test_vec_codegen.cpp)
-  add_executable(test-vec_codegen ${test_vec_codegen_SOURCES})
-  target_link_libraries(test-vec_codegen nacs-utils)
-
-  set_property(TARGET test-codegen test-vec_codegen APPEND
-    PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
-  set_property(SOURCE ${test_codegen_SOURCES} ${test_vec_codegen_SOURCES} APPEND_STRING
-    PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
+  add_llvm_test(codegen)
+  add_llvm_test(vec_codegen)
 endif()

@@ -1,9 +1,14 @@
 #
 
-set(test_schedule_SOURCES test_schedule.cpp)
-add_executable(test-schedule ${test_schedule_SOURCES})
-target_link_libraries(test-schedule nacs-seq)
+function(add_seq_test target)
+  if(${ARGC} EQUAL 1)
+    set(SOURCES "test_${target}.cpp")
+  else()
+    set(SOURCES ${ARGN})
+  endif()
+  add_executable(test-${target} ${SOURCES})
+  target_link_libraries(test-${target} nacs-seq)
+endfunction()
 
-set(test_cmdlist_parse_SOURCES test_cmdlist_parse.cpp)
-add_executable(test-cmdlist_parse ${test_cmdlist_parse_SOURCES})
-target_link_libraries(test-cmdlist_parse nacs-seq)
+add_seq_test(schedule)
+add_seq_test(cmdlist_parse)
