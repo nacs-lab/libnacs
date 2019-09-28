@@ -178,3 +178,225 @@ TEST_CASE("cse") {
     REQUIRE(v2->is_const());
     REQUIRE(v2->get_const().is(0.0));
 }
+
+TEST_CASE("diamond") {
+    //   v3 - v2 - v1
+    //   /    /
+    // *v5 - v4
+    // Should be simplified to
+    // *v5 - v1
+    auto v1 = env.new_extern({IR::Type::Float64, 2345});
+    auto v2 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createCall(IR::Builtins::log10, {0}));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v1)});
+    }();
+    auto v3 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createAdd(0, builder.getConst(2.3)));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v2)});
+    }();
+    auto v4 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createSub(builder.getConst(4.5), 0));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v2)});
+    }();
+    auto v5 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64, IR::Type::Float64});
+        builder.createRet(builder.createMul(0, 1));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v3),
+                Seq::Arg::create_var(v4)});
+    }()->ref();
+    env.optimize();
+    REQUIRE(env.num_vars() == 2);
+    REQUIRE(v1->varid() == 0);
+    REQUIRE(v1->type() == IR::Type::Float64);
+    REQUIRE(v5->varid() == 1);
+    REQUIRE(v5->type() == IR::Type::Float64);
+    REQUIRE(v5->is_call());
+    REQUIRE(v5->get_callee().is_llvm);
+    auto args5 = v5->args();
+    REQUIRE(args5.size() == 1);
+    REQUIRE(args5[0].is_var());
+    REQUIRE(args5[0].get_var() == v1);
+}
+
+TEST_CASE("diamond_mixed_type") {
+    //   v3 - v2 - v1
+    //   /    /
+    // *v5 - v4
+    // Should be simplified to
+    // *v5 - v1
+    auto v1 = env.new_extern({IR::Type::Bool, 2345});
+    auto v2 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createCall(IR::Builtins::log10, {0}));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v1)});
+    }();
+    auto v3 = [&] {
+        IR::Builder builder(IR::Type::Int32, {IR::Type::Float64});
+        builder.createRet(builder.createAdd(0, builder.getConst(2.3)));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v2)});
+    }();
+    auto v4 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Int32});
+        builder.createRet(builder.createSub(builder.getConst(4.5), 0));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v2)});
+    }();
+    auto v5 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64, IR::Type::Int32});
+        builder.createRet(builder.createMul(0, 1));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v3),
+                Seq::Arg::create_var(v4)});
+    }()->ref();
+    env.optimize();
+    REQUIRE(env.num_vars() == 2);
+    REQUIRE(v1->varid() == 0);
+    REQUIRE(v1->type() == IR::Type::Bool);
+    REQUIRE(v5->varid() == 1);
+    REQUIRE(v5->type() == IR::Type::Float64);
+    REQUIRE(v5->is_call());
+    REQUIRE(v5->get_callee().is_llvm);
+    auto args5 = v5->args();
+    REQUIRE(args5.size() == 1);
+    REQUIRE(args5[0].is_var());
+    REQUIRE(args5[0].get_var() == v1);
+}
+
+TEST_CASE("Y") {
+    // *v4 - v3 - v2 - v1
+    //       /
+    // *v5 -/
+    // Should be simplified to
+    // *v4 - v3 - v1
+    //       /
+    // *v5 -/
+    auto v1 = env.new_extern({IR::Type::Float64, 2345});
+    auto v2 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createCall(IR::Builtins::log10, {0}));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v1)});
+    }();
+    auto v3 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createAdd(0, builder.getConst(2.3)));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v2)});
+    }();
+    auto v4 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createSub(builder.getConst(4.5), 0));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v3)});
+    }()->ref();
+    auto v5 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createMul(0, 0));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v3)});
+    }()->ref();
+    env.optimize();
+    REQUIRE(env.num_vars() == 4);
+    REQUIRE(v1->varid() == 0);
+    REQUIRE(v1->type() == IR::Type::Float64);
+
+    REQUIRE(v3->varid() == 1);
+    REQUIRE(v3->type() == IR::Type::Float64);
+    REQUIRE(v3->is_call());
+    REQUIRE(v3->get_callee().is_llvm);
+    auto args3 = v3->args();
+    REQUIRE(args3.size() == 1);
+    REQUIRE(args3[0].is_var());
+    REQUIRE(args3[0].get_var() == v1);
+
+    REQUIRE(v4->varid() == 2);
+    REQUIRE(v4->type() == IR::Type::Float64);
+    REQUIRE(v4->is_call());
+    REQUIRE(v4->get_callee().is_llvm);
+    auto args4 = v4->args();
+    REQUIRE(args4.size() == 1);
+    REQUIRE(args4[0].is_var());
+    REQUIRE(args4[0].get_var() == v3);
+
+    REQUIRE(v5->varid() == 3);
+    REQUIRE(v5->type() == IR::Type::Float64);
+    REQUIRE(v5->is_call());
+    REQUIRE(v5->get_callee().is_llvm);
+    auto args5 = v5->args();
+    REQUIRE(args5.size() == 1);
+    REQUIRE(args5[0].is_var());
+    REQUIRE(args5[0].get_var() == v3);
+}
+
+TEST_CASE("copy_var") {
+    // *v4 -c- v3 - v2 - v1
+    //         /
+    // *v5 -c-/
+    // where the `-c-` is effectively a copy
+    // Should be simplified to
+    // *v4 -c- v3 - v1
+    //         /
+    // *v5 -c-/
+    // where the `-c-` is stored as a copy
+    auto v1 = env.new_extern({IR::Type::Float64, 2345});
+    auto v2 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createCall(IR::Builtins::log10, {0}));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v1)});
+    }();
+    auto v3 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createAdd(0, builder.getConst(2.3)));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v2)});
+    }();
+    auto v4 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(0);
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v3)});
+    }()->ref();
+    auto v5 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(0);
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v3)});
+    }()->ref();
+    env.optimize();
+    REQUIRE(env.num_vars() == 4);
+    REQUIRE(v1->varid() == 0);
+    REQUIRE(v1->type() == IR::Type::Float64);
+
+    REQUIRE(v3->varid() == 1);
+    REQUIRE(v3->type() == IR::Type::Float64);
+    REQUIRE(v3->is_call());
+    REQUIRE(v3->get_callee().is_llvm);
+    auto args3 = v3->args();
+    REQUIRE(args3.size() == 1);
+    REQUIRE(args3[0].is_var());
+    REQUIRE(args3[0].get_var() == v1);
+
+    REQUIRE(v4->varid() == 2);
+    REQUIRE(v4->type() == IR::Type::Float64);
+    REQUIRE(v4->is_call());
+    REQUIRE(v4->get_assigned_var() == v3);
+
+    REQUIRE(v5->varid() == 3);
+    REQUIRE(v5->type() == IR::Type::Float64);
+    REQUIRE(v5->is_call());
+    REQUIRE(v5->get_assigned_var() == v3);
+}
+
+TEST_CASE("sink_extern") {
+    // *v2 -c- v1
+    // where the `-c-` is effectively a copy and `v1` is an external variable
+    // Should be simplified to
+    // *v2
+    // where `v2` becomes the external variable
+    auto v1 = env.new_extern({IR::Type::Float64, 2345});
+    auto v2 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(0);
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v1)});
+    }()->ref();
+    env.optimize();
+    REQUIRE(env.num_vars() == 1);
+    REQUIRE(v2->varid() == 0);
+    REQUIRE(v2->type() == IR::Type::Float64);
+    REQUIRE(v2->is_extern());
+    REQUIRE(v2->get_extern() == std::make_pair(IR::Type::Float64, (uint64_t)2345));
+}
