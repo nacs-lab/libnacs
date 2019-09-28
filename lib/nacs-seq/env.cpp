@@ -24,6 +24,7 @@
 #include "../nacs-utils/llvm/utils.h"
 #include "../nacs-utils/streams.h"
 
+#include <llvm/ADT/SetVector.h>
 #include <llvm/ADT/StringMap.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/LegacyPassManager.h>
@@ -32,6 +33,7 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
+#include <map>
 #include <vector>
 
 namespace NaCs::Seq {
@@ -437,17 +439,345 @@ bool Env::optimize_local()
     return changed;
 }
 
+#ifndef NDEBUG
+static void assert_topological_order(Env &env)
+{
+    for (auto var: env) {
+        if (!var->is_call())
+            continue;
+        auto self_id = var->varid();
+        auto check = [&] (Var *child) {
+            assert(child->varid() < self_id);
+        };
+        auto f = var->get_callee();
+        if (!f.is_llvm)
+            check(f.var);
+        for (auto arg: var->args()) {
+            if (!arg.is_var())
+                continue;
+            check(arg.get_var());
+        }
+    }
+}
+#endif
+
+NACS_INTERNAL bool Env::optimize_global()
+{
+    assert(!m_varid_dirty);
+    if (!m_vars)
+        return false;
+#ifndef NDEBUG
+    // The variables should be in topological order by construction
+    // and the optimizations should keep it that way.
+    assert_topological_order(*this);
+#endif
+    // First we need to compute the set of root variables,
+    // as well as the roots all other variables are going to be inlined into.
+    // The roots are the ones that are either used by an external user or
+    // more than one other roots.
+
+    // In order to compute this, we can start with the topological order of the DAG.
+    // The root for a variable is then only determined by all the variables
+    // in front of it (no one after it uses it)
+    // and we can assign the root for each variable by,
+    //
+    // 1. If the variable has external use, it is its own root and we are done.
+    // 2. This function is always called after `gc()` so the variable now must have
+    //    at least one internal use. If all of the users have the same root, the
+    //    variable will have the same root.
+    // 3. Otherwise, the variable is its own root.
+    //
+    // Since we don't have a way to iterate the user,
+    // we'll do a slightly tweaked version by marking the usee as we go.
+    unsigned nvars = m_vars->m_varid + 1;
+    unsigned varid = nvars;
+    llvm::SmallVector<Var*, 32> roots(nvars, nullptr);
+    for (auto var: *this) {
+        varid--;
+        assert(var->m_varid == (int)varid);
+        assume(var->m_varid == (int)varid);
+        Var *root;
+        assert(var->m_extern_ref > 0 || !var->is_const());
+        if (var->m_extern_ref > 0) {
+            root = var;
+            roots[varid] = root;
+        }
+        else {
+            root = roots[varid];
+            // This is after `gc()` so the variable must have a user already.
+            assert(root);
+        }
+        if (!var->is_call())
+            continue;
+        // Mark all usee's.
+        auto visit_field = [&] (Var *new_var) {
+            if (!roots[new_var->m_varid]) {
+                // We have not found a user yet, use the current root
+                roots[new_var->m_varid] = root;
+                return;
+            }
+            // The root is the same as us or the root is the variable itself
+            // no need to change.
+            if (roots[new_var->m_varid] == new_var || roots[new_var->m_varid] == root)
+                return;
+            // The root disagrees with us and is not already the variable itself.
+            // The variable is used by more than one root and we need to make it a root.
+            roots[new_var->m_varid] = new_var;
+        };
+        auto f = var->get_callee();
+        if (!f.is_llvm)
+            visit_field(f.var);
+        for (auto &arg: var->args()) {
+            if (arg.is_var()) {
+                visit_field(arg.get_var());
+            }
+        }
+    }
+    // Now we've assigned each variable to a root, it's time to inline all variables
+    // to the corresponding root.
+    varid = nvars;
+    bool changed = false;
+    llvm::SmallVector<bool, 32> visited(nvars, false);
+    llvm::SmallVector<Var*, 16> branches;
+    llvm::SetVector<Var*, llvm::SmallVector<Var*, 16>> inputs;
+    std::map<int,llvm::Type*> args;
+    for (auto var: *this) {
+        varid--;
+        assert(var->m_varid == (int)varid);
+        assume(var->m_varid == (int)varid);
+        auto root = roots[varid];
+        if (root != var) {
+            // `var` is ordered so a non-root variable should be visited already.
+            // We don't mark all external variables as visited so allow that too.
+            assert(visited[varid] || !var->is_call());
+            continue;
+        }
+        if (auto copy = root->get_assigned_var()) {
+            if (roots[copy->m_varid] != root) {
+                // This is a copy of another root.
+                // Since the copy should have no other uses
+                // (the user of it will use the copied variable instead)
+                // this must be an external use and we can just let the user
+                // fix the reference later.
+                continue;
+            }
+            visited[copy->m_varid] = true;
+            changed = true;
+            // The copied variable belongs to us
+            // so it has no extern use and must not be constant.
+            assert(!copy->is_const());
+            // This is a variable that has a single use, copy it.
+            if (copy->is_extern()) {
+                root->assign_extern(copy->get_extern());
+                continue;
+            }
+            assert(copy->is_call());
+            assert(copy->get_callee().is_llvm);
+            root->assign_call(copy->get_callee().llvm, copy->args(),
+                              copy->nfreeargs());
+            // Proceed normally for the new call.
+        }
+        else if (!root->is_call()) {
+            // No need to mutate `visited` since no one is going to read this...
+            continue;
+        }
+        assert(root->get_callee().is_llvm);
+        auto visit_field = [&] (Var *new_var) {
+            if (roots[new_var->m_varid] != root || !new_var->is_call()) {
+                inputs.insert(new_var);
+                return;
+            }
+            if (visited[new_var->m_varid])
+                return;
+            visited[new_var->m_varid] = true;
+            branches.push_back(new_var);
+        };
+        branches.clear();
+        inputs.clear();
+        args.clear();
+        branches.push_back(root);
+        auto oldf = root->get_callee().llvm;
+        auto oldfty = oldf->getFunctionType();
+        // For each roots, collect all the branches that belongs to the same root
+        // as well as all the leaves that does not have the same root.
+        // We'll later need to inline all the branches
+        // and put all the leaves as arguments.
+        for (size_t scan_idx = 0; scan_idx < branches.size(); scan_idx++) {
+            auto var = branches[scan_idx];
+            if (!var->is_call())
+                continue;
+            auto f = var->get_callee();
+            if (!f.is_llvm) {
+                // Everything else should have been optimized out.
+                assert(var->args().size() == 0);
+                visit_field(f.var);
+                continue;
+            }
+            auto nargs = var->args().size();
+            for (unsigned i = 0; i < nargs; i++) {
+                auto &arg = var->args()[i];
+                if (var == root && arg.is_arg()) {
+                    // There should be no duplicated argument
+                    auto res = args.emplace(arg.get_arg(), oldfty->getParamType(i));
+                    assert(res.second);
+                    (void)res;
+                    continue;
+                }
+                // Arguments cannot have free argument
+                // and constants should have been inlined
+                assert(arg.is_var());
+                visit_field(arg.get_var());
+            }
+        }
+        // Nothing to inline
+        if (branches.size() == 1)
+            continue;
+        changed = true;
+        // Sort in topological order for correct (reverse) evaluation order.
+        std::sort(branches.begin() + 1, branches.end(), [&] (Var *a, Var *b) {
+            return a->m_varid > b->m_varid;
+        });
+#ifndef NDEBUG
+        std::is_sorted(branches.begin(), branches.end(), [&] (Var *a, Var *b) {
+            return a->m_varid > b->m_varid;
+        });
+        assert(branches.front() == root);
+#endif
+        // Now the branches are in the reverse order that we'll evaluate them
+        // 1. Create the function.
+        assert(!oldfty->isVarArg());
+        auto rt = oldfty->getReturnType();
+        auto llvm_mod = llvm_module();
+        auto &llvm_ctx = llvm_mod->getContext();
+        llvm::SmallVector<llvm::Type*, 8> fsig;
+        decltype(root->m_args) newargs;
+        for (auto arg: args) {
+            fsig.push_back(arg.second);
+            newargs.push_back(Arg::create_arg(arg.first));
+        }
+        for (auto var: inputs) {
+            fsig.push_back(m_cgctx->llvm_argty(var->type()));
+            newargs.push_back(Arg::create_var(var));
+        }
+        auto fty = llvm::FunctionType::get(rt, fsig, false);
+        auto f = llvm::Function::Create(fty, llvm::GlobalValue::ExternalLinkage,
+                                        oldf->getName() + ".g", llvm_mod);
+        f->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+        f->setAttributes(llvm::AttributeList::get(llvm_ctx,
+                                                  oldf->getAttributes().getFnAttributes(),
+                                                  {}, {}));
+        auto *b0 = llvm::BasicBlock::Create(llvm_ctx, "top", f);
+        llvm::IRBuilder<> builder(b0);
+        std::map<Var*,llvm::Value*> value_map;
+        llvm::SmallVector<llvm::CallInst*, 16> calls;
+        // 2. Emit each variables
+        {
+            unsigned argi = args.size();
+            for (auto var: inputs) {
+                value_map[var] = f->arg_begin() + (argi++);
+            }
+        }
+        // This loop does not run on the first element,
+        // which is `root` and we deal with it separately at the end.
+        for (size_t i = branches.size() - 1; i > 0; i--) {
+            auto var = branches[i];
+            assert(var->is_call());
+            auto f = var->get_callee();
+            if (!f.is_llvm) {
+                auto v = value_map[f.var];
+                assert(v);
+                value_map[var] = v;
+                continue;
+            }
+            llvm::SmallVector<llvm::Value*, 8> call_args;
+            for (auto &arg: var->args()) {
+                assert(arg.is_var());
+                auto v = value_map[arg.get_var()];
+                assert(v);
+                auto ty = f.llvm->getArg(call_args.size())->getType();
+                // Hard code this for now (assume T_i8 are booleans)
+                if (ty == m_cgctx->T_i8)
+                    v = LLVM::convert_scalar(builder, m_cgctx->T_bool, v);
+                call_args.push_back(LLVM::convert_scalar(builder, ty, v));
+            }
+            auto call = builder.CreateCall(f.llvm, call_args);
+            calls.push_back(call);
+            value_map[var] = call;
+        }
+        llvm::CallInst *res;
+        {
+            std::map<unsigned,unsigned> arg_map;
+            llvm::SmallVector<llvm::Value*, 8> call_args;
+            unsigned argi = 0;
+            for (auto arg: args)
+                arg_map[arg.first] = argi++;
+            for (auto &arg: root->args()) {
+                auto ty = oldf->getArg(call_args.size())->getType();
+                llvm::Value *v;
+                if (arg.is_var()) {
+                    v = value_map[arg.get_var()];
+                }
+                else {
+                    assert(arg.is_arg());
+                    v = f->arg_begin() + arg_map[arg.get_arg()];
+                }
+                assert(v);
+                // Hard code this for now (assume T_i8 are booleans)
+                if (ty == m_cgctx->T_i8)
+                    v = LLVM::convert_scalar(builder, m_cgctx->T_bool, v);
+                call_args.push_back(LLVM::convert_scalar(builder, ty, v));
+            }
+            res = builder.CreateCall(oldf, call_args);
+        }
+        calls.push_back(res);
+        builder.CreateRet(res);
+        // Inline function calls
+        llvm::InlineFunctionInfo IFI;
+        for (auto call: calls) {
+#if LLVM_VERSION_MAJOR >= 11
+            llvm::InlineFunction(*call, IFI);
+#else
+            llvm::InlineFunction(call, IFI);
+#endif
+        }
+        root->assign_call(f, newargs, root->nfreeargs());
+    }
+    return changed;
+}
+
 NACS_EXPORT() void Env::optimize()
 {
     if (!m_vars)
         return;
 
+    auto gc_compute_id = [&] {
+        gc();
+        if (m_varid_dirty) {
+            compute_varid();
+        }
+    };
+
     // Initialize variable ID eagerly so the optimization functions don't need to check
     if (m_varid_dirty)
         compute_varid();
+    // Local optimization and global optimization should be complete on their own
+    // and won't expose more optimization opportunities
+    // for themselves when called back to back.
+    // However, they could expose optimization opportunities for each other
+    // so we should call the other one if the one of them made a change.
+    // Additionally, we should call each one (along with `gc()`) at least once
+    // to capture all the initial optimization chances.
     optimize_local();
-    gc();
-    // TODO: global dependency optimization
+    // `optimize_global` assumes all nodes are used so we need to run `gc()` once first.
+    gc_compute_id();
+    while (true) {
+        if (!optimize_global())
+            break;
+        gc_compute_id();
+        if (!optimize_local())
+            break;
+        gc_compute_id();
+    }
     finalize_vars();
 }
 
