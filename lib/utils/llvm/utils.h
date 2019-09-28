@@ -20,6 +20,7 @@
 #define __NACS_UTILS_LLVM_UTILS_H__
 
 #include "../utils.h"
+#include "../ir.h"
 
 #include <llvm/IR/DebugLoc.h>
 #include <llvm/IR/Function.h>
@@ -50,6 +51,7 @@ NACS_EXPORT(utils) llvm::Module *new_module(llvm::StringRef, llvm::LLVMContext&)
 NACS_EXPORT(utils) void delete_module(llvm::Module*);
 NACS_EXPORT(utils) llvm::LLVMContext *new_context();
 NACS_EXPORT(utils) void delete_context(llvm::LLVMContext*);
+NACS_EXPORT(utils) IR::Type get_ir_type(llvm::Type*, bool apitype=true);
 
 }
 }

@@ -81,6 +81,22 @@ NACS_EXPORT() void delete_context(LLVMContext *ctx)
     delete ctx;
 }
 
+NACS_EXPORT() IR::Type get_ir_type(llvm::Type *typ, bool apitype)
+{
+    if (typ->isDoubleTy())
+        return IR::Type::Float64;
+    if (typ->isIntegerTy()) {
+        auto bits = typ->getPrimitiveSizeInBits();
+        if (bits == 32) {
+            return IR::Type::Int32;
+        }
+        else if ((apitype && bits == 8) || (!apitype && bits == 1)) {
+            return IR::Type::Bool;
+        }
+    }
+    return IR::Type::_Min;
+}
+
 const std::string &get_cpu_arch()
 {
     static const std::string arch = Triple(sys::getProcessTriple()).getArchName();
