@@ -212,6 +212,21 @@ struct TagVal {
             return TagVal(new_typ);
         }
     }
+    bool is(const TagVal &other) const
+    {
+        if (typ != other.typ)
+            return false;
+        switch (typ) {
+        case Type::Bool:
+            return val.b == other.val.b;
+        case Type::Int32:
+            return val.i32 == other.val.i32;
+        case Type::Float64:
+            return val.f64 == other.val.f64;
+        default:
+            return false;
+        }
+    }
     void dump(void) const;
 } __attribute__((aligned(8)));
 
