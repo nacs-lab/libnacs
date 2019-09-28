@@ -178,6 +178,190 @@ static void test_cse(Seq::Env &env)
     assert(v2->get_const().is(0.0));
 }
 
+static void test_diamond(Seq::Env &env)
+{
+    //   v3 - v2 - v1
+    //   /    /
+    // *v5 - v4
+    // Should be simplified to
+    // *v5 - v1
+    auto v1 = env.new_extern({IR::Type::Float64, 2345});
+    auto v2 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createCall(IR::Builtins::log10, {0}));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v1)});
+    }();
+    auto v3 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createAdd(0, builder.getConst(2.3)));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v2)});
+    }();
+    auto v4 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createSub(builder.getConst(4.5), 0));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v2)});
+    }();
+    auto v5 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64, IR::Type::Float64});
+        builder.createRet(builder.createMul(0, 1));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v3),
+                Seq::Arg::create_var(v4)});
+    }()->ref();
+    env.optimize();
+    assert(env.num_vars() == 2);
+    assert(v1->varid() == 0);
+    assert(v1->type() == IR::Type::Float64);
+    assert(v5->varid() == 1);
+    assert(v5->type() == IR::Type::Float64);
+    assert(v5->is_call());
+    assert(v5->get_callee().is_llvm);
+    auto args5 = v5->args();
+    assert(args5.size() == 1);
+    assert(args5[0].is_var());
+    assert(args5[0].get_var() == v1);
+}
+
+static void test_Y(Seq::Env &env)
+{
+    // *v4 - v3 - v2 - v1
+    //       /
+    // *v5 -/
+    // Should be simplified to
+    // *v4 - v3 - v1
+    //       /
+    // *v5 -/
+    auto v1 = env.new_extern({IR::Type::Float64, 2345});
+    auto v2 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createCall(IR::Builtins::log10, {0}));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v1)});
+    }();
+    auto v3 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createAdd(0, builder.getConst(2.3)));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v2)});
+    }();
+    auto v4 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createSub(builder.getConst(4.5), 0));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v3)});
+    }()->ref();
+    auto v5 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createMul(0, 0));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v3)});
+    }()->ref();
+    env.optimize();
+    assert(env.num_vars() == 4);
+    assert(v1->varid() == 0);
+    assert(v1->type() == IR::Type::Float64);
+
+    assert(v3->varid() == 1);
+    assert(v3->type() == IR::Type::Float64);
+    assert(v3->is_call());
+    assert(v3->get_callee().is_llvm);
+    auto args3 = v3->args();
+    assert(args3.size() == 1);
+    assert(args3[0].is_var());
+    assert(args3[0].get_var() == v1);
+
+    assert(v4->varid() == 2);
+    assert(v4->type() == IR::Type::Float64);
+    assert(v4->is_call());
+    assert(v4->get_callee().is_llvm);
+    auto args4 = v4->args();
+    assert(args4.size() == 1);
+    assert(args4[0].is_var());
+    assert(args4[0].get_var() == v3);
+
+    assert(v5->varid() == 3);
+    assert(v5->type() == IR::Type::Float64);
+    assert(v5->is_call());
+    assert(v5->get_callee().is_llvm);
+    auto args5 = v5->args();
+    assert(args5.size() == 1);
+    assert(args5[0].is_var());
+    assert(args5[0].get_var() == v3);
+}
+
+static void test_copy_var(Seq::Env &env)
+{
+    // *v4 -c- v3 - v2 - v1
+    //         /
+    // *v5 -c-/
+    // where the `-c-` is effectively a copy
+    // Should be simplified to
+    // *v4 -c- v3 - v1
+    //         /
+    // *v5 -c-/
+    // where the `-c-` is stored as a copy
+    auto v1 = env.new_extern({IR::Type::Float64, 2345});
+    auto v2 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createCall(IR::Builtins::log10, {0}));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v1)});
+    }();
+    auto v3 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createAdd(0, builder.getConst(2.3)));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v2)});
+    }();
+    auto v4 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(0);
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v3)});
+    }()->ref();
+    auto v5 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(0);
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v3)});
+    }()->ref();
+    env.optimize();
+    assert(env.num_vars() == 4);
+    assert(v1->varid() == 0);
+    assert(v1->type() == IR::Type::Float64);
+
+    assert(v3->varid() == 1);
+    assert(v3->type() == IR::Type::Float64);
+    assert(v3->is_call());
+    assert(v3->get_callee().is_llvm);
+    auto args3 = v3->args();
+    assert(args3.size() == 1);
+    assert(args3[0].is_var());
+    assert(args3[0].get_var() == v1);
+
+    assert(v4->varid() == 2);
+    assert(v4->type() == IR::Type::Float64);
+    assert(v4->is_call());
+    assert(v4->get_assigned_var() == v3);
+
+    assert(v5->varid() == 3);
+    assert(v5->type() == IR::Type::Float64);
+    assert(v5->is_call());
+    assert(v5->get_assigned_var() == v3);
+}
+
+static void test_sink_extern(Seq::Env &env)
+{
+    // *v2 -c- v1
+    // where the `-c-` is effectively a copy and `v1` is an external variable
+    // Should be simplified to
+    // *v2
+    // where `v2` becomes the external variable
+    auto v1 = env.new_extern({IR::Type::Float64, 2345});
+    auto v2 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(0);
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v1)});
+    }()->ref();
+    env.optimize();
+    assert(env.num_vars() == 1);
+    assert(v2->varid() == 0);
+    assert(v2->type() == IR::Type::Float64);
+    assert(v2->is_extern());
+    assert(v2->get_extern() == std::make_pair(IR::Type::Float64, (uint64_t)2345));
+}
+
 int main()
 {
     auto llvm_ctx = LLVM::new_context();
@@ -189,6 +373,11 @@ int main()
     test_return_const(env);
     test_unused_arg(env);
     test_cse(env);
+
+    test_diamond(env);
+    test_Y(env);
+    test_copy_var(env);
+    test_sink_extern(env);
 
     return 0;
 }
