@@ -25,6 +25,8 @@
 #include "../ir_p.h"
 #include "../number.h"
 
+#include <stdexcept>
+
 #include <llvm/ADT/SetVector.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Dominators.h>
@@ -93,7 +95,7 @@ NACS_EXPORT() Type *Context::llvm_ty(IR::Type ty) const
     case IR::Type::Float64:
         return T_f64;
     default:
-        abort();
+        throw std::runtime_error("Unknown type.");
     }
 }
 
@@ -107,7 +109,7 @@ NACS_EXPORT() Type *Context::llvm_argty(IR::Type ty) const
     case IR::Type::Float64:
         return T_f64;
     default:
-        abort();
+        throw std::runtime_error("Unknown type.");
     }
 }
 
@@ -121,7 +123,7 @@ NACS_EXPORT() Value *Context::emit_const(IR::TagVal c) const
     case IR::Type::Float64:
         return ConstantFP::get(T_f64, c.val.f64);
     default:
-        abort();
+        throw std::runtime_error("Unknown type.");
     }
 }
 
@@ -145,7 +147,7 @@ NACS_EXPORT() Value *Context::emit_convert(IRBuilder<> &builder, IR::Type ty, Va
         assert(lty->isFloatingPointTy());
         return builder.CreateFPCast(val, T_f64);
     default:
-        abort();
+        throw std::runtime_error("Unknown type.");
     }
 }
 
@@ -226,7 +228,7 @@ Value *Context::emit_cmp(IRBuilder<> &builder, IR::CmpType cmptyp,
         case IR::CmpType::ne:
             return builder.CreateICmpNE(val1, val2);
         default:
-            abort();
+            throw std::runtime_error("Unknown compare type.");
         }
     }
     val1 = emit_convert(builder, IR::Type::Float64, val1);
@@ -245,7 +247,7 @@ Value *Context::emit_cmp(IRBuilder<> &builder, IR::CmpType cmptyp,
     case IR::CmpType::ne:
         return builder.CreateFCmpONE(val1, val2);
     default:
-        abort();
+        throw std::runtime_error("Unknown compare type.");
     }
 }
 

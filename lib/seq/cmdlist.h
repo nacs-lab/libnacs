@@ -32,6 +32,7 @@
 #include "seq.h"
 
 #include <istream>
+#include <stdexcept>
 
 namespace NaCs {
 
@@ -325,7 +326,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             break;
         }
         default:
-            abort();
+            throw std::runtime_error("Invalid opcode.");
         }
     }
 }
