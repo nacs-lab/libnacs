@@ -423,6 +423,11 @@ private:
     // Optimize each variables (functions) individually based only on the
     // arguments and callee without information about the global call graph.
     bool optimize_local();
+    // Optimize the global variable relation.
+    // Identify the variables that should be individually computed, (i.e.
+    //  inlining it to the user will result in multiple evaluation of the value)
+    // and inline every other variables to the user.
+    bool optimize_global();
 
     std::unique_ptr<llvm::Module> m_llvm_mod;
     std::unique_ptr<LLVM::Codegen::Context> m_cgctx;
