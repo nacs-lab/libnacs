@@ -88,11 +88,13 @@ public:
     {
         return emit_function(func, name, true, data);
     }
-private:
+
     Type *llvm_ty(IR::Type ty) const;
     Type *llvm_argty(IR::Type ty) const;
     Value *emit_const(IR::TagVal c) const;
     Value *emit_convert(IRBuilder<> &builder, IR::Type ty, Value *val) const;
+
+private:
     Value *emit_add(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const;
     Value *emit_sub(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const;
     Value *emit_mul(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const;

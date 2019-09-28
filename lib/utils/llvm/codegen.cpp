@@ -83,7 +83,7 @@ Constant *Context::ensurePureFunc(StringRef name, FunctionType *ft, bool canread
     return ensurePureExtern(m_mod, ft, name, canread);
 }
 
-Type *Context::llvm_ty(IR::Type ty) const
+NACS_EXPORT() Type *Context::llvm_ty(IR::Type ty) const
 {
     switch (ty) {
     case IR::Type::Bool:
@@ -97,7 +97,7 @@ Type *Context::llvm_ty(IR::Type ty) const
     }
 }
 
-Type *Context::llvm_argty(IR::Type ty) const
+NACS_EXPORT() Type *Context::llvm_argty(IR::Type ty) const
 {
     switch (ty) {
     case IR::Type::Bool:
@@ -111,7 +111,7 @@ Type *Context::llvm_argty(IR::Type ty) const
     }
 }
 
-Value *Context::emit_const(IR::TagVal c) const
+NACS_EXPORT() Value *Context::emit_const(IR::TagVal c) const
 {
     switch (c.typ) {
     case IR::Type::Bool:
@@ -125,7 +125,7 @@ Value *Context::emit_const(IR::TagVal c) const
     }
 }
 
-Value *Context::emit_convert(IRBuilder<> &builder, IR::Type ty, Value *val) const
+NACS_EXPORT() Value *Context::emit_convert(IRBuilder<> &builder, IR::Type ty, Value *val) const
 {
     auto lty = val->getType();
     switch (ty) {
