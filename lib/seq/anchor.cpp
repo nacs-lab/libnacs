@@ -20,10 +20,8 @@
 
 // Make sure that we are linked to `nacs-utils` when compiling as a dummy library.
 
-namespace NaCs {
-namespace Seq {
+namespace NaCs::Seq {
 
 NACS_EXPORT() auto pbreakpoint = &breakpoint;
 
-}
 }

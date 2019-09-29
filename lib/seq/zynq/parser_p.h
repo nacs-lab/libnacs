@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,10 +16,10 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#ifndef __NACS_SEQ_PARSER_P_H__
-#define __NACS_SEQ_PARSER_P_H__
+#ifndef __NACS_SEQ_ZYNQ_PARSER_P_H__
+#define __NACS_SEQ_ZYNQ_PARSER_P_H__
 
-#include "../utils/utils.h"
+#include "../../utils/utils.h"
 
 #include <cmath>
 #include <istream>
@@ -28,8 +28,7 @@
 #include <string>
 #include <utility>
 
-namespace NaCs {
-namespace Seq {
+namespace NaCs::Seq::Zynq {
 
 // This parses the output format from the `Printer` in `exechelper_p.h`
 // The parser read a line of text each time and keeps track of the current position
@@ -251,6 +250,5 @@ std::pair<T,int> ParserBase::read_dec(T lo, T hi)
 extern template std::pair<int,int> ParserBase::read_dec<int>(int lo, int hi);
 
 }
-}
 
-#endif // __NACS_SEQ_PARSER_P_H__
+#endif // __NACS_SEQ_ZYNQ_PARSER_P_H__

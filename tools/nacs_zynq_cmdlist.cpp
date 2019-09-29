@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../lib/seq/cmdlist.h"
+#include "../lib/seq/zynq/cmdlist.h"
 #include "../lib/utils/log.h"
 #include "../lib/utils/errors.h"
 #include "../lib/utils/streams.h"
@@ -48,7 +48,7 @@ int parse(int argc, char **argv)
     uvector_ostream vstm;
     uint32_t ttl_mask;
     try {
-        ttl_mask = Seq::CmdList::parse(vstm, istm);
+        ttl_mask = Seq::Zynq::CmdList::parse(vstm, istm);
     }
     catch (const SyntaxError &err) {
         std::cerr << err;
@@ -62,7 +62,7 @@ int parse(int argc, char **argv)
     uint32_t ver = 1;
     ostm.write((char*)&ver, 4);
     auto v = vstm.get_buf();
-    uint64_t len_ns = Seq::CmdList::total_time(v.data(), v.size()) * 10;
+    uint64_t len_ns = Seq::Zynq::CmdList::total_time(v.data(), v.size()) * 10;
     ostm.write((char*)&len_ns, 8);
     ostm.write((char*)&ttl_mask, 4);
     ostm.write((char*)v.data(), v.size());
@@ -126,7 +126,7 @@ int print(int argc, char **argv)
     str_sz -= 4;
 
     *stm << "# " << len_ns << " ns" << std::endl;
-    Seq::CmdList::print(*stm, str_data, str_sz, ttl_mask);
+    Seq::Zynq::CmdList::print(*stm, str_data, str_sz, ttl_mask);
     return 0;
 }
 

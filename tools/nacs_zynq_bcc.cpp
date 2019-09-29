@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,23 +16,32 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../lib/seq/bytecode.h"
+#include "../lib/seq/zynq/bytecode.h"
 
 #include <iostream>
 #include <fstream>
+#include <assert.h>
 
 using namespace NaCs;
 
 int main(int argc, char **argv)
 {
-    if (argc != 2) {
+    if (argc != 3) {
         std::cout << "ERROR: wrong number of arguments." << std::endl;
         return 1;
     }
 
     std::ifstream istm(argv[1]);
-    std::string code(std::istreambuf_iterator<char>(istm), {});
-    Seq::ByteCode::print(std::cout, (uint8_t*)&code[0], code.size());
+    istm.seekg(0, std::ios::end);
+    auto filesize = (size_t)istm.tellg();
+    istm.seekg(0, std::ios::beg);
+    std::vector<uint32_t> data(filesize / 4);
+    istm.read((char*)data.data(), filesize);
+    auto code = Seq::Zynq::ExpSeq::fromBinary(data.data(), data.size())
+        .toByteCode(nullptr);
+
+    std::ofstream ostm(argv[2]);
+    ostm.write((const char*)&code[0], code.size());
 
     return 0;
 }
