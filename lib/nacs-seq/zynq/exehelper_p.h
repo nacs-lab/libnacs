@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,8 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#ifndef __NACS_SEQ_EXEHELPER_P_H__
-#define __NACS_SEQ_EXEHELPER_P_H__
+#ifndef __NACS_SEQ_ZYNQ_EXEHELPER_P_H__
+#define __NACS_SEQ_ZYNQ_EXEHELPER_P_H__
 
 #include <ostream>
 
@@ -26,7 +26,7 @@
 // This file contains a few classes/functions that are useful for both bytecode
 // and command list.
 
-namespace NaCs::Seq {
+namespace NaCs::Seq::Zynq {
 
 namespace {
 
@@ -125,6 +125,6 @@ struct TimeKeeper {
 
 }
 
-} // NaCs::Seq
+} // NaCs::Seq::Zynq
 
-#endif // __NACS_SEQ_EXEHELPER_P_H__
+#endif // __NACS_SEQ_ZYNQ_EXEHELPER_P_H__

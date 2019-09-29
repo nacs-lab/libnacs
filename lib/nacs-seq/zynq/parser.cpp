@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -19,11 +19,11 @@
 #include "parser_p.h"
 #include "pulse_time.h"
 
-#include "../nacs-utils/errors.h"
+#include "../../nacs-utils/errors.h"
 
 #include <assert.h>
 
-namespace NaCs::Seq {
+namespace NaCs::Seq::Zynq {
 
 ParserBase::ParserBase(std::istream &istm)
     : istm(istm)
@@ -167,9 +167,7 @@ uint8_t ParserBase::read_ddschn(const char *name)
     if (peek() != '(')
         syntax_error(std::string("Invalid ") + name + " command: expecting `(`", colno + 1);
     colno++;
-    uint8_t chn;
-    int chn_start;
-    std::tie(chn, chn_start) = read_dec(0, 21);
+    auto [chn, chn_start] = read_dec(0, 21);
     if (chn_start == -1)
         syntax_error("Missing DDS channel", colno + 1);
     skip_whitespace();
@@ -177,7 +175,7 @@ uint8_t ParserBase::read_ddschn(const char *name)
         syntax_error("Expecting `)` after DDS channel", colno + 1);
     colno++;
     skip_whitespace();
-    return chn;
+    return uint8_t(chn);
 }
 
 
@@ -263,9 +261,7 @@ std::pair<uint8_t,bool> ParserBase::read_ttl1()
 {
     assert(peek() == '(');
     colno++;
-    uint8_t chn;
-    int chn_start;
-    std::tie(chn, chn_start) = read_dec(0, 31);
+    auto [chn, chn_start] = read_dec(0, 31);
     if (chn_start == -1)
         syntax_error("Missing TTL channel", colno + 1);
     skip_whitespace();
@@ -303,13 +299,9 @@ std::pair<uint8_t,uint32_t> ParserBase::read_freqcmd()
     if (peek() != '=')
         syntax_error("Expecting `=` before frequency value", colno + 1);
     colno++;
-    uint32_t freq;
-    int freq_start;
-    std::tie(freq, freq_start) = read_hex(0, 0x7fffffff);
+    auto [freq, freq_start] = read_hex(0, 0x7fffffff);
     if (freq_start == -1) {
-        double freq_hz;
-        int freq_hz_start;
-        std::tie(freq_hz, freq_hz_start) = read_float(0);
+        auto [freq_hz, freq_hz_start] = read_float(0);
         if (freq_hz_start == -1)
             syntax_error("Invalid frequency", colno + 1);
         auto unit = read_name();
@@ -343,13 +335,9 @@ std::pair<uint8_t,uint16_t> ParserBase::read_ampcmd()
     if (peek() != '=')
         syntax_error("Expecting `=` before amplitude value", colno + 1);
     colno++;
-    uint16_t amp;
-    int amp_start;
-    std::tie(amp, amp_start) = read_hex(0, 4095);
+    auto [amp, amp_start] = read_hex(0, 4095);
     if (amp_start == -1) {
-        double ampf;
-        int ampf_start;
-        std::tie(ampf, ampf_start) = read_float(0, 1);
+        auto [ampf, ampf_start] = read_float(0, 1);
         if (ampf_start == -1)
             syntax_error("Invalid amplitude", colno + 1);
         amp = uint16_t(ampf * 4095.0 + 0.5);
@@ -379,13 +367,9 @@ std::pair<uint8_t,std::pair<bool,uint16_t>> ParserBase::read_phasecmd()
         syntax_error("Expecting `=`, `-=` or `+=` before phase value", colno + 1);
     }
     colno++;
-    uint16_t phase;
-    int phase_start;
-    std::tie(phase, phase_start) = read_hex(0, UINT16_MAX);
+    auto [phase, phase_start] = read_hex(0, UINT16_MAX);
     if (phase_start == -1) {
-        double phase_deg;
-        int phase_deg_start;
-        std::tie(phase_deg, phase_deg_start) = read_float();
+        auto [phase_deg, phase_deg_start] = read_float();
         if (phase_deg_start == -1)
             syntax_error("Invalid phase", colno + 1);
         auto unit = read_name();
@@ -422,9 +406,7 @@ std::pair<uint8_t,uint16_t> ParserBase::read_daccmd()
     if (peek() != '(')
         syntax_error("Invalid dac command: expecting `(`", colno + 1);
     colno++;
-    uint8_t chn;
-    int chn_start;
-    std::tie(chn, chn_start) = read_dec(0, 4);
+    auto [chn, chn_start] = read_dec(0, 4);
     if (chn_start == -1)
         syntax_error("Missing DAC channel", colno + 1);
     skip_whitespace();
@@ -435,13 +417,9 @@ std::pair<uint8_t,uint16_t> ParserBase::read_daccmd()
     if (peek() != '=')
         syntax_error("Expecting `=` before DAC value", colno + 1);
     colno++;
-    uint16_t dac;
-    int dac_start;
-    std::tie(dac, dac_start) = read_hex(0, UINT16_MAX);
+    auto [dac, dac_start] = read_hex(0, UINT16_MAX);
     if (dac_start == -1) {
-        double dac_mv;
-        int dac_mv_start;
-        std::tie(dac_mv, dac_mv_start) = read_float();
+        auto [dac_mv, dac_mv_start] = read_float();
         if (dac_mv_start == -1)
             syntax_error("Invalid DAC voltage", colno + 1);
         auto unit = read_name();

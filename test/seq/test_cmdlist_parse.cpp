@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -18,7 +18,7 @@
 
 #define CATCH_CONFIG_MAIN
 
-#include "../../lib/nacs-seq/cmdlist.h"
+#include "../../lib/nacs-seq/zynq/cmdlist.h"
 #include "../../lib/nacs-utils/streams.h"
 #include "../../lib/nacs-utils/errors.h"
 #include "../../lib/nacs-utils/log.h"
@@ -30,6 +30,7 @@
 #include <catch2/catch.hpp>
 
 using namespace NaCs;
+using namespace NaCs::Seq::Zynq;
 
 static void test_file_eq(const std::string &fname, const std::string &cmp)
 {
@@ -42,7 +43,7 @@ static void test_file_eq(const std::string &fname, const std::string &cmp)
 static uint64_t test_cmdlist_eq(const std::string &cmdlist, uint32_t ttl_mask,
                                 const std::string &cmp)
 {
-    uint64_t len_ns = Seq::CmdList::total_time((uint8_t*)cmdlist.data(), cmdlist.size()) * 10;
+    uint64_t len_ns = CmdList::total_time((uint8_t*)cmdlist.data(), cmdlist.size()) * 10;
     auto str_data = (const uint8_t*)cmp.data();
     auto str_sz = cmp.size();
     uint32_t ver = 1;
@@ -68,7 +69,7 @@ static void test(const std::string &dir, const std::string &name)
     REQUIRE(istm.good());
     string_ostream vstm;
     try {
-        uint32_t ttl_mask = Seq::CmdList::parse(vstm, istm);
+        uint32_t ttl_mask = CmdList::parse(vstm, istm);
         auto vec = vstm.get_buf();
         std::ifstream bstm(path + ".cmdbin", std::ios::binary);
         REQUIRE(bstm.good());
@@ -77,12 +78,12 @@ static void test(const std::string &dir, const std::string &name)
 
         string_ostream tstm;
         tstm << "# " << len_ns << " ns" << std::endl;
-        Seq::CmdList::print(tstm, (uint8_t*)vec.data(), vec.size(), ttl_mask);
+        CmdList::print(tstm, (uint8_t*)vec.data(), vec.size(), ttl_mask);
         auto text = tstm.get_buf();
         test_file_eq(path + ".txt", text);
 
         const_istream tistm(text);
-        auto ttl_mask2 = Seq::CmdList::parse(vstm, tistm);
+        auto ttl_mask2 = CmdList::parse(vstm, tistm);
         REQUIRE(ttl_mask == ttl_mask2);
         REQUIRE(vec == vstm.get_buf());
     }

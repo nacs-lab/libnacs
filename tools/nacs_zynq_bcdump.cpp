@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2021 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,22 +16,23 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include <nacs-utils/utils.h>
+#include "../lib/nacs-seq/zynq/bytecode.h"
 
-#ifndef __NACS_SEQ_PULSE_TIME_H__
-#define __NACS_SEQ_PULSE_TIME_H__
+#include <iostream>
+#include <fstream>
 
-namespace NaCs::Seq::PulseTime {
-static constexpr uint8_t Min = 3;
-static constexpr uint8_t _DDS = 50;
-static constexpr uint8_t DDSFreq = _DDS;
-static constexpr uint8_t DDSAmp = _DDS;
-static constexpr uint8_t DDSPhase = _DDS;
-static constexpr uint8_t DDSReset = _DDS;
-static constexpr uint8_t Clear = 5;
-static constexpr uint8_t LoopBack = 5;
-static constexpr uint8_t Clock = 5;
-static constexpr uint8_t DAC = 45;
+using namespace NaCs;
+
+int main(int argc, char **argv)
+{
+    if (argc != 2) {
+        std::cout << "ERROR: wrong number of arguments." << std::endl;
+        return 1;
+    }
+
+    std::ifstream istm(argv[1], std::ios::binary);
+    std::string code(std::istreambuf_iterator<char>(istm), {});
+    Seq::Zynq::ByteCode::print(std::cout, (uint8_t*)&code[0], code.size());
+
+    return 0;
 }
-
-#endif
