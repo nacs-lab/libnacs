@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -23,7 +23,7 @@
 #include <assert.h>
 #include <math.h>
 
-namespace NaCs::Seq::ByteCode {
+namespace NaCs::Seq::Zynq::ByteCode {
 
 NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
 {

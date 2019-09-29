@@ -18,11 +18,11 @@
 
 #include <nacs-utils/mem.h>
 
-#ifndef __NACS_SEQ_CMDLIST_H__
-#define __NACS_SEQ_CMDLIST_H__
+#ifndef __NACS_SEQ_ZYNQ_CMDLIST_H__
+#define __NACS_SEQ_ZYNQ_CMDLIST_H__
 
 /**
- * This file defines the format used for running simple sequences on the FPGA board.
+ * This file defines the format used for running simple sequences on the ZYNQ board.
  * This is not for experiment sequences, which uses the bytecode.
  *
  * Comparing to bytecode, this is not as compact and is not optimized for
@@ -41,7 +41,7 @@ namespace NaCs {
 
 class buff_ostream;
 
-namespace Seq::CmdList {
+namespace Seq::Zynq::CmdList {
 
 // Each cmdlist instruction has a 4 bit opcode followed by a instruction length that's
 // a function of the opcode.

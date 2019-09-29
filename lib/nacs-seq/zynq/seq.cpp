@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -19,17 +19,16 @@
 #include "seq.h"
 #include "bytecode.h"
 
-#include "../nacs-utils/number.h"
-#include "../nacs-utils/streams.h"
-#include "../nacs-utils/utils.h"
+#include "../../nacs-utils/number.h"
+#include "../../nacs-utils/streams.h"
+#include "../../nacs-utils/utils.h"
 
 #include <type_traits>
 #include <iomanip>
 
-namespace NaCs::Seq {
+namespace NaCs::Seq::Zynq {
 
-NACS_EXPORT() Sequence
-Sequence::fromBinary(const uint32_t *bin, size_t len)
+NACS_EXPORT() Sequence Sequence::fromBinary(const uint32_t *bin, size_t len)
 {
     auto exectx = IR::ExeContext::get();
     // [TTL default: 4B]
@@ -425,7 +424,7 @@ class Writer {
         if (nchgs == 1) {
             auto bit = __builtin_ffs(changes) - 1;
             last_timed_inst = addInst(Inst::TTL2{OpCode::TTL2, 0, uint8_t(bit & 0x1f),
-                        uint8_t(bit & 0x1f)});
+                    uint8_t(bit & 0x1f)});
             max_time_left = 3;
         }
         else if (nchgs == 2) {
@@ -433,7 +432,7 @@ class Writer {
             changes = changes ^ (1 << bit1);
             auto bit2 = __builtin_ffs(changes) - 1;
             last_timed_inst = addInst(Inst::TTL2{OpCode::TTL2, 0, uint8_t(bit1 & 0x1f),
-                        uint8_t(bit2 & 0x1f)});
+                    uint8_t(bit2 & 0x1f)});
             max_time_left = 3;
         }
         else if (nchgs == 3) {
@@ -443,7 +442,7 @@ class Writer {
             changes = changes ^ (1 << bit2);
             auto bit3 = __builtin_ffs(changes) - 1;
             addInst(Inst::TTL4{OpCode::TTL4, uint8_t(bit1 & 0x1f),
-                        uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit3 & 0x1f)});
+                    uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit3 & 0x1f)});
         }
         else if (nchgs == 4) {
             auto bit1 = __builtin_ffs(changes) - 1;
@@ -454,7 +453,7 @@ class Writer {
             changes = changes ^ (1 << bit3);
             auto bit4 = __builtin_ffs(changes) - 1;
             addInst(Inst::TTL4{OpCode::TTL4, uint8_t(bit1 & 0x1f),
-                        uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit4 & 0x1f)});
+                    uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit4 & 0x1f)});
         }
         else if (nchgs == 5) {
             auto bit1 = __builtin_ffs(changes) - 1;
@@ -467,8 +466,8 @@ class Writer {
             changes = changes ^ (1 << bit4);
             auto bit5 = __builtin_ffs(changes) - 1;
             last_timed_inst = addInst(Inst::TTL5{OpCode::TTL5, 0, uint8_t(bit1 & 0x1f),
-                        uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f),
-                        uint8_t(bit4 & 0x1f), uint8_t(bit5 & 0x1f)});
+                    uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f),
+                    uint8_t(bit4 & 0x1f), uint8_t(bit5 & 0x1f)});
             max_time_left = 7;
         }
         else {
@@ -518,19 +517,19 @@ class Writer {
         dds[chn].freq_set = true;
         if (dfreq <= 0x3f || dfreq >= 0xffffffc0) {
             addInst(Inst::DDSDetFreq2{OpCode::DDSDetFreq2, uint8_t(chn & 0x1f),
-                        uint8_t(dfreq & 0x7f)});
+                    uint8_t(dfreq & 0x7f)});
         }
         else if (dfreq <= 0x3fff || dfreq >= 0xffffc000) {
             addInst(Inst::DDSDetFreq3{OpCode::DDSDetFreq3, uint8_t(chn & 0x1f),
-                        uint16_t(dfreq & 0x7fff)});
+                    uint16_t(dfreq & 0x7fff)});
         }
         else if (dfreq <= 0x003fffff || dfreq >= 0xffc00000) {
             addInst(Inst::DDSDetFreq4{OpCode::DDSDetFreq4, uint8_t(chn & 0x1f),
-                        uint32_t(dfreq & 0x7fffff)});
+                    uint32_t(dfreq & 0x7fffff)});
         }
         else {
             addInst(Inst::DDSFreq{OpCode::DDSFreq, uint8_t(chn & 0x1f),
-                        uint32_t(freq & 0x7fffffff)});
+                    uint32_t(freq & 0x7fffffff)});
         }
         return PulseTime::DDSFreq;
     }
@@ -550,11 +549,11 @@ class Writer {
         dds[chn].amp_set = true;
         if (damp <= 0x3f || damp >= 0xffc0) {
             addInst(Inst::DDSDetAmp{OpCode::DDSDetAmp, uint8_t(chn & 0x1f),
-                        uint8_t(damp & 0x7f)});
+                    uint8_t(damp & 0x7f)});
         }
         else {
             addInst(Inst::DDSAmp{OpCode::DDSAmp, 0, uint8_t(chn & 0x1f),
-                        uint16_t(amp & 0xfff)});
+                    uint16_t(amp & 0xfff)});
         }
         return PulseTime::DDSAmp;
     }
@@ -1181,9 +1180,9 @@ NACS_EXPORT() uint8_t *Sequence::toByteCode(size_t *sz, uint32_t *ttl_mask)
     return (uint8_t*)stm.get_buf(*sz);
 }
 
-} // NaCs::Seq
+} // NaCs::Seq::Zynq
 
-using namespace NaCs::Seq;
+using namespace NaCs::Seq::Zynq;
 
 extern "C" NACS_EXPORT() uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data,
                                                            size_t data_len,

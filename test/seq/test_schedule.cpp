@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -17,14 +17,15 @@
  *************************************************************************/
 
 #include "../../lib/nacs-utils/timer.h"
-#include "../../lib/nacs-seq/bytecode.h"
-#include "../../lib/nacs-seq/seq.h"
+#include "../../lib/nacs-seq/zynq/bytecode.h"
+#include "../../lib/nacs-seq/zynq/seq.h"
 
 #include <iostream>
 #include <fstream>
 #include <assert.h>
 
 using namespace NaCs;
+using namespace NaCs::Seq::Zynq;
 
 int main(int argc, char **argv)
 {
@@ -37,11 +38,11 @@ int main(int argc, char **argv)
     std::vector<uint32_t> data(filesize / 4);
     istm.read((char*)data.data(), filesize);
     Timer timer;
-    auto code = Seq::Sequence::fromBinary(data.data(), data.size())
+    auto code = Sequence::fromBinary(data.data(), data.size())
         .toByteCode(nullptr);
     timer.print();
     size_t code_len;
-    auto code2 = Seq::Sequence::fromBinary(data.data(), data.size())
+    auto code2 = Sequence::fromBinary(data.data(), data.size())
         .toByteCode(&code_len, nullptr);
 
     if (argc >= 3) {
@@ -53,9 +54,9 @@ int main(int argc, char **argv)
     assert(memcmp(code2, &code[0], code_len) == 0);
     free(code2);
 
-    // Seq::ByteCode::print(std::cout, code);
+    // ByteCode::print(std::cout, code);
 
-    std::cout << Seq::ByteCode::count(code) << std::endl;
+    std::cout << ByteCode::count(code) << std::endl;
     std::cout << code.size() << std::endl;
 
     return 0;
