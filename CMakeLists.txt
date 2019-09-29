@@ -27,6 +27,10 @@ option(ENABLE_INSTALL_NONLIB
   "Enable installation of files other than the libraries (e.g. headers and pkgconfig)"
   ${IS_UNIX})
 option(ENABLE_SIMD "Enable simd optimization" On)
+option(SEQ_IN_UTILS "Build nacs-seq as part of nacs-utils" Off)
+if (ENABLE_LLVM AND STATIC_LLVM)
+  set(SEQ_IN_UTILS On FORCE)
+endif()
 
 include(CMakeCMacros)
 include(GNUInstallDirs)
