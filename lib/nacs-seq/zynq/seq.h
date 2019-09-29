@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -24,10 +24,10 @@
 #include <set>
 #include <stdint.h>
 
-#ifndef __NACS_SEQ_SEQ_H__
-#define __NACS_SEQ_SEQ_H__
+#ifndef __NACS_SEQ_ZYNQ_SEQ_H__
+#define __NACS_SEQ_ZYNQ_SEQ_H__
 
-namespace NaCs::Seq {
+namespace NaCs::Seq::Zynq {
 
 struct Channel {
     enum Type {

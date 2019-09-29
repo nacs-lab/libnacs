@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,17 +16,16 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../lib/nacs-seq/seq.h"
+#include "../lib/nacs-seq/zynq/seq.h"
 
 #include <iostream>
 #include <fstream>
-#include <assert.h>
 
 using namespace NaCs;
 
 int main(int argc, char **argv)
 {
-    if (argc != 3) {
+    if (argc != 2) {
         std::cout << "ERROR: wrong number of arguments." << std::endl;
         return 1;
     }
@@ -37,11 +36,7 @@ int main(int argc, char **argv)
     istm.seekg(0, std::ios::beg);
     std::vector<uint32_t> data(filesize / 4);
     istm.read((char*)data.data(), filesize);
-    auto code = Seq::Sequence::fromBinary(data.data(), data.size())
-        .toByteCode(nullptr);
-
-    std::ofstream ostm(argv[2], std::ios::binary);
-    ostm.write((const char*)&code[0], code.size());
+    Seq::Zynq::Sequence::dumpBinary(std::cout, data.data(), data.size());
 
     return 0;
 }

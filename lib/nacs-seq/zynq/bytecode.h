@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -18,13 +18,13 @@
 
 #include <nacs-utils/mem.h>
 
-#ifndef __NACS_SEQ_BYTECODE_H__
-#define __NACS_SEQ_BYTECODE_H__
+#ifndef __NACS_SEQ_ZYNQ_BYTECODE_H__
+#define __NACS_SEQ_ZYNQ_BYTECODE_H__
 
 /**
- * This file defines the compat format used for execution on the FPGA board.
+ * This file defines the compat format used for execution on the ZYNQ board.
  * This is currently sequential and being executed on the CPU but a future version
- * could be executed on the FPGA direction and exploid more parallelism.
+ * could be executed on the ZYNQ direction and exploid more parallelism.
  *
  * The main way to generate bytecode is from a `Sequence`.
  * There is no way provided to manually construct a bytecode since that is not
@@ -35,7 +35,7 @@
 
 #include <stdexcept>
 
-namespace NaCs::Seq::ByteCode {
+namespace NaCs::Seq::Zynq::ByteCode {
 
 // Each bytecode instruction has a 4 bit opcode followed by a instruction length that's
 // a function of the opcode.
