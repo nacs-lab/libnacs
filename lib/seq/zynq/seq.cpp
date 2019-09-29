@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -18,16 +18,14 @@
 
 #include "seq.h"
 
-#include "../utils/utils.h"
+#include "../../utils/utils.h"
 
 #include <type_traits>
 #include <iomanip>
 
-namespace NaCs {
-namespace Seq {
+namespace NaCs::Seq::Zynq {
 
-NACS_EXPORT() Sequence
-Sequence::fromBinary(const uint32_t *bin, size_t len)
+NACS_EXPORT() ExpSeq ExpSeq::fromBinary(const uint32_t *bin, size_t len)
 {
     auto exectx = IR::ExeContext::get();
     // [TTL default: 4B]
@@ -87,7 +85,7 @@ Sequence::fromBinary(const uint32_t *bin, size_t len)
         cursor += code_len;
     }
     if (cursor >= len)
-        return Sequence(std::move(seq), std::move(defaults), {}, std::move(exectx));
+        return ExpSeq(std::move(seq), std::move(defaults), {}, std::move(exectx));
     uint32_t n_clocks = bin[cursor];
     cursor++;
     std::vector<Clock> clocks(n_clocks);
@@ -103,7 +101,7 @@ Sequence::fromBinary(const uint32_t *bin, size_t len)
         clock.len = t_len_ns / 10;
         clock.div = clock_div;
     }
-    return Sequence(std::move(seq), std::move(defaults), std::move(clocks), std::move(exectx));
+    return ExpSeq(std::move(seq), std::move(defaults), std::move(clocks), std::move(exectx));
 }
 
 static void print_channel(std::ostream &stm, Channel::Type chn_type, int chn_id,
@@ -143,7 +141,7 @@ static void print_channel(std::ostream &stm, Channel::Type chn_type, int chn_id,
     stm << "(" << chn_id << ")";
 }
 
-NACS_EXPORT() void Sequence::dumpBinary(std::ostream &stm, const uint32_t *bin, size_t len)
+NACS_EXPORT() void ExpSeq::dumpBinary(std::ostream &stm, const uint32_t *bin, size_t len)
 {
     stm << "TTL default: 0x" << std::hex << std::setfill('0')
         << std::setw(8) << bin[0] << std::dec << std::endl;
@@ -207,5 +205,4 @@ NACS_EXPORT() void Sequence::dumpBinary(std::ostream &stm, const uint32_t *bin, 
     }
 }
 
-} // Seq
-} // NaCs
+} // NaCs::Seq::Zynq

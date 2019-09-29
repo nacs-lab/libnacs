@@ -1,14 +1,15 @@
 #
 
-set(nacs_seq_HDRS
-  bytecode.h
-  cmdlist.h
-  seq.h)
+set(nacs_seq_HDRS)
+set(nacs_seq_zynq_HDRS
+  zynq/bytecode.h
+  zynq/cmdlist.h
+  zynq/seq.h)
 set(nacs_seq_SRCS
-  bytecode.cpp
-  cmdlist.cpp
-  parser.cpp
-  seq.cpp)
+  zynq/bytecode.cpp
+  zynq/cmdlist.cpp
+  zynq/parser.cpp
+  zynq/seq.cpp)
 set(nacs_seq_LINKS)
 
 if(SEQ_IN_UTILS)
@@ -43,6 +44,8 @@ if(ENABLE_INSTALL_NONLIB)
     DESTINATION ${INSTALL_PKGCONFIG_DIR})
   install(FILES ${nacs_seq_HDRS}
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-seq")
+  install(FILES ${nacs_seq_zynq_HDRS}
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-seq/zynq")
 endif()
 
 install(TARGETS nacs-seq

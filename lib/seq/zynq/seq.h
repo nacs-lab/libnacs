@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -24,11 +24,10 @@
 #include <set>
 #include <stdint.h>
 
-#ifndef __NACS_SEQ_SEQ_H__
-#define __NACS_SEQ_SEQ_H__
+#ifndef __NACS_SEQ_ZYNQ_SEQ_H__
+#define __NACS_SEQ_ZYNQ_SEQ_H__
 
-namespace NaCs {
-namespace Seq {
+namespace NaCs::Seq::Zynq {
 
 struct Channel {
     enum Type {
@@ -98,7 +97,7 @@ private:
     }
 };
 
-struct Sequence {
+struct ExpSeq {
     struct Pulse {
         typedef IR::ExeContext::Func<double(double,double)> func_t;
         uint64_t t;
@@ -154,22 +153,21 @@ struct Sequence {
     std::map<Channel,Val> defaults;
     std::vector<Clock> clocks;
     std::unique_ptr<IR::ExeContext> exectx;
-    Sequence(std::vector<Pulse> &&_pulses, std::map<Channel,Val> &&_defaults,
-             std::vector<Clock> &&_clocks={},
-             std::unique_ptr<IR::ExeContext> _exectx=IR::ExeContext::get())
+    ExpSeq(std::vector<Pulse> &&_pulses, std::map<Channel,Val> &&_defaults,
+           std::vector<Clock> &&_clocks={},
+           std::unique_ptr<IR::ExeContext> _exectx=IR::ExeContext::get())
         : pulses(std::move(_pulses)),
           defaults(std::move(_defaults)),
           clocks(std::move(_clocks)),
           exectx(std::move(_exectx))
     {
     }
-    static Sequence fromBinary(const uint32_t *data, size_t len);
+    static ExpSeq fromBinary(const uint32_t *data, size_t len);
     static void dumpBinary(std::ostream &stm, const uint32_t *data, size_t len);
     std::vector<uint8_t> toByteCode(uint32_t *ttl_mask);
     uint8_t *toByteCode(size_t *sz, uint32_t *ttl_mask);
 };
 
-}
 }
 
 #endif

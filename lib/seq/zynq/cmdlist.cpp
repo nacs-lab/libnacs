@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -21,15 +21,13 @@
 #include "exehelper_p.h"
 #include "parser_p.h"
 
-#include "../utils/streams.h"
+#include "../../utils/streams.h"
 
 #include <cctype>
 #include <iomanip>
 #include <type_traits>
 
-namespace NaCs {
-namespace Seq {
-namespace CmdList {
+namespace NaCs::Seq::Zynq::CmdList {
 
 NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
 {
@@ -269,9 +267,7 @@ struct Parser : ParserBase {
 NACS_EXPORT() uint32_t parse(buff_ostream &ostm, std::istream &istm)
 {
     Parser parser(istm);
-    bool cont;
-    uint32_t ttl_mask;
-    std::tie(cont, ttl_mask) = parser.read_ttlmask();
+    auto [cont, ttl_mask] = parser.read_ttlmask();
     if (!cont)
         return ttl_mask;
     Writer writer(ostm, ttl_mask);
@@ -280,6 +276,4 @@ NACS_EXPORT() uint32_t parse(buff_ostream &ostm, std::istream &istm)
     return writer.get_ttl_mask();
 }
 
-}
-}
 }

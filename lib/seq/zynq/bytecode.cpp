@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -20,13 +20,12 @@
 
 #include "bytecode.h"
 
-#include "../utils/streams.h"
-#include "../utils/number.h"
+#include "../../utils/streams.h"
+#include "../../utils/number.h"
 
 #include <math.h>
 
-namespace NaCs {
-namespace Seq {
+namespace NaCs::Seq::Zynq {
 
 namespace ByteCode {
 
@@ -526,10 +525,10 @@ static constexpr Channel clock_chn{Channel::Type::CLOCK, 0};
 static constexpr int default_clock_div = 100;
 
 class Scheduler {
-    std::vector<Sequence::Pulse> &pulses;
+    std::vector<ExpSeq::Pulse> &pulses;
     size_t n_pulses;
     std::map<Channel,Val> &defaults;
-    std::vector<Sequence::Clock> &clocks;
+    std::vector<ExpSeq::Clock> &clocks;
     Writer writer;
 
     Time::Constraints t_cons;
@@ -845,7 +844,7 @@ class Scheduler {
     }
 
 public:
-    Scheduler(Sequence &seq, buff_ostream &stm, Time::Constraints t_cons)
+    Scheduler(ExpSeq &seq, buff_ostream &stm, Time::Constraints t_cons)
         : pulses(seq.pulses),
           n_pulses(pulses.size()),
           defaults(seq.defaults),
@@ -1005,7 +1004,7 @@ public:
 
 } // anonymous
 
-static uint32_t SeqToByteCode(buff_ostream &stm, Sequence &seq)
+static uint32_t SeqToByteCode(buff_ostream &stm, ExpSeq &seq)
 {
     // The bytecode is guaranteed to not enable any channel that is not present in the mask.
     Scheduler state(seq, stm, {50, 40, 4096});
@@ -1015,7 +1014,7 @@ static uint32_t SeqToByteCode(buff_ostream &stm, Sequence &seq)
 
 } // ByteCode
 
-NACS_EXPORT() std::vector<uint8_t> Sequence::toByteCode(uint32_t *ttl_mask)
+NACS_EXPORT() std::vector<uint8_t> ExpSeq::toByteCode(uint32_t *ttl_mask)
 {
     basic_vector_ostream<std::vector<uint8_t>> stm;
     auto tm = ByteCode::SeqToByteCode(stm, *this);
@@ -1024,7 +1023,7 @@ NACS_EXPORT() std::vector<uint8_t> Sequence::toByteCode(uint32_t *ttl_mask)
     return stm.get_buf();
 }
 
-NACS_EXPORT() uint8_t *Sequence::toByteCode(size_t *sz, uint32_t *ttl_mask)
+NACS_EXPORT() uint8_t *ExpSeq::toByteCode(size_t *sz, uint32_t *ttl_mask)
 {
     malloc_ostream stm;
     auto tm = ByteCode::SeqToByteCode(stm, *this);
@@ -1034,16 +1033,15 @@ NACS_EXPORT() uint8_t *Sequence::toByteCode(size_t *sz, uint32_t *ttl_mask)
 }
 
 }
-}
 
-using namespace NaCs::Seq;
+using namespace NaCs::Seq::Zynq;
 
 extern "C" NACS_EXPORT() uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data,
                                                            size_t data_len,
                                                            size_t *code_len,
                                                            uint32_t *ttl_mask)
 {
-    return Sequence::fromBinary(data, data_len).toByteCode(code_len, ttl_mask);
+    return ExpSeq::fromBinary(data, data_len).toByteCode(code_len, ttl_mask);
 }
 
 extern "C" NACS_EXPORT() uint64_t nacs_seq_bytecode_total_time(const uint8_t *code,
