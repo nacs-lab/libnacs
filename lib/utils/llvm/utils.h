@@ -48,10 +48,24 @@ NACS_EXPORT(utils) void dump(const llvm::DebugLoc *dbg);
 // This is useful/needed when we statically linking LLVM and cannot
 // link to the same version of LLVM as the user.
 // See also comments in `lib/utils/CMakeLists.txt`
-NACS_EXPORT(utils) llvm::Module *new_module(llvm::StringRef, llvm::LLVMContext&);
 NACS_EXPORT(utils) void delete_module(llvm::Module*);
-NACS_EXPORT(utils) llvm::LLVMContext *new_context();
+struct module_deleter {
+    void operator()(llvm::Module *mod) const
+    {
+        delete_module(mod);
+    }
+};
+using module_ref = std::unique_ptr<llvm::Module,module_deleter>;
+NACS_EXPORT(utils) module_ref new_module(llvm::StringRef, llvm::LLVMContext&);
 NACS_EXPORT(utils) void delete_context(llvm::LLVMContext*);
+struct context_deleter {
+    void operator()(llvm::LLVMContext *ctx) const
+    {
+        delete_context(ctx);
+    }
+};
+using context_ref = std::unique_ptr<llvm::LLVMContext,context_deleter>;
+NACS_EXPORT(utils) context_ref new_context();
 NACS_EXPORT(utils) IR::Type get_ir_type(llvm::Type*, bool apitype=true);
 
 /**

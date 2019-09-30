@@ -62,9 +62,9 @@ NACS_EXPORT() void dump(const DebugLoc *dbg)
     dbgs() << "\n";
 }
 
-NACS_EXPORT() Module *new_module(StringRef name, LLVMContext &ctx)
+NACS_EXPORT() module_ref new_module(StringRef name, LLVMContext &ctx)
 {
-    return new Module(name, ctx);
+    return module_ref(new Module(name, ctx));
 }
 
 NACS_EXPORT() void delete_module(Module *mod)
@@ -72,9 +72,9 @@ NACS_EXPORT() void delete_module(Module *mod)
     delete mod;
 }
 
-NACS_EXPORT() LLVMContext *new_context()
+NACS_EXPORT() context_ref new_context()
 {
-    return new LLVMContext;
+    return context_ref(new LLVMContext);
 }
 
 NACS_EXPORT() void delete_context(LLVMContext *ctx)

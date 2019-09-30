@@ -43,7 +43,7 @@ struct LLVMTest {
         : mod(LLVM::new_module("", ll_ctx)),
           engine(engine)
     {
-        LLVM::Codegen::Context ctx(mod);
+        LLVM::Codegen::Context ctx(mod.get());
         LLVM::Codegen::Context::data_map_t data_map;
         f = ctx.emit_function(func, "0", &data_map);
         populate_data(func, data_map);
@@ -58,7 +58,7 @@ struct LLVMTest {
         : mod(LLVM::new_module("", ll_ctx)),
           engine(engine)
     {
-        LLVM::Codegen::Context ctx(mod);
+        LLVM::Codegen::Context ctx(mod.get());
         LLVM::Codegen::Context::data_map_t data_map;
         auto f0 = ctx.emit_function(func, "1", false, &data_map);
         populate_data(func, data_map);
@@ -72,12 +72,12 @@ struct LLVMTest {
     LLVMTest &operator=(LLVMTest&&) = delete;
     LLVMTest &opt()
     {
-        LLVM::Compile::optimize(mod);
+        LLVM::Compile::optimize(mod.get());
         return *this;
     }
     LLVMTest &print()
     {
-        LLVM::dump(mod);
+        LLVM::dump(mod.get());
         return *this;
     }
     void *get_ptr(const char *name=nullptr)
@@ -85,7 +85,7 @@ struct LLVMTest {
         assert(f);
         llvm::SmallVector<char,0> vec;
         auto res = LLVM::Compile::emit_objfile(vec, LLVM::Compile::get_native_target(),
-                                               mod);
+                                               mod.get());
         assert(res);
         if (name && *name) {
             std::fstream stm(name, std::ios_base::out);
@@ -106,11 +106,11 @@ struct LLVMTest {
     }
     ~LLVMTest()
     {
-        for (auto id: obj_ids)
+        for (auto id: obj_ids) {
             engine.free(id);
-        LLVM::delete_module(mod);
+        }
     }
-    llvm::Module *mod;
+    LLVM::module_ref mod;
     LLVM::Exe::Engine &engine;
     llvm::Function *f = nullptr;
     std::vector<uint64_t> obj_ids;
@@ -128,10 +128,10 @@ private:
 
 struct TestCtx {
     LLVM::Exe::Engine engine;
-    std::unique_ptr<llvm::LLVMContext,void(*)(llvm::LLVMContext*)> llvm;
+    LLVM::context_ref llvm;
     std::unique_ptr<IR::ExeContext> ir;
     TestCtx()
-        : llvm(LLVM::new_context(), LLVM::delete_context),
+        : llvm(LLVM::new_context()),
           ir(IR::ExeContext::get())
     {
     }
