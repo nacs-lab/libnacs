@@ -79,6 +79,8 @@ public:
     virtual Function *emit_wrapper(Function *func, StringRef name, const Wrapper &spec);
     virtual Function *emit_function(const IR::Function &func, StringRef name,
                                     bool _export=true);
+    virtual Function *emit_function(const uint8_t *data, size_t sz, StringRef name,
+                                    bool _export=true);
 
     Type *llvm_ty(IR::Type ty) const;
     Type *llvm_argty(IR::Type ty) const;

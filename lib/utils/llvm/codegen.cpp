@@ -812,6 +812,12 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
     return f;
 }
 
+NACS_EXPORT()
+Function *Context::emit_function(const uint8_t *data, size_t sz, StringRef name, bool _export)
+{
+    return emit_function(IR::Function(data, sz), name, _export);
+}
+
 }
 }
 }
