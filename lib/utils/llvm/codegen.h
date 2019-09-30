@@ -28,6 +28,8 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Value.h>
 
+#include <functional>
+
 namespace NaCs {
 namespace LLVM {
 namespace Codegen {
@@ -72,27 +74,48 @@ struct Wrapper {
 
 class Context {
 public:
-    using data_map_t = std::map<std::string,std::pair<uint32_t,uint32_t>>;
-    NACS_EXPORT(utils) Context(Module *mod);
-    NACS_EXPORT(utils) Function *emit_wrapper(Function *func,
-                                              StringRef name, const Wrapper &spec);
-    // If `data` is not `NULL`, the constant data needed by the compiled code
-    // (e.g. for interpolation) will be managed by the caller.
-    // The offset (in size of `uint32_t`) and size of the data in the `func`'s constant table
-    // will be stored under the symbol name in the map. The caller is responsible
-    // for passing that info to the runtime loader so that the data is accessible by the code.
-    NACS_EXPORT(utils) Function *emit_function(const IR::Function &func,
-                                               StringRef name, bool _export=true,
-                                               data_map_t *data=nullptr);
-    inline Function *emit_function(const IR::Function &func, StringRef name, data_map_t *data)
-    {
-        return emit_function(func, name, true, data);
-    }
+    Context(Module *mod);
+    Context(LLVMContext &ctx);
+    virtual Function *emit_wrapper(Function *func, StringRef name, const Wrapper &spec);
+    virtual Function *emit_function(const IR::Function &func, StringRef name,
+                                    bool _export=true);
 
     Type *llvm_ty(IR::Type ty) const;
     Type *llvm_argty(IR::Type ty) const;
     Value *emit_const(IR::TagVal c) const;
     Value *emit_convert(IRBuilder<> &builder, IR::Type ty, Value *val) const;
+
+    LLVMContext &get_context() const
+    {
+        return m_ctx;
+    }
+    Module *get_module() const
+    {
+        return m_mod;
+    }
+    void set_module(Module *mod)
+    {
+        m_mod = mod;
+    }
+    // If `use_extern_data` returns `true`, the constant data needed by the compiled code
+    // (e.g. for interpolation) will be passed to `add_data`.
+    virtual bool use_extern_data() const
+    {
+        return false;
+    }
+    virtual void add_extern_data(StringRef, const void*, size_t)
+    {
+    }
+    virtual uintptr_t get_extern_data(StringRef)
+    {
+        return 0;
+    }
+    std::function<uintptr_t(const std::string&)> get_extern_resolver()
+    {
+        if (!use_extern_data())
+            return std::function<uintptr_t(const std::string&)>();
+        return std::bind(&Context::get_extern_data, this, std::placeholders::_1);
+    }
 
 private:
     Value *emit_add(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const;
@@ -105,18 +128,18 @@ private:
     Module *m_mod;
     LLVMContext &m_ctx;
 public:
-    IntegerType *T_bool;
-    IntegerType *T_i8;
-    IntegerType *T_i32;
-    Type *T_f64;
-    FunctionType *F_f64_f64;
-    FunctionType *F_f64_f64f64;
-    FunctionType *F_f64_f64f64f64;
-    FunctionType *F_f64_f64i32;
-    FunctionType *F_f64_i32f64;
-    FunctionType *F_f64_f64i32pf64;
+    IntegerType *const T_bool;
+    IntegerType *const T_i8;
+    IntegerType *const T_i32;
+    Type *const T_f64;
+    FunctionType *const F_f64_f64;
+    FunctionType *const F_f64_f64f64;
+    FunctionType *const F_f64_f64f64f64;
+    FunctionType *const F_f64_f64i32;
+    FunctionType *const F_f64_i32f64;
+    FunctionType *const F_f64_f64i32pf64;
 private:
-    UndefValue *V_undefbool;
+    UndefValue *const V_undefbool;
     MDBuilder m_mdbuilder;
     MDNode *tbaa_root;
     MDNode *tbaa_const;

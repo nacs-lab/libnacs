@@ -38,46 +38,45 @@ namespace {
 
 using namespace NaCs;
 
-struct LLVMTest {
-    LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func)
-        : mod(LLVM::new_module("", ll_ctx)),
+struct LLVMTest : LLVM::Codegen::Context {
+    LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine)
+        : LLVM::Codegen::Context(ll_ctx),
+          mod(LLVM::new_module("", ll_ctx)),
           engine(engine)
     {
-        LLVM::Codegen::Context ctx(mod.get());
-        LLVM::Codegen::Context::data_map_t data_map;
-        f = ctx.emit_function(func, "0", &data_map);
-        populate_data(func, data_map);
+        set_module(mod.get());
+    }
+    LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func)
+        : LLVMTest(ll_ctx, engine)
+    {
+        f = emit_function(func, "0");
         auto fty = f->getFunctionType();
         assert(!fty->isVarArg());
         for (auto argt: fty->params()) {
-            assert(argt == ctx.T_i8 || argt == ctx.T_i32 || argt == ctx.T_f64);
+            assert(argt == T_i8 || argt == T_i32 || argt == T_f64);
         }
     }
     LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func,
              const LLVM::Codegen::Wrapper &wrapper)
-        : mod(LLVM::new_module("", ll_ctx)),
-          engine(engine)
+        : LLVMTest(ll_ctx, engine)
     {
-        LLVM::Codegen::Context ctx(mod.get());
-        LLVM::Codegen::Context::data_map_t data_map;
-        auto f0 = ctx.emit_function(func, "1", false, &data_map);
-        populate_data(func, data_map);
+        auto f0 = emit_function(func, "1", false);
         auto fty0 = f0->getFunctionType();
         assert(!fty0->isVarArg());
         for (auto argt: fty0->params())
-            assert(argt == ctx.T_i8 || argt == ctx.T_i32 || argt == ctx.T_f64);
-        f = ctx.emit_wrapper(f0, "0", wrapper);
+            assert(argt == T_i8 || argt == T_i32 || argt == T_f64);
+        f = emit_wrapper(f0, "0", wrapper);
     }
     LLVMTest(LLVMTest&&) = default;
     LLVMTest &operator=(LLVMTest&&) = delete;
     LLVMTest &opt()
     {
-        LLVM::Compile::optimize(mod.get());
+        LLVM::Compile::optimize(get_module());
         return *this;
     }
     LLVMTest &print()
     {
-        LLVM::dump(mod.get());
+        LLVM::dump(get_module());
         return *this;
     }
     void *get_ptr(const char *name=nullptr)
@@ -85,7 +84,7 @@ struct LLVMTest {
         assert(f);
         llvm::SmallVector<char,0> vec;
         auto res = LLVM::Compile::emit_objfile(vec, LLVM::Compile::get_native_target(),
-                                               mod.get());
+                                               get_module());
         assert(res);
         if (name && *name) {
             std::fstream stm(name, std::ios_base::out);
@@ -93,13 +92,7 @@ struct LLVMTest {
                 stm.write(&vec[0], vec.size());
             }
         }
-        auto cb = [&] (auto &name) {
-            auto it = data.find(name);
-            if (it == data.end())
-                return (uintptr_t)0;
-            return (uintptr_t)&it->second[0];
-        };
-        auto obj_id = engine.load(&vec[0], vec.size(), cb);
+        auto obj_id = engine.load(&vec[0], vec.size(), get_extern_resolver());
         obj_ids.push_back(obj_id);
         assert(obj_id);
         return engine.get_symbol("0");
@@ -110,20 +103,27 @@ struct LLVMTest {
             engine.free(id);
         }
     }
+    bool use_extern_data() const override
+    {
+        return true;
+    }
+    void add_extern_data(llvm::StringRef name, const void *_p, size_t size) override
+    {
+        auto p = (const double*)_p;
+        data[name] = std::vector<double>{p, p + size / sizeof(double)};
+    }
+    uintptr_t get_extern_data(llvm::StringRef name) override
+    {
+        auto it = data.find(name);
+        if (it != data.end())
+            return (uintptr_t)&it->second[0];
+        return 0;
+    }
     LLVM::module_ref mod;
     LLVM::Exe::Engine &engine;
     llvm::Function *f = nullptr;
     std::vector<uint64_t> obj_ids;
     std::map<std::string,std::vector<double>> data;
-private:
-    void populate_data(const IR::Function &func,
-                       LLVM::Codegen::Context::data_map_t &data_map)
-    {
-        for (auto &it: data_map) {
-            auto ptr = &func.float_table[it.second.first];
-            data[it.first] = std::vector<double>(ptr, ptr + it.second.second);
-        }
-    }
 };
 
 struct TestCtx {

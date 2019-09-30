@@ -59,9 +59,9 @@ Constant *ensurePureExtern(Module *M, FunctionType *ft, StringRef name, bool can
     return f;
 }
 
-Context::Context(Module *mod)
-    : m_mod(mod),
-      m_ctx(mod->getContext()),
+NACS_EXPORT_ Context::Context(LLVMContext &ctx)
+    : m_mod(nullptr),
+      m_ctx(ctx),
       T_bool(Type::getInt1Ty(m_ctx)),
       T_i8(Type::getInt8Ty(m_ctx)),
       T_i32(Type::getInt32Ty(m_ctx)),
@@ -78,6 +78,12 @@ Context::Context(Module *mod)
 {
     MDNode *const_s = m_mdbuilder.createTBAAScalarTypeNode("nacs_tbaa_const", tbaa_root);
     tbaa_const = m_mdbuilder.createTBAAStructTagNode(const_s, const_s, 0, true);
+}
+
+NACS_EXPORT_ Context::Context(Module *mod)
+    : Context(mod->getContext())
+{
+    set_module(mod);
 }
 
 Constant *Context::ensurePureFunc(StringRef name, FunctionType *ft, bool canread) const
@@ -254,6 +260,7 @@ Value *Context::emit_cmp(IRBuilder<> &builder, IR::CmpType cmptyp,
 NACS_EXPORT()
 Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &spec)
 {
+    assert(get_module());
     if (spec.vector_size > 1) {
         SmallVector<unsigned, 8> vec_args;
         bool vec_only = true;
@@ -379,9 +386,9 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
 }
 
 NACS_EXPORT()
-Function *Context::emit_function(const IR::Function &func, StringRef name, bool _export,
-                                 data_map_t *data_map)
+Function *Context::emit_function(const IR::Function &func, StringRef name, bool _export)
 {
+    assert(get_module());
     auto nargs = func.nargs;
     auto nslots = func.vals.size();
     // 1. Create function signature
@@ -476,7 +483,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
         }
     };
     auto emit_interp_data = [&] (uint32_t data_offset, uint32_t ndata) {
-        if (!data_map) {
+        if (!use_extern_data()) {
             // Inlined data in the object file.
             ArrayRef<double> dataref(&func.float_table[data_offset], ndata);
             auto table = ConstantDataArray::get(m_ctx, dataref);
@@ -492,7 +499,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
         // `[0 x double]` is what clang uses for `extern double[]` global in C.
         auto res = new GlobalVariable(*m_mod, ArrayType::get(T_f64, 0), true,
                                       GlobalValue::ExternalLinkage, nullptr, name);
-        data_map->emplace(res->getName(), std::make_pair(data_offset, ndata));
+        add_extern_data(res->getName(), &func.float_table[data_offset], ndata * sizeof(double));
         return res;
     };
     while (pc && end > pc) {
