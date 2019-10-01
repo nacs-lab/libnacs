@@ -146,7 +146,6 @@ private:
     MDBuilder m_mdbuilder;
     MDNode *tbaa_root;
     MDNode *tbaa_const;
-    uint64_t m_counter = 0;
 };
 
 }

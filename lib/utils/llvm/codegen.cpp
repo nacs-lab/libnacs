@@ -492,17 +492,15 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             ArrayRef<double> dataref(&func.float_table[data_offset], ndata);
             auto table = ConstantDataArray::get(m_ctx, dataref);
             auto datap = new GlobalVariable(*m_mod, table->getType(), true,
-                                            GlobalValue::PrivateLinkage, table,
-                                            ".L.nacs." + std::to_string(m_counter++));
+                                            GlobalValue::PrivateLinkage, table, ".L.nacs");
             datap->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
             return datap;
         }
         // Manage the data externally so that they can be shared between multiple object
         // files more easily.
-        auto name = std::string(f->getName()) + "." + std::to_string(m_counter++);
         // `[0 x double]` is what clang uses for `extern double[]` global in C.
         auto res = new GlobalVariable(*m_mod, ArrayType::get(T_f64, 0), true,
-                                      GlobalValue::ExternalLinkage, nullptr, name);
+                                      GlobalValue::ExternalLinkage, nullptr, "nacs");
         add_extern_data(res->getName(), &func.float_table[data_offset], ndata * sizeof(double));
         return res;
     };
