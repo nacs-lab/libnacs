@@ -22,6 +22,7 @@
 #include "../utils.h"
 #include "../ir.h"
 
+#include <llvm/ADT/StringMap.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/MDBuilder.h>
 #include <llvm/IR/Module.h>
@@ -150,6 +151,18 @@ private:
     MDBuilder m_mdbuilder;
     MDNode *tbaa_root;
     MDNode *tbaa_const;
+};
+
+class CachedContext: public Context {
+public:
+    CachedContext(Module *mod);
+    CachedContext(LLVMContext &ctx);
+    ~CachedContext();
+    Function *emit_function(const uint8_t *data, size_t sz, StringRef name,
+                            bool _export=true) override;
+    void clear_cache();
+private:
+    llvm::StringMap<llvm::Function*> m_cache;
 };
 
 }

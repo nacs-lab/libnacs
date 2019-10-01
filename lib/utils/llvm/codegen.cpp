@@ -846,6 +846,35 @@ Function *Context::emit_function(const uint8_t *data, size_t sz, StringRef name,
     return emit_function(IR::Function(data, sz), name, _export);
 }
 
+NACS_EXPORT_ CachedContext::CachedContext(Module *mod)
+    : Context(mod)
+{
+}
+
+NACS_EXPORT_ CachedContext::CachedContext(LLVMContext &ctx)
+    : Context(ctx)
+{
+}
+
+NACS_EXPORT() CachedContext::~CachedContext()
+{
+}
+
+NACS_EXPORT() Function *CachedContext::emit_function(const uint8_t *data, size_t sz,
+                                                     StringRef name, bool _export)
+{
+    llvm::StringRef code((const char*)data, sz);
+    auto &f = m_cache[code];
+    if (!f)
+        f = Context::emit_function(data, sz, name, _export);
+    return f;
+}
+
+NACS_EXPORT() void CachedContext::clear_cache()
+{
+    m_cache.clear();
+}
+
 }
 }
 }
