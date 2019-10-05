@@ -19,17 +19,11 @@
 #include "winpath_helper.h"
 
 #include "../../lib/utils/dlload.h"
+#include "../../lib/utils/number.h"
 #include <assert.h>
 #include <math.h>
 
 using namespace NaCs;
-
-static bool approx(double a, double b)
-{
-    double diff = abs(a - b);
-    double avg = abs(a + b) / 2;
-    return diff < 2e-8 || diff / avg < 2e-8;
-}
 
 int main()
 {

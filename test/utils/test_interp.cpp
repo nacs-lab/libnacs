@@ -25,13 +25,6 @@ using namespace NaCs;
 
 const double points[] = {0, 0.1, 0.2, 0.6};
 
-static bool approx(double a, double b)
-{
-    double diff = abs(a - b);
-    double avg = abs(a + b) / 2;
-    return diff < 2e-8 || diff / avg < 2e-8;
-}
-
 static void print_avg(Timer &timer, const char *prefix, size_t nele)
 {
     auto ttotal = timer.elapsed();

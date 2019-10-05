@@ -24,6 +24,7 @@
 #include <stdint.h>
 
 #include <cmath>
+#include <cstdlib>
 
 #if NACS_CPU_X86 || NACS_CPU_X86_64
 #  include <immintrin.h>
@@ -76,6 +77,22 @@ static inline constexpr auto
 square(const T &a)
 {
     return a * a;
+}
+
+template<typename T1, typename T2, typename Tu>
+static inline constexpr bool
+approx(T1 a, T2 b, Tu unc)
+{
+    auto diff = std::abs(a - b);
+    auto avg = abs(a + b) / 2;
+    return diff < unc || diff / avg < unc;
+}
+
+template<typename T1, typename T2>
+static inline constexpr bool
+approx(T1 a, T2 b)
+{
+    return approx(a, b, std::sqrt(std::numeric_limits<decltype(a - b)>::epsilon()));
 }
 
 template<typename T1, typename T2>

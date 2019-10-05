@@ -22,6 +22,7 @@
 #include "winpath_helper.h"
 
 #include "../../lib/utils/ir.h"
+#include "../../lib/utils/number.h"
 #include "../../lib/utils/streams.h"
 
 #include <vector>
@@ -45,13 +46,6 @@ static void test_str_eq(T &&v, std::string val)
 }
 
 namespace detail {
-
-static inline bool approx(double a, double b)
-{
-    double diff = abs(a - b);
-    double avg = abs(a + b) / 2;
-    return diff < 2e-8 || diff / avg < 2e-8;
-}
 
 template<typename T1, typename T2>
 static bool compare(T1 a, T2 b, bool _approx)
