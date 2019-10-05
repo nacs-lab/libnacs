@@ -86,6 +86,10 @@ NACS_EXPORT_ Context::Context(Module *mod)
     set_module(mod);
 }
 
+NACS_EXPORT() Context::~Context()
+{
+}
+
 Constant *Context::ensurePureFunc(StringRef name, FunctionType *ft, bool canread) const
 {
     return ensurePureExtern(m_mod, ft, name, canread);

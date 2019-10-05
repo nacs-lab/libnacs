@@ -76,6 +76,7 @@ class Context {
 public:
     Context(Module *mod);
     Context(LLVMContext &ctx);
+    virtual ~Context();
     virtual Function *emit_wrapper(Function *func, StringRef name, const Wrapper &spec);
     virtual Function *emit_function(const IR::Function &func, StringRef name,
                                     bool _export=true);
