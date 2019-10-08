@@ -25,6 +25,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <limits>
 
 #if NACS_CPU_X86 || NACS_CPU_X86_64
 #  include <immintrin.h>
