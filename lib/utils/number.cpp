@@ -20,34 +20,11 @@
 
 namespace NaCs {
 
-#if NACS_CPU_X86 || NACS_CPU_X86_64
-
-static NACS_INLINE double _maxd(double x, double y)
-{
-    return _mm_max_sd(_mm_set_sd(x), _mm_set_sd(y))[0];
-}
-
-#elif NACS_CPU_AARCH64
-
-static NACS_INLINE double _maxd(double x, double y)
-{
-    return vmaxnm_f64(float64x1_t{x}, float64x1_t{y})[0];
-}
-
-#else
-
-static NACS_INLINE double _maxd(double x, double y)
-{
-    return x > y ? x : y;
-}
-
-#endif
-
 static NACS_INLINE double _linearInterpolate(double x, uint32_t npoints, const double *points)
 {
     if (unlikely(x >= 1))
         return points[npoints - 1];
-    x = _maxd(x, 0);
+    x = max(x, 0);
     x = x * (npoints - 1);
     int lo = (int)x;
     x = x - lo;

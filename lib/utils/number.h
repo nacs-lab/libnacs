@@ -26,6 +26,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <limits>
+#include <type_traits>
 
 #if NACS_CPU_X86 || NACS_CPU_X86_64
 #  include <immintrin.h>
@@ -35,11 +36,86 @@
 
 namespace NaCs {
 
+namespace detail {
+
+template<typename T>
+struct MinMax {
+    template<typename T1, typename T2>
+    static NACS_INLINE constexpr T
+    min(T1 &&a, T2 &&b)
+    {
+        return (a < b) ? a : b;
+    }
+    template<typename T1, typename T2>
+    static NACS_INLINE constexpr T
+    max(T1 &&a, T2 &&b)
+    {
+        return (a > b) ? a : b;
+    }
+};
+
+#if NACS_CPU_X86 || NACS_CPU_X86_64
+
+template<>
+struct MinMax<double> {
+    static NACS_INLINE double max(double x, double y)
+    {
+        return _mm_max_sd(_mm_set_sd(x), _mm_set_sd(y))[0];
+    }
+    static NACS_INLINE double min(double x, double y)
+    {
+        return _mm_min_sd(_mm_set_sd(x), _mm_set_sd(y))[0];
+    }
+};
+
+template<>
+struct MinMax<float> {
+    static NACS_INLINE float max(float x, float y)
+    {
+        return _mm_max_ss(_mm_set_ss(x), _mm_set_ss(y))[0];
+    }
+    static NACS_INLINE float min(float x, float y)
+    {
+        return _mm_min_ss(_mm_set_ss(x), _mm_set_ss(y))[0];
+    }
+};
+
+#elif NACS_CPU_AARCH64
+
+template<>
+struct MinMax<double> {
+    static NACS_INLINE double max(double x, double y)
+    {
+        return vmaxnm_f64(float64x1_t{x}, float64x1_t{y})[0];
+    }
+    static NACS_INLINE double min(double x, double y)
+    {
+        return vminnm_f64(float64x1_t{x}, float64x1_t{y})[0];
+    }
+};
+
+template<>
+struct MinMax<float> {
+    static NACS_INLINE float max(float x, float y)
+    {
+        return vmaxnm_f32(float32x2_t{x, 0}, float32x2_t{y, 0})[0];
+    }
+    static NACS_INLINE float min(float x, float y)
+    {
+        return vminnm_f32(float32x2_t{x, 0}, float32x2_t{y, 0})[0];
+    }
+};
+
+#endif
+
+}
+
 template<typename T1, typename T2>
 static inline constexpr auto
 max(T1 &&a, T2 &&b)
 {
-    return (a > b) ? a : b;
+    using T = std::remove_cv_t<std::remove_reference_t<decltype((a > b) ? a : b)>>;
+    return detail::MinMax<T>::max(std::forward<T1>(a), std::forward<T2>(b));
 }
 
 template<typename First, typename... Rest>
@@ -54,7 +130,8 @@ template<typename T1, typename T2>
 static inline constexpr auto
 min(T1 &&a, T2 &&b)
 {
-    return (a < b) ? a : b;
+    using T = std::remove_cv_t<std::remove_reference_t<decltype((a > b) ? a : b)>>;
+    return detail::MinMax<T>::min(std::forward<T1>(a), std::forward<T2>(b));
 }
 
 template<typename First, typename... Rest>
