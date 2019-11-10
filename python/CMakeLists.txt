@@ -2,6 +2,13 @@
 
 include(PythonMacros)
 
+set(NACS_UTILS nacs-utils)
+if(SEQ_IN_UTILS)
+  set(NACS_SEQ nacs-utils)
+else()
+  set(NACS_SEQ nacs-seq)
+endif()
+
 if(IS_WINDOWS)
   configure_file(handle_win.py.in handle.py @ONLY)
 else()

@@ -19,7 +19,7 @@ kernel32.LoadLibraryExW.argtypes = (wintypes.LPCWSTR,
                                     wintypes.HANDLE,
                                     wintypes.DWORD)
 
-LOAD_WITH_ALTERED_SEARCH_PATH       = 0x00000008
+LOAD_WITH_ALTERED_SEARCH_PATH = 0x00000008
 
 class CDLLEx(ctypes.CDLL):
     def __init__(self, name, mode=0, handle=None,
@@ -32,6 +32,6 @@ def _open_handle(name):
     return CDLLEx(os.path.join(r"@INSTALL_WINDOWS_BINDIR@", name),
                   LOAD_WITH_ALTERED_SEARCH_PATH)
 
-nacs_seq = _open_handle(r"@CMAKE_SHARED_LIBRARY_PREFIX@nacs-seq-@MAJOR_VERSION@.dll")
-nacs_utils = _open_handle(r"@CMAKE_SHARED_LIBRARY_PREFIX@nacs-utils-@MAJOR_VERSION@.dll")
+nacs_seq = _open_handle(r"@CMAKE_SHARED_LIBRARY_PREFIX@@NACS_SEQ@-@MAJOR_VERSION@.dll")
+nacs_utils = _open_handle(r"@CMAKE_SHARED_LIBRARY_PREFIX@@NACS_UTILS@-@MAJOR_VERSION@.dll")
 libc = ctypes.cdll.msvcrt
