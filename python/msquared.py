@@ -135,7 +135,11 @@ class MSquared:
             async def func1():
                 await self.__initialized
                 return func(self, *args, **kwargs)
-            return asyncio.run_coroutine_threadsafe(func1(), self.__loop).result()
+            future = asyncio.run_coroutine_threadsafe(func1(), self.__loop)
+            try:
+                return future.result()
+            except concurrent.futures.CancelledError:
+                return
         return f
 
     def with_reply(*names):
