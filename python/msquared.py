@@ -112,9 +112,13 @@ class MSquaredProtocol(asyncio.Protocol):
         else:
             tid = self.__id
             self.__id += 1
-        msg = (b'{"message":{"transmission_id":[' + str(tid).encode() + b'],"op":"' +
-                   op.encode() + b'","parameters":' +
-                   json.dumps(params, separators=(',', ':')).encode() + b'}}')
+        if params:
+            msg = (b'{"message":{"transmission_id":[' + str(tid).encode() + b'],"op":"' +
+                       op.encode() + b'","parameters":' +
+                       json.dumps(params, separators=(',', ':')).encode() + b'}}')
+        else:
+            msg = (b'{"message":{"transmission_id":[' + str(tid).encode() + b'],"op":"' +
+                       op.encode() + b'"}}')
         self.__transport.write(msg)
 
     def done(self):
