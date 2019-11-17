@@ -221,6 +221,31 @@ class MSquared:
     def system_status(self):
         self.__protocol.send_raw('get_status')
 
+    @run_in_loop
+    @with_reply('get_alignment_status_reply')
+    def alignment_status(self):
+        self.__protocol.send_raw('get_alignment_status')
+
+    @run_in_loop
+    @with_reply('beam_alignment_reply', 'beam_alignment_f_r')
+    def set_alignment_mode(self, mode):
+        self.__protocol.send_raw('beam_alignment', mode=mode, report="finished")
+
+    @run_in_loop
+    @with_reply('beam_adjust_x_reply', 'beam_adjust_x_f_r')
+    def alignment_adjust_x(self, val):
+        self.__protocol.send_raw('beam_adjust_x', x_value=val, report="finished")
+
+    @run_in_loop
+    @with_reply('beam_adjust_y_reply', 'beam_adjust_y_f_r')
+    def alignment_adjust_y(self, val):
+        self.__protocol.send_raw('beam_adjust_y', y_value=val, report="finished")
+
+    @run_in_loop
+    @with_reply('get_wavelength_range_reply')
+    def wavelength_range(self):
+        self.__protocol.send_raw('get_wavelength_range')
+
     async def __run(self):
         self.__loop = asyncio.get_running_loop()
         self.__initialized = self.__loop.create_future()
