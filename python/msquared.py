@@ -225,9 +225,9 @@ class MSquared:
         self.__protocol.send_raw('etalon_lock_status')
 
     @run_in_loop
-    @with_reply('select_profile_reply', 'select_profile_f_r')
+    @with_reply('select_profile_reply')
     def select_etalon_profile(self, profile):
-        self.__protocol.send_raw('select_profile', profile=[profile], report="finished")
+        self.__protocol.send_raw('select_profile', profile=[profile])
 
     @run_in_loop
     @with_reply('get_status_reply')
