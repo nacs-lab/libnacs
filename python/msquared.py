@@ -23,14 +23,40 @@ import json
 import threading
 import time
 
+class JSONStream:
+    def __init__(self):
+        self.__buff = ''
+        self.__decoder = json.JSONDecoder()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:
+            obj, pos = self.__decoder.raw_decode(self.__buff)
+        except json.JSONDecodeError as e:
+            # If the error happens past the last character, we have an incomplete object.
+            # Stash it and continue. Otherwise:
+            if e.pos != len(self.__buff):
+                # Shouldn't really happen but if it does, throw away invalid data.
+                self.__buff = ''
+            raise StopIteration
+        self.__buff = self.__buff[pos:].lstrip()
+        return obj
+
+    def add_bytes(self, data):
+        if self.__buff:
+            self.__buff += data.decode()
+        else:
+            self.__buff = data.decode().lstrip()
+
 class MSquaredProtocol(asyncio.Protocol):
     def __init__(self):
         loop = asyncio.get_running_loop()
         self.__done = loop.create_future()
         self.__transport = None
         self.__id = 1
-        self.__buff = ''
-        self.__decoder = json.JSONDecoder()
+        self.__json = JSONStream()
         self.__handlers = {}
         self.__background_task = None
 
@@ -58,21 +84,8 @@ class MSquaredProtocol(asyncio.Protocol):
         self.__background_task = asyncio.shield(self.__background())
 
     def data_received(self, data):
-        if self.__buff:
-            self.__buff += data.decode()
-        else:
-            self.__buff = data.decode().lstrip()
-        while True:
-            try:
-                obj, pos = self.__decoder.raw_decode(self.__buff)
-            except json.JSONDecodeError as e:
-                # If the error happens past the last character, we have an incomplete object.
-                # Stash it and continue. Otherwise:
-                if e.pos != len(self.__buff):
-                    # Shouldn't really happen but if it does, throw away invalid data.
-                    self.__buff = ''
-                break
-            self.__buff = self.__buff[pos:].lstrip()
+        self.__json.add_bytes(data)
+        for obj in self.__json:
             try:
                 msg = obj['message']
                 param = msg['parameters'] if 'parameters' in msg else {}
