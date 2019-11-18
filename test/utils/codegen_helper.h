@@ -95,7 +95,9 @@ struct LLVMTest : LLVM::Codegen::Context {
         auto obj_id = engine.load(&vec[0], vec.size(), get_extern_resolver());
         obj_ids.push_back(obj_id);
         assert(obj_id);
-        return engine.get_symbol("0");
+        auto ptr = engine.get_symbol("0");
+        assert(ptr);
+        return ptr;
     }
     ~LLVMTest()
     {
