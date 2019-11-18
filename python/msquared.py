@@ -229,17 +229,17 @@ class MSquared:
     @run_in_loop
     @with_reply('beam_alignment_reply', 'beam_alignment_f_r')
     def set_alignment_mode(self, mode):
-        self.__protocol.send_raw('beam_alignment', mode=mode, report="finished")
+        self.__protocol.send_raw('beam_alignment', mode=[mode], report="finished")
 
     @run_in_loop
     @with_reply('beam_adjust_x_reply', 'beam_adjust_x_f_r')
     def alignment_adjust_x(self, val):
-        self.__protocol.send_raw('beam_adjust_x', x_value=val, report="finished")
+        self.__protocol.send_raw('beam_adjust_x', x_value=[val], report="finished")
 
     @run_in_loop
     @with_reply('beam_adjust_y_reply', 'beam_adjust_y_f_r')
     def alignment_adjust_y(self, val):
-        self.__protocol.send_raw('beam_adjust_y', y_value=val, report="finished")
+        self.__protocol.send_raw('beam_adjust_y', y_value=[val], report="finished")
 
     @run_in_loop
     @with_reply('get_wavelength_range_reply')
