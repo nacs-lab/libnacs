@@ -225,7 +225,7 @@ class MSquared:
     def send_raw(self, *args, **kwargs):
         self.__protocol.send_raw(*args, **kwargs)
 
-    @def_cmd('move_wave', True)
+    @def_cmd('move_wave_t', True)
     def move_wave(self, wl):
         return dict(wavelength=[wl])
 
