@@ -73,7 +73,7 @@ class MSquaredProtocol(asyncio.Protocol):
             while i < len(self.__handlers):
                 if self.__handlers[i][1] < t:
                     try:
-                        self.__handlers.pop(i)[0].set_result(None)
+                        self.__handlers.pop(i)[0].timeout()
                     except Exception as e:
                         print(e)
                 i += 1
@@ -183,6 +183,12 @@ class MSquared:
                 self.set_result({'parse_fail': msg})
                 return True
             return False
+
+        def timeout(self):
+            if self.__reply is not None:
+                self.set_result({'reply': self.__reply})
+            else:
+                self.set_result({})
 
     def run_in_loop(func):
         def f(self, *args, **kwargs):
