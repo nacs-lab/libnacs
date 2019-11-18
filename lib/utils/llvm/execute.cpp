@@ -175,13 +175,40 @@ JITSymbol Resolver::findSymbol(const std::string &name)
     return nullptr;
 }
 
-NACS_EXPORT() uintptr_t Resolver::resolve_ir_sym(const std::string &name)
+#if NACS_OS_WINDOWS && NACS_CPU_X86_64
+static size_t find_vector_suffix(const std::string &name)
 {
+    size_t len = name.size();
+    for (size_t i = len; i >= 2; i--) {
+        char c = name[i - 1];
+        if (c >= '0' && c <= '9')
+            continue;
+        if (c != '@' || name[i - 2] != '@')
+            return 0;
+        return i - 2;
+    }
+    return 0;
+}
+#endif
+
+NACS_EXPORT() uintptr_t Resolver::resolve_ir_sym(const std::string &orig_name)
+{
+#if NACS_OS_WINDOWS && NACS_CPU_X86_64
+    std::string devec_name;
+    const std::string *pname = &orig_name;
+    if (auto prefix_len = find_vector_suffix(orig_name)) {
+        devec_name = orig_name.substr(0, prefix_len);
+        pname = &devec_name;
+    }
+    const std::string &name = *pname;
+#else
+    const std::string &name = orig_name;
+#endif
     if (name == "interp")
         return (uintptr_t)static_cast<double(*)(double, uint32_t, const double*)>(
             linearInterpolate);
     if (auto openlibm_hdl = IR::get_openlibm_handle())
-        if (auto addr = DL::sym(openlibm_hdl, name.c_str()))
+        if (auto addr = DL::sym(openlibm_hdl, orig_name.c_str()))
             return (uintptr_t)addr;
 #ifndef NACS_HAS_EXP10
     if (name == "exp10")
@@ -273,7 +300,7 @@ NACS_EXPORT() uintptr_t Resolver::resolve_ir_sym(const std::string &name)
     check_sleef_ddd(host_info, name, fma);
     check_sleef_di(host_info, name, ldexp);
 #endif
-    return (uintptr_t)DL::sym(nullptr, name.c_str());
+    return (uintptr_t)DL::sym(nullptr, orig_name.c_str());
 }
 
 uintptr_t Resolver::find_extern(const std::string &name)
