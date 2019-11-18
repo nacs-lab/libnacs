@@ -402,13 +402,14 @@ class MSquared:
         self.__thread = None
         self.__state = self.State.Stopped
 
-    # This can throw `CancelledError` if the connection is restarted
     @staticmethod
     def wait(res, timeout=1):
         try:
             return res.result(timeout)
         except concurrent.futures.TimeoutError:
             return
+        except concurrent.futures.CancelledError:
+            return {'cancel': True}
 
     del run_in_loop
     del def_cmd
