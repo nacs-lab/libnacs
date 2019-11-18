@@ -63,11 +63,15 @@ class MSquaredProtocol(asyncio.Protocol):
         self.__json = JSONStream()
         self.__handlers = []
         self.__background_task = None
+        self.do_ping = True
+        self.print_message = False
+        self.print_data = False
 
     async def __background(self):
         while True:
             await asyncio.sleep(1)
-            self.send_raw('ping', dict(text_in="Ping"))
+            if self.do_ping:
+                self.send_raw('ping', dict(text_in="Ping"))
             t = time.time()
             i = 0
             while i < len(self.__handlers):
@@ -83,8 +87,12 @@ class MSquaredProtocol(asyncio.Protocol):
         self.__background_task = asyncio.shield(self.__background())
 
     def data_received(self, data):
+        if self.print_data:
+            print(data)
         self.__json.add_bytes(data)
         for obj in self.__json:
+            if self.print_message:
+                print(obj)
             try:
                 msg = obj['message']
                 param = msg['parameters'] if 'parameters' in msg else {}
@@ -225,6 +233,9 @@ class MSquared:
         self.__thread = None
         self.__state = self.State.Stopped
         self.__init_cv = threading.Condition()
+        self.__do_ping = True
+        self.__print_message = False
+        self.__print_data = False
         self.start()
 
     @run_in_loop
@@ -287,6 +298,51 @@ class MSquared:
     def wavelength_range(self):
         pass
 
+    @run_in_loop
+    def __sync_props(self):
+        # The control thread waits for this and there's no need for synchronization
+        self.__protocol.do_ping = self.__do_ping
+        self.__protocol.print_message = self.__print_message
+        self.__protocol.print_data = self.__print_data
+
+    def __new_protocol(self):
+        res = MSquaredProtocol()
+        with self.__init_cv:
+            res.do_ping = self.__do_ping
+            res.print_message = self.__print_message
+            res.print_data = self.__print_data
+        return res
+
+    @property
+    def do_ping(self):
+        return self.__do_ping
+
+    @do_ping.setter
+    def do_ping(self, do_ping):
+        self.__do_ping = do_ping
+        if self.__loop is not None:
+            self.__sync_props()
+
+    @property
+    def print_message(self):
+        return self.__print_message
+
+    @print_message.setter
+    def print_message(self, print_message):
+        self.__print_message = print_message
+        if self.__loop is not None:
+            self.__sync_props()
+
+    @property
+    def print_data(self):
+        return self.__print_data
+
+    @print_data.setter
+    def print_data(self, print_data):
+        self.__print_data = print_data
+        if self.__loop is not None:
+            self.__sync_props()
+
     async def __run(self):
         self.__loop = asyncio.get_running_loop()
         self.__initialized = self.__loop.create_future()
@@ -298,7 +354,7 @@ class MSquared:
 
         try:
             transport, self.__protocol = await self.__loop.create_connection(
-                MSquaredProtocol, *self.__addr)
+                self.__new_protocol, *self.__addr)
         except:
             await asyncio.sleep(1)
             return
