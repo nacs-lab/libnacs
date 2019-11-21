@@ -188,7 +188,7 @@ class MSquared:
             else:
                 self.set_result({})
 
-    def run_in_loop(func):
+    def run_on_worker(func):
         def f(self, *args, **kwargs):
             async def func1():
                 await self.__initialized
@@ -200,7 +200,7 @@ class MSquared:
                 return
         return f
 
-    @run_in_loop
+    @run_on_worker
     def cmd(self, name, report=False, **params):
         tid = self.__protocol.next_id()
         reply = self.Reply(name, tid, report)
@@ -216,7 +216,7 @@ class MSquared:
         self.__loop = None
         self.__initialized = None
         self.__protocol = None
-        self.__thread = None
+        self.__worker = None
         self.__state = self.State.Stopped
         self.__init_cv = threading.Condition()
         self.__do_ping = True
@@ -224,7 +224,7 @@ class MSquared:
         self.__print_data = False
         self.start()
 
-    @run_in_loop
+    @run_on_worker
     def send_raw(self, *args, **kwargs):
         self.__protocol.send_raw(*args, **kwargs)
 
@@ -270,7 +270,7 @@ class MSquared:
     def wavelength_range(self):
         return self.cmd('get_wavelength_range')
 
-    @run_in_loop
+    @run_on_worker
     def __sync_props(self):
         # The control thread waits for this and there's no need for synchronization
         self.__protocol.do_ping = self.__do_ping
@@ -339,7 +339,7 @@ class MSquared:
         finally:
             pass
 
-    def __thread_fun(self):
+    def __worker_fun(self):
         while True:
             asyncio.run(self.__run())
             with self.__init_cv:
@@ -348,21 +348,21 @@ class MSquared:
                 self.__state = self.State.Starting
 
     def start(self):
-        # `__thread` is only written to by the controller thread. no need for synchronization
-        if self.__thread is not None:
+        # `__worker` is only written to by the controller thread. no need for synchronization
+        if self.__worker is not None:
             return
         with self.__init_cv:
             self.__state = self.State.Starting
-            self.__thread = threading.Thread(target = self.__thread_fun)
-            self.__thread.start()
+            self.__worker = threading.Thread(target = self.__worker_fun)
+            self.__worker.start()
             self.__init_cv.wait_for(lambda: self.__state == self.State.Started)
 
-    @run_in_loop
+    @run_on_worker
     def __req_stop(self):
         self.__protocol.stop()
 
     def stop(self):
-        if self.__thread is None:
+        if self.__worker is None:
             return
         # `__state` can be `Starting` or `Started`
         # The worker thread checks the state before changing it
@@ -370,8 +370,8 @@ class MSquared:
         with self.__init_cv:
             self.__state = self.State.Stopping
         self.__req_stop()
-        self.__thread.join()
-        self.__thread = None
+        self.__worker.join()
+        self.__worker = None
         self.__state = self.State.Stopped
 
     @staticmethod
@@ -383,4 +383,4 @@ class MSquared:
         except concurrent.futures.CancelledError:
             return {'cancel': True}
 
-    del run_in_loop
+    del run_on_worker
