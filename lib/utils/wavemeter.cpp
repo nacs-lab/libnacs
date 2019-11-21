@@ -234,12 +234,8 @@ NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
 {
     pos_type lb = pstart;
     pos_type ub = pend;
-    if (ub == pos_error) {
-        stm.seekg(0, std::ios::end);
-        if (!stm.good())
-            throw std::runtime_error("Unable to seek stream.");
-        ub = stm.tellg();
-    }
+    if (ub == pos_error)
+        ub = m_file_len;
     bool lb_valid = false;
     std::tuple<double,double,pos_type> lb_res{0, 0, 0};
     while (true) {
@@ -427,9 +423,50 @@ segment_started:
 }
 
 // Always seek the stream.
+NACS_INTERNAL void Wavemeter::check_cache(std::istream &stm)
+{
+    static constexpr int max_len = 128;
+    stm.seekg(0, std::ios::end);
+    if (!stm.good())
+        throw std::runtime_error("Unable to seek stream.");
+    pos_type len = stm.tellg();
+    auto update = [&] {
+        m_file_len = len;
+        if (len > max_len) {
+            stm.seekg(-max_len, std::ios::end);
+            m_file_end.resize(max_len);
+        }
+        else {
+            stm.seekg(0);
+            m_file_end.resize(len);
+        }
+        stm.read(&m_file_end[0], m_file_end.size());
+        if (!stm.good()) {
+            m_file_end.resize(0);
+            throw std::runtime_error("Unable to read from file end.");
+        }
+    };
+    if (len < m_file_len) {
+        clear();
+    }
+    else {
+        stm.seekg(m_file_len - (off_t)m_file_end.size(), std::ios::end);
+        char buff[max_len];
+        stm.read(buff, m_file_end.size());
+        if (!stm.good())
+            throw std::runtime_error("Unable to read from file end.");
+        if (memcpy(buff, m_file_end.data(), m_file_end.size()) != 0) {
+            clear();
+        }
+    }
+    update();
+}
+
+// Always seek the stream.
 NACS_EXPORT() std::pair<const double*,const double*>
 Wavemeter::parse(std::istream &stm, size_t *sz, double tstart, double tend)
 {
+    check_cache(stm);
     if (unlikely(tend <= tstart)) {
         *sz = 0;
         return {nullptr, nullptr};

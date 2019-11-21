@@ -114,6 +114,10 @@ class Wavemeter {
     // Parse and cache the result for a block.
     seg_iterator get_segment(std::istream &stm, double tstart, double tend);
 
+    // Check if the cache is still valid and clear it if not.
+    // Also update the `m_file_len` and `m_file_end` fields.
+    void check_cache(std::istream &stm);
+
     // TODO: GC of cache
 
 public:
@@ -127,6 +131,12 @@ private:
 
     const double m_lo = 0;
     const double m_hi = 0;
+
+    // The file length we got last time and the corresponding (up to) last 100 characters.
+    // If the file is shorter than the length or if the content doesn't match
+    // we'll assume the cache is invalide and clear it.
+    pos_type m_file_len = 0;
+    std::string m_file_end;
 };
 
 }
