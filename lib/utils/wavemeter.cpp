@@ -30,6 +30,7 @@
 
 namespace NaCs {
 
+// Read stream from current position
 NACS_INTERNAL bool Wavemeter::parsetime(std::istream &stm, double *tsf)
 {
     std::tm timedate;
@@ -64,6 +65,7 @@ NACS_INTERNAL bool Wavemeter::parsetime(std::istream &stm, double *tsf)
     return true;
 }
 
+// Read stream from current position
 NACS_INTERNAL bool Wavemeter::parsenumber(std::istream &stm, double *val, bool *eol)
 {
     stm >> *val;
@@ -82,6 +84,7 @@ NACS_INTERNAL bool Wavemeter::parsenumber(std::istream &stm, double *val, bool *
     return true;
 }
 
+// Read stream from current position
 NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
                                        double lo, double hi)
 {
@@ -136,6 +139,7 @@ NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
     return line_valid;
 }
 
+// Read stream from current position
 NACS_INTERNAL bool Wavemeter::parseline(std::istream &stm, double *tsf, double *val) const
 {
     if (!parsetime(stm, tsf)) {
@@ -148,6 +152,7 @@ NACS_INTERNAL bool Wavemeter::parseline(std::istream &stm, double *tsf, double *
 
 static const std::istream::pos_type pos_error = std::streamoff(-1);
 
+// Always seek the stream.
 NACS_INTERNAL auto Wavemeter::find_linestart(std::istream &stm, pos_type ub,
                                              pos_type lb) -> pos_type
 {
@@ -171,6 +176,7 @@ NACS_INTERNAL auto Wavemeter::find_linestart(std::istream &stm, pos_type ub,
     return lb;
 }
 
+// Always seek the stream.
 NACS_INTERNAL auto Wavemeter::parse_at(std::istream &stm, pos_type pos, pos_type lb,
                                        double *tsf, double *val) const
     -> std::pair<bool,pos_type>
@@ -180,6 +186,7 @@ NACS_INTERNAL auto Wavemeter::parse_at(std::istream &stm, pos_type pos, pos_type
     return {parseline(stm, tsf, val), ls};
 }
 
+// Read stream from current position
 NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_type pos_max,
                                           std::vector<double> &times,
                                           std::vector<double> &datas) const
@@ -220,6 +227,7 @@ static constexpr std::streamoff pos_threshold = 10240;
 // and `loc` is the start of the corresponding line. Note that the data is only guaranteed
 // to be the first valid line following `loc`, there could be any number of garbage lines
 // before it.
+// Always seek the stream.
 NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
                                           pos_type pstart, pos_type pend,
                                           double *tsf, double *val, pos_type *loc) const
@@ -274,6 +282,7 @@ NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
     }
 }
 
+// Always seek the stream.
 NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, seg_iterator seg,
                                              double tend, pos_type pend)
 {
@@ -284,6 +293,7 @@ NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, seg_iterator seg
     seg->pend = stm.tellg();
 }
 
+// Always seek the stream.
 NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, double tend,
                                           pos_type lb, pos_type ub, seg_iterator prev)
     -> seg_iterator
@@ -322,6 +332,7 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
     return m_segments.emplace(loc, stm.tellg(), std::move(times), std::move(datas)).first;
 }
 
+// Always seek the stream.
 NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
                                           double tend) -> seg_iterator
 {
@@ -415,6 +426,7 @@ segment_started:
     return it;
 }
 
+// Always seek the stream.
 NACS_EXPORT() std::pair<const double*,const double*>
 Wavemeter::parse(std::istream &stm, size_t *sz, double tstart, double tend)
 {
