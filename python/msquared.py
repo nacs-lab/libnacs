@@ -149,16 +149,6 @@ class MSquaredProtocol(asyncio.Protocol):
     def stop(self):
         self.__transport.close()
 
-def _run_in_loop(loop, initialized, func, *args, **kwargs):
-    async def func1():
-        await initialized
-        return func(*args, **kwargs)
-    future = asyncio.run_coroutine_threadsafe(func1(), loop)
-    try:
-        return future.result()
-    except concurrent.futures.CancelledError:
-        return
-
 class MSquared:
     class State(Enum):
         Stopped = 0
@@ -200,29 +190,25 @@ class MSquared:
 
     def run_in_loop(func):
         def f(self, *args, **kwargs):
-            return _run_in_loop(self.__loop, self.__initialized, func,
-                                    self, *args, **kwargs)
+            async def func1():
+                await self.__initialized
+                return func(self, *args, **kwargs)
+            future = asyncio.run_coroutine_threadsafe(func1(), self.__loop)
+            try:
+                return future.result()
+            except concurrent.futures.CancelledError:
+                return
         return f
 
-    def def_cmd(name, report=False):
-        _report = report
-        def real_dec(func):
-            def f(self, *args, report=_report, **kwargs):
-                tid = self.__protocol.next_id()
-                reply = self.Reply(name, tid, report)
-                self.__protocol.add_handler(reply)
-                params = func(self, *args, **kwargs)
-                if report:
-                    if not params:
-                        params = {}
-                    params['report'] = 'finished'
-                self.__protocol.send_raw(name, params, transmission_id=tid)
-                return reply
-            def f2(self, *args, **kwargs):
-                return _run_in_loop(self.__loop, self.__initialized, f,
-                                        self, *args, **kwargs)
-            return f2
-        return real_dec
+    @run_in_loop
+    def cmd(self, name, report=False, **params):
+        tid = self.__protocol.next_id()
+        reply = self.Reply(name, tid, report)
+        self.__protocol.add_handler(reply)
+        if report:
+            params['report'] = 'finished'
+        self.__protocol.send_raw(name, params, transmission_id=tid)
+        return reply
 
     def __init__(self, addr, host_addr):
         self.__addr = addr
@@ -242,61 +228,47 @@ class MSquared:
     def send_raw(self, *args, **kwargs):
         self.__protocol.send_raw(*args, **kwargs)
 
-    @def_cmd('move_wave_t', True)
     def move_wave(self, wl):
-        return dict(wavelength=[wl])
+        return self.cmd('move_wave_t', True, wavelength=[wl])
 
-    @def_cmd('poll_move_wave_t')
     def poll_move_wave(self):
-        pass
+        return self.cmd('poll_move_wave_t')
 
-    @def_cmd('tune_etalon', True)
     def tune_etalon(self, percent):
-        return dict(setting=[percent])
+        return self.cmd('tune_etalon', True, setting=[percent])
 
-    @def_cmd('tune_resonator', True)
     def tune_resonator(self, percent):
-        return dict(setting=[percent])
+        return self.cmd('tune_resonator', True, setting=[percent])
 
-    @def_cmd('fine_tune_resonator', True)
     def fine_tune_resonator(self, percent):
-        return dict(setting=[percent])
+        return self.cmd('fine_tune_resonator', True, setting=[percent])
 
-    @def_cmd('etalon_lock', True)
     def etalon_lock(self, on):
-        return dict(operation="on" if on else "off")
+        return self.cmd('etalon_lock', True, operation="on" if on else "off")
 
-    @def_cmd('etalon_lock_status')
     def etalon_lock_status(self):
-        pass
+        return self.cmd('etalon_lock_status')
 
-    @def_cmd('select_profile')
     def select_etalon_profile(self, profile):
-        return dict(profile=[profile])
+        return self.cmd('select_profile', profile=[profile])
 
-    @def_cmd('get_status')
     def system_status(self):
-        pass
+        return self.cmd('get_status')
 
-    @def_cmd('get_alignment_status')
     def alignment_status(self):
-        pass
+        return self.cmd('get_alignment_status')
 
-    @def_cmd('beam_alignment', True)
     def set_alignment_mode(self, mode):
-        return dict(mode=[mode])
+        return self.cmd('beam_alignment', True, mode=[mode])
 
-    @def_cmd('beam_adjust_x', True)
     def alignment_adjust_x(self, val):
-        return dict(x_value=[val])
+        return self.cmd('beam_adjust_x', True, x_value=[val])
 
-    @def_cmd('beam_adjust_y', True)
     def alignment_adjust_y(self, val):
-        return dict(y_value=[val])
+        return self.cmd('beam_adjust_y', True, y_value=[val])
 
-    @def_cmd('get_wavelength_range')
     def wavelength_range(self):
-        pass
+        return self.cmd('get_wavelength_range')
 
     @run_in_loop
     def __sync_props(self):
@@ -412,4 +384,3 @@ class MSquared:
             return {'cancel': True}
 
     del run_in_loop
-    del def_cmd
