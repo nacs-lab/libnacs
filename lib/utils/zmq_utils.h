@@ -38,7 +38,11 @@ static inline bool has_more(zmq::socket_t &sock)
 static inline bool recv_more(zmq::socket_t &sock, zmq::message_t &msg)
 {
     if (has_more(sock)) {
+#if ZMQ_VERSION >= 40301
+        sock.recv(msg);
+#else
         sock.recv(&msg);
+#endif
         return true;
     }
     return false;
@@ -48,7 +52,11 @@ static inline void readall(zmq::socket_t &sock)
 {
     while (has_more(sock)) {
         zmq::message_t msg;
+#if ZMQ_VERSION >= 40301
+        sock.recv(msg);
+#else
         sock.recv(&msg);
+#endif
     }
 }
 
