@@ -85,7 +85,7 @@ NACS_INTERNAL bool Wavemeter::parsenumber(std::istream &stm, double *val, bool *
 }
 
 // Read stream from current position
-NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
+NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val, double *height,
                                        double lo, double hi)
 {
     bool line_valid = true;
@@ -136,18 +136,20 @@ NACS_INTERNAL bool Wavemeter::parseval(std::istream &stm, double *val,
     if (!stm.good())
         return false;
     *val = max_pos;
+    *height = max_height;
     return line_valid;
 }
 
 // Read stream from current position
-NACS_INTERNAL bool Wavemeter::parseline(std::istream &stm, double *tsf, double *val) const
+NACS_INTERNAL bool Wavemeter::parseline(std::istream &stm, double *tsf,
+                                        double *val, double *height) const
 {
     if (!parsetime(stm, tsf)) {
         stm.clear();
         stm >> ignore_line;
         return false;
     }
-    return parseval(stm, val, m_lo, m_hi);
+    return parseval(stm, val, height, m_lo, m_hi);
 }
 
 static const std::istream::pos_type pos_error = std::streamoff(-1);
@@ -178,18 +180,19 @@ NACS_INTERNAL auto Wavemeter::find_linestart(std::istream &stm, pos_type ub,
 
 // Always seek the stream.
 NACS_INTERNAL auto Wavemeter::parse_at(std::istream &stm, pos_type pos, pos_type lb,
-                                       double *tsf, double *val) const
+                                       double *tsf, double *val, double *height) const
     -> std::pair<bool,pos_type>
 {
     auto ls = find_linestart(stm, pos, lb);
     stm.seekg(ls);
-    return {parseline(stm, tsf, val), ls};
+    return {parseline(stm, tsf, val, height), ls};
 }
 
 // Read stream from current position
 NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_type pos_max,
                                           std::vector<double> &times,
-                                          std::vector<double> &datas) const
+                                          std::vector<double> &datas,
+                                          std::vector<double> &heights) const
 {
     while (true) {
         auto pos = stm.tellg();
@@ -197,7 +200,8 @@ NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_ty
             return;
         double tsf;
         double val;
-        auto res = parseline(stm, &tsf, &val);
+        double height;
+        auto res = parseline(stm, &tsf, &val, &height);
         if (!unlikely(res)) {
             // Treat IO error as not possible to read forward
             if (!stm.good()) {
@@ -209,6 +213,7 @@ NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_ty
         if (val != 0) {
             times.push_back(tsf);
             datas.push_back(val);
+            heights.push_back(height);
         }
         if (tsf >= tmax) {
             return;
@@ -230,29 +235,30 @@ static constexpr std::streamoff pos_threshold = 10240;
 // Always seek the stream.
 NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
                                           pos_type pstart, pos_type pend,
-                                          double *tsf, double *val, pos_type *loc) const
+                                          double *tsf, double *val, double *height,
+                                          pos_type *loc) const
 {
     pos_type lb = pstart;
     pos_type ub = pend;
     if (ub == pos_error)
         ub = m_file_len;
     bool lb_valid = false;
-    std::tuple<double,double,pos_type> lb_res{0, 0, 0};
+    std::tuple<double,double,double,pos_type> lb_res{0, 0, 0, 0};
     while (true) {
         auto sz = ub - lb;
         // Good enough
         if (sz < pos_threshold) {
             stm.seekg(lb);
-            std::tie(*tsf, *val, *loc) = lb_res;
+            std::tie(*tsf, *val, *height, *loc) = lb_res;
             return lb_valid;
         }
         pos_type mid = lb + sz / 2;
-        double t, v;
-        auto res = parse_at(stm, mid, lb, &t, &v);
+        double t, v, h;
+        auto res = parse_at(stm, mid, lb, &t, &v, &h);
         if (unlikely(!res.first)) {
             while (!res.first && stm.good() && stm.tellg() < ub) {
                 stm.clear();
-                res.first = parseline(stm, &t, &v);
+                res.first = parseline(stm, &t, &v, &h);
             }
             if (!res.first) {
                 // Nothing above us is useful, just update ub
@@ -273,7 +279,7 @@ NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
             // mid is lb
             lb = stm.tellg();
             lb_valid = true;
-            lb_res = {t, v, res.second};
+            lb_res = {t, v, h, res.second};
         }
     }
 }
@@ -285,7 +291,7 @@ NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, seg_iterator seg
     if (seg->times.back() >= tend)
         return;
     stm.seekg(seg->pend);
-    parse_until(stm, tend, pend, seg->times, seg->datas);
+    parse_until(stm, tend, pend, seg->times, seg->datas, seg->heights);
     seg->pend = stm.tellg();
 }
 
@@ -294,11 +300,11 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
                                           pos_type lb, pos_type ub, seg_iterator prev)
     -> seg_iterator
 {
-    double tsf, val;
+    double tsf, val, height;
     pos_type loc;
     bool valid;
     try {
-        valid = start_parse(stm, tstart, lb, ub, &tsf, &val, &loc);
+        valid = start_parse(stm, tstart, lb, ub, &tsf, &val, &height, &loc);
     }
     catch (...) {
         return m_segments.end();
@@ -311,21 +317,25 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
         if (valid && val != 0) {
             prev->times.push_back(tsf);
             prev->datas.push_back(val);
+            prev->heights.push_back(height);
         }
-        parse_until(stm, tend, ub, prev->times, prev->datas);
+        parse_until(stm, tend, ub, prev->times, prev->datas, prev->heights);
         prev->pend = stm.tellg();
         return prev;
     }
     std::vector<double> times;
     std::vector<double> datas;
+    std::vector<double> heights;
     if (valid && val != 0) {
         times.push_back(tsf);
         datas.push_back(val);
+        heights.push_back(height);
     }
-    parse_until(stm, tend, ub, times, datas);
+    parse_until(stm, tend, ub, times, datas, heights);
     if (times.empty())
         return m_segments.end();
-    return m_segments.emplace(loc, stm.tellg(), std::move(times), std::move(datas)).first;
+    return m_segments.emplace(loc, stm.tellg(), std::move(times), std::move(datas),
+                              std::move(heights)).first;
 }
 
 // Always seek the stream.
@@ -464,25 +474,25 @@ NACS_INTERNAL void Wavemeter::check_cache(std::istream &stm)
 }
 
 // Always seek the stream.
-NACS_EXPORT() std::pair<const double*,const double*>
+NACS_EXPORT() std::tuple<const double*,const double*,const double*>
 Wavemeter::parse(std::istream &stm, size_t *sz, double tstart, double tend)
 {
     check_cache(stm);
     if (unlikely(tend <= tstart)) {
         *sz = 0;
-        return {nullptr, nullptr};
+        return {nullptr, nullptr, nullptr};
     }
     auto seg = get_segment(stm, tstart, tend);
     if (seg == m_segments.end())
-        return {nullptr, nullptr};
+        return {nullptr, nullptr, nullptr};
     auto it1 = std::lower_bound(seg->times.begin(), seg->times.end(), tstart);
     if (it1 == seg->times.end())
-        return {nullptr, nullptr};
+        return {nullptr, nullptr, nullptr};
     auto idx1 = it1 - seg->times.begin();
     auto it2 = std::lower_bound(it1, seg->times.end(), tend);
     auto idx2 = it2 == seg->times.end() ? seg->times.size() - 1 : it2 - seg->times.begin();
     *sz = idx2 - idx1;
-    return {&*it1, &seg->datas[idx1]};
+    return {&*it1, &seg->datas[idx1], &seg->heights[idx1]};
 }
 
 NACS_EXPORT_ Wavemeter::Wavemeter(double lo, double hi)
@@ -508,14 +518,13 @@ NACS_EXPORT() void *nacs_utils_new_wavemeter(double lo, double hi)
 
 NACS_EXPORT() size_t nacs_utils_wavemeter_parse(void *_parser, const char *name,
                                                 const double **ts, const double **data,
+                                                const double **height,
                                                 double tstart, double tend)
 {
     auto parser = (Wavemeter*)_parser;
     size_t sz = 0;
     std::ifstream stm(name);
-    auto ptrs = parser->parse(stm, &sz, tstart, tend);
-    *ts = ptrs.first;
-    *data = ptrs.second;
+    std::tie(*ts, *data, *height) = parser->parse(stm, &sz, tstart, tend);
     return sz;
 }
 

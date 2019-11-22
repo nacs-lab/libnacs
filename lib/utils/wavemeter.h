@@ -37,12 +37,15 @@ class Wavemeter {
         // These two should never be empty.
         mutable std::vector<double> times;
         mutable std::vector<double> datas;
+        mutable std::vector<double> heights;
         Segment(pos_type pstart, pos_type pend,
-                std::vector<double> times, std::vector<double> datas)
+                std::vector<double> times, std::vector<double> datas,
+                std::vector<double> heights)
             : pstart(pstart),
               pend(pend),
               times(std::move(times)),
-              datas(std::move(datas))
+              datas(std::move(datas)),
+              heights(std::move(heights))
         {
             assert(!this->times.empty());
         }
@@ -86,21 +89,22 @@ class Wavemeter {
     // Parse the data section of the log file and find the best match
     // given the upper and lower bound.
     // The line must be terminated by a `\n`.
-    static bool parseval(std::istream &stm, double *val, double lo, double hi);
+    static bool parseval(std::istream &stm, double *val, double *height, double lo, double hi);
     // Parse both the time and the data from a complete line.
     // A `good()` `stm` after the function return guarantees forward progress.
-    bool parseline(std::istream &stm, double *tsf, double *val) const;
+    bool parseline(std::istream &stm, double *tsf, double *val, double *height) const;
     // Find the beginning of the line that includes `ub`
     // Do not look back more than `lb`.
     static pos_type find_linestart(std::istream &stm, pos_type ub, pos_type lb);
     // Parse the line that includes `pos`. Do not look back more than `lb`
     std::pair<bool,pos_type> parse_at(std::istream &stm, pos_type pos, pos_type lb,
-                                      double *tsf, double *val) const;
+                                      double *tsf, double *val, double *height) const;
     // Parse until the time and position limit.
     void parse_until(std::istream &stm, double tmax, pos_type pos_max,
-                     std::vector<double> &times, std::vector<double> &datas) const;
+                     std::vector<double> &times, std::vector<double> &datas,
+                     std::vector<double> &heights) const;
     bool start_parse(std::istream &stm, double tstart, pos_type pstart, pos_type pend,
-                     double *tsf, double *val, pos_type *loc) const;
+                     double *tsf, double *val, double *height, pos_type *loc) const;
 
     void extend_segment(std::istream &stm, seg_iterator seg, double tend, pos_type pend);
     // If `prev` is not NULL, it's a segment that ends at `lb`.
@@ -122,7 +126,7 @@ class Wavemeter {
 
 public:
     NACS_EXPORT(utils) Wavemeter(double lo, double hi);
-    NACS_EXPORT(utils) std::pair<const double*,const double*>
+    NACS_EXPORT(utils) std::tuple<const double*,const double*,const double*>
     parse(std::istream &stm, size_t *sz, double tstart, double tend);
     NACS_EXPORT(utils) void clear();
 

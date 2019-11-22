@@ -40,14 +40,18 @@ int main(int argc, char **argv)
     parser.parse(istm, &sz, 0, std::numeric_limits<double>::max());
     timer.print(true);
 
-    auto ptrs = parser.parse(istm, &sz, 0, std::numeric_limits<double>::max());
+    const double *times_ptr;
+    const double *datas_ptr;
+    const double *heights_ptr;
+    std::tie(times_ptr, datas_ptr, heights_ptr) =
+        parser.parse(istm, &sz, 0, std::numeric_limits<double>::max());
     timer.print(true);
 
     parser.parse(istm, &sz, 0, std::numeric_limits<double>::max());
     timer.print(true);
 
-    std::cout << (void*)ptrs.first << " "
-              << (void*)ptrs.second << std::endl;
+    std::cout << (void*)times_ptr << " "
+              << (void*)datas_ptr << std::endl;
 
     return 0;
 }

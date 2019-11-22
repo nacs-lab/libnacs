@@ -119,32 +119,35 @@ struct TestFile {
     {
         const_istream stm(file);
         size_t sz;
-        auto ptrs = parser.parse(stm, &sz, tstart, tend);
-        if (ptrs.first == nullptr) {
-            assert(ptrs.second == nullptr);
+        const double *times_ptr;
+        const double *datas_ptr;
+        const double *heights_ptr;
+        std::tie(times_ptr, datas_ptr, heights_ptr) = parser.parse(stm, &sz, tstart, tend);
+        if (times_ptr == nullptr) {
+            assert(datas_ptr == nullptr);
             assert(tstart + teps > times.back() ||
                    tend - teps < times.front());
             return;
         }
-        assert(ptrs.second != nullptr);
+        assert(datas_ptr != nullptr);
         // The first data must be at least the same as tstart.
-        assert(*ptrs.first >= tstart);
+        assert(*times_ptr >= tstart);
         // Given the constraint on `dt`, the first data must be `idx_start` or `idx_start + 1`.
         size_t idx_start = std::lower_bound(times.begin(), times.end(),
                                             tstart - teps) - times.begin();
-        if (abs(*ptrs.first - times[idx_start]) > teps) {
+        if (abs(*times_ptr - times[idx_start]) > teps) {
             idx_start++;
             assert(idx_start < times.size());
-            assert(abs(*ptrs.first - times[idx_start]) <= teps);
+            assert(abs(*times_ptr - times[idx_start]) <= teps);
         }
         if (idx_start > 0) {
             assert(times[idx_start - 1] < tstart + teps);
         }
         for (size_t i = 0; i < sz; i++) {
-            assert(abs(ptrs.first[i] - times[idx_start + i]) <= teps);
-            assert(ptrs.second[i] == datas[idx_start + i]);
-            assert(ptrs.second[i] >= lo);
-            assert(ptrs.second[i] <= hi);
+            assert(abs(times_ptr[i] - times[idx_start + i]) <= teps);
+            assert(datas_ptr[i] == datas[idx_start + i]);
+            assert(datas_ptr[i] >= lo);
+            assert(datas_ptr[i] <= hi);
         }
         if (idx_start + sz < times.size() - 1) {
             assert(times[idx_start + sz + 1] > tend - teps);

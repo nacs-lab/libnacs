@@ -17,6 +17,7 @@ nacs_utils_wavemeter_parse.restype = ctypes.c_size_t
 nacs_utils_wavemeter_parse.argtypes = [ctypes.c_void_p, ctypes.c_char_p,
                                        ctypes.POINTER(ctypes.c_void_p),
                                        ctypes.POINTER(ctypes.c_void_p),
+                                       ctypes.POINTER(ctypes.c_void_p),
                                        ctypes.c_double, ctypes.c_double]
 
 nacs_utils_wavemeter_clear = handle.nacs_utils.nacs_utils_wavemeter_clear
@@ -31,17 +32,22 @@ class WavemeterParser:
     def __init__(self, lo=0, hi=1.7976931348623157e308):
         self.hdl = nacs_utils_new_wavemeter(lo, hi)
 
-    def parse(self, name, tstart=0, tend=1.7976931348623157e308):
+    def parse_with_heights(self, name, tstart=0, tend=1.7976931348623157e308):
         ptime = ctypes.c_void_p()
         pdata = ctypes.c_void_p()
+        pheight = ctypes.c_void_p()
         sz = nacs_utils_wavemeter_parse(self.hdl, name.encode(),
                                         ctypes.byref(ptime), ctypes.byref(pdata),
-                                        tstart, tend)
+                                        ctypes.byref(pheight), tstart, tend)
         if sz == 0:
-            return array.array('d'), array.array('d')
+            return array.array('d'), array.array('d'), array.array('d')
         btime = PyBytes_FromStringAndSize(ptime, sz * 8)
         bdata = PyBytes_FromStringAndSize(pdata, sz * 8)
-        return array.array('d', btime), array.array('d', bdata)
+        bheight = PyBytes_FromStringAndSize(pheight, sz * 8)
+        return array.array('d', btime), array.array('d', bdata), array.array('d', bheight)
+
+    def parse(self, *args):
+        return self.parse_with_heights(*args)[:2]
 
     def clear(self):
         nacs_utils_wavemeter_clear(self.hdl)
