@@ -342,11 +342,11 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
 NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
                                           double tend) -> seg_iterator
 {
-    // Handle the most likely case first, i.e. reading from the end of file.
     if (unlikely(m_segments.empty()))
         return new_segment(stm, tstart, tend, 0, pos_error);
     auto it = m_segments.end();
     --it;
+    // Handle the most likely case first, i.e. reading from the end of file.
     if (it->times.front() <= tstart) {
         if (it->times.back() + time_threshold >= tstart) {
             extend_segment(stm, it, tend, pos_error);
@@ -448,7 +448,7 @@ NACS_INTERNAL void Wavemeter::check_cache(std::istream &stm)
         }
         else {
             stm.seekg(0);
-            m_file_end.resize(len);
+            m_file_end.resize((size_t)len);
         }
         stm.read(&m_file_end[0], m_file_end.size());
         if (!stm.good()) {
