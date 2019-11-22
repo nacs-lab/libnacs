@@ -450,8 +450,9 @@ NACS_INTERNAL void Wavemeter::check_cache(std::istream &stm)
         clear();
     }
     else {
-        stm.seekg(m_file_len - (off_t)m_file_end.size(), std::ios::end);
+        stm.seekg(m_file_len - (off_t)m_file_end.size());
         char buff[max_len];
+        assert(max_len >= m_file_end.size());
         stm.read(buff, m_file_end.size());
         if (!stm.good())
             throw std::runtime_error("Unable to read from file end.");
