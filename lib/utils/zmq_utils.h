@@ -27,6 +27,46 @@
 namespace NaCs {
 namespace ZMQ {
 
+// Wrapper functions for CPPZMQ 4.3.1 deprecation.
+static inline void send(zmq::socket_t &sock, zmq::message_t &msg)
+{
+#if CPPZMQ_VERSION >= 40301
+    sock.send(msg, zmq::send_flags::none);
+#else
+    sock.send(msg);
+#endif
+}
+
+static inline void send(zmq::socket_t &sock, zmq::message_t &&msg)
+{
+    // Call the `zmq::message_t&` version
+    send(sock, msg);
+}
+
+static inline void send_more(zmq::socket_t &sock, zmq::message_t &msg)
+{
+#if CPPZMQ_VERSION >= 40301
+    sock.send(msg, zmq::send_flags::sndmore);
+#else
+    sock.send(msg, ZMQ_SNDMORE);
+#endif
+}
+
+static inline void send_more(zmq::socket_t &sock, zmq::message_t &&msg)
+{
+    // Call the `zmq::message_t&` version
+    send_more(sock, msg);
+}
+
+static inline void recv(zmq::socket_t &sock, zmq::message_t &msg)
+{
+#if CPPZMQ_VERSION >= 40301
+    sock.recv(msg);
+#else
+    sock.recv(&msg);
+#endif
+}
+
 static inline bool has_more(zmq::socket_t &sock)
 {
     int more = 0;
@@ -38,11 +78,7 @@ static inline bool has_more(zmq::socket_t &sock)
 static inline bool recv_more(zmq::socket_t &sock, zmq::message_t &msg)
 {
     if (has_more(sock)) {
-#if ZMQ_VERSION >= 40301
-        sock.recv(msg);
-#else
-        sock.recv(&msg);
-#endif
+        recv(sock, msg);
         return true;
     }
     return false;
@@ -52,11 +88,7 @@ static inline void readall(zmq::socket_t &sock)
 {
     while (has_more(sock)) {
         zmq::message_t msg;
-#if ZMQ_VERSION >= 40301
-        sock.recv(msg);
-#else
-        sock.recv(&msg);
-#endif
+        recv(sock, msg);
     }
 }
 
