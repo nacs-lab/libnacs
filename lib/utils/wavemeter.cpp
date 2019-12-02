@@ -470,7 +470,7 @@ NACS_INTERNAL void Wavemeter::check_cache(std::istream &stm)
         stm.read(buff, m_file_end.size());
         if (!stm.good())
             throw std::runtime_error("Unable to read from file end.");
-        if (memcpy(buff, m_file_end.data(), m_file_end.size()) != 0) {
+        if (memcmp(buff, m_file_end.data(), m_file_end.size()) != 0) {
             clear();
         }
     }
