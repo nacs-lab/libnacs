@@ -18,6 +18,7 @@
 
 #include "wavemeter.h"
 
+#include "number.h"
 #include "streams.h"
 
 #include <ctime>
@@ -291,7 +292,9 @@ NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, seg_iterator seg
     if (seg->times.back() >= tend)
         return;
     stm.seekg(seg->pend);
+    size_t old_size = seg->times.size();
     parse_until(stm, tend, pend, seg->times, seg->datas, seg->heights);
+    m_cache_size += seg->times.size() - old_size;
     seg->pend = stm.tellg();
 }
 
@@ -334,6 +337,7 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
     parse_until(stm, tend, ub, times, datas, heights);
     if (times.empty())
         return m_segments.end();
+    m_cache_size += times.size();
     return m_segments.emplace(loc, stm.tellg(), std::move(times), std::move(datas),
                               std::move(heights)).first;
 }
@@ -473,6 +477,95 @@ NACS_INTERNAL void Wavemeter::check_cache(std::istream &stm)
     update();
 }
 
+// Trigger GC based on the size and the time range of the cache
+NACS_INTERNAL void Wavemeter::check_gc(double tstart, double tend)
+{
+    if (unlikely(m_segments.empty()))
+        return;
+    // Trigger cache if
+    // 1. The cache size is larger than `8M` entries, and
+    // 2. The time range of the cache is larger than 100 days and 10 x the read time.
+    size_t sz_thresh = 8 * 1024 * 1024;
+    if (likely(m_cache_size <= sz_thresh))
+        return;
+    double cache_begin_t = m_segments.begin()->times.front();
+    double cache_end_t = m_segments.rbegin()->times.back();
+    double t_thresh = 100 * max(86400, tstart - tend);
+    if (likely(cache_end_t - cache_begin_t <= t_thresh))
+        return;
+    // Now drop everything that's too far from the current read range
+    t_thresh /= 10;
+    sz_thresh /= 10;
+    size_t new_sz = 0;
+    for (auto next = m_segments.begin(), end = m_segments.end(); next != end;) {
+        auto it = next++;
+        double t0 = it->times.front();
+        double t1 = it->times.back();
+        if (t1 >= tstart - t_thresh && t0 <= tend + t_thresh) {
+            if (new_sz == 0)
+                cache_begin_t = t0;
+            cache_end_t = t1;
+            // We could calculate the delta as well.
+            // However, we are dropping more time period than keeping and recounting
+            // can fix any miscalculation we have had (just in case I'm missing something)
+            new_sz += it->times.size();
+            continue;
+        }
+        m_segments.erase(it);
+    }
+    if (new_sz <= sz_thresh || cache_end_t - cache_begin_t <= t_thresh) {
+        // We've dropped enough entries.
+        m_cache_size = new_sz;
+        return;
+    }
+    assert(!m_segments.empty());
+    for (auto it = m_segments.begin(); it->times.back() < tstart;) {
+        new_sz -= it->times.size();
+        m_segments.erase(it);
+        if (m_segments.empty()) {
+            m_cache_size = 0;
+            return;
+        }
+        it = m_segments.begin();
+        cache_begin_t = it->times.front();
+    }
+    if (new_sz <= sz_thresh || cache_end_t - cache_begin_t <= t_thresh) {
+        m_cache_size = new_sz;
+        return;
+    }
+    // We use `--m_segments.end()` instead of `m_segments.rbegin()` since
+    // `erase` does not accept reverse iterator.
+    for (auto it = --m_segments.end(); it->times.front() > tend;) {
+        new_sz -= it->times.size();
+        m_segments.erase(it);
+        if (m_segments.empty()) {
+            m_cache_size = 0;
+            return;
+        }
+        it = --m_segments.end();
+        cache_end_t = it->times.back();
+    }
+    // The check for whether we've dropped enough for this one is merged into the loop below.
+
+    // Currently the location where each line is located isn't cached so we can't
+    // drop partial segment and have to drop a whole segment at a time.
+    // We prefer dropping from the beginning since the end is more likely to be used later
+    // so we'll just drop segments from the beginning until we've dropped enough.
+    for (auto next = m_segments.begin(), end = m_segments.end(); next != end;) {
+        auto it = next++;
+        cache_begin_t = it->times.front();
+        if (new_sz <= sz_thresh || cache_end_t - cache_begin_t <= t_thresh) {
+            // We've dropped enough entries.
+            m_cache_size = new_sz;
+            return;
+        }
+        new_sz -= it->times.size();
+        m_segments.erase(it);
+    }
+    // All dropped.
+    m_cache_size = 0;
+}
+
 // Always seek the stream.
 NACS_EXPORT() std::tuple<const double*,const double*,const double*>
 Wavemeter::parse(std::istream &stm, size_t *sz, double tstart, double tend)
@@ -482,6 +575,7 @@ Wavemeter::parse(std::istream &stm, size_t *sz, double tstart, double tend)
         *sz = 0;
         return {nullptr, nullptr, nullptr};
     }
+    check_gc(tstart, tend);
     auto seg = get_segment(stm, tstart, tend);
     if (seg == m_segments.end())
         return {nullptr, nullptr, nullptr};

@@ -122,7 +122,8 @@ class Wavemeter {
     // Also update the `m_file_len` and `m_file_end` fields.
     void check_cache(std::istream &stm);
 
-    // TODO: GC of cache
+    // Check if we should free-up some cache.
+    void check_gc(double tstart, double tend);
 
 public:
     NACS_EXPORT(utils) Wavemeter(double lo, double hi);
@@ -132,6 +133,7 @@ public:
 
 private:
     seg_map_t m_segments;
+    size_t m_cache_size = 0;
 
     const double m_lo = 0;
     const double m_hi = 0;
