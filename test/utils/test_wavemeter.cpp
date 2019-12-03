@@ -123,6 +123,12 @@ struct TestFile {
         const double *datas_ptr;
         const double *heights_ptr;
         std::tie(times_ptr, datas_ptr, heights_ptr) = parser.parse(stm, &sz, tstart, tend);
+        {
+            size_t sz2;
+            auto res = parser.parse(stm, &sz2, tstart, tend);
+            assert(times_ptr == nullptr || sz == sz2);
+            assert(res == std::make_tuple(times_ptr, datas_ptr, heights_ptr));
+        }
         if (times_ptr == nullptr) {
             assert(datas_ptr == nullptr);
             assert(tstart + teps > times.back() ||

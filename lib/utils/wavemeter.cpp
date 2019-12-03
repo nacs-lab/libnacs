@@ -190,15 +190,16 @@ NACS_INTERNAL auto Wavemeter::parse_at(std::istream &stm, pos_type pos, pos_type
 }
 
 // Read stream from current position
-NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_type pos_max,
-                                          std::vector<double> &times,
-                                          std::vector<double> &datas,
-                                          std::vector<double> &heights) const
+NACS_INTERNAL double Wavemeter::parse_until(std::istream &stm, double tmax, pos_type pos_max,
+                                            std::vector<double> &times,
+                                            std::vector<double> &datas,
+                                            std::vector<double> &heights) const
 {
+    double last_time = 0;
     while (true) {
         auto pos = stm.tellg();
         if (pos_max != pos_error && pos >= pos_max)
-            return;
+            return last_time;
         double tsf;
         double val;
         double height;
@@ -207,17 +208,18 @@ NACS_INTERNAL void Wavemeter::parse_until(std::istream &stm, double tmax, pos_ty
             // Treat IO error as not possible to read forward
             if (!stm.good()) {
                 stm.clear();
-                return;
+                return last_time;
             }
             continue;
         }
+        last_time = tsf;
         if (val != 0) {
             times.push_back(tsf);
             datas.push_back(val);
             heights.push_back(height);
         }
         if (tsf >= tmax) {
-            return;
+            return last_time;
         }
     }
 }
@@ -289,12 +291,14 @@ NACS_INTERNAL bool Wavemeter::start_parse(std::istream &stm, double tstart,
 NACS_INTERNAL void Wavemeter::extend_segment(std::istream &stm, seg_iterator seg,
                                              double tend, pos_type pend)
 {
-    if (seg->times.back() >= tend)
+    if (seg->tend >= tend)
         return;
     stm.seekg(seg->pend);
     size_t old_size = seg->times.size();
-    parse_until(stm, tend, pend, seg->times, seg->datas, seg->heights);
+    double last_time = parse_until(stm, tend, pend, seg->times, seg->datas, seg->heights);
     m_cache_size += seg->times.size() - old_size;
+    if (last_time > 0)
+        seg->tend = last_time;
     seg->pend = stm.tellg();
 }
 
@@ -322,7 +326,9 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
             prev->datas.push_back(val);
             prev->heights.push_back(height);
         }
-        parse_until(stm, tend, ub, prev->times, prev->datas, prev->heights);
+        double last_time = parse_until(stm, tend, ub, prev->times, prev->datas, prev->heights);
+        if (last_time > 0)
+            prev->tend = last_time;
         prev->pend = stm.tellg();
         return prev;
     }
@@ -334,12 +340,12 @@ NACS_INTERNAL auto Wavemeter::new_segment(std::istream &stm, double tstart, doub
         datas.push_back(val);
         heights.push_back(height);
     }
-    parse_until(stm, tend, ub, times, datas, heights);
+    double last_time = parse_until(stm, tend, ub, times, datas, heights);
     if (times.empty())
         return m_segments.end();
     m_cache_size += times.size();
-    return m_segments.emplace(loc, stm.tellg(), std::move(times), std::move(datas),
-                              std::move(heights)).first;
+    return m_segments.emplace(loc, stm.tellg(), last_time,
+                              std::move(times), std::move(datas), std::move(heights)).first;
 }
 
 // Always seek the stream.
@@ -352,7 +358,7 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
     --it;
     // Handle the most likely case first, i.e. reading from the end of file.
     if (it->times.front() <= tstart) {
-        if (it->times.back() + time_threshold >= tstart) {
+        if (it->tend + time_threshold >= tstart) {
             extend_segment(stm, it, tend, pos_error);
             return it;
         }
@@ -378,7 +384,7 @@ NACS_INTERNAL auto Wavemeter::get_segment(std::istream &stm, double tstart,
     pos_type lb = 0;
     if (it2 != m_segments.begin()) {
         --it2;
-        auto endt2 = it2->times.back();
+        auto endt2 = it2->tend;
         if (endt2 >= tend)
             return it2; // `front() <= tstart` and `back() >= tend`
         if (endt2 + time_threshold >= tstart) {
@@ -417,18 +423,19 @@ segment_started:
         extend_segment(stm, it, tend, it2->pstart);
         // Gap big enough
         if (it2->pstart - it->pend > pos_threshold &&
-            it2->times.front() - it->times.back() > time_threshold)
+            it2->times.front() - it->tend > time_threshold)
             break;
         if (it->pend != it2->pstart)
-            extend_segment(stm, it, it2->times.back(), it2->pstart);
+            extend_segment(stm, it, it2->tend, it2->pstart);
         // Merge the two segments
         it->pend = it2->pend;
+        it->tend = it2->tend;
         it->times.insert(it->times.end(), it2->times.begin(), it2->times.end());
         it->datas.insert(it->datas.end(), it2->datas.begin(), it2->datas.end());
         auto tmp = it2;
         ++it2;
         m_segments.erase(tmp);
-        if (it->times.back() >= tend) {
+        if (it->tend >= tend) {
             break;
         }
     }

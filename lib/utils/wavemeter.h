@@ -34,15 +34,20 @@ class Wavemeter {
     struct Segment {
         pos_type pstart;
         mutable pos_type pend;
+        // The time corresponding to the last line.
+        // This could be different from the last element of `times`
+        // since the last line might not have yield a valid frequency point.
+        mutable double tend;
         // These two should never be empty.
         mutable std::vector<double> times;
         mutable std::vector<double> datas;
         mutable std::vector<double> heights;
-        Segment(pos_type pstart, pos_type pend,
+        Segment(pos_type pstart, pos_type pend, double tend,
                 std::vector<double> times, std::vector<double> datas,
                 std::vector<double> heights)
             : pstart(pstart),
               pend(pend),
+              tend(tend),
               times(std::move(times)),
               datas(std::move(datas)),
               heights(std::move(heights))
@@ -100,9 +105,12 @@ class Wavemeter {
     std::pair<bool,pos_type> parse_at(std::istream &stm, pos_type pos, pos_type lb,
                                       double *tsf, double *val, double *height) const;
     // Parse until the time and position limit.
-    void parse_until(std::istream &stm, double tmax, pos_type pos_max,
-                     std::vector<double> &times, std::vector<double> &datas,
-                     std::vector<double> &heights) const;
+    // Returns the time in the last valid line read.
+    // (Note that a valid line have the correct syntax but might not have had
+    //  a value in the correct range.)
+    double parse_until(std::istream &stm, double tmax, pos_type pos_max,
+                       std::vector<double> &times, std::vector<double> &datas,
+                       std::vector<double> &heights) const;
     bool start_parse(std::istream &stm, double tstart, pos_type pstart, pos_type pend,
                      double *tsf, double *val, double *height, pos_type *loc) const;
 
