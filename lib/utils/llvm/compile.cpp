@@ -20,11 +20,13 @@
 #include "vector_abi.h"
 #include "inst_simplify.h"
 #include "lower_vector.h"
+#include "utils.h"
 
 #include "../utils.h"
 
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/MC/MCContext.h>
 #include <llvm/Support/TargetSelect.h>
@@ -35,6 +37,7 @@
 #include <llvm/Transforms/IPO/AlwaysInliner.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Utils/ModuleUtils.h>
 #if LLVM_VERSION_MAJOR >= 7
 #  include <llvm/Transforms/Utils.h>
 #endif
@@ -106,6 +109,18 @@ NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Modu
 {
     M->setTargetTriple(tgt->getTargetTriple().getTriple());
     M->setDataLayout(tgt->createDataLayout());
+    // By default, if we didn't need executable stack, LLVM emits
+    // `.note.GNU-stack` section to disable executable stack.
+    // However, we don't use the system linker and don't care about this section
+    // and we'd like to disable this section.
+    // So far, the only way I can find to do this is to trick LLVM to think we are using
+    // the trampoline intrinsics which is done by the code below.
+    // This may not be very reliable but should be safe to do so even if it break
+    // in the future this should only be a performance (memory consumption) issue
+    // rather than a correctness issue.
+    auto init_tramp = M->getFunction("llvm.init.trampoline");
+    if (!init_tramp || init_tramp->use_empty())
+        appendToCompilerUsed(*M, {Intrinsic::getDeclaration(M, Intrinsic::init_trampoline)});
     legacy::PassManager pm;
     pm.add(new TargetLibraryInfoWrapperPass(Triple(tgt->getTargetTriple())));
     pm.add(createTargetTransformInfoWrapperPass(tgt->getTargetIRAnalysis()));
