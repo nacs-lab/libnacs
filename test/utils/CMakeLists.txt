@@ -48,5 +48,6 @@ if(ENABLE_LLVM)
   endfunction()
 
   add_llvm_test(codegen)
+  add_llvm_test(codegen_dump)
   add_llvm_test(vec_codegen)
 endif()
