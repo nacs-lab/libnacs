@@ -21,6 +21,8 @@
 #include <zmq.hpp>
 #include <string.h>
 
+#include <vector>
+
 #ifndef __NACS_UTILS_ZMQ_H__
 #define __NACS_UTILS_ZMQ_H__
 
@@ -58,6 +60,21 @@ static inline void send_more(zmq::socket_t &sock, zmq::message_t &&msg)
     send_more(sock, msg);
 }
 
+// Send address messages up to and including the empty deliminator frame.
+static inline void send_addr(zmq::socket_t &sock, std::vector<zmq::message_t> &addr,
+                             zmq::message_t &empty)
+{
+    for (auto &msg: addr)
+        send_more(sock, msg);
+    send_more(sock, empty);
+}
+
+static inline void send_addr(zmq::socket_t &sock, std::vector<zmq::message_t> &addr)
+{
+    zmq::message_t empty(0);
+    send_addr(sock, addr, empty);
+}
+
 static inline void recv(zmq::socket_t &sock, zmq::message_t &msg)
 {
 #if CPPZMQ_VERSION >= 40301
@@ -82,6 +99,21 @@ static inline bool recv_more(zmq::socket_t &sock, zmq::message_t &msg)
         return true;
     }
     return false;
+}
+
+// Read address messages up to and including the empty deliminator frame
+// and return the vector of addresses.
+static inline std::vector<zmq::message_t> recv_addr(zmq::socket_t &sock)
+{
+    zmq::message_t msg;
+    std::vector<zmq::message_t> addr;
+    recv(sock, msg);
+    do {
+        if (msg.size() == 0)
+            return addr;
+        addr.push_back(std::move(msg));
+    } while (recv_more(sock, msg));
+    return addr;
 }
 
 static inline void readall(zmq::socket_t &sock)
