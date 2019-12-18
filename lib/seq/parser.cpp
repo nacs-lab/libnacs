@@ -34,9 +34,13 @@ ParserBase::ParserBase(std::istream &istm)
 
 bool ParserBase::next_line()
 {
+    if (istm.eof())
+        return false;
     std::getline(istm, line);
     lineno++;
     colno = 0;
+    if (istm.eof())
+        return !line.empty();
     return istm.good();
 }
 

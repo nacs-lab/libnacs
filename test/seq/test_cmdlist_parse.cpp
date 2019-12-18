@@ -135,5 +135,8 @@ int main(int argc, char **argv)
     test(dir, "invalid_freq_val");
     test(dir, "invalid_freq_val2");
 
+    test(dir, "no_newline_invalid_start");
+    test(dir, "no_newline_valid");
+
     return 0;
 }
