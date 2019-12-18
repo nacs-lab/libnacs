@@ -26,7 +26,7 @@
 #include <sstream>
 #include <math.h>
 
-int main(int argc, char **argv)
+int main(int, char **argv)
 {
     TestCtx ctx;
     IR::Builder builder(IR::Type::Int32, {});
