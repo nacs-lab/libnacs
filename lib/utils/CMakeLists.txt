@@ -81,6 +81,7 @@ set(nacs_utils_llvm_SRCS
   llvm/codegen.cpp
   llvm/compile.cpp
   llvm/execute.cpp
+  llvm/global_rename.cpp
   llvm/inst_simplify.cpp
   llvm/lower_vector.cpp
   llvm/memmgr.cpp
