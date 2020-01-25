@@ -359,7 +359,7 @@ NACS_EXPORT() uint64_t Engine::load(const char *p, size_t len, const Resolver::c
     return load(*(*obj), cb);
 }
 
-NACS_EXPORT() void *Engine::get_symbol(StringRef name)
+NACS_EXPORT() void *Engine::get_symbol(StringRef name) const
 {
     return (void*)(uintptr_t)m_dyld->getSymbol(name).getAddress();
 }

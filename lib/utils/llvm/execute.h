@@ -191,7 +191,7 @@ public:
     NACS_EXPORT(utils) uint64_t load(const char *p, size_t len,
                                      const Resolver::cb_t &cb=Resolver::cb_t());
     // Must be called before `free`ing any other files after the `load`.
-    NACS_EXPORT(utils) void *get_symbol(StringRef name);
+    NACS_EXPORT(utils) void *get_symbol(StringRef name) const;
     // This does not invalidates pointers from any other files
     // but it does clears all symbols.
     NACS_EXPORT(utils) void free(uint64_t id);
