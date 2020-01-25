@@ -18,6 +18,7 @@ set(nacs_seq_llvm_HDRS
   error.h
   event_time.h
   pulse.h
+  rtenv.h
   seq.h)
 set(nacs_seq_llvm_SRCS
   basic_seq.cpp
@@ -26,6 +27,7 @@ set(nacs_seq_llvm_SRCS
   error.cpp
   event_time.cpp
   pulse.cpp
+  rtenv.cpp
   seq.cpp
   var.cpp)
 
