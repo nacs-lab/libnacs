@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2019 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2020 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -94,6 +94,9 @@ struct LLVMTest : LLVM::Codegen::Context {
         }
         auto obj_id = engine.load(&vec[0], vec.size(), get_extern_resolver());
         obj_ids.push_back(obj_id);
+        if (!obj_id)
+            std::cerr << "Loading of object file errored: "
+                      << engine.error_string() << std::endl;
         assert(obj_id);
         auto ptr = engine.get_symbol("0");
         assert(ptr);

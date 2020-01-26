@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2020 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -195,11 +195,17 @@ public:
     // This does not invalidates pointers from any other files
     // but it does clears all symbols.
     NACS_EXPORT(utils) void free(uint64_t id);
+    // If loading failed, this may contain an error string about the reason for the failure.
+    const std::string &error_string() const
+    {
+        return m_errstr;
+    }
 private:
     void reset_dyld();
     MemMgr m_memmgr;
     Resolver m_resolver;
     std::unique_ptr<RuntimeDyld> m_dyld;
+    std::string m_errstr;
 };
 
 }

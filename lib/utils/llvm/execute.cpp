@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2020 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -331,13 +331,22 @@ NACS_EXPORT() uint64_t Engine::load(const object::ObjectFile &obj, const Resolve
 {
     if (!m_dyld)
         reset_dyld();
+    m_errstr.clear();
     auto id = m_memmgr.new_group();
     Resolver::SetCB setter(m_resolver, cb ? &cb : nullptr);
-    if (!m_dyld->loadObject(obj)) {
-        m_memmgr.free_group(id);
+    // If the loading errors, we should reset the loader so that it does not remember
+    // any wrong state. Calling the `free(id)` function accomplishes this.
+    if (!m_dyld->loadObject(obj) || m_dyld->hasError()) {
+        m_errstr = m_dyld->getErrorString();
+        free(id);
         return 0;
     }
     m_dyld->finalizeWithMemoryManagerLocking();
+    if (m_dyld->hasError()) {
+        m_errstr = m_dyld->getErrorString();
+        free(id);
+        return 0;
+    }
     return id;
 }
 
@@ -360,6 +369,7 @@ NACS_EXPORT() void Engine::free(uint64_t id)
     m_memmgr.free_group(id);
     // Reusing the memory could really confuse the relocator so we need to reset the dyld
     // when we free any memory.
+    // This is also used to clear any sideeffect when the loading process errored.
     m_dyld.reset(nullptr);
 }
 
