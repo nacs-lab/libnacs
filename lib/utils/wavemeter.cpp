@@ -461,22 +461,26 @@ NACS_INTERNAL void Wavemeter::check_cache(std::istream &stm)
             stm.seekg(0);
             m_file_end.resize((size_t)len);
         }
+        if (!stm.good())
+            throw std::runtime_error("Cannot seek to stream end. (1)");
         stm.read(&m_file_end[0], m_file_end.size());
         if (!stm.good()) {
             m_file_end.resize(0);
-            throw std::runtime_error("Unable to read from file end.");
+            throw std::runtime_error("Unable to read from file end. (1)");
         }
     };
     if (len < m_file_len) {
         clear();
     }
-    else {
+    else if (m_file_end.size() > 0) {
         stm.seekg(m_file_len - (off_t)m_file_end.size());
+        if (!stm.good())
+            throw std::runtime_error("Cannot seek to stream end. (2)");
         char buff[max_len];
         assert(max_len >= m_file_end.size());
         stm.read(buff, m_file_end.size());
         if (!stm.good())
-            throw std::runtime_error("Unable to read from file end.");
+            throw std::runtime_error("Unable to read from file end. (2)");
         if (memcmp(buff, m_file_end.data(), m_file_end.size()) != 0) {
             clear();
         }
@@ -640,7 +644,7 @@ NACS_EXPORT() size_t nacs_utils_wavemeter_parse(void *_parser, const char *name,
     try {
         auto parser = (Wavemeter*)_parser;
         size_t sz = 0;
-        std::ifstream stm(name);
+        std::ifstream stm(name, std::ios::binary);
         if (!stm.good())
             throw std::runtime_error(std::string("Cannot open file ") + name);
         std::tie(*ts, *data, *height) = parser->parse(stm, &sz, tstart, tend);
