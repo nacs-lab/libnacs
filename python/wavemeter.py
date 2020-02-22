@@ -20,6 +20,10 @@ nacs_utils_wavemeter_parse.argtypes = [ctypes.c_void_p, ctypes.c_char_p,
                                        ctypes.POINTER(ctypes.c_void_p),
                                        ctypes.c_double, ctypes.c_double]
 
+nacs_utils_wavemeter_last_error = handle.nacs_utils.nacs_utils_wavemeter_last_error
+nacs_utils_wavemeter_last_error.restype = ctypes.c_char_p
+nacs_utils_wavemeter_last_error.argtypes = []
+
 nacs_utils_wavemeter_clear = handle.nacs_utils.nacs_utils_wavemeter_clear
 nacs_utils_wavemeter_clear.restype = None
 nacs_utils_wavemeter_clear.argtypes = [ctypes.c_void_p]
@@ -40,6 +44,9 @@ class WavemeterParser:
                                         ctypes.byref(ptime), ctypes.byref(pdata),
                                         ctypes.byref(pheight), tstart, tend)
         if sz == 0:
+            err = nacs_utils_wavemeter_last_error()
+            if err is not None:
+                raise RuntimeError(err.decode())
             return array.array('d'), array.array('d'), array.array('d')
         btime = PyBytes_FromStringAndSize(ptime, sz * 8)
         bdata = PyBytes_FromStringAndSize(pdata, sz * 8)
