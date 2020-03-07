@@ -22,7 +22,6 @@ endif()
 option(ENABLE_KNACS "Enable kernel driver" Off)
 option(ENABLE_LLVM "Enable LLVM JIT" Off)
 option(STATIC_LLVM "Statically link LLVM" Off)
-option(ENABLE_PYWRAPPER "Enable python wrapper for nacs-seq" On)
 option(ENABLE_INSTALL_NONLIB
   "Enable installation of files other than the libraries (e.g. headers and pkgconfig)"
   ${IS_UNIX})
@@ -117,16 +116,13 @@ cmake_c_include_fix_path()
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/lib/utils") # config.h
 
 if(IS_WINDOWS)
-  # Used by python and test
+  # Used by test
   cmake_utils_cygpath_m(INSTALL_WINDOWS_BINDIR "${CMAKE_INSTALL_FULL_BINDIR}")
 else()
   set(INSTALL_WINDOWS_BINDIR "${CMAKE_INSTALL_FULL_BINDIR}")
 endif()
 
 add_subdirectory(lib)
-if(ENABLE_PYWRAPPER)
-  add_subdirectory(python)
-endif()
 add_subdirectory(tools)
 add_subdirectory(test)
 

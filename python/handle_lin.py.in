@@ -1,7 +1,0 @@
-#
-
-import ctypes
-
-nacs_seq = ctypes.CDLL(r"@CMAKE_SHARED_LIBRARY_PREFIX@@NACS_SEQ@.so.@MAJOR_VERSION@")
-nacs_utils = ctypes.CDLL(r"@CMAKE_SHARED_LIBRARY_PREFIX@@NACS_UTILS@.so.@MAJOR_VERSION@")
-libc = nacs_seq
