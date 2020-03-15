@@ -73,11 +73,15 @@ Sequence::fromBinary(const uint32_t *bin, size_t len)
             memcpy(&val, &bin[cursor + 7], 8);
             seq[i] = Pulse(t_start, t_len, chn, Val::get<double>(val));
             cursor += 9;
+            if (t_start == 0)
+                defaults[chn] = Val::get<double>(val);
             continue;
         }
         cursor += 7;
         auto func = exectx->getFunc<double(double, double)>(IR::Function(&bin[cursor], code_len));
         seq[i] = Pulse(t_start, t_len, chn, std::move(func));
+        if (t_start == 0)
+            defaults[chn] = seq[i](0, defaults[chn]);
         cursor += code_len;
     }
     if (cursor >= len)
