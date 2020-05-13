@@ -356,7 +356,11 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
                                              argt->getPointerTo());
             max_offset = max(max_offset, offset + 1);
             auto load = builder.CreateLoad(argt, ptr);
+#if LLVM_VERSION_MAJOR >= 10
+            load->setAlignment(MaybeAlign(8));
+#else
             load->setAlignment(8);
+#endif
             load->setMetadata(LLVMContext::MD_tbaa, tbaa_const);
             call_args[i] = load;
         }
