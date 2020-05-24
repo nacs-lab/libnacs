@@ -16,8 +16,9 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "fd_utils.h"
 #include "mem.h"
+
+#include "fd_utils.h"
 #include "number.h"
 
 #if !NACS_OS_WINDOWS

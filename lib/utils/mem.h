@@ -20,6 +20,7 @@
 
 #include <cstring>
 #include <map>
+#include <stdexcept>
 #include <utility>
 
 #if NACS_OS_WINDOWS
