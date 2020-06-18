@@ -23,7 +23,7 @@
 #include "../utils/mem.h"
 #include "../utils/fd_utils.h"
 
-#include <stropts.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 
 namespace NaCs {
