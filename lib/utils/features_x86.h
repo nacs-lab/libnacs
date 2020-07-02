@@ -43,9 +43,9 @@ NACS_FEATURE_DEF(bmi, 32 * 2 + 3, 0)
 // NACS_FEATURE_DEF(hle, 32 * 2 + 4, 0) // Not used and gone in LLVM 5.0
 NACS_FEATURE_DEF(avx2, 32 * 2 + 5, 0)
 NACS_FEATURE_DEF(bmi2, 32 * 2 + 8, 0)
-// NACS_FEATURE_DEF(invpcid, 32 * 2 + 10, 0) // Not used and gone in LLVM 5.0
+// NACS_FEATURE_DEF(invpcid, 32 * 2 + 10, 0) // Priviledged instruction
 NACS_FEATURE_DEF(rtm, 32 * 2 + 11, 0)
-NACS_FEATURE_DEF(mpx, 32 * 2 + 14, 0)
+// NACS_FEATURE_DEF(mpx, 32 * 2 + 14, 0) // Deprecated in LLVM 10.0
 NACS_FEATURE_DEF(avx512f, 32 * 2 + 16, 0)
 NACS_FEATURE_DEF(avx512dq, 32 * 2 + 17, 0)
 NACS_FEATURE_DEF(rdseed, 32 * 2 + 18, 0)
@@ -66,11 +66,28 @@ NACS_FEATURE_DEF(avx512vl, 32 * 2 + 31, 0)
 NACS_FEATURE_DEF(prefetchwt1, 32 * 3 + 0, 0)
 NACS_FEATURE_DEF(avx512vbmi, 32 * 3 + 1, 0)
 NACS_FEATURE_DEF(pku, 32 * 3 + 4, 0) // ospke
+NACS_FEATURE_DEF(waitpkg, 32 * 3 + 5, 0)
+NACS_FEATURE_DEF(avx512vbmi2, 32 * 3 + 6, 0)
+NACS_FEATURE_DEF(shstk, 32 * 3 + 7, 0)
+NACS_FEATURE_DEF(gfni, 32 * 3 + 8, 0)
+NACS_FEATURE_DEF(vaes, 32 * 3 + 9, 0)
+NACS_FEATURE_DEF(vpclmulqdq, 32 * 3 + 10, 0)
+NACS_FEATURE_DEF(avx512vnni, 32 * 3 + 11, 0)
+NACS_FEATURE_DEF(avx512bitalg, 32 * 3 + 12, 0)
 NACS_FEATURE_DEF(avx512vpopcntdq, 32 * 3 + 14, 0)
+NACS_FEATURE_DEF(rdpid, 32 * 3 + 22, 0)
+NACS_FEATURE_DEF(cldemote, 32 * 3 + 25, 0)
+NACS_FEATURE_DEF(movdiri, 32 * 3 + 27, 0)
+NACS_FEATURE_DEF(movdir64b, 32 * 3 + 28, 0)
+NACS_FEATURE_DEF(enqcmd, 32 * 3 + 29, 90000)
 
 // EAX=7,ECX=0: EDX
-// NACS_FEATURE_DEF(avx512_4vnniw, 32 * 4 + 2, ?????)
-// NACS_FEATURE_DEF(avx512_4fmaps, 32 * 4 + 3, ?????)
+// NACS_FEATURE_DEF(avx5124vnniw, 32 * 4 + 2, ?????)
+// NACS_FEATURE_DEF(avx5124fmaps, 32 * 4 + 3, ?????)
+NACS_FEATURE_DEF(avx512vp2intersect, 32 * 4 + 8, 90000)
+NACS_FEATURE_DEF(serialize, 32 * 4 + 14, 110000)
+NACS_FEATURE_DEF(tsxldtrk, 32 * 4 + 16, 110000)
+NACS_FEATURE_DEF(pconfig, 32 * 4 + 18, 0)
 
 // EAX=0x80000001: ECX
 // ignore sahf on 32bit x86 since it is required
@@ -95,3 +112,10 @@ NACS_FEATURE_DEF(xsaves, 32 * 7 + 3, 0)
 
 // EAX=0x80000008: EBX
 NACS_FEATURE_DEF(clzero, 32 * 8 + 0, 0)
+NACS_FEATURE_DEF(wbnoinvd, 32 * 8 + 9, 0)
+
+// EAX=7,ECX=1: EAX
+NACS_FEATURE_DEF(avx512bf16, 32 * 9 + 5, 90000)
+
+// EAX=0x14,ECX=0: EBX
+NACS_FEATURE_DEF(ptwrite, 32 * 10 + 4, 0)
