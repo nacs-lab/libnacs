@@ -16,6 +16,11 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+// Copy values `from arch/arm/include/uapi/asm/hwcap.h` from linux kernel source tree
+// and match LLVM names.
+
+// LLVM features in `llvm/lib/Target/ARM/ARM.td`
+
 // AArch32 features definition
 // hwcap
 NACS_FEATURE_DEF(neon, 12, 0)
@@ -40,5 +45,8 @@ NACS_FEATURE_DEF(v7, 32 * 2 + 3, 0)
 NACS_FEATURE_DEF(v8, 32 * 2 + 4, 0)
 NACS_FEATURE_DEF(v8_1a, 32 * 2 + 5, 0)
 NACS_FEATURE_DEF(v8_2a, 32 * 2 + 6, 0)
-NACS_FEATURE_DEF(v8_3a, 32 * 2 + 7, 60000)
+NACS_FEATURE_DEF(v8_3a, 32 * 2 + 7, 0)
 NACS_FEATURE_DEF(v8_m_main, 32 * 2 + 8, 0)
+NACS_FEATURE_DEF(v8_4a, 32 * 2 + 9, 0)
+NACS_FEATURE_DEF(v8_5a, 32 * 2 + 10, 0)
+NACS_FEATURE_DEF(v8_6a, 32 * 2 + 11, 110000)

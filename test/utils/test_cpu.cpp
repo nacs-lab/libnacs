@@ -91,7 +91,8 @@ int main()
     assert(cortex_a75->get_vector_size() == 16);
     assert(cortex_a75->test_feature(AArch64::Feature::v8_2a));
     assert(cortex_a75->test_feature(AArch64::Feature::crc));
-    assert(cortex_a75->test_feature(AArch64::Feature::crypto));
+    assert(cortex_a75->test_feature(AArch64::Feature::aes));
+    assert(cortex_a75->test_feature(AArch64::Feature::sha2));
 
     return 0;
 }
