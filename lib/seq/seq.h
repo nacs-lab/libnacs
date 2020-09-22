@@ -116,12 +116,12 @@ struct Sequence {
             : t(t), len(len), chn(chn), m_val(), m_cb(std::move(func))
         {
         }
-        Val operator()(uint64_t t, Val start) const
+        Val operator()(uint64_t t) const
         {
             // `t` is the time within the pulse,
             // `start` is the value of the channel at the begining of the pulse.
             if (m_cb)
-                return IR::TagVal(m_cb(double(t) * 10e-9, start.val.f64)).val;
+                return IR::TagVal(m_cb(double(t) * 10e-9, m_val.val.f64)).val;
             return m_val;
         }
         void set(Val v)
@@ -129,8 +129,14 @@ struct Sequence {
             m_val = v;
             m_cb = func_t();
         }
+        void set_start(Val start)
+        {
+            if (m_cb) {
+                m_val = start;
+            }
+        }
     private:
-        Val m_val;
+        Val m_val; // this is the start value if m_cb is not null.
         func_t m_cb;
     };
     struct Clock {

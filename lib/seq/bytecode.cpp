@@ -538,11 +538,6 @@ class Scheduler {
     /**
      * States for value calculations.
      */
-    // This is an array of the same length as `pulses`,
-    // storing the corresponding start values for each pulse.
-    // This is the value given to the sequence pulse callback as the old_val
-    // (second parameter).
-    std::vector<Val> start_vals;
     // Final value for each pulses.
     // This value can be computed from `start_vals` and `pulses` but is cached because
     // it is already computed when initializing `start_vals`. See `init_pulse_vals`
@@ -659,7 +654,7 @@ class Scheduler {
         uint64_t rel_t = t < pulse.t ? 0 : t - pulse.t;
         if (rel_t > pulse.len)
             return end_vals[id];
-        return pulse(rel_t, start_vals[id]);
+        return pulse(rel_t);
     }
 
     // If `cleanup` is `false`,
@@ -842,8 +837,8 @@ class Scheduler {
             else {
                 val = it->second;
             }
-            start_vals[i] = val;
-            val = pulse(pulse.len, val);
+            pulse.set_start(val);
+            val = pulse(pulse.len);
             end_vals[i] = val;
             it->second = val;
         }
@@ -858,7 +853,6 @@ public:
           writer(stm, t_cons),
           t_cons(t_cons),
           keeper(writer.keeper),
-          start_vals(n_pulses),
           end_vals(n_pulses)
     {
     }
@@ -890,7 +884,8 @@ public:
             assert(pulse.chn.id < 32);
             uint32_t mask = uint32_t(1) << pulse.chn.id;
             all_ttl_mask = all_ttl_mask | mask;
-            bool val = pulse(pulse.t, Val::get<double>((ttl_val & mask) != 0)).val.f64 != 0;
+            pulse.set_start(Val::get<double>((ttl_val & mask) != 0));
+            bool val = pulse(pulse.t).val.f64 != 0;
             uint32_t new_ttl_val;
             if (val) {
                 new_ttl_val = ttl_val | mask;
