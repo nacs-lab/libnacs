@@ -37,13 +37,24 @@ namespace NaCs {
 namespace LLVM {
 namespace Codegen {
 
-Constant *ensurePureExtern(Module *M, FunctionType *ft, StringRef name, bool canread)
+#if LLVM_VERSION_MAJOR >= 11
+FunctionCallee
+#else
+Constant*
+#endif
+ensurePureExtern(Module *M, FunctionType *ft, StringRef name, bool canread)
 {
     if (auto f = M->getNamedValue(name)) {
         auto pft = ft->getPointerTo();
+#if LLVM_VERSION_MAJOR >= 11
+        if (f->getType() != pft)
+            return {ft, ConstantExpr::getBitCast(f, pft)};
+        return {ft, f};
+#else
         if (f->getType() != pft)
             return ConstantExpr::getBitCast(f, pft);
         return f;
+#endif
     }
     Function *f = Function::Create(ft, GlobalValue::ExternalLinkage, name, M);
     f->addFnAttr(Attribute::Speculatable);
@@ -90,7 +101,12 @@ NACS_EXPORT() Context::~Context()
 {
 }
 
-Constant *Context::ensurePureFunc(StringRef name, FunctionType *ft, bool canread) const
+#if LLVM_VERSION_MAJOR >= 11
+FunctionCallee
+#else
+Constant*
+#endif
+Context::ensurePureFunc(StringRef name, FunctionType *ft, bool canread) const
 {
     return ensurePureExtern(m_mod, ft, name, canread);
 }
@@ -356,7 +372,9 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
                                              argt->getPointerTo());
             max_offset = max(max_offset, offset + 1);
             auto load = builder.CreateLoad(argt, ptr);
-#if LLVM_VERSION_MAJOR >= 10
+#if LLVM_VERSION_MAJOR >= 11
+            load->setAlignment(Align(8));
+#elif LLVM_VERSION_MAJOR >= 10
             load->setAlignment(MaybeAlign(8));
 #else
             load->setAlignment(8);
@@ -679,7 +697,11 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
                 auto sym = IR::getBuiltinSymbol(id);
                 if (!sym)
                     break;
+#if LLVM_VERSION_MAJOR >= 11
+                FunctionCallee callee;
+#else
                 Constant *callee = nullptr;
+#endif
                 switch (IR::getBuiltinType(id)) {
                 case IR::BuiltinType::F64_F64: {
                     assert(nargs == 1);

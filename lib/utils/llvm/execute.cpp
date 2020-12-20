@@ -337,13 +337,13 @@ NACS_EXPORT() uint64_t Engine::load(const object::ObjectFile &obj, const Resolve
     // If the loading errors, we should reset the loader so that it does not remember
     // any wrong state. Calling the `free(id)` function accomplishes this.
     if (!m_dyld->loadObject(obj) || m_dyld->hasError()) {
-        m_errstr = m_dyld->getErrorString();
+        m_errstr = m_dyld->getErrorString().str();
         free(id);
         return 0;
     }
     m_dyld->finalizeWithMemoryManagerLocking();
     if (m_dyld->hasError()) {
-        m_errstr = m_dyld->getErrorString();
+        m_errstr = m_dyld->getErrorString().str();
         free(id);
         return 0;
     }

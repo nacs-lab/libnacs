@@ -25,10 +25,12 @@
 #include "../utils.h"
 
 #include <llvm/Analysis/TargetTransformInfo.h>
+#include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/MC/MCContext.h>
+#include <llvm/Support/Host.h>
 #include <llvm/Support/TargetSelect.h>
 #if LLVM_VERSION_MAJOR >= 7
 #  include <llvm/Transforms/InstCombine/InstCombine.h>
@@ -182,7 +184,7 @@ static TargetMachine *create_native_target()
             attr.append(1, std::string("-") + it->getKey().str());
         }
     }
-    std::string cpu = sys::getHostCPUName();
+    auto cpu = sys::getHostCPUName();
     return eb.selectTarget(TheTriple, "", cpu, attr);
 }
 

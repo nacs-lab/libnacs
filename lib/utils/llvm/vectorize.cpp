@@ -37,6 +37,10 @@ namespace LLVM {
 
 namespace {
 
+#if LLVM_VERSION_MAJOR < 11
+#  define FixedVectorType VectorType
+#endif
+
 template<typename T>
 static Function *createFunction(const Function &F, StringRef name, unsigned vec_size,
                                 const T &vec_args, bool _export)
@@ -49,7 +53,7 @@ static Function *createFunction(const Function &F, StringRef name, unsigned vec_
         auto argt = fsig[arg];
         if (!VectorType::isValidElementType(argt))
             return nullptr;
-        fsig[arg] = VectorType::get(argt, vec_size);
+        fsig[arg] = FixedVectorType::get(argt, vec_size);
     }
     auto orig_rt = orig_ft->getReturnType();
     Type *rt;
@@ -60,7 +64,7 @@ static Function *createFunction(const Function &F, StringRef name, unsigned vec_
         return nullptr;
     }
     else {
-        rt = VectorType::get(orig_rt, vec_size);
+        rt = FixedVectorType::get(orig_rt, vec_size);
     }
     auto ftype = FunctionType::get(rt, fsig, false);
 
@@ -228,13 +232,13 @@ struct Vectorizer {
                 add_vec_inst(builder.CreateSelect(cond, trueop, falseop));
             }
             else if (auto *cast = dyn_cast<CastInst>(&inst)) {
-                Type *dest_ty = VectorType::get(cast->getType(), vec_size);
+                Type *dest_ty = FixedVectorType::get(cast->getType(), vec_size);
                 Value *a = map_val(cast->getOperand(0), true);
                 add_vec_inst(builder.CreateCast(cast->getOpcode(), a, dest_ty));
             }
             else if (auto *call = dyn_cast<CallInst>(&inst)) {
                 auto ty = call->getType();
-                auto vty = VectorType::get(ty, vec_size);
+                auto vty = FixedVectorType::get(ty, vec_size);
                 auto callee = call->getCalledFunction();
                 if (auto id = callee->getIntrinsicID()) {
                     auto intrin = Intrinsic::getDeclaration(const_cast<Module*>(F.getParent()),
@@ -263,7 +267,7 @@ struct Vectorizer {
                 }
                 SmallVector<Type*, 4> argts(fty->param_begin(), fty->param_end());
                 for (auto &argt: argts)
-                    argt = VectorType::get(argt, vec_size);
+                    argt = FixedVectorType::get(argt, vec_size);
                 auto vfty = FunctionType::get(vty, argts, false);
                 SmallVector<Value*, 4> args;
                 for (const auto &op: call->arg_operands())

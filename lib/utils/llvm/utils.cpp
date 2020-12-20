@@ -194,7 +194,7 @@ NACS_INTERNAL Value *FunctionMover::materialize(Value *V)
 
 const std::string &get_cpu_arch()
 {
-    static const std::string arch = Triple(sys::getProcessTriple()).getArchName();
+    static const std::string arch = Triple(sys::getProcessTriple()).getArchName().str();
     return arch;
 }
 

@@ -101,7 +101,11 @@ void LowerVectorPass::replace_frem(BinaryOperator *binop)
     }
     auto fty = FunctionType::get(ty, {ty, ty}, false);
     auto f = Codegen::ensurePureExtern(binop->getModule(), fty, name);
+#if LLVM_VERSION_MAJOR >= 11
+    fixVectorABI(*cast<Function>(f.getCallee()));
+#else
     fixVectorABI(*cast<Function>(f));
+#endif
     IRBuilder<> builder(binop);
     auto call = builder.CreateCall(f, {binop->getOperand(0), binop->getOperand(1)});
     binop->replaceAllUsesWith(call);

@@ -126,7 +126,11 @@ private:
     Value *emit_mul(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const;
     Value *emit_fdiv(IRBuilder<> &builder, Value *val1, Value *val2) const;
     Value *emit_cmp(IRBuilder<> &builder, IR::CmpType cmptyp, Value *val1, Value *val2) const;
+#if LLVM_VERSION_MAJOR >= 11
+    FunctionCallee ensurePureFunc(StringRef name, FunctionType *ft, bool canread=false) const;
+#else
     Constant *ensurePureFunc(StringRef name, FunctionType *ft, bool canread=false) const;
+#endif
 
     Module *m_mod;
     LLVMContext &m_ctx;

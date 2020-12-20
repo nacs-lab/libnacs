@@ -27,7 +27,11 @@ namespace Codegen {
 
 using namespace llvm;
 
+#if LLVM_VERSION_MAJOR >= 11
+FunctionCallee ensurePureExtern(Module *M, FunctionType *ft, StringRef name, bool canread=false);
+#else
 Constant *ensurePureExtern(Module *M, FunctionType *ft, StringRef name, bool canread=false);
+#endif
 
 }
 }

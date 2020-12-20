@@ -31,6 +31,7 @@
 #  include <llvm/InitializePasses.h>
 #endif
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Transforms/Utils/Local.h>
 
@@ -115,7 +116,7 @@ static Value *simplify_inst(Instruction *I, const SimplifyQuery &SQ,
             auto gname = gv->getName();
             if (!cb)
                 return v;
-            data = (const char*)cb(gname);
+            data = (const char*)cb(gname.str());
             if (!data) {
                 return v;
             }
@@ -126,7 +127,7 @@ static Value *simplify_inst(Instruction *I, const SimplifyQuery &SQ,
                                linearInterpolate(x, npoints, points));
     }
     auto call_sym = [&] (auto... args) -> Value* {
-        if (auto addr = Exe::Resolver::resolve_ir_sym(name)) {
+        if (auto addr = Exe::Resolver::resolve_ir_sym(name.str())) {
             clear_v();
             return ConstantFP::get(Type::getDoubleTy(llvm_ctx),
                                    call_ptr(addr, args...));

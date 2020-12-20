@@ -115,11 +115,11 @@ struct LLVMTest : LLVM::Codegen::Context {
     void add_extern_data(llvm::StringRef name, const void *_p, size_t size) override
     {
         auto p = (const double*)_p;
-        data[name] = std::vector<double>{p, p + size / sizeof(double)};
+        data[name.str()] = std::vector<double>{p, p + size / sizeof(double)};
     }
     uintptr_t get_extern_data(llvm::StringRef name) override
     {
-        auto it = data.find(name);
+        auto it = data.find(name.str());
         if (it != data.end())
             return (uintptr_t)&it->second[0];
         return 0;
