@@ -72,6 +72,18 @@ private:
     uint64_t m_start_time = getTime();
 };
 
+struct PerfCounter {
+    enum Type {
+        CPUCycles,
+        CPUInsts
+    };
+    PerfCounter(Type type);
+    void start(bool reset=true);
+    int64_t finish(bool stop=true);
+private:
+    int m_fd = -1;
+};
+
 }
 
 #endif
