@@ -125,6 +125,18 @@ NACS_EXPORT() PerfCounter::PerfCounter(Type type)
     m_fd = perf_event_open(&pe, 0, -1, -1, 0);
 }
 
+NACS_EXPORT() void PerfCounter::reset()
+{
+    if (m_fd == -1)
+        return;
+    ioctl(m_fd, PERF_EVENT_IOC_RESET, 0);
+}
+
+NACS_EXPORT() void PerfCounter::stop()
+{
+    ioctl(m_fd, PERF_EVENT_IOC_DISABLE, 0);
+}
+
 NACS_EXPORT() void PerfCounter::start(bool reset)
 {
     if (m_fd == -1)
@@ -156,6 +168,14 @@ NACS_EXPORT() void PerfCounter::start(bool reset)
 NACS_EXPORT() int64_t PerfCounter::finish(bool stop)
 {
     return 0;
+}
+
+NACS_EXPORT() void PerfCounter::reset()
+{
+}
+
+NACS_EXPORT() void PerfCounter::stop()
+{
 }
 #endif
 

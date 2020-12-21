@@ -84,6 +84,8 @@ struct PerfCounter {
         CPUStallBackend,
     };
     PerfCounter(Type type);
+    void reset();
+    void stop();
     void start(bool reset=true);
     int64_t finish(bool stop=true);
 private:
