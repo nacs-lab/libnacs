@@ -75,7 +75,13 @@ private:
 struct PerfCounter {
     enum Type {
         CPUCycles,
-        CPUInsts
+        CPUInsts,
+        CacheRefs,
+        CacheMisses,
+        Branches,
+        BranchMisses,
+        CPUStallFrontend,
+        CPUStallBackend,
     };
     PerfCounter(Type type);
     void start(bool reset=true);

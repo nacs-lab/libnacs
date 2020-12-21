@@ -95,6 +95,30 @@ PerfCounter::PerfCounter(Type type)
         pe.type = PERF_TYPE_HARDWARE;
         pe.config = PERF_COUNT_HW_INSTRUCTIONS;
         break;
+    case CacheRefs:
+        pe.type = PERF_TYPE_HARDWARE;
+        pe.config = PERF_COUNT_HW_CACHE_REFERENCES;
+        break;
+    case CacheMisses:
+        pe.type = PERF_TYPE_HARDWARE;
+        pe.config = PERF_COUNT_HW_CACHE_MISSES;
+        break;
+    case Branches:
+        pe.type = PERF_TYPE_HARDWARE;
+        pe.config = PERF_COUNT_HW_BRANCH_INSTRUCTIONS;
+        break;
+    case BranchMisses:
+        pe.type = PERF_TYPE_HARDWARE;
+        pe.config = PERF_COUNT_HW_BRANCH_MISSES;
+        break;
+    case CPUStallFrontend:
+        pe.type = PERF_TYPE_HARDWARE;
+        pe.config = PERF_COUNT_HW_STALLED_CYCLES_FRONTEND;
+        break;
+    case CPUStallBackend:
+        pe.type = PERF_TYPE_HARDWARE;
+        pe.config = PERF_COUNT_HW_STALLED_CYCLES_BACKEND;
+        break;
     default:
         return;
     }
