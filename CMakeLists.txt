@@ -99,7 +99,16 @@ if(IS_WINDOWS)
   set(CMAKE_ASM_COMPILE_OPTIONS_PIC)
   set(CMAKE_ASM_COMPILE_OPTIONS_PIE)
 else()
-  set(LINKER_FLAGS ${LINKER_FLAGS} -Wl,-Bsymbolic)
+  # Do no use `-Bsymbolic`.
+  # The difference between that and `-Bsymbolic-functions` is that `-Bsymbolic`
+  # also cause all the global variables to refer to the local version.
+  # This is actually problematic when the global variable is accessed externally
+  # since GCC can actually emit a static copy of the variable in a program
+  # linked to the library and rely on the runtime linker
+  # to overwrite the address in the library with the external one.
+  # With `-Bsymbolic` the two will be refering to
+  # two different versions of the global variable.
+  set(LINKER_FLAGS ${LINKER_FLAGS} -Wl,-Bsymbolic-functions)
 endif()
 
 cmake_c_add_flags(CMAKE_C_FLAGS -std=gnu11)
