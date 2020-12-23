@@ -24,8 +24,6 @@ test_write(volatile void *ptr, uint32_t nrun)
 int
 main()
 {
-    uint32_t page_size = getpagesize();
-
     void *virt_addr = mmap(nullptr, page_size, PROT_READ | PROT_WRITE,
                            MAP_SHARED | MAP_ANONYMOUS | MAP_LOCKED |
                            MAP_POPULATE, -1, 0);

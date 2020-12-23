@@ -68,7 +68,6 @@ getPhyAddr(void *virt_addr)
 {
 #if NACS_OS_LINUX
     static int page_map = open("/proc/self/pagemap", O_RDONLY);
-    static uint32_t page_size = getpagesize();
     uintptr_t virt_offset = uintptr_t(virt_addr) % page_size;
     uintptr_t virt_pfn = uintptr_t(virt_addr) / page_size;
 
