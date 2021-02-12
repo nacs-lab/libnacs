@@ -104,9 +104,15 @@ Value *VectorABIPass::set_nele_vector(IRBuilder<> &builder, Value *v, unsigned n
 {
     auto ty = cast<VectorType>(v->getType());
     auto old_nele = ty->getNumElements();
+#if LLVM_VERSION_MAJOR >= 11
+    SmallVector<int, 16> mask(nele);
+    for (unsigned i = 0; i < nele; i++)
+        mask[i] = int(i < old_nele ? i : old_nele);
+#else
     SmallVector<uint32_t, 16> mask(nele);
     for (unsigned i = 0; i < nele; i++)
         mask[i] = i < old_nele ? i : old_nele;
+#endif
     return builder.CreateShuffleVector(v, UndefValue::get(ty), mask);
 }
 
@@ -125,10 +131,11 @@ Value *VectorABIPass::cast_vector(IRBuilder<> &builder, VectorType *ty, Value *v
         return v;
     }
     else if (old_sz % elsz == 0) {
-        v = builder.CreateBitCast(v, VectorType::get(ty->getElementType(), old_sz / elsz));
+        v = builder.CreateBitCast(v, FixedVectorType::get(ty->getElementType(), old_sz / elsz));
         return set_nele_vector(builder, v, ty->getNumElements());
     }
-    v = builder.CreateBitCast(v, VectorType::get(Type::getInt8Ty(ty->getContext()), old_sz / 8));
+    v = builder.CreateBitCast(v, FixedVectorType::get(Type::getInt8Ty(ty->getContext()),
+                                                      old_sz / 8));
     v = set_nele_vector(builder, v, sz);
     return builder.CreateBitCast(v, ty);
 }
@@ -277,7 +284,7 @@ bool VectorABIPass::handle_x86_func(const DataLayout &DL, VectorType *T_v128,
 bool VectorABIPass::x86_abi(Module &M, bool is_win32)
 {
     auto &DL = M.getDataLayout();
-    auto T_v128 = VectorType::get(Type::getInt32Ty(M.getContext()), 4);
+    auto T_v128 = FixedVectorType::get(Type::getInt32Ty(M.getContext()), 4);
     bool changed = false;
     for (auto &f: M)
         changed |= handle_x86_func(DL, T_v128, f, is_win32);
@@ -316,11 +323,11 @@ bool VectorABIPass::handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32
             auto ele = cast<VectorType>(t)->getElementType();
             auto elesz = DL.getTypeSizeInBits(t);
             if (sz % elesz == 0) {
-                argts.push_back(VectorType::get(ele, sz / elesz));
+                argts.push_back(FixedVectorType::get(ele, sz / elesz));
             }
             else {
-                argts.push_back(VectorType::get(Type::getInt8Ty(ele->getContext()),
-                                                sz / 8));
+                argts.push_back(FixedVectorType::get(Type::getInt8Ty(ele->getContext()),
+                                                     sz / 8));
             }
         }
     }
@@ -397,7 +404,7 @@ bool VectorABIPass::run_on_function(Function &F)
     switch (triple.getArch()) {
     case Triple::x86:
     case Triple::x86_64:
-        return handle_x86_func(DL, VectorType::get(Type::getInt32Ty(M->getContext()), 4),
+        return handle_x86_func(DL, FixedVectorType::get(Type::getInt32Ty(M->getContext()), 4),
                                F, triple.getOS() == Triple::Win32);
     case Triple::aarch64:
     case Triple::aarch64_be:
