@@ -21,6 +21,7 @@
 
 #include <nacs-utils/utils.h>
 #include <nacs-utils/ir.h>
+#include <nacs-utils/llvm/utils.h>
 
 #include <llvm/IR/Module.h>
 
@@ -575,6 +576,33 @@ static inline std::ostream &operator<<(std::ostream &stm, const Env &env)
     env.print(stm);
     return stm;
 }
+
+class VarMover {
+    struct MapVisitor;
+public:
+    VarMover(Env *dest);
+    virtual ~VarMover();
+    Var *clone_var(Var *var);
+    Env *env()
+    {
+        return &m_dest;
+    }
+
+protected:
+    // Map old value to new value **without recursing into the arguments**
+    // Return `nullptr` if the default copying method should be used.
+    // If recursive mapping of the arguments is needed, overload the `new_call` functions below.
+    // Note that the API does not allow arbitrary change of the call structure.
+    virtual Var *map_var(Var *old);
+    // Create a new call from the mapped arguments.
+    virtual Var *new_call(Var *func, llvm::ArrayRef<Arg> args, int nfreeargs);
+    virtual Var *new_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs);
+
+private:
+    Env &m_dest;
+    LLVM::FunctionMover m_mover;
+    std::map<Var*,Var*> m_map;
+};
 
 }
 

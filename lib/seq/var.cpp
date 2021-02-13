@@ -23,7 +23,6 @@
 #include "../utils/llvm/compile.h"
 #include "../utils/llvm/execute.h"
 #include "../utils/llvm/inst_simplify.h"
-#include "../utils/llvm/utils.h"
 
 #include <stdexcept>
 

@@ -885,4 +885,98 @@ NACS_EXPORT() void Env::print(std::ostream &stm, bool sortvar) const
     }
 }
 
+NACS_EXPORT_ VarMover::VarMover(Env *dest)
+    : m_dest(*dest),
+      m_mover(dest->llvm_module())
+{
+}
+
+NACS_EXPORT_ VarMover::~VarMover()
+{
+}
+
+NACS_EXPORT() Var *VarMover::map_var(Var *old)
+{
+    return nullptr;
+}
+
+NACS_EXPORT() Var *VarMover::new_call(Var *func, llvm::ArrayRef<Arg> args, int nfreeargs)
+{
+    return m_dest.new_call(func, args, nfreeargs);
+}
+
+NACS_EXPORT() Var*
+VarMover::new_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs)
+{
+    return m_dest.new_call(func, args, nfreeargs);
+}
+
+struct VarMover::MapVisitor : Env::Visitor {
+    MapVisitor(VarMover &mover)
+        : mover(mover)
+    {
+    }
+
+    Var *previsit(Var *v)
+    {
+        auto &newv = mover.m_map[v];
+        if (newv)
+            return newv;
+        if ((newv = mover.map_var(v))) {
+            assert(newv->valid() && &newv->env() == &mover.m_dest);
+            return newv;
+        }
+        if (v->is_const()) {
+            newv = mover.m_dest.new_const(v->get_const());
+            return newv;
+        }
+        if (v->is_extern()) {
+            newv = mover.m_dest.new_extern(v->get_extern());
+            return newv;
+        }
+        return nullptr;
+    }
+    void postvisit(Var *var)
+    {
+        // Finish up this call
+        llvm::SmallVector<Arg, 16> args;
+        assert(var->is_call());
+        for (const auto &arg: var->args()) {
+            if (!arg.is_var()) {
+                args.push_back(arg);
+            }
+            else {
+                auto newargv = mover.m_map[arg.get_var()];
+                assert(newargv);
+                args.push_back(Arg::create_var(newargv));
+            }
+        }
+        auto callee = var->get_callee();
+        auto &newv = mover.m_map[var];
+        assert(!newv);
+        if (callee.is_llvm) {
+            newv = mover.new_call(mover.m_mover.clone_function(callee.llvm),
+                                  args, var->nfreeargs());
+        }
+        else {
+            auto callvar = mover.m_map[callee.var];
+            assert(callvar);
+            newv = mover.new_call(callvar, args, var->nfreeargs());
+        }
+    }
+    VarMover &mover;
+};
+
+NACS_EXPORT() Var *VarMover::clone_var(Var *v)
+{
+    assert(&v->env() != &m_dest);
+    MapVisitor visitor(*this);
+    if (auto var = visitor.previsit(v))
+        return var;
+    Env::scan_dfs(v, visitor);
+    v = m_map[v];
+    assert(v);
+    return v;
+}
+
 }
