@@ -32,6 +32,7 @@ namespace IR {
 
 enum class Type : uint8_t {
     _Min = 0,
+    None = 0,
     Bool,
     Int32,
     Float64,
