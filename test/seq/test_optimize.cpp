@@ -139,6 +139,11 @@ static void test_unused_arg(Seq::Env &env)
         builder.createRet(builder.createAdd(1, 1));
         return env.new_call(builder.get(), {Seq::Arg::create_arg(0), Seq::Arg::create_arg(1)}, 2);
     }()->ref();
+    auto v3 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64, IR::Type::Float64});
+        builder.createRet(builder.createAdd(0, 0));
+        return env.new_call(builder.get(), {Seq::Arg::create_arg(0), Seq::Arg::create_arg(1)}, 2);
+    }()->ref();
 
     env.optimize();
 
@@ -147,6 +152,10 @@ static void test_unused_arg(Seq::Env &env)
 
     assert(v2->nfreeargs() == 2);
     assert(v2->argument_unused(0));
+
+    assert(v3->nfreeargs() == 1);
+    assert(v3->args()[0].is_arg());
+    assert(v3->args()[0].get_arg() == 0);
 }
 
 static void test_cse(Seq::Env &env)
