@@ -157,15 +157,41 @@ public:
         };
     };
     // Use unique pointer since I'm too lazy to write my own.
-    // The only difference is that copy is not allowed
-    // but we could use `->ref()` most of the time.
-    using Ref = std::unique_ptr<Var,Unrefer>;
+    // The only limitation is that copy is not allowed
+    // but we could/should use `->ref()` most of the time in place of copy anyway.
+    class Ref : public std::unique_ptr<Var,Unrefer> {
+    public:
+        constexpr Ref() noexcept : std::unique_ptr<Var,Unrefer>()
+        {
+        }
+        constexpr Ref(std::nullptr_t) noexcept : std::unique_ptr<Var,Unrefer>(nullptr)
+        {
+        }
+        explicit Ref(Var *var) noexcept
+            : std::unique_ptr<Var,Unrefer>(var)
+        {
+            if (var) {
+                var->incref();
+            }
+        }
+        Ref(Ref &&ref) noexcept = default;
+        Ref &operator=(Ref &&ref) noexcept = default;
+        Ref &operator=(std::nullptr_t) noexcept
+        {
+            reset(nullptr);
+            return *this;
+        }
+        void reset(Var *ptr) noexcept
+        {
+            if (ptr)
+                ptr->incref();
+            std::unique_ptr<Var,Unrefer>::reset(ptr);
+        }
+        Var *release() noexcept = delete;
+    };
 
     Ref ref()
     {
-        if (!m_extern_ref)
-            varuse_dirty();
-        m_extern_ref++;
         return Ref(this);
     }
 
@@ -288,6 +314,12 @@ private:
         if (m_next)
             m_next->m_prev = m_prev;
         *m_prev = m_next;
+    }
+    void incref()
+    {
+        if (!m_extern_ref)
+            varuse_dirty();
+        m_extern_ref++;
     }
     void unref()
     {
