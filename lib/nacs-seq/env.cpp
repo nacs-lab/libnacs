@@ -369,7 +369,7 @@ bool Env::optimize_local()
             // Check arguments
             if (!var->is_call())
                 return next();
-            bool has_arg = false;
+            int max_arg_idx = -1;
             // There could be constant variable argument again
             // since the argument var optimization might have optimized
             // the variable to a constant
@@ -377,7 +377,9 @@ bool Env::optimize_local()
             for (size_t i = 0; i < var->args().size(); i++) {
                 auto &arg = var->args()[i];
                 if (arg.is_arg()) {
-                    has_arg = true;
+                    auto idx = arg.get_arg();
+                    if (idx > max_arg_idx)
+                        max_arg_idx = idx;
                     continue;
                 }
                 if (!arg.is_var())
@@ -392,10 +394,9 @@ bool Env::optimize_local()
                     changed = true;
                 }
             }
-            // We don't want to surprise the user with mismatch argument number.
-            // However, we allowe it in the special case where none of the arguments are used.
-            if (!has_arg && var->nfreeargs() != 0) {
-                var->m_n_freeargs = 0;
+            // Allow removing unused trailing arguments.
+            if (max_arg_idx + 1 < var->nfreeargs()) {
+                var->m_n_freeargs = max_arg_idx + 1;
                 changed = true;
             }
             // Now all of the non-const arguments are used by the function
