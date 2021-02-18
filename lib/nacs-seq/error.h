@@ -38,6 +38,10 @@ struct NACS_EXPORT_ Error : std::runtime_error {
         Seq,
         Channel,
     };
+    enum class EventTime : uint8_t {
+        NegTime,
+        NonPosTime,
+    };
 
     Error(Type type, uint16_t code, Type type1, uint64_t id1, const char *what);
     Error(Type type, uint16_t code, Type type1, uint64_t id1, const std::string &what);
