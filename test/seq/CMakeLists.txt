@@ -35,4 +35,6 @@ if(ENABLE_LLVM)
 
   add_llvm_test(env)
   add_llvm_test(optimize)
+
+  add_llvm_test(event_time)
 endif()
