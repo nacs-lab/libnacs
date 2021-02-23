@@ -88,13 +88,18 @@ NACS_EXPORT() Env::~Env()
 NACS_INTERNAL Var *Env::new_var()
 {
     auto var = new Var(*this);
+    link_var(var);
+    m_varid_dirty = true;
+    return var;
+}
+
+NACS_INTERNAL void Env::link_var(Var *var)
+{
     if (m_vars)
         m_vars->m_prev = &var->m_next;
     var->m_prev = &m_vars;
     var->m_next = m_vars;
     m_vars = var;
-    m_varid_dirty = true;
-    return var;
 }
 
 NACS_EXPORT() Var *Env::new_const(IR::TagVal c)
@@ -126,7 +131,7 @@ NACS_EXPORT() Var *Env::new_call(Var *func, llvm::ArrayRef<Arg> args, int nfreea
     // There are significantly fewer things to check since we assume the callee
     // is already verified.
     auto var = new_var();
-    var->assign_call(func, args, nfreeargs);
+    var->_assign_call(func, args, nfreeargs);
     return var;
 }
 
@@ -142,7 +147,7 @@ NACS_INTERNAL Var *Env::_new_call(llvm::Function *func, llvm::ArrayRef<Arg> args
         throw std::invalid_argument("Argument number mismatch");
     check_args(args, nfreeargs);
     auto var = new_var();
-    var->assign_call(func, args, nfreeargs);
+    var->_assign_call(func, args, nfreeargs);
     return var;
 }
 
@@ -403,23 +408,28 @@ bool Env::optimize_local()
 }
 
 #ifndef NDEBUG
+static void assert_topological_order(Var *var)
+{
+    if (!var->is_call())
+        return;
+    auto self_id = var->varid();
+    auto check = [&] (Var *child) {
+        assert(child->varid() < self_id);
+    };
+    auto f = var->get_callee();
+    if (!f.is_llvm)
+        check(f.var);
+    for (auto arg: var->args()) {
+        if (!arg.is_var())
+            continue;
+        check(arg.get_var());
+    }
+}
+
 static void assert_topological_order(Env &env)
 {
     for (auto var: env) {
-        if (!var->is_call())
-            continue;
-        auto self_id = var->varid();
-        auto check = [&] (Var *child) {
-            assert(child->varid() < self_id);
-        };
-        auto f = var->get_callee();
-        if (!f.is_llvm)
-            check(f.var);
-        for (auto arg: var->args()) {
-            if (!arg.is_var())
-                continue;
-            check(arg.get_var());
-        }
+        assert_topological_order(var);
     }
 }
 #endif
@@ -536,8 +546,8 @@ NACS_INTERNAL bool Env::optimize_global()
             }
             assert(copy->is_call());
             assert(copy->get_callee().is_llvm);
-            root->assign_call(copy->get_callee().llvm, copy->args(),
-                              copy->nfreeargs());
+            root->_assign_call(copy->get_callee().llvm, copy->args(),
+                               copy->nfreeargs());
             // Proceed normally for the new call.
         }
         else if (!root->is_call()) {
@@ -693,15 +703,80 @@ NACS_INTERNAL bool Env::optimize_global()
             llvm::InlineFunction(call, IFI);
 #endif
         }
-        root->assign_call(f, newargs, root->nfreeargs());
+        root->_assign_call(f, newargs, root->nfreeargs());
     }
     return changed;
+}
+
+NACS_EXPORT() bool Env::ensure_sorted()
+{
+    if (!m_sort_dirty)
+        return false;
+
+    for (auto var: *this)
+        var->m_used = false;
+
+    struct SortVisitor : Visitor {
+        bool previsit(Var *var)
+        {
+            if (var->m_used)
+                return false;
+            var->m_used = true;
+            if (var->ref_none()) {
+                add_to_order(var);
+                return false;
+            }
+            return true;
+        }
+        void postvisit(Var *var)
+        {
+            add_to_order(var);
+        }
+        llvm::SmallVector<Var*, 16> order;
+        void add_to_order(Var *var)
+        {
+            assert(var->m_used);
+            var->m_varid = order.size();
+#ifndef NDEBUG
+            assert_topological_order(var);
+#endif
+            order.push_back(var);
+        }
+    };
+
+    // Mark varid as clean so that the topological order check can work.
+    m_varid_dirty = false;
+    SortVisitor visitor;
+
+    for (auto var: *this) {
+        if (var->m_used)
+            continue;
+        var->m_used = true;
+        if (var->ref_none()) {
+            visitor.add_to_order(var);
+            continue;
+        }
+        scan_dfs(var, visitor);
+    }
+    auto &order = visitor.order;
+    auto nvar = order.size();
+    m_vars = nullptr;
+    for (unsigned i = 0; i < nvar; i++) {
+        auto var = order[i];
+        link_var(var);
+        assert((unsigned)var->m_varid == i);
+    }
+    m_varuse_dirty = true; // We've misused m_used for something else....
+    m_sort_dirty = false;
+    return true;
 }
 
 NACS_EXPORT() void Env::optimize()
 {
     if (!m_vars)
         return;
+
+    ensure_sorted();
 
     auto gc_compute_id = [&] {
         gc();
@@ -760,8 +835,10 @@ NACS_EXPORT() void Env::optimize()
     PM.run(*llvm_module());
 }
 
-NACS_EXPORT() void Env::print(std::ostream &stm) const
+NACS_EXPORT() void Env::print(std::ostream &stm, bool sortvar) const
 {
+    if (sortvar)
+        const_cast<Env*>(this)->ensure_sorted();
     llvm::SmallVector<Var*, 32> vars(begin(), end());
     if (vars.empty()) {
         stm << "Variables: <empty>" << std::endl;

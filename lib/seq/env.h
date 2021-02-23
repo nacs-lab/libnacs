@@ -136,9 +136,7 @@ static_assert(sizeof(Arg) == 8 * 2, "Check alignment.");
 std::ostream &operator<<(std::ostream &stm, const Arg &arg);
 
 class Var {
-    // The user cannot mutate this freely.
-    // Each variable can only refer to a variable added before it.
-    // (i.e. the linked list in `Env` natually forms a topological order of the variables)
+    // Must not form a dependency loop.
     struct Unrefer {
         void operator()(Var *var) const
         {
@@ -273,13 +271,6 @@ public:
         return nullptr;
     }
 
-private:
-    // The following functions are only used in optimizations or to create new variables
-    // and does not need to explicitly invalidate varuse.
-    void set_arg(int i, Arg arg)
-    {
-        m_args[i] = arg;
-    }
     void assign_const(IR::TagVal c)
     {
         m_is_const = true;
@@ -287,18 +278,6 @@ private:
         m_n_freeargs = 0;
         m_value.constant = c;
         m_args.clear();
-    }
-    void assign_call(Var *func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
-    void assign_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
-    // Special case for assigning a copy of a variable.
-    void assign_var(Var *var)
-    {
-        m_args.clear();
-        m_n_freeargs = 0;
-        m_is_const = false;
-        m_is_extern = false;
-        m_value.func.is_llvm = false;
-        m_value.func.var = var;
     }
     void assign_extern(std::pair<IR::Type,uint64_t> ext)
     {
@@ -308,6 +287,31 @@ private:
         m_value.ext = ext;
         m_args.clear();
     }
+    void assign_call(Var *func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
+    void assign_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
+    // Special case for assigning a copy of a variable.
+    void assign_var(Var *var);
+
+private:
+    // The following functions are only used in optimizations or to create new variables
+    // and does not need to explicitly invalidate varuse.
+    void set_arg(int i, Arg arg)
+    {
+        m_args[i] = arg;
+    }
+    void _assign_call(Var *func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
+    void _assign_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
+    // Special case for assigning a copy of a variable.
+    void _assign_var(Var *var)
+    {
+        m_args.clear();
+        m_n_freeargs = 0;
+        m_is_const = false;
+        m_is_extern = false;
+        m_value.func.is_llvm = false;
+        m_value.func.var = var;
+    }
+    void check_sort(Var *func, llvm::ArrayRef<Arg> args);
     void fill_args(llvm::ArrayRef<Arg> args, int nfreeargs);
 
     bool inline_callee();
@@ -496,9 +500,10 @@ public:
     }
 
     int num_vars() const;
+    bool ensure_sorted();
     void gc();
     void optimize();
-    void print(std::ostream &stm) const;
+    void print(std::ostream &stm, bool sort=true) const;
 
     template<typename T>
     static void scan_dfs(Var *var, T &&visitor)
@@ -509,6 +514,7 @@ public:
 private:
     Var *_new_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs);
     Var *new_var();
+    void link_var(Var*);
     void compute_varid();
     void compute_varuse();
     // Optimize each variables (functions) individually based only on the
@@ -526,6 +532,7 @@ private:
 
     bool m_varid_dirty{false};
     bool m_varuse_dirty{false};
+    bool m_sort_dirty{false};
     friend class Var;
 };
 
