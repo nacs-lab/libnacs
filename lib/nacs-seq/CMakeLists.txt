@@ -16,10 +16,12 @@ set(nacs_seq_SRCS
   zynq/legacy_seq.cpp)
 set(nacs_seq_LINKS)
 set(nacs_seq_llvm_HDRS
+  basic_seq.h
   env.h
   event_time.h
   pulse.h)
 set(nacs_seq_llvm_SRCS
+  basic_seq.cpp
   env.cpp
   event_time.cpp
   pulse.cpp
