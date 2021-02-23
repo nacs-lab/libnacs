@@ -26,6 +26,8 @@
 
 namespace NaCs::Seq {
 
+class Seq;
+
 class BasicSeq {
 public:
     struct Assignment {
@@ -105,6 +107,8 @@ private:
 
     std::vector<Branch> m_branches;
     BasicSeq *m_default_branch = nullptr;
+
+    friend class Seq;
 };
 
 }
