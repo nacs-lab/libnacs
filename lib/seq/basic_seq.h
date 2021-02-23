@@ -26,6 +26,8 @@
 
 namespace NaCs::Seq {
 
+class Seq;
+
 class BasicSeq {
     struct ChannelInfo {
         std::list<Pulse> pulses;
@@ -175,6 +177,8 @@ private:
     BasicSeq *m_default_branch = nullptr;
 
     int32_t m_startval_count = 0;
+
+    friend class Seq;
 };
 
 static inline std::ostream &operator<<(std::ostream &stm, const BasicSeq &seq)
