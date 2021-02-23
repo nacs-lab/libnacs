@@ -19,12 +19,14 @@ set(nacs_seq_llvm_HDRS
   basic_seq.h
   env.h
   event_time.h
-  pulse.h)
+  pulse.h
+  seq.h)
 set(nacs_seq_llvm_SRCS
   basic_seq.cpp
   env.cpp
   event_time.cpp
   pulse.cpp
+  seq.cpp
   var.cpp)
 
 if(ENABLE_LLVM)
