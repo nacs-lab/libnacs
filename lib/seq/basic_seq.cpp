@@ -1,0 +1,490 @@
+/*************************************************************************
+ *   Copyright (c) 2021 - 2021 Yichao Yu <yyc1992@gmail.com>             *
+ *                                                                       *
+ *   This library is free software; you can redistribute it and/or       *
+ *   modify it under the terms of the GNU Lesser General Public          *
+ *   License as published by the Free Software Foundation; either        *
+ *   version 3.0 of the License, or (at your option) any later version.  *
+ *                                                                       *
+ *   This library is distributed in the hope that it will be useful,     *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU    *
+ *   Lesser General Public License for more details.                     *
+ *                                                                       *
+ *   You should have received a copy of the GNU Lesser General Public    *
+ *   License along with this library. If not,                            *
+ *   see <http://www.gnu.org/licenses/>.                                 *
+ *************************************************************************/
+
+#include "basic_seq.h"
+
+#include "../utils/llvm/codegen.h"
+
+#include <algorithm>
+#include <set>
+#include <utility>
+
+namespace NaCs::Seq {
+
+// Used only by `Seq::add_basicseq`
+BasicSeq::BasicSeq(uint32_t id)
+    : m_id(id)
+{
+    assert(id);
+}
+
+NACS_EXPORT() Pulse *BasicSeq::add_pulse(uint32_t chn, uint32_t id,
+                                         EventTime &&start, Var *len, Var *val)
+{
+    return &m_pulses[chn].emplace_back(id, std::move(start), len, val, false);
+}
+
+NACS_EXPORT() Pulse *BasicSeq::add_measure(uint32_t chn, uint32_t id,
+                                           EventTime &&start, Var *val)
+{
+    assert(val->is_extern());
+    assert((val->get_extern().second >> 32) == m_id);
+    return &m_pulses[chn].emplace_back(id, std::move(start), nullptr, val, true);
+}
+
+NACS_EXPORT() Var *BasicSeq::new_measure(Env &env, uint32_t _measure_id) const
+{
+    uint64_t measure_id = (uint64_t(m_id) << 32) | _measure_id;
+    return env.new_extern({IR::Type::Float64, measure_id});
+}
+
+NACS_EXPORT() void BasicSeq::add_branch(Var *cond, BasicSeq *target, uint32_t id)
+{
+    assert(cond);
+    m_branches.push_back({cond->ref(), target, id});
+}
+
+NACS_EXPORT() void BasicSeq::set_default_branch(BasicSeq *target)
+{
+    m_default_branch = target;
+}
+
+NACS_EXPORT() bool BasicSeq::has_output(uint32_t chn) const
+{
+    auto it = m_pulses.find(chn);
+    if (it == m_pulses.end())
+        return false;
+    for (auto &pulse: it->second) {
+        if (!pulse.is_measure()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void BasicSeq::mark_recursive()
+{
+    if (m_used)
+        return;
+    m_used = true;
+    // Simply use the native stack since I don't expect there to be too many basic sequence
+    // for stack overflow to be a problem...
+    if (m_default_branch)
+        m_default_branch->mark_recursive();
+    for (auto &br: m_branches) {
+        if (br.target) {
+            br.target->mark_recursive();
+        }
+    }
+}
+
+bool BasicSeq::optimize_pulse(uint32_t chn)
+{
+    bool changed = false;
+    auto &pulses = m_pulses[chn];
+    for (auto it = pulses.begin(), end = pulses.end(); it != end;) {
+        auto &pulse = *it;
+        if (!pulse.is_measure()) {
+            changed |= pulse.clear_unused_args();
+        }
+        else {
+            auto m = pulse.val();
+            assert(m->extern_used() >= 1);
+            if (m->extern_used() == 1 && !m->used(false)) {
+                it = pulses.erase(it);
+                changed = true;
+                continue;
+            }
+        }
+        changed |= pulse.optimize();
+        ++it;
+    }
+    return changed;
+}
+
+bool BasicSeq::optimize_order(uint32_t chn)
+{
+    bool changed = false;
+    auto &pulses = m_pulses[chn];
+    if (pulses.empty()) {
+        auto it = m_startval.find(chn);
+        if (it == m_startval.end())
+            return false;
+        auto &old_endval = m_endval[chn];
+        if (old_endval)
+            return false;
+        old_endval.reset(it->second.get());
+        return true;
+    }
+    for (auto it = pulses.begin(), end = pulses.end(); it != end;) {
+        auto &pulse = *it;
+        if (pulse.is_measure()) {
+            auto m = pulse.val();
+            assert(m->extern_used() >= 1);
+            if (m->extern_used() == 1 && !m->used(false)) {
+                it = pulses.erase(it);
+                changed = true;
+                continue;
+            }
+        }
+        changed |= pulse.optimize();
+        ++it;
+    }
+    pulses.sort([] (const Pulse &p1, const Pulse &p2) {
+        auto &t1 = p1.start();
+        auto &t2 = p2.start();
+        if (t1.tconst < t2.tconst)
+            return true;
+        if (t1.tconst > t2.tconst)
+            return false;
+        auto nt1 = t1.terms.size();
+        auto nt2 = t2.terms.size();
+        if (nt1 < nt2)
+            return true;
+        if (nt1 > nt2)
+            return false;
+        return p1.id() < p2.id();
+    });
+    // These variables stores the current status of the ordering among the ones we've checked.
+    // This is a vector of pulses that forms a total order.
+    llvm::SmallVector<Pulse*,32> ordered;
+    // Whether there's a unique first pulse
+    // Whether each pulse have a unique next pulse,
+    // there is one more element than `orderred`.
+    // The first element record if the first pulse in the sequence is unique.
+    llvm::SmallVector<bool,32> next_unique(1, true);
+    // Measures that are interested in the particular pulse
+    // Also has one more element than `ordered`.
+    llvm::SmallVector<llvm::SmallVector<Pulse*,1>,32> measures(1);
+    // The latest element on each compariable branch.
+    // None of the elements in `ordered` are in `latest`.
+    // All elements in `latest` are known to be after all elements in `ordered`.
+    std::set<Pulse*> latest;
+    // For each new pulse, if it is known to be after everything we've seen before,
+    // then we can simply add it to the list and assume it has a unique next pulse.
+    // Otherwise, we need to find the last pulse it is definitely after
+    // and remove all pulses after that pulse (without adding this one to the list).
+    auto known_after = [&] (Pulse *p1, Pulse *p2) {
+        // assume `p1` was sorted before `p2`;
+        auto &t1 = p1->start();
+        auto &t2 = p2->start();
+        assert(t1.tconst <= t2.tconst);
+        auto isless = t1.isless_terms(t2);
+        if (isless == EventTime::NonNeg) {
+            if (t1.tconst < t2.tconst)
+                return true;
+            return p1->id() < p2->id();
+        }
+        return isless == EventTime::Pos;
+    };
+    auto num_ordered = [&] (Pulse *pulse) {
+        assert(!ordered.empty());
+        assert(!known_after(ordered.back(), pulse));
+        if (ordered.size() == 1 || !known_after(ordered.front(), pulse))
+            return 0u;
+        unsigned lo = 0;
+        unsigned hi = ordered.size() - 1;
+        // The index of the last element that is before `pulse` is `[lo, hi)`.
+        // `lo` is known before `pulse` whereas `hi` isn't.
+        while (hi > lo + 1) {
+            unsigned mid = (lo + hi) / 2;
+            if (known_after(ordered[mid], pulse)) {
+                lo = mid;
+            }
+            else {
+                hi = mid;
+            }
+        }
+        // `lo` is the index of the last element that is known before `pulse`.
+        return lo + 1; // Total number of pulses known before `pulse`.
+    };
+    auto add_measure = [&] (Pulse *pulse) {
+        // If a measure pulse isn't after the last orderred one,
+        // or the last one isn't ordered, simply ignore it.
+        // We already know that we can't decide it's value
+        // and it won't affect any time ordering of the normal pulses.
+        if (!latest.empty() || (!ordered.empty() && !known_after(ordered.back(), pulse)))
+            return;
+        if (next_unique.back()) {
+            measures.back().push_back(pulse);
+        }
+    };
+    auto check_measures = [&] (Pulse *pulse) {
+        assert(ordered.empty() || known_after(ordered.back(), pulse));
+        assert(!measures.empty());
+        assert(measures.size() == ordered.size() + 1);
+        auto &measure = measures.back();
+        if (measure.empty())
+            return;
+        measure.erase(std::remove_if(measure.begin(), measure.end(), [&] (const auto &m) {
+            return !known_after(m, pulse);
+        }), measure.end());
+    };
+    auto add_pulse = [&] (Pulse *pulse) {
+        if (pulse->is_measure()) {
+            add_measure(pulse);
+            return;
+        }
+        auto had_latest = !latest.empty();
+        for (auto it = latest.begin(); it != latest.end();) {
+            if (known_after(*it, pulse)) {
+                it = latest.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
+        if (ordered.empty() || known_after(ordered.back(), pulse)) {
+            check_measures(pulse);
+            if (latest.empty()) {
+                // Pulse is after everything we've seen
+                ordered.push_back(pulse);
+                next_unique.push_back(true);
+                measures.emplace_back();
+            }
+            else {
+                latest.insert(pulse);
+            }
+            return;
+        }
+        // If `latest` wasn't empty but is empty now,
+        // then pulse is after everything that was in `latest`
+        // which is after the last element in `ordered` so it cannot happen in this branch.
+        if (had_latest)
+            assert(!latest.empty());
+        latest.insert(pulse);
+        // If `latest` wasn't empty we know that either `pulse` or another one in `latest`
+        // is already after everything in `ordered` so we don't need to add anything
+        // from `ordered` to `latest`.
+        if (!had_latest)
+            latest.insert(ordered.back());
+        auto no = num_ordered(pulse);
+        ordered.resize(no);
+        next_unique.resize(no + 1);
+        next_unique[no] = false;
+        measures.resize(no + 1);
+        check_measures(pulse);
+    };
+    for (auto &pulse: pulses)
+        add_pulse(&pulse);
+    latest.clear(); // Don't need anymore
+
+    Var *curval = nullptr;
+    bool measure_replaced = false;
+    {
+        auto it = m_startval.find(chn);
+        if (it != m_startval.end()) {
+            curval = it->second.get();
+            assert(curval);
+            for (auto m: measures.front()) {
+                measure_replaced = true;
+                m->val()->assign_var(curval);
+                assert(!m->val()->is_extern());
+            }
+            if (!next_unique.front()) {
+                curval = nullptr;
+            }
+        }
+    }
+    auto use_val = [&] (Var *val, Pulse *measure) {
+        measure_replaced = true;
+        measure->val()->assign_var(val);
+        assert(!measure->val()->is_extern());
+    };
+    auto use_pulse_end = [&] (Pulse *pulse, Pulse *measure) {
+        auto val = pulse->endval();
+        assert(val); // Should be handled by needs_oldval
+        use_val(val, measure);
+    };
+    auto replace_measure = [&] (Pulse *pulse, Pulse *measure) {
+        assert(!pulse->needs_oldval()); // Caller should check this.
+        auto pulse_len = pulse->len();
+        if (!pulse_len) {
+            use_pulse_end(pulse, measure);
+            return;
+        }
+        // Caller should have optimized each pulse already (clear_unused_args)
+        // so a pulse that doesn't need time should already have a NULL length.
+        assert(pulse->val()->is_call());
+        assert(pulse->val()->nfreeargs() == 1);
+        assert(!pulse->val()->argument_unused(0));
+        auto &tp = pulse->start();
+        auto &mp = measure->start();
+        assert(tp.tconst <= mp.tconst);
+        assert(known_after(pulse, measure));
+        auto tdiff = mp - tp;
+        bool needs_branch = true;
+        if (pulse_len->is_const()) {
+            auto t = uint64_t(pulse_len->get_const().get<double>() + 0.5);
+            if (t <= tdiff.tconst) {
+                use_pulse_end(pulse, measure);
+                return;
+            }
+            needs_branch = !tdiff.terms.empty();
+        }
+        else {
+            for (auto &term: tdiff.terms) {
+                if (term.var.get() == pulse_len) {
+                    use_pulse_end(pulse, measure);
+                    return;
+                }
+            }
+        }
+        auto &env = measure->val()->env();
+        auto toffset = tdiff.to_var(env);
+        if (needs_branch) {
+            auto mod = env.llvm_module();
+            auto &ctx = mod->getContext();
+            auto cgctx = env.cg_context();
+            llvm::Function *f;
+            {
+                llvm::FunctionType *ftype;
+                llvm::Type *fsig[] = { cgctx->T_f64, cgctx->T_f64 };
+                ftype = llvm::FunctionType::get(cgctx->T_f64, fsig, false);
+                f = llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage,
+                                           "m", mod);
+            }
+            f->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+            f->addFnAttr(llvm::Attribute::AlwaysInline);
+            f->addFnAttr(llvm::Attribute::Speculatable);
+            f->addFnAttr(llvm::Attribute::NoRecurse);
+            f->addFnAttr(llvm::Attribute::NoUnwind);
+            f->addFnAttr(llvm::Attribute::ReadOnly);
+
+            {
+                auto b0 = llvm::BasicBlock::Create(ctx, "top", f);
+                llvm::IRBuilder<> builder(b0);
+                llvm::FastMathFlags fmf;
+                fmf.setNoNaNs();
+                fmf.setNoInfs();
+                fmf.setNoSignedZeros();
+                fmf.setAllowReciprocal();
+#if LLVM_VERSION_MAJOR >= 7
+                fmf.setAllowContract();
+#endif
+                builder.setFastMathFlags(fmf);
+
+                auto intrin = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::minnum,
+                                                              { cgctx->T_f64 });
+                builder.CreateRet(builder.CreateCall(intrin, { f->getArg(0), f->getArg(1) }));
+            }
+            toffset = env.new_call(f, { Arg::create_var(toffset),
+                    Arg::create_var(pulse_len) });
+        }
+        use_val(env.new_call(pulse->val(), { Arg::create_var(toffset) }), measure);
+    };
+    auto nordered = ordered.size();
+    for (unsigned i = 0; i < nordered; i++) {
+        auto pulse = ordered[i];
+        assert(!pulse->is_measure());
+        if (pulse->needs_oldval() && curval) {
+            pulse->set_oldval(curval);
+            changed = true;
+        }
+        else {
+            changed |= pulse->clear_unused_args();
+        }
+        if (!pulse->needs_oldval()) {
+            for (auto m: measures[i + 1]) {
+                replace_measure(pulse, m);
+            }
+        }
+        curval = next_unique[i + 1] ? pulse->endval() : nullptr;
+    }
+    if (curval) {
+        auto &old_endval = m_endval[chn];
+        if (!old_endval) {
+            old_endval.reset(curval);
+            changed = true;
+        }
+    }
+
+    // remove measurements that are filled in
+    if (measure_replaced) {
+        changed = true;
+        pulses.remove_if([&] (auto &pulse) {
+            return pulse.is_measure() && !pulse.val()->is_extern();
+        });
+    }
+    return changed;
+}
+
+void BasicSeq::optimize_vars()
+{
+    auto optimize_mapval = [] (auto &map) {
+        for (auto &kv: map) {
+            assert(kv.second);
+            if (auto v = kv.second->get_assigned_var()) {
+                kv.second.reset(v);
+            }
+        }
+    };
+    optimize_mapval(m_startval);
+    optimize_mapval(m_endval);
+
+    for (auto &br: m_branches) {
+        if (auto v = br.cond->get_assigned_var()) {
+            br.cond.reset(v);
+        }
+    }
+}
+
+bool BasicSeq::optimize_branch()
+{
+    bool changed = false;
+    bool dead = false;
+    for (auto &br: m_branches) {
+        auto &cond = br.cond;
+        if (dead) {
+            cond = nullptr;
+            continue;
+        }
+        if (auto v = cond->get_assigned_var())
+            cond = v->ref();
+        if (cond->is_const()) {
+            auto c = cond->get_const();
+            changed = true;
+            if (c.get<bool>()) {
+                dead = true;
+                m_default_branch = br.target;
+            }
+            cond = nullptr;
+            continue;
+        }
+    }
+    size_t nbranches = m_branches.size();
+    size_t num_non_default = 0;
+    for (size_t i = 0; i < nbranches; i++) {
+        auto &br = m_branches[i];
+        if (!br.cond)
+            continue;
+        if (br.target != m_default_branch) {
+            num_non_default = i + 1;
+        }
+    }
+    if (num_non_default < nbranches) {
+        m_branches.resize(num_non_default);
+        changed = true;
+    }
+    m_branches.erase(std::remove_if(m_branches.begin(), m_branches.end(), [&] (const auto &br) {
+        return !br.cond;
+    }), m_branches.end());
+    return changed;
+}
+
+}
