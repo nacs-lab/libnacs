@@ -17,10 +17,12 @@ set(nacs_seq_SRCS
 set(nacs_seq_LINKS)
 set(nacs_seq_llvm_HDRS
   env.h
-  event_time.h)
+  event_time.h
+  pulse.h)
 set(nacs_seq_llvm_SRCS
   env.cpp
   event_time.cpp
+  pulse.cpp
   var.cpp)
 
 if(ENABLE_LLVM)
