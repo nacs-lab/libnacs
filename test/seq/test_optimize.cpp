@@ -409,3 +409,77 @@ TEST_CASE("sink_extern") {
     REQUIRE(v2->is_extern());
     REQUIRE(v2->get_extern() == std::make_pair(IR::Type::Float64, (uint64_t)2345));
 }
+
+TEST_CASE("reorder") {
+    auto v1 = env.new_extern({IR::Type::Float64, 2345});
+    auto v2 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createAdd(0, builder.getConst(2.3)));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v1)});
+    }()->ref();
+    auto v3 = env.new_extern({IR::Type::Float64, 9999})->ref();
+    env.optimize();
+    REQUIRE(env.num_vars() == 3);
+    REQUIRE(v1->varid() == 0);
+    REQUIRE(v2->varid() == 1);
+    REQUIRE(v3->varid() == 2);
+    v1->assign_var(v3.get());
+    env.optimize();
+    REQUIRE(env.num_vars() == 2);
+    REQUIRE(v2->varid() == 1);
+    REQUIRE(v3->varid() == 0);
+    REQUIRE(v3->type() == IR::Type::Float64);
+    REQUIRE(v3->is_extern());
+    REQUIRE(v3->get_extern() == std::make_pair(IR::Type::Float64, (uint64_t)9999));
+}
+
+TEST_CASE("reorder2") {
+    // Test that an internally referenced `Var` that doesn't reference other `Var`
+    // is correctly handled by the sorting.
+    auto v1 = env.new_extern({IR::Type::Float64, 2345});
+    auto v2 = env.new_extern({IR::Type::Float64, 7777});
+    auto v3 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64, IR::Type::Float64});
+        builder.createRet(builder.createAdd(0, 1));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v1),
+                Seq::Arg::create_var(v2)});
+    }()->ref();
+    auto v4 = env.new_extern({IR::Type::Float64, 9999})->ref();
+    env.optimize();
+    REQUIRE(env.num_vars() == 4);
+    v1->assign_var(v4.get());
+    env.ensure_sorted();
+    REQUIRE(env.num_vars() == 4);
+    env.optimize();
+    REQUIRE(env.num_vars() == 3);
+}
+
+TEST_CASE("reorder3") {
+    // Test that the last argument is handled correctly.
+    auto v1 = env.new_extern({IR::Type::Float64, 2345});
+    auto v2 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createAdd(0, builder.getConst(1.2)));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v1)});
+    }()->ref();
+    auto v3 = [&] {
+        IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
+        builder.createRet(builder.createAdd(0, builder.getConst(2.3)));
+        return env.new_call(builder.get(), {Seq::Arg::create_var(v2.get())});
+    }()->ref();
+    auto v4 = env.new_extern({IR::Type::Float64, 7777})->ref();
+    env.optimize();
+    REQUIRE(env.num_vars() == 4);
+    v1->assign_var(v4.get());
+    env.ensure_sorted();
+    REQUIRE(env.num_vars() == 4);
+    REQUIRE(v4->varid() == 0);
+    REQUIRE(v1->varid() == 1);
+    REQUIRE(v2->varid() == 2);
+    REQUIRE(v3->varid() == 3);
+    env.optimize();
+    REQUIRE(env.num_vars() == 3);
+    REQUIRE(v4->varid() == 0);
+    REQUIRE(v2->varid() == 1);
+    REQUIRE(v3->varid() == 2);
+}

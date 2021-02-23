@@ -71,7 +71,7 @@ NACS_INTERNAL void Var::fill_args(llvm::ArrayRef<Arg> args, int nfreeargs)
     m_n_freeargs = nfreeargs;
 }
 
-void Var::assign_call(Var *func, llvm::ArrayRef<Arg> args, int nfreeargs)
+void Var::_assign_call(Var *func, llvm::ArrayRef<Arg> args, int nfreeargs)
 {
     fill_args(args, nfreeargs);
     m_is_const = false;
@@ -80,13 +80,53 @@ void Var::assign_call(Var *func, llvm::ArrayRef<Arg> args, int nfreeargs)
     m_value.func.var = func;
 }
 
-void Var::assign_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs)
+void Var::_assign_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs)
 {
     fill_args(args, nfreeargs);
     m_is_const = false;
     m_is_extern = false;
     m_value.func.is_llvm = true;
     m_value.func.llvm = func;
+}
+
+void Var::check_sort(Var *func, llvm::ArrayRef<Arg> args)
+{
+    if (m_env.m_sort_dirty)
+        return;
+    auto id = varid();
+    auto check = [&] (Var *var) {
+        if (!var)
+            return true;
+        if (var->varid() < id)
+            return true;
+        m_env.m_sort_dirty = true;
+        return false;
+    };
+    if (!check(func))
+        return;
+    for (const auto &arg: args) {
+        if (arg.is_var() && !check(arg.get_var())) {
+            return;
+        }
+    }
+}
+
+NACS_EXPORT() void Var::assign_call(Var *func, llvm::ArrayRef<Arg> args, int nfreeargs)
+{
+    check_sort(func, args);
+    _assign_call(func, args, nfreeargs);
+}
+
+NACS_EXPORT() void Var::assign_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs)
+{
+    check_sort(nullptr, args);
+    _assign_call(func, args, nfreeargs);
+}
+
+NACS_EXPORT() void Var::assign_var(Var *var)
+{
+    check_sort(var, {});
+    _assign_var(var);
 }
 
 NACS_EXPORT() std::ostream &operator<<(std::ostream &stm, const Arg &arg)
@@ -218,7 +258,7 @@ bool Var::inline_callee()
                 return true;
             }
             else if (arg.is_var()) {
-                assign_var(arg.get_var());
+                _assign_var(arg.get_var());
                 f = get_callee();
                 changed = true;
                 goto non_llvm;
@@ -245,7 +285,7 @@ non_llvm:
     else if (f.var->is_extern()) {
         // Maintain the pointer identity of the `Var*` with external parameter.
         if (!args().empty() || nfreeargs() > 0) {
-            assign_var(f.var);
+            _assign_var(f.var);
             return true;
         }
         return changed;
@@ -259,7 +299,7 @@ non_llvm:
     // (the user might eliminate the need for this variable later).
     if (f.var->nfreeargs() == 0) {
         changed |= !args().empty();
-        assign_var(f.var);
+        _assign_var(f.var);
         return changed;
     }
     // The callee has free arguments, we'll just make a copy of the llvm function
@@ -449,7 +489,7 @@ NACS_INTERNAL bool Var::reduce_args()
 
     optimize_llvmf(f);
 
-    assign_call(f, newargs, nfreeargs());
+    _assign_call(f, newargs, nfreeargs());
     return true;
 }
 
