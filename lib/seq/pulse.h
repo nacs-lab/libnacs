@@ -77,6 +77,7 @@ public:
     bool set_oldval(Var *oldval);
 
     EventTime::Sign known_before(const Pulse &p2) const;
+    void print(std::ostream &stm, bool newline=false) const;
 
 private:
     Pulse(Pulse&&) = delete;
@@ -90,6 +91,12 @@ private:
 
     mutable Var::Ref m_endval;
 };
+
+static inline std::ostream &operator<<(std::ostream &stm, const Pulse &p)
+{
+    p.print(stm);
+    return stm;
+}
 
 }
 

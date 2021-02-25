@@ -105,6 +105,34 @@ NACS_EXPORT() EventTime::Sign Pulse::known_before(const Pulse &p2) const
     return sign;
 }
 
+NACS_EXPORT() void Pulse::print(std::ostream &stm, bool newline) const
+{
+    if (is_measure()) {
+        stm << "M(" << id() << "@";
+        start().print(stm);
+        stm << ")=";
+        val()->print(stm, false, true);
+    }
+    else {
+        stm << "O(" << id() << "@";
+        start().print(stm);
+        if (m_len) {
+            stm << "; +[";
+            m_len->print(stm, false, true);
+            stm << "]";
+        }
+        stm << ")=";
+        val()->print(stm, false, true);
+        if (m_endval) {
+            stm << " # E=";
+            m_endval->print(stm, false, true);
+        }
+    }
+    if (newline) {
+        stm << std::endl;
+    }
+}
+
 NACS_EXPORT() Var *Pulse::compute_endval() const
 {
     assert(!m_is_measure);

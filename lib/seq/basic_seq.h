@@ -108,6 +108,7 @@ public:
     void add_assume(EventTime::Sign sign, Var *val, uint32_t assume_id);
 
     void check() const;
+    void print(std::ostream &stm) const;
 
 private:
     BasicSeq(BasicSeq&&) = delete;
@@ -131,6 +132,12 @@ private:
 
     friend class Seq;
 };
+
+static inline std::ostream &operator<<(std::ostream &stm, const BasicSeq &seq)
+{
+    seq.print(stm);
+    return stm;
+}
 
 }
 

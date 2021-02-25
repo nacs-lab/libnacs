@@ -70,6 +70,7 @@ public:
 
     void optimize();
     void check() const;
+    void print(std::ostream &stm) const;
 
 private:
     bool optimize_cfg();
@@ -83,6 +84,12 @@ private:
     llvm::StringMap<uint32_t> m_chnids;
     std::vector<std::string> m_chnnames;
 };
+
+static inline std::ostream &operator<<(std::ostream &stm, const Seq &seq)
+{
+    seq.print(stm);
+    return stm;
+}
 
 }
 

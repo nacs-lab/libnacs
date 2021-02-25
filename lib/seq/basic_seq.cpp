@@ -742,4 +742,74 @@ bool BasicSeq::optimize_branch()
     return changed;
 }
 
+NACS_EXPORT() void BasicSeq::print(std::ostream &stm) const
+{
+    stm << "BS(" << id() << "):" << std::endl;
+    for (auto &channel: m_pulses) {
+        auto chn = channel.first;
+        auto &pulses = channel.second;
+        stm << "  CH(" << chn << "):" << std::endl;
+        auto start_it = m_startval.find(chn);
+        if (start_it != m_startval.end() && start_it->second) {
+            stm << "   -init=";
+            start_it->second->print(stm, false, true);
+            stm << std::endl;
+        }
+        for (auto &pulse: pulses) {
+            stm << "    ";
+            pulse.print(stm, true);
+        }
+        auto end_it = m_endval.find(chn);
+        if (end_it != m_endval.end() && end_it->second) {
+            stm << "   -final=";
+            end_it->second->print(stm, false, true);
+            stm << std::endl;
+        }
+    }
+    if (!m_assign.empty()) {
+        stm << "  Assignment:" << std::endl;
+        for (auto &assign: m_assign) {
+            stm << "    " << assign.first << " <- ";
+            assign.second.val->print(stm, true, true);
+        }
+    }
+    if (!m_assume.empty()) {
+        stm << "  Assumptions:" << std::endl;
+        for (auto &as: m_assume) {
+            stm << "    ";
+            as.val->print(stm, false, true);
+            stm << "/";
+            if (as.sign == EventTime::Pos) {
+                stm << "p";
+            } else if (as.sign == EventTime::NonNeg) {
+                stm << "nn";
+            } else {
+                stm << "u";
+            }
+            stm << std::endl;
+        }
+    }
+    stm << "  Branch:" << std::endl;
+    for (auto &br: m_branches) {
+        stm << "    ";
+        br.cond->print(stm, false, true);
+        stm << ": ";
+        if (br.target) {
+            stm << "BS(" << br.target->id() << ")";
+        }
+        else {
+            stm << "end";
+        }
+        stm << std::endl;
+    }
+    stm << "    default: ";
+    if (m_default_branch) {
+        stm << "BS(" << m_default_branch->id() << ")";
+    }
+    else {
+        stm << "end";
+    }
+    stm << std::endl;
+}
+
 }

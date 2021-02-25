@@ -73,6 +73,7 @@ struct EventTime {
 
     bool normalize();
     Var *to_var(Env &env) const;
+    void print(std::ostream &stm, bool newline=false) const;
 
     // Compare the terms.
     // If `this` is known to be less than `other`, return `Pos`.
@@ -90,6 +91,12 @@ struct EventTime {
     // (in order to support statically linking LLVM).
     std::vector<Term> terms;
 };
+
+static inline std::ostream &operator<<(std::ostream &stm, const EventTime &t)
+{
+    t.print(stm);
+    return stm;
+}
 
 }
 

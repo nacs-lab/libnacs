@@ -224,4 +224,24 @@ NACS_EXPORT() Var *EventTime::to_var(Env &env) const
     return env.new_call(f, args);
 }
 
+NACS_EXPORT() void EventTime::print(std::ostream &stm, bool newline) const
+{
+    stm << tconst;
+    for (auto &t: terms) {
+        stm << " + (";
+        t.var->print(stm, false, true);
+        stm << ")/";
+        if (t.sign == Pos) {
+            stm << "p";
+        } else if (t.sign == NonNeg) {
+            stm << "nn";
+        } else {
+            stm << "u";
+        }
+    }
+    if (newline) {
+        stm << std::endl;
+    }
+}
+
 }

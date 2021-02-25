@@ -226,4 +226,29 @@ NACS_EXPORT() void Seq::check() const
     }
 }
 
+NACS_EXPORT() void Seq::print(std::ostream &stm) const
+{
+    unsigned nchns = m_chnnames.size();
+    stm << "Channels:" << std::endl;
+    for (unsigned i = 1; i <= nchns; i++)
+        stm << "  " << i << ": " << m_chnnames[i - 1] << std::endl;
+    for (auto &seq: m_seqs)
+        seq.print(stm);
+    stm << "Default Value:" << std::endl;
+    for (auto &dv: m_defval) {
+        stm << "  " << dv.first << " = ";
+        dv.second->print(stm, true);
+    }
+    if (!m_slot_vars.empty()) {
+        stm << "Global Variable:" << std::endl;
+        for (auto &slot: m_slot_vars) {
+            if (!slot)
+                continue;
+            stm << "  ";
+            slot->print(stm, true);
+        }
+    }
+    m_env.print(stm);
+}
+
 }
