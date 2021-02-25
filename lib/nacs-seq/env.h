@@ -243,7 +243,7 @@ public:
     llvm::Type *llvm_type() const;
     int varid() const;
     bool used(bool ext) const;
-    void print(std::ostream &stm, bool newline=false) const;
+    void print(std::ostream &stm, bool newline=false, bool abbr=false) const;
     bool argument_unused(int idx) const;
     // Return the variable that this one is a copy of
     // (i.e. zero argument call of another variable)
