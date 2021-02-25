@@ -27,6 +27,7 @@
 
 #include <iterator>
 #include <memory>
+#include <type_traits>
 
 namespace NaCs::LLVM::Codegen {
 class Context;
@@ -239,6 +240,28 @@ public:
     {
         return m_value.func;
     }
+    bool ref_none() const
+    {
+        if (!args().empty())
+            return false;
+        if (!is_call())
+            return true;
+        return get_callee().is_llvm;
+    }
+    Var *get_ref(ssize_t idx) const
+    {
+        if (idx < 0) {
+            if (is_call()) {
+                auto f = get_callee();
+                if (!f.is_llvm) {
+                    return assume(f.var);
+                }
+            }
+            return nullptr;
+        }
+        auto arg = args()[idx];
+        return arg.is_var() ? arg.get_var() : nullptr;
+    };
     IR::Type type() const;
     llvm::Type *llvm_type() const;
     int varid() const;
@@ -380,6 +403,34 @@ static inline std::ostream &operator<<(std::ostream &stm, const Var &var)
 }
 
 class Env {
+    template<typename T>
+    using StackVector = llvm::SmallVector<T,16>;
+    struct VarFieldIterator : FieldIterator<Var*> {
+        VarFieldIterator(Var *var)
+            : m_var(var)
+        {
+        }
+        Var *get() const
+        {
+            return m_var->get_ref(m_idx);
+        }
+        Var *parent() const
+        {
+            return m_var;
+        }
+        bool is_end() const
+        {
+            return m_idx >= (ssize_t)m_var->args().size();
+        }
+        FieldIterator &operator++()
+        {
+            m_idx++;
+            return *this;
+        }
+    private:
+        Var *m_var;
+        ssize_t m_idx = -1;
+    };
 public:
     class iterator { // input iterator
     public:
@@ -419,6 +470,8 @@ public:
         Var *m_var;
     };
 
+    using Visitor = DFSVisitor<Var*,VarFieldIterator,StackVector>;
+
     Env(std::unique_ptr<LLVM::Codegen::Context> cgctx);
     Env(llvm::LLVMContext &llvm_ctx);
     ~Env();
@@ -450,6 +503,12 @@ public:
     void gc();
     void optimize();
     void print(std::ostream &stm) const;
+
+    template<typename T>
+    static void scan_dfs(Var *var, T &&visitor)
+    {
+        visit_dfs(var, std::forward<T>(visitor));
+    }
 
 private:
     Var *_new_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs);

@@ -195,65 +195,26 @@ NACS_EXPORT() void Env::compute_varuse()
             roots.push_back(var);
         }
     }
-    auto ref_empty = [] (Var *var) {
-        if (!var->args().empty())
-            return false;
-        if (!var->is_call())
-            return true;
-        return var->get_callee().is_llvm;
-    };
-    auto get_ref = [] (Var *var, ssize_t idx) -> Var* {
-        if (idx < 0) {
-            if (var->is_call()) {
-                auto f = var->get_callee();
-                if (!f.is_llvm) {
-                    return assume(f.var);
-                }
-            }
-            return nullptr;
-        }
-        auto arg = var->args()[idx];
-        return arg.is_var() ? arg.get_var() : nullptr;
-    };
 
-    // Mark starting from roots
-    // Use a manual stack for better optimization and less actual stack usage so that
-    // we don't need to worry about stack overflow.
-    // All items on the stack is inbound (see `push` below) `pop` does not need bounds check
-    llvm::SmallVector<std::pair<Var*,size_t>, 16> stack;
-    for (auto var: roots) {
-        if (ref_empty(var))
-            continue;
-        ssize_t idx = -1;
-        auto next = [&] {
-            // Next argument
-            if (++idx < (ssize_t)var->args().size())
-                return true;
-            // Done
-            if (stack.empty())
+    struct VarUseVisitor : Visitor {
+        bool previsit(Var *var)
+        {
+            if (var->m_used)
                 return false;
-            std::tie(var, idx) = stack.pop_back_val();
-            return true;
-        };
-        auto iterate = [&] {
-            auto new_var = get_ref(var, idx);
-            if (!new_var || new_var->m_used)
-                return next();
-            new_var->m_used = true;
+            var->m_used = true;
             // If this is a externally and internally referenced variable,
             // it'll be scanned from the root so we can stop here.
-            if (new_var->m_extern_ref > 0 || ref_empty(new_var))
-                return next();
-            // Save the next one to be processed to the stack
-            // If we are already at the last one, we don't need to do anything.
-            if (idx + 1 < (ssize_t)var->args().size())
-                stack.emplace_back(var, idx + 1);
-            var = new_var;
-            idx = -1;
+            if (var->m_extern_ref > 0 || var->ref_none())
+                return false;
             return true;
-        };
-        while (iterate()) {
         }
+    };
+
+    VarUseVisitor visitor;
+    for (auto var: roots) {
+        if (var->ref_none())
+            continue;
+        scan_dfs(var, visitor);
     }
 
     m_varuse_dirty = false;
