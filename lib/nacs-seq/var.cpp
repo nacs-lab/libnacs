@@ -106,13 +106,24 @@ NACS_EXPORT() std::ostream &operator<<(std::ostream &stm, const Arg &arg)
     return stm;
 }
 
-NACS_EXPORT() void Var::print(std::ostream &stm, bool newline) const
+NACS_EXPORT() void Var::print(std::ostream &stm, bool newline, bool abbr) const
 {
     auto id = varid();
-    if (m_extern_ref > 0)
+    if (m_extern_ref > 0 && !abbr)
         stm << '*';
     if (id < 0) {
         stm << "%<invalid_ref>";
+        if (newline)
+            stm << std::endl;
+        return;
+    }
+    if (abbr) {
+        if (is_const()) {
+            stm << get_const();
+        }
+        else {
+            stm << '%' << id;
+        }
         if (newline)
             stm << std::endl;
         return;
