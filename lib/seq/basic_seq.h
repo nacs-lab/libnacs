@@ -30,6 +30,11 @@ class Seq;
 
 class BasicSeq {
 public:
+    enum Errno : uint8_t {
+        ExternMeasure,
+        ExternMeasureLength,
+        MeasureOrder,
+    };
     struct Assignment {
         Var::Ref val;
         // ID is for error reporting only
@@ -88,6 +93,8 @@ public:
     }
     bool has_output(uint32_t chn) const;
     void assign_global(uint32_t global_id, Var *val, uint32_t assignment_id);
+
+    void check() const;
 
 private:
     BasicSeq(BasicSeq&&) = delete;

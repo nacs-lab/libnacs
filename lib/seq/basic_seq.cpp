@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "basic_seq.h"
+#include "error.h"
 
 #include "../utils/llvm/codegen.h"
 
@@ -83,6 +84,204 @@ NACS_EXPORT() void BasicSeq::assign_global(uint32_t global_id, Var *val, uint32_
     auto &assign = m_assign[global_id];
     assign.val.reset(val);
     assign.id = assignment_id;
+}
+
+NACS_EXPORT() void BasicSeq::check() const
+{
+    // Pre-compile check to make sure the sequence is computable.
+    // 1. Measurements are not accessed from a different basic sequence.
+    // 2. Measurements are used only by pulses after themselves.
+    // Even if this sequence contains no measure, we still need to check since it might
+    // reference illegal measures.
+    struct MeasureUseVisitor : Env::Visitor {
+        MeasureUseVisitor(const BasicSeq &seq)
+            : seq(seq)
+        {
+        }
+
+        void merge_depend(Var *var, std::set<Var*> &dep)
+        {
+            if (var->is_extern()) {
+                // We do time check on each measure.
+                // Since the time check is transitive,
+                // we don't have to check the dependency of the measure.
+                // Global variables (hi 32bit == 0) also doesn't have any dependencies
+                // so we can ignore those.
+                if ((var->get_extern().second >> 32) != 0)
+                    dep.insert(var);
+                return;
+            }
+            if (var->is_const())
+                return;
+            auto it = depends.find(var);
+            if (it == depends.end())
+                return;
+            dep.insert(it->second.begin(), it->second.end());
+        }
+
+        bool previsit(Var *var)
+        {
+            if (var->is_const())
+                return false;
+            if (var->is_extern()) {
+                auto id = uint32_t(var->get_extern().second >> 32);
+                if (id != 0 && id != seq.id())
+                    throw Error(uint32_t(Error::BasicSeq) << 16 | ExternMeasure,
+                                Error::Measure, var->get_extern().second,
+                                Error::BasicSeq, seq.id(),
+                                "Measurement value can only be used "
+                                "in the same basic sequence");
+                return false;
+            }
+            assert(var->is_call());
+            if (var->ref_none())
+                return false;
+            // We unconditionally initialize the depends entry for the variable
+            // in postvisit. Since we are doing DFS on a DAG,
+            // we should never visit a node twice before finishing it
+            // so this should be enough to check if this node has been scanned.
+            if (depends.find(var) != depends.end())
+                return false;
+            return true;
+        }
+        void postvisit(Var *var)
+        {
+            assert(var->is_call());
+            int nargs = var->args().size();
+            // If the node has been scanned, it should have been finished
+            // before we start this one and rejected by previsit already.
+            assert(depends.find(var) == depends.end());
+            auto &dep = depends[var];
+            for (int i = -1; i < nargs; i++) {
+                auto ref = var->get_ref(i);
+                if (!ref)
+                    continue;
+                merge_depend(ref, dep);
+            }
+        }
+
+        void scan_deps(Var *var, std::set<Var*> &dep)
+        {
+            if (var->is_const())
+                return;
+            if (previsit(var))
+                Env::scan_dfs(var, *this);
+            merge_depend(var, dep);
+        }
+        void scan_deps(const EventTime &time, std::set<Var*> &dep)
+        {
+            for (auto &term: time.terms) {
+                try {
+                    scan_deps(term.var.get(), dep);
+                }
+                catch (Error &error) {
+                    if (error.code == (uint32_t(Error::BasicSeq) << 16 | ExternMeasure)) {
+                        error.type2 = Error::EventTime;
+                        error.id2 = term.id;
+                    }
+                    throw error;
+                }
+            }
+        }
+        const BasicSeq &seq;
+        std::map<Var*,std::set<Var*>> depends;
+    };
+    MeasureUseVisitor visitor(*this);
+    std::map<const Pulse*,std::set<Var*>> pulse_depends;
+    std::map<Var*,const Pulse*> measures;
+    for (auto &channel: m_pulses) {
+        auto &pulses = channel.second;
+        for (auto &pulse: pulses) {
+            auto val = pulse.val();
+            assert(val);
+            auto &dep = pulse_depends[&pulse];
+            visitor.scan_deps(pulse.start(), dep);
+            if (pulse.is_measure()) {
+                assert(val->is_extern());
+                assert((val->get_extern().second >> 32) == m_id);
+                assert(!pulse.len());
+                measures[val] = &pulse;
+                continue;
+            }
+            try {
+                if (auto len = pulse.len()) {
+                    visitor.scan_deps(len, dep);
+                }
+            }
+            catch (Error &error) {
+                if (error.code == (uint32_t(Error::BasicSeq) << 16 | ExternMeasure)) {
+                    error.code = uint32_t(Error::BasicSeq) << 16 | ExternMeasureLength;
+                    error.type2 = Error::Pulse;
+                    error.id2 = pulse.id();
+                }
+                throw error;
+            }
+            try {
+                visitor.scan_deps(val, dep);
+            }
+            catch (Error &error) {
+                if (error.code == (uint32_t(Error::BasicSeq) << 16 | ExternMeasure)) {
+                    error.type2 = Error::Pulse;
+                    error.id2 = pulse.id();
+                }
+                throw error;
+            }
+        }
+    }
+    for (auto &v: pulse_depends) {
+        auto pulse = v.first;
+        for (auto var: v.second) {
+            assert(var->is_extern());
+            assert((var->get_extern().second >> 32) == m_id);
+            auto it = measures.find(var);
+            assert(it != measures.end());
+            if (it->second->known_before(*pulse) != EventTime::Pos) {
+                if (pulse->is_measure())
+                    throw Error(uint32_t(Error::BasicSeq) << 16 | MeasureOrder,
+                                Error::Measure, var->get_extern().second,
+                                Error::Measure, pulse->val()->get_extern().second,
+                                "Use of measure must be later than the measure.");
+                throw Error(uint32_t(Error::BasicSeq) << 16 | MeasureOrder,
+                            Error::Measure, var->get_extern().second,
+                            Error::Pulse, pulse->id(),
+                            "Use of measure must be later than the measure.");
+            }
+        }
+    }
+    // Make sure assignment values are valid.
+    for (auto &assign: m_assign) {
+        auto var = assign.second.val.get();
+        assert(var);
+        try {
+            if (!visitor.previsit(var))
+                continue;
+            Env::scan_dfs(var, visitor);
+        }
+        catch (Error &error) {
+            if (error.code == (uint32_t(Error::BasicSeq) << 16 | ExternMeasure)) {
+                error.type2 = Error::Assignment;
+                error.id2 = assign.second.id;
+            }
+            throw error;
+        }
+    }
+    // Make sure branch conditions are valid.
+    for (auto &br: m_branches) {
+        auto var = br.cond.get();
+        assert(var);
+        try {
+            if (!visitor.previsit(var))
+                continue;
+            Env::scan_dfs(var, visitor);
+        }
+        catch (Error &error) {
+            if (error.code == (uint32_t(Error::BasicSeq) << 16 | ExternMeasure)) {
+                error.type2 = Error::Branch;
+                error.id2 = br.id;
+            }
+            throw error;
+        }
+    }
 }
 
 void BasicSeq::mark_recursive()

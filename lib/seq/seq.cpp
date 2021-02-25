@@ -219,4 +219,11 @@ NACS_EXPORT() void Seq::optimize()
     m_env.gc();
 }
 
+NACS_EXPORT() void Seq::check() const
+{
+    for (auto &seq: m_seqs) {
+        seq.check();
+    }
+}
+
 }

@@ -69,6 +69,7 @@ public:
     }
 
     void optimize();
+    void check() const;
 
 private:
     bool optimize_cfg();
