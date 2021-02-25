@@ -21,13 +21,6 @@
 #include "global_rename.h"
 #include "utils.h"
 
-// #include <llvm/ADT/Triple.h>
-// #include <llvm/ADT/SmallVector.h>
-// #include <llvm/IR/CallingConv.h>
-// #include <llvm/IR/Instructions.h>
-// #include <llvm/IR/IRBuilder.h>
-// #include <llvm/IR/Module.h>
-
 namespace NaCs {
 namespace LLVM {
 
