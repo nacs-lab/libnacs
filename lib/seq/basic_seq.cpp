@@ -77,6 +77,14 @@ NACS_EXPORT() bool BasicSeq::has_output(uint32_t chn) const
     return false;
 }
 
+NACS_EXPORT() void BasicSeq::assign_global(uint32_t global_id, Var *val, uint32_t assignment_id)
+{
+    assert(val);
+    auto &assign = m_assign[global_id];
+    assign.val.reset(val);
+    assign.id = assignment_id;
+}
+
 void BasicSeq::mark_recursive()
 {
     if (m_used)
@@ -436,6 +444,12 @@ void BasicSeq::optimize_vars()
     };
     optimize_mapval(m_startval);
     optimize_mapval(m_endval);
+    for (auto &kv: m_assign) {
+        assert(kv.second.val);
+        if (auto v = kv.second.val->get_assigned_var()) {
+            kv.second.val.reset(v);
+        }
+    }
 
     for (auto &br: m_branches) {
         if (auto v = br.cond->get_assigned_var()) {

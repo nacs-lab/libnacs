@@ -28,6 +28,11 @@ namespace NaCs::Seq {
 
 class BasicSeq {
 public:
+    struct Assignment {
+        Var::Ref val;
+        // ID is for error reporting only
+        uint32_t id;
+    };
     struct Branch {
         Var::Ref cond;
         BasicSeq *target;
@@ -67,6 +72,10 @@ public:
             return nullptr;
         return &it->second;
     }
+    const std::map<uint32_t,Assignment> &get_assigns() const
+    {
+        return m_assign;
+    }
     llvm::ArrayRef<Branch> get_branches() const
     {
         return m_branches;
@@ -76,6 +85,7 @@ public:
         return m_default_branch;
     }
     bool has_output(uint32_t chn) const;
+    void assign_global(uint32_t global_id, Var *val, uint32_t assignment_id);
 
 private:
     BasicSeq(BasicSeq&&) = delete;
@@ -91,6 +101,7 @@ private:
     // The maps below is guaranteed to not have empty Var::Ref
     std::map<uint32_t,Var::Ref> m_startval;
     std::map<uint32_t,Var::Ref> m_endval;
+    std::map<uint32_t,Assignment> m_assign;
 
     std::vector<Branch> m_branches;
     BasicSeq *m_default_branch = nullptr;
