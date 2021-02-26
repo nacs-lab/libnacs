@@ -38,4 +38,7 @@ if(ENABLE_LLVM)
 
   add_llvm_test(event_time)
   add_llvm_test(pulse)
+  add_llvm_test(seq)
+  add_llvm_test(seq_check)
+  add_llvm_test(seq_optimize)
 endif()
