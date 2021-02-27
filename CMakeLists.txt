@@ -161,7 +161,7 @@ if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
       OUTPUT_VARIABLE objdump_out
       ERROR_QUIET)
     if(objdump_res EQUAL 0)
-      string(REGEX MATCH "SONAME.*\\.so\\.([0-9]*)" match "${objdump_out}")
+      string(REGEX MATCH "SONAME[^\n]*\\.so\\.([0-9]*)" match "${objdump_out}")
       set(CPACK_DEBIAN_PACKAGE_DEPENDS
         "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libopenlibm${CMAKE_MATCH_1}")
     endif()
