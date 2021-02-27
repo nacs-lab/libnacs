@@ -154,7 +154,18 @@ if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
   set(CPACK_SOURCE_PACKAGE_FILE_NAME
     "${CMAKE_PROJECT_NAME}_${MAJOR_VERSION}.${MINOR_VERSION}.${CPACK_PACKAGE_VERSION_PATCH}")
 
-  set(CPACK_DEBIAN_PACKAGE_DEPENDS "libstdc++6 (>= 4.2.1), libopenlibm2")
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "libstdc++6 (>= 4.2.1)")
+  if(CMAKE_OBJDUMP)
+    execute_process(COMMAND "${CMAKE_OBJDUMP}" -p "${OPENLIBM_LIBRARIES}"
+      RESULT_VARIABLE objdump_res
+      OUTPUT_VARIABLE objdump_out
+      ERROR_QUIET)
+    if(objdump_res EQUAL 0)
+      string(REGEX MATCH "SONAME.*\.so\.([0-9]*)" match "${objdump_out}")
+      set(CPACK_DEBIAN_PACKAGE_DEPENDS
+        "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libopenlibm${CMAKE_MATCH_1}")
+    endif()
+  endif()
   if(ENABLE_LLVM AND NOT STATIC_LLVM)
     string(REPLACE "." ";" LLVM_PACKAGE_VERSION_LIST ${LLVM_PACKAGE_VERSION})
     list(GET LLVM_PACKAGE_VERSION_LIST 0 LLVM_PACKAGE_VERSION_MAJOR)
