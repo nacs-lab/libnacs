@@ -86,6 +86,12 @@ NACS_EXPORT() void BasicSeq::assign_global(uint32_t global_id, Var *val, uint32_
     assign.id = assignment_id;
 }
 
+NACS_EXPORT() void BasicSeq::add_assume(EventTime::Sign sign, Var *val, uint32_t assume_id)
+{
+    assert(sign == EventTime::Pos || sign == EventTime::NonNeg);
+    m_assume.push_back({sign, val->ref(), assume_id});
+}
+
 NACS_EXPORT() void BasicSeq::check() const
 {
     // Pre-compile check to make sure the sequence is computable.
@@ -261,6 +267,23 @@ NACS_EXPORT() void BasicSeq::check() const
             if (error.code == (uint32_t(Error::BasicSeq) << 16 | ExternMeasure)) {
                 error.type2 = Error::Assignment;
                 error.id2 = assign.second.id;
+            }
+            throw error;
+        }
+    }
+    // Make sure assumption values are valid.
+    for (auto &as: m_assume) {
+        auto var = as.val.get();
+        assert(var);
+        try {
+            if (!visitor.previsit(var))
+                continue;
+            Env::scan_dfs(var, visitor);
+        }
+        catch (Error &error) {
+            if (error.code == (uint32_t(Error::BasicSeq) << 16 | ExternMeasure)) {
+                error.type2 = Error::EventTime;
+                error.id2 = as.id;
             }
             throw error;
         }
@@ -648,6 +671,25 @@ void BasicSeq::optimize_vars()
         if (auto v = kv.second.val->get_assigned_var()) {
             kv.second.val.reset(v);
         }
+    }
+    for (auto it = m_assume.begin(), end = m_assume.end(); it != end;) {
+        auto &as = *it;
+        if (auto v = as.val->get_assigned_var())
+            as.val.reset(v);
+        if (!as.val->is_const()) {
+            ++it;
+            continue;
+        }
+        auto v = as.val->get_const().get<double>();
+        if (as.sign == EventTime::Pos && !(int64_t(v + 0.5) > 0)) {
+            throw Error(uint32_t(Error::EventTime) << 16 | EventTime::NonPosTime,
+                        Error::EventTime, as.id, "Positive time expected.");
+        }
+        else if (as.sign == EventTime::NonNeg && !(v >= 0)) {
+            throw Error(uint32_t(Error::EventTime) << 16 | EventTime::NegTime,
+                        Error::EventTime, as.id, "Non-negative time expected.");
+        }
+        it = m_assume.erase(it);
     }
 
     for (auto &br: m_branches) {

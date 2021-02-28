@@ -40,6 +40,13 @@ public:
         // ID is for error reporting only
         uint32_t id;
     };
+    struct Assumption {
+        EventTime::Sign sign;
+        Var::Ref val;
+        // ID is for error reporting only
+        // This ID is in the same namespace as EventTime and will be reported as so.
+        uint32_t id = 0;
+    };
     struct Branch {
         Var::Ref cond;
         BasicSeq *target;
@@ -83,6 +90,11 @@ public:
     {
         return m_assign;
     }
+    // Whether the assumption triggers or now for an unused basic seq is implementation defined.
+    const std::list<Assumption> &get_assumes() const
+    {
+        return m_assume;
+    }
     llvm::ArrayRef<Branch> get_branches() const
     {
         return m_branches;
@@ -93,6 +105,7 @@ public:
     }
     bool has_output(uint32_t chn) const;
     void assign_global(uint32_t global_id, Var *val, uint32_t assignment_id);
+    void add_assume(EventTime::Sign sign, Var *val, uint32_t assume_id);
 
     void check() const;
 
@@ -111,6 +124,7 @@ private:
     std::map<uint32_t,Var::Ref> m_startval;
     std::map<uint32_t,Var::Ref> m_endval;
     std::map<uint32_t,Assignment> m_assign;
+    std::list<Assumption> m_assume;
 
     std::vector<Branch> m_branches;
     BasicSeq *m_default_branch = nullptr;
