@@ -12,9 +12,11 @@ set(nacs_seq_SRCS
   zynq/legacy_seq.cpp)
 set(nacs_seq_LINKS)
 set(nacs_seq_llvm_HDRS
-  env.h)
+  env.h
+  error.h)
 set(nacs_seq_llvm_SRCS
   env.cpp
+  error.cpp
   var.cpp)
 
 if(ENABLE_LLVM)
