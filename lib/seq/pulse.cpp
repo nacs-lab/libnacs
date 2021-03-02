@@ -159,29 +159,23 @@ NACS_EXPORT() Var *Pulse::compute_endval() const
 
 NACS_EXPORT() bool Pulse::optimize()
 {
-    if (m_is_measure) {
-        assert(m_val->is_extern());
-        assert(!m_len);
-        assert(!m_endval);
-    }
-    else {
-        // Simple assignment can happen since the variable optimization maintains pointer
-        // identity for external variables. Update our external references to allow
-        // such assgignments to be optimized out.
-        if (m_len) {
-            if (auto v = m_len->get_assigned_var()) {
-                // Here we'll rely on the parent to check if the length is greater than 0.
-                // Since pulse length can be optimized out,
-                // this isn't a good/reliable place to do the check anyway.
-                m_len = v->ref();
-            }
+    assert(!m_is_measure);
+    // Simple assignment can happen since the variable optimization maintains pointer
+    // identity for external variables. Update our external references to allow
+    // such assgignments to be optimized out.
+    if (m_len) {
+        if (auto v = m_len->get_assigned_var()) {
+            // Here we'll rely on the parent to check if the length is greater than 0.
+            // Since pulse length can be optimized out,
+            // this isn't a good/reliable place to do the check anyway.
+            m_len = v->ref();
         }
-        if (auto v = m_val->get_assigned_var())
-            m_val = v->ref();
-        if (m_endval) {
-            if (auto v = m_endval->get_assigned_var()) {
-                m_endval = v->ref();
-            }
+    }
+    if (auto v = m_val->get_assigned_var())
+        m_val = v->ref();
+    if (m_endval) {
+        if (auto v = m_endval->get_assigned_var()) {
+            m_endval = v->ref();
         }
     }
     return false;

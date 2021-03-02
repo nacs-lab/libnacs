@@ -359,6 +359,7 @@ bool BasicSeq::optimize_pulse(uint32_t chn)
         auto &pulse = *it;
         if (!pulse.is_measure()) {
             changed |= pulse.clear_unused_args();
+            changed |= pulse.optimize();
         }
         else {
             auto m = pulse.val();
@@ -369,7 +370,6 @@ bool BasicSeq::optimize_pulse(uint32_t chn)
                 continue;
             }
         }
-        changed |= pulse.optimize();
         ++it;
     }
     return changed;
@@ -389,6 +389,7 @@ bool BasicSeq::optimize_order(uint32_t chn)
         old_endval.reset(it->second.get());
         return true;
     }
+    bool should_continue = false;
     for (auto it = pulses.begin(), end = pulses.end(); it != end;) {
         auto &pulse = *it;
         if (pulse.is_measure()) {
@@ -399,10 +400,19 @@ bool BasicSeq::optimize_order(uint32_t chn)
                 changed = true;
                 continue;
             }
+            should_continue = true;
         }
-        changed |= pulse.optimize();
+        else {
+            if (!should_continue && pulse.needs_oldval())
+                should_continue = true;
+            changed |= pulse.clear_unused_args();
+            changed |= pulse.optimize();
+        }
         ++it;
     }
+    // Nothing more to optimize here...
+    if (!should_continue && endval(chn))
+        return changed;
     pulses.sort([] (const Pulse &p1, const Pulse &p2) {
         auto &t1 = p1.start();
         auto &t2 = p2.start();
@@ -653,9 +663,6 @@ bool BasicSeq::optimize_order(uint32_t chn)
         if (pulse->needs_oldval() && curval) {
             pulse->set_oldval(curval);
             changed = true;
-        }
-        else {
-            changed |= pulse->clear_unused_args();
         }
         if (!pulse->needs_oldval()) {
             for (auto m: measures[i + 1]) {
