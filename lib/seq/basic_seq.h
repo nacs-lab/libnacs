@@ -103,9 +103,14 @@ public:
     {
         return m_default_branch;
     }
+    const std::list<EventTime> &get_endtimes() const
+    {
+        return m_endtimes;
+    }
     bool has_output(uint32_t chn) const;
     void assign_global(uint32_t global_id, Var *val, uint32_t assignment_id);
     void add_assume(EventTime::Sign sign, Var *val, uint32_t assume_id);
+    void add_endtime(EventTime &&t);
 
     void check() const;
     void print(std::ostream &stm) const;
@@ -115,6 +120,7 @@ private:
     void mark_recursive();
     bool optimize_pulse(uint32_t chn);
     bool optimize_order(uint32_t chn);
+    bool optimize_endtimes();
     void optimize_vars();
     bool optimize_branch();
 
@@ -126,6 +132,13 @@ private:
     std::map<uint32_t,Var::Ref> m_endval;
     std::map<uint32_t,Assignment> m_assign;
     std::list<Assumption> m_assume;
+    // We use a different list to keep track of the sequence times
+    // since in the real sequence there are likely many duplicates
+    // between times on different channels
+    // and most of the times will be known to be smaller than other ones.
+    // Using a different list allows us to not reprocess all of those
+    // in each optimization cycle.
+    std::list<EventTime> m_endtimes;
 
     std::vector<Branch> m_branches;
     BasicSeq *m_default_branch = nullptr;

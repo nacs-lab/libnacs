@@ -210,6 +210,8 @@ NACS_EXPORT() void Seq::optimize()
         for (auto &seq: m_seqs)
             seq.optimize_vars();
         bool changed = optimize_cfg();
+        for (auto &seq: m_seqs)
+            changed |= seq.optimize_endtimes();
         for (unsigned i = 1; i <= nchns; i++)
             changed |= optimize_chn(i);
         if (!changed) {
