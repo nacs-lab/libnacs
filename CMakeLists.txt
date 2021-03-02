@@ -42,7 +42,7 @@ set(INSTALL_PKGCONFIG_DIR "${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig"
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS)
 
-set(CMAKE_REQUIRED_FLAGS "-std=gnu++14")
+set(CMAKE_REQUIRED_FLAGS "-std=gnu++17")
 check_cxx_source_compiles("
       #include <math.h>
       int main()
@@ -112,7 +112,7 @@ else()
 endif()
 
 cmake_c_add_flags(CMAKE_C_FLAGS -std=gnu11)
-cmake_c_add_flags(CMAKE_CXX_FLAGS -std=gnu++14 -fno-rtti -D__STDCPP_WANT_MATH_SPEC_FUNCS__)
+cmake_c_add_flags(CMAKE_CXX_FLAGS -std=gnu++17 -fno-rtti -D__STDCPP_WANT_MATH_SPEC_FUNCS__)
 cmake_c_add_flags(CMAKE_EXE_LINKER_FLAGS ${LINKER_FLAGS})
 cmake_c_add_flags(CMAKE_STATIC_LINKER_FLAGS ${LINKER_FLAGS})
 cmake_c_add_flags(CMAKE_SHARED_LINKER_FLAGS ${LINKER_FLAGS})

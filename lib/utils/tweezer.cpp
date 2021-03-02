@@ -23,8 +23,6 @@
 namespace NaCs {
 namespace Tweezer {
 
-#if __cplusplus >= 201703L || __STDCPP_MATH_SPEC_FUNCS__ >= 201003L
-
 NACS_EXPORT() double sideband(double eta, int n1, int n2)
 {
     if (n1 < 0 || n2 < 0)
@@ -74,8 +72,6 @@ NACS_EXPORT() void max_sideband_ratios(double eta, int orders, double *ratios)
         ratios[i] = m0 / find_max_sideband(eta, i + 1);
     }
 }
-
-#endif
 
 }
 }
