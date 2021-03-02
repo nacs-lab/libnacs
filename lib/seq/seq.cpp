@@ -200,20 +200,23 @@ NACS_EXPORT() void Seq::optimize()
     // Do some clean up before doing the actual optimization of the variables
     unsigned nchns = m_chnnames.size();
     for (auto &seq: m_seqs) {
-        for (unsigned i = 1; i <= nchns; i++) {
+        for (unsigned i = 1; i <= nchns; i++)
             seq.optimize_pulse(i);
-        }
+        seq.preoptimize_eventtimes();
     }
     optimize_cfg();
     while (true) {
         m_env.optimize();
+        bool changed = false;
         for (auto &seq: m_seqs)
-            seq.optimize_vars();
-        bool changed = optimize_cfg();
+            changed |= seq.optimize_vars();
+        changed |= optimize_cfg();
         for (auto &seq: m_seqs)
             changed |= seq.optimize_endtimes();
         for (unsigned i = 1; i <= nchns; i++)
             changed |= optimize_chn(i);
+        for (auto &seq: m_seqs)
+            changed |= seq.postoptimize_eventtimes();
         if (!changed) {
             break;
         }

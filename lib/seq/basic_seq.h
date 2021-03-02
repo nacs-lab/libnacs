@@ -58,8 +58,8 @@ public:
     {
         return m_id;
     }
-    Pulse *add_pulse(uint32_t chn, uint32_t id, EventTime &&start, Var *len, Var *val);
-    Pulse *add_measure(uint32_t chn, uint32_t id, EventTime &&start, Var *val);
+    Pulse *add_pulse(uint32_t chn, uint32_t id, EventTime &start, Var *len, Var *val);
+    Pulse *add_measure(uint32_t chn, uint32_t id, EventTime &start, Var *val);
     Var *new_measure(Env &env, uint32_t measure_id) const;
     // NULL target means termination of sequence
     void add_branch(Var *cond, BasicSeq *target, uint32_t id);
@@ -103,14 +103,15 @@ public:
     {
         return m_default_branch;
     }
-    const std::list<EventTime> &get_endtimes() const
+    const std::list<EventTime::Ref> &get_endtimes() const
     {
         return m_endtimes;
     }
     bool has_output(uint32_t chn) const;
     void assign_global(uint32_t global_id, Var *val, uint32_t assignment_id);
     void add_assume(EventTime::Sign sign, Var *val, uint32_t assume_id);
-    void add_endtime(EventTime &&t);
+    void add_endtime(EventTime &t);
+    EventTime &track_time(const EventTime &t);
 
     void check() const;
     void print(std::ostream &stm) const;
@@ -121,8 +122,10 @@ private:
     bool optimize_pulse(uint32_t chn);
     bool optimize_order(uint32_t chn);
     bool optimize_endtimes();
-    void optimize_vars();
+    bool optimize_vars();
     bool optimize_branch();
+    bool preoptimize_eventtimes();
+    bool postoptimize_eventtimes();
 
     const uint32_t m_id;
     bool m_used = false; // Used by GC
@@ -138,7 +141,9 @@ private:
     // and most of the times will be known to be smaller than other ones.
     // Using a different list allows us to not reprocess all of those
     // in each optimization cycle.
-    std::list<EventTime> m_endtimes;
+    std::list<EventTime::Ref> m_endtimes;
+    // All the times used in the sequence
+    std::list<EventTime> m_eventtimes;
 
     std::vector<Branch> m_branches;
     BasicSeq *m_default_branch = nullptr;

@@ -28,7 +28,7 @@ public:
     // id must be unique in the whole sequence
     // A pulse with the same time but a larger ID will be treated as happens after
     // one with a smaller ID.
-    Pulse(uint32_t id, EventTime &&start, Var *len, Var *val, bool is_measure);
+    Pulse(uint32_t id, EventTime &start, Var *len, Var *val, bool is_measure);
     uint32_t id() const
     {
         return m_id;
@@ -42,11 +42,7 @@ public:
     // this is the time of the output/measure.
     const EventTime &start() const
     {
-        return m_start;
-    }
-    EventTime &start()
-    {
-        return m_start;
+        return *m_start;
     }
     // May be null if the pulse contains no ramp or is a measurement.
     Var *len() const
@@ -85,7 +81,7 @@ private:
 
     const uint32_t m_id;
     const bool m_is_measure;
-    EventTime m_start;
+    EventTime::Ref m_start;
     Var::Ref m_len;
     Var::Ref m_val;
 

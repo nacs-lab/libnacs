@@ -62,14 +62,16 @@ static void test_check_extern_measure_value(llvm::LLVMContext &llvm_ctx)
     assert(bs2->id() == 2);
     bs1->set_default_branch(bs2);
 
-    auto m1 = bs1->add_measure(1, 10, Seq::EventTime(0), bs1->new_measure(seq.env(), 1));
+    auto m1 = bs1->add_measure(1, 10, bs1->track_time(Seq::EventTime(0)),
+                               bs1->new_measure(seq.env(), 1));
     assert(m1->id() == 10);
     assert(m1->is_measure());
     assert(m1->val()->is_extern());
     assert(m1->val()->get_extern().first == IR::Type::Float64);
     assert(m1->val()->get_extern().second == ((uint64_t(1) << 32) | 1));
 
-    auto p2 = bs2->add_pulse(1, 7, Seq::EventTime(0), seq.get_const(IR::TagVal(1000)),
+    auto p2 = bs2->add_pulse(1, 7, bs2->track_time(Seq::EventTime(0)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -108,7 +110,8 @@ static void test_check_extern_measure_length(llvm::LLVMContext &llvm_ctx)
     assert(bs2->id() == 2);
     bs1->set_default_branch(bs2);
 
-    auto m1 = bs1->add_measure(1, 10, Seq::EventTime(0), bs1->new_measure(seq.env(), 1));
+    auto m1 = bs1->add_measure(1, 10, bs1->track_time(Seq::EventTime(0)),
+                               bs1->new_measure(seq.env(), 1));
     assert(m1->id() == 10);
     assert(m1->is_measure());
     assert(m1->val()->is_extern());
@@ -120,7 +123,7 @@ static void test_check_extern_measure_length(llvm::LLVMContext &llvm_ctx)
         builder.createRet(builder.createMul(0, builder.getConst(20000)));
         return seq.get_call(builder.get(), {Seq::Arg::create_var(m1->val())}, 0);
     }();
-    auto p2 = bs2->add_pulse(1, 5, Seq::EventTime(0), len,
+    auto p2 = bs2->add_pulse(1, 5, bs2->track_time(Seq::EventTime(0)), len,
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -159,7 +162,8 @@ static void test_check_extern_measure_time(llvm::LLVMContext &llvm_ctx)
     assert(bs2->id() == 2);
     bs1->set_default_branch(bs2);
 
-    auto m1 = bs1->add_measure(1, 10, Seq::EventTime(0), bs1->new_measure(seq.env(), 1));
+    auto m1 = bs1->add_measure(1, 10, bs1->track_time(Seq::EventTime(0)),
+                               bs1->new_measure(seq.env(), 1));
     assert(m1->id() == 10);
     assert(m1->is_measure());
     assert(m1->val()->is_extern());
@@ -172,7 +176,7 @@ static void test_check_extern_measure_time(llvm::LLVMContext &llvm_ctx)
         builder.createRet(builder.createMul(0, builder.getConst(20000)));
         return seq.get_call(builder.get(), {Seq::Arg::create_var(m1->val())}, 0);
     }(), 1289);
-    auto p2 = bs2->add_pulse(1, 58, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p2 = bs2->add_pulse(1, 58, bs2->track_time(t), seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -211,7 +215,8 @@ static void test_check_extern_measure_assign(llvm::LLVMContext &llvm_ctx)
     assert(bs2->id() == 2);
     bs1->set_default_branch(bs2);
 
-    auto m1 = bs1->add_measure(1, 10, Seq::EventTime(0), bs1->new_measure(seq.env(), 1));
+    auto m1 = bs1->add_measure(1, 10, bs1->track_time(Seq::EventTime(0)),
+                               bs1->new_measure(seq.env(), 1));
     assert(m1->id() == 10);
     assert(m1->is_measure());
     assert(m1->val()->is_extern());
@@ -252,7 +257,8 @@ static void test_check_extern_measure_assume(llvm::LLVMContext &llvm_ctx)
     assert(bs2->id() == 2);
     bs1->set_default_branch(bs2);
 
-    auto m1 = bs1->add_measure(1, 10, Seq::EventTime(0), bs1->new_measure(seq.env(), 1));
+    auto m1 = bs1->add_measure(1, 10, bs1->track_time(Seq::EventTime(0)),
+                               bs1->new_measure(seq.env(), 1));
     assert(m1->id() == 10);
     assert(m1->is_measure());
     assert(m1->val()->is_extern());
@@ -291,7 +297,8 @@ static void test_check_extern_measure_branch(llvm::LLVMContext &llvm_ctx)
     assert(bs2->id() == 2);
     bs1->set_default_branch(bs2);
 
-    auto m1 = bs1->add_measure(1, 10, Seq::EventTime(0), bs1->new_measure(seq.env(), 1));
+    auto m1 = bs1->add_measure(1, 10, bs1->track_time(Seq::EventTime(0)),
+                               bs1->new_measure(seq.env(), 1));
     assert(m1->id() == 10);
     assert(m1->is_measure());
     assert(m1->val()->is_extern());
@@ -330,7 +337,8 @@ static void test_check_extern_measure_endtime(llvm::LLVMContext &llvm_ctx)
     assert(bs2->id() == 2);
     bs1->set_default_branch(bs2);
 
-    auto m1 = bs1->add_measure(1, 10, Seq::EventTime(0), bs1->new_measure(seq.env(), 1));
+    auto m1 = bs1->add_measure(1, 10, bs1->track_time(Seq::EventTime(0)),
+                               bs1->new_measure(seq.env(), 1));
     assert(m1->id() == 10);
     assert(m1->is_measure());
     assert(m1->val()->is_extern());
@@ -345,7 +353,7 @@ static void test_check_extern_measure_endtime(llvm::LLVMContext &llvm_ctx)
         builder.createRet(builder.createMul(0, builder.getConst(20000)));
         return seq.get_call(builder.get(), {Seq::Arg::create_var(m1->val())}, 0);
     }(), 12189);
-    bs2->add_endtime(std::move(t));
+    bs2->add_endtime(bs2->track_time(t));
 
     auto err = expect_error([&] {
         seq.check();
@@ -370,7 +378,8 @@ static void test_check_measure_order_time(llvm::LLVMContext &llvm_ctx)
     auto bs1 = seq.add_basicseq(1);
     assert(bs1->id() == 1);
 
-    auto m1 = bs1->add_measure(1, 10, Seq::EventTime(100), bs1->new_measure(seq.env(), 1));
+    auto m1 = bs1->add_measure(1, 10, bs1->track_time(Seq::EventTime(100)),
+                               bs1->new_measure(seq.env(), 1));
     assert(m1->id() == 10);
     assert(m1->is_measure());
     assert(m1->val()->is_extern());
@@ -379,7 +388,7 @@ static void test_check_measure_order_time(llvm::LLVMContext &llvm_ctx)
 
     Seq::EventTime t;
     t.add_term(Seq::EventTime::Pos, seq.get_slot(IR::Type::Float64, 0), 998);
-    auto p1 = bs1->add_pulse(1, 11, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs1->add_pulse(1, 11, bs1->track_time(t), seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -414,14 +423,16 @@ static void test_check_measure_order_id(llvm::LLVMContext &llvm_ctx)
     auto bs1 = seq.add_basicseq(1);
     assert(bs1->id() == 1);
 
-    auto m1 = bs1->add_measure(1, 10, Seq::EventTime(100), bs1->new_measure(seq.env(), 1));
+    auto m1 = bs1->add_measure(1, 10, bs1->track_time(Seq::EventTime(100)),
+                               bs1->new_measure(seq.env(), 1));
     assert(m1->id() == 10);
     assert(m1->is_measure());
     assert(m1->val()->is_extern());
     assert(m1->val()->get_extern().first == IR::Type::Float64);
     assert(m1->val()->get_extern().second == ((uint64_t(1) << 32) | 1));
 
-    auto p1 = bs1->add_pulse(1, 9, Seq::EventTime(100), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs1->add_pulse(1, 9, bs1->track_time(Seq::EventTime(100)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -456,14 +467,16 @@ static void test_check_measure_order_id_ok(llvm::LLVMContext &llvm_ctx)
     auto bs1 = seq.add_basicseq(1);
     assert(bs1->id() == 1);
 
-    auto m1 = bs1->add_measure(1, 10, Seq::EventTime(100), bs1->new_measure(seq.env(), 1));
+    auto m1 = bs1->add_measure(1, 10, bs1->track_time(Seq::EventTime(100)),
+                               bs1->new_measure(seq.env(), 1));
     assert(m1->id() == 10);
     assert(m1->is_measure());
     assert(m1->val()->is_extern());
     assert(m1->val()->get_extern().first == IR::Type::Float64);
     assert(m1->val()->get_extern().second == ((uint64_t(1) << 32) | 1));
 
-    auto p1 = bs1->add_pulse(1, 11, Seq::EventTime(100), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs1->add_pulse(1, 11, bs1->track_time(Seq::EventTime(100)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -500,7 +513,8 @@ static void test_check_measure_order_measure_time(llvm::LLVMContext &llvm_ctx)
     auto bs1 = seq.add_basicseq(1);
     assert(bs1->id() == 1);
 
-    auto m1 = bs1->add_measure(1, 10, Seq::EventTime(100), bs1->new_measure(seq.env(), 1));
+    auto m1 = bs1->add_measure(1, 10, bs1->track_time(Seq::EventTime(100)),
+                               bs1->new_measure(seq.env(), 1));
     assert(m1->id() == 10);
     assert(m1->is_measure());
     assert(m1->val()->is_extern());
@@ -509,7 +523,7 @@ static void test_check_measure_order_measure_time(llvm::LLVMContext &llvm_ctx)
 
     Seq::EventTime t(100);
     t.add_term(Seq::EventTime::NonNeg, m1->val(), 998);
-    auto m2 = bs1->add_measure(1, 9, Seq::EventTime(t), bs1->new_measure(seq.env(), 2));
+    auto m2 = bs1->add_measure(1, 9, bs1->track_time(t), bs1->new_measure(seq.env(), 2));
     assert(m2->id() == 9);
     assert(m2->is_measure());
     assert(m2->val()->is_extern());

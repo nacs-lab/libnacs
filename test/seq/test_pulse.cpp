@@ -39,11 +39,8 @@ int main()
     t.add_term(Seq::EventTime::NonNeg, env.new_extern({IR::Type::Float64, 2345}));
 
     {
-        Seq::EventTime t2(t);
-        Seq::Pulse p1(1, std::move(t2), env.new_const(IR::TagVal(4.5)),
+        Seq::Pulse p1(1, t, env.new_const(IR::TagVal(4.5)),
                       env.new_const(IR::TagVal(8.9)), false);
-        // The move constructor should take the vector data.
-        assert(t2.terms.size() == 0);
         assert(p1.id() == 1);
         assert(!p1.is_measure());
         assert(p1.start() == t);
@@ -59,10 +56,6 @@ int main()
         p1.clear_unused_args();
         p1.optimize();
 
-        Seq::EventTime t3(6);
-        t3.add_term(Seq::EventTime::Pos, t.terms[1].var.get());
-        t3.add_term(Seq::EventTime::NonNeg, t.terms[3].var.get());
-        assert(p1.start() == t3);
         assert(!p1.len());
         assert(p1.val());
         assert(p1.endval() == ev);
@@ -75,7 +68,7 @@ int main()
             return env.new_call(builder.get(), {Seq::Arg::create_const(0.5),
                     Seq::Arg::create_arg(1)}, 2);
         }();
-        Seq::Pulse p1(1, Seq::EventTime(t), env.new_const(IR::TagVal(4.5)), v, false);
+        Seq::Pulse p1(1, t, env.new_const(IR::TagVal(4.5)), v, false);
         assert(p1.id() == 1);
         assert(!p1.is_measure());
         assert(p1.start() == t);
@@ -94,7 +87,7 @@ int main()
         // and optimize out len if possible.
         assert(!p1.len());
 
-        Seq::Pulse p2(2, Seq::EventTime(t), nullptr, v, false);
+        Seq::Pulse p2(2, t, nullptr, v, false);
 
         assert(p1.start() == p2.start());
         assert(p1.start() == t);
@@ -104,20 +97,18 @@ int main()
         p1.optimize();
         p2.optimize();
 
-        assert(p1.start() == p2.start());
-        assert(p1.start() != t);
         assert(p1.known_before(p2) == Seq::EventTime::Pos);
         assert(p2.known_before(p1) == Seq::EventTime::Unknown);
     }
 
     {
-        Seq::Pulse m(1, Seq::EventTime(t), nullptr,
+        Seq::Pulse m(1, t, nullptr,
                      env.new_extern({IR::Type::Float64, 1234}), true);
         assert(m.is_measure());
     }
 
     {
-        Seq::Pulse p(1, Seq::EventTime(0), env.new_const(IR::TagVal(4.5)), [&] {
+        Seq::Pulse p(1, t, env.new_const(IR::TagVal(4.5)), [&] {
             IR::Builder builder(IR::Type::Float64,
                                 {IR::Type::Float64, IR::Type::Float64});
             builder.createRet(

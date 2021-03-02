@@ -22,10 +22,11 @@
 
 namespace NaCs::Seq {
 
-NACS_EXPORT_ Pulse::Pulse(uint32_t id, EventTime &&start, Var *len, Var *val, bool is_measure)
+NACS_EXPORT_ Pulse::Pulse(uint32_t id, EventTime &start,
+                          Var *len, Var *val, bool is_measure)
     : m_id(id),
       m_is_measure(is_measure),
-      m_start(std::move(start)),
+      m_start(start.ref()),
       m_len(len ? len->ref() : nullptr),
       m_val(val->ref())
 {
@@ -183,7 +184,7 @@ NACS_EXPORT() bool Pulse::optimize()
             }
         }
     }
-    return m_start.normalize();
+    return false;
 }
 
 }

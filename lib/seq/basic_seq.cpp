@@ -35,17 +35,17 @@ BasicSeq::BasicSeq(uint32_t id)
 }
 
 NACS_EXPORT() Pulse *BasicSeq::add_pulse(uint32_t chn, uint32_t id,
-                                         EventTime &&start, Var *len, Var *val)
+                                         EventTime &start, Var *len, Var *val)
 {
-    return &m_pulses[chn].emplace_back(id, std::move(start), len, val, false);
+    return &m_pulses[chn].emplace_back(id, start, len, val, false);
 }
 
 NACS_EXPORT() Pulse *BasicSeq::add_measure(uint32_t chn, uint32_t id,
-                                           EventTime &&start, Var *val)
+                                           EventTime &start, Var *val)
 {
     assert(val->is_extern());
     assert((val->get_extern().second >> 32) == m_id);
-    return &m_pulses[chn].emplace_back(id, std::move(start), nullptr, val, true);
+    return &m_pulses[chn].emplace_back(id, start, nullptr, val, true);
 }
 
 NACS_EXPORT() Var *BasicSeq::new_measure(Env &env, uint32_t _measure_id) const
@@ -92,9 +92,14 @@ NACS_EXPORT() void BasicSeq::add_assume(EventTime::Sign sign, Var *val, uint32_t
     m_assume.push_back({sign, val->ref(), assume_id});
 }
 
-NACS_EXPORT() void BasicSeq::add_endtime(EventTime &&t)
+NACS_EXPORT() void BasicSeq::add_endtime(EventTime &t)
 {
-    m_endtimes.push_back(std::move(t));
+    m_endtimes.push_back(t.ref());
+}
+
+NACS_EXPORT() EventTime &BasicSeq::track_time(const EventTime &t)
+{
+    return m_eventtimes.emplace_back(t);
 }
 
 NACS_EXPORT() void BasicSeq::check() const
@@ -312,7 +317,7 @@ NACS_EXPORT() void BasicSeq::check() const
     }
     // Make sure endtimes are valid.
     for (auto &time: m_endtimes) {
-        for (auto &term: time.terms) {
+        for (auto &term: time->terms) {
             try {
                 auto var = term.var.get();
                 if (var->is_const() || !visitor.previsit(var))
@@ -679,19 +684,17 @@ bool BasicSeq::optimize_order(uint32_t chn)
 
 bool BasicSeq::optimize_endtimes()
 {
-    bool changed = false;
-    for (auto &time: m_endtimes)
-        changed |= time.normalize();
     // size has constant complexity
     if (m_endtimes.size() <= 1)
-        return changed;
-    m_endtimes.sort([] (const EventTime &t1, const EventTime &t2) {
-        if (t1.tconst < t2.tconst)
+        return false;
+    bool changed = false;
+    m_endtimes.sort([] (const auto &t1, const auto &t2) {
+        if (t1->tconst < t2->tconst)
             return true;
-        if (t1.tconst > t2.tconst)
+        if (t1->tconst > t2->tconst)
             return false;
-        auto nt1 = t1.terms.size();
-        auto nt2 = t2.terms.size();
+        auto nt1 = t1->terms.size();
+        auto nt2 = t2->terms.size();
         if (nt1 < nt2)
             return true;
         if (nt1 > nt2)
@@ -700,8 +703,8 @@ bool BasicSeq::optimize_endtimes()
     });
     auto check_time = [&] (auto tit) {
         for (auto it = m_endtimes.begin(); it != tit;) {
-            assert(it->tconst <= tit->tconst);
-            if (it->isless_terms(*tit) != EventTime::Unknown) {
+            assert((*it)->tconst <= (*tit)->tconst);
+            if ((*it)->isless_terms(**tit) != EventTime::Unknown) {
                 changed = true;
                 it = m_endtimes.erase(it);
             }
@@ -715,7 +718,30 @@ bool BasicSeq::optimize_endtimes()
     return changed;
 }
 
-void BasicSeq::optimize_vars()
+bool BasicSeq::preoptimize_eventtimes()
+{
+    bool changed = false;
+    for (auto &time: m_eventtimes)
+        changed |= time.normalize();
+    return changed;
+}
+
+bool BasicSeq::postoptimize_eventtimes()
+{
+    bool changed = false;
+    for (auto it = m_eventtimes.begin(), end = m_eventtimes.end(); it != end;) {
+        if (it->m_ref_count == 0) {
+            changed = true;
+            it = m_eventtimes.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
+    return changed;
+}
+
+bool BasicSeq::optimize_vars()
 {
     auto optimize_mapval = [] (auto &map) {
         for (auto &kv: map) {
@@ -758,6 +784,7 @@ void BasicSeq::optimize_vars()
             br.cond.reset(v);
         }
     }
+    return preoptimize_eventtimes();
 }
 
 bool BasicSeq::optimize_branch()
@@ -874,7 +901,7 @@ NACS_EXPORT() void BasicSeq::print(std::ostream &stm) const
     if (!m_endtimes.empty()) {
         stm << "  End Times:" << std::endl;
         for (auto &time: m_endtimes) {
-            stm << "    " << time << std::endl;
+            stm << "    " << *time << std::endl;
         }
     }
 }

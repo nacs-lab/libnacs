@@ -34,11 +34,11 @@ int main()
     Seq::Env env(*llvm_ctx);
 
     Seq::EventTime t;
-    t.add_term(Seq::EventTime::Pos, env.new_const(IR::TagVal(1.2)));
+    t.add_term(Seq::EventTime::Pos, env.new_const(IR::TagVal(1.2)), 1);
     t.normalize();
     assert(t.tconst == 1);
     assert(t.terms.empty());
-    t.add_term(Seq::EventTime::Pos, env.new_extern({IR::Type::Float64, 1234}));
+    t.add_term(Seq::EventTime::Pos, env.new_extern({IR::Type::Float64, 1234}), 2);
     t.normalize();
     assert(t.tconst == 1);
     assert(t.terms.size() == 1);
@@ -48,8 +48,8 @@ int main()
     auto tv = env.new_extern({IR::Type::Float64, 1111});
     Seq::EventTime t2;
     t2.tconst = 10;
-    t.add_term(Seq::EventTime::Unknown, tv);
-    t2.add_term(Seq::EventTime::Unknown, tv);
+    t.add_term(Seq::EventTime::Unknown, tv, 3);
+    t2.add_term(Seq::EventTime::Unknown, tv, 3);
     t.normalize();
     t2.normalize();
     // We sort by varid, so `tv` should remain as the second term.
@@ -95,14 +95,16 @@ int main()
     assert(tdiff.terms[0].var == t.terms[0].var);
 
     {
-        // Test copy and move constructors
+        // Test copy constructor
         Seq::EventTime t3(t);
         assert(t == t3);
-        Seq::EventTime t4(std::move(t3));
-        assert(t == t4);
-        assert(t3 != t4);
-        assert(t3.terms != t4.terms);
-        assert(t3.terms.size() == 0);
+        // Make sure id is also copied.
+        // `==` does not check this since it is insignificant to the sequence semantics
+        auto nterms = t.terms.size();
+        for (size_t i = 0; i < nterms; i++) {
+            assert(t.terms[i].id == t3.terms[i].id);
+            assert(t.terms[i].id != 0);
+        }
     }
 
     {

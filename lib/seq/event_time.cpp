@@ -29,6 +29,7 @@ NACS_EXPORT_ EventTime::EventTime(const EventTime &other)
     : tconst(other.tconst),
       terms(other.terms.size())
 {
+    // Do not copy reference count
     auto nterms = other.terms.size();
     for (size_t i = 0; i < nterms; i++) {
         auto &term = terms[i];
@@ -131,7 +132,8 @@ NACS_EXPORT() EventTime EventTime::operator-(const EventTime &other) const
 {
     assert(other.tconst <= tconst);
     assert(other.isless_terms(*this) != Unknown);
-    EventTime diff{tconst - other.tconst};
+    uint64_t diff_tconst = tconst - other.tconst;
+    decltype(terms) diff_terms;
 
     const auto &vc1 = other;
     const auto &vc2 = *this;
@@ -156,14 +158,14 @@ NACS_EXPORT() EventTime EventTime::operator-(const EventTime &other) const
         // if it is non-negetive, we can move to the next one.
         off2++;
         assertsize();
-        diff.terms.push_back({t2.sign, t2.var->ref()});
+        diff_terms.push_back({t2.sign, t2.var->ref()});
     }
     while (off2 < nt2) {
         auto &t2 = vc2.terms[off2];
         off2++;
-        diff.terms.push_back({t2.sign, t2.var->ref()});
+        diff_terms.push_back({t2.sign, t2.var->ref()});
     }
-    return diff;
+    return {diff_tconst, std::move(diff_terms)};
 }
 
 NACS_EXPORT() Var *EventTime::to_var(Env &env) const

@@ -23,7 +23,16 @@
 
 namespace NaCs::Seq {
 
-struct EventTime {
+class BasicSeq;
+
+class EventTime {
+    struct Unrefer {
+        void operator()(EventTime *time) const
+        {
+            time->unref();
+        }
+    };
+public:
     enum Errno : uint8_t {
         NegTime,
         NonPosTime
@@ -49,14 +58,43 @@ struct EventTime {
             return !operator==(other);
         }
     };
+    // Use unique pointer since I'm too lazy to write my own.
+    // The only limitation is that copy is not allowed
+    // but we could/should use `->ref()` most of the time in place of copy anyway.
+    class Ref : public std::unique_ptr<EventTime,Unrefer> {
+    public:
+        // Unlike `Var::Ref`, we do not allow keeping the `Ref` alive
+        // past the lifetime of the allocator of `EventTime` itself.
+        // This should be fine since all the `Ref`'s should be stored in the sequence
+        // that owns the `EventTime`.
+        // This way the use of the reference counting to manage the lifetime of `EventTime`
+        // is optional and we can still easily use our own `EventTime` however we want
+        // when constructing the sequence.
+        using std::unique_ptr<EventTime,Unrefer>::unique_ptr;
+        void reset(EventTime *ptr) noexcept
+        {
+            if (ptr)
+                ptr->incref();
+            std::unique_ptr<EventTime,Unrefer>::reset(ptr);
+        }
+        EventTime *release() noexcept = delete;
+    };
+
+    Ref ref()
+    {
+        incref();
+        return Ref(this);
+    }
 
     EventTime() = default;
     EventTime(uint64_t tconst, std::vector<Term> &&terms={})
         : tconst(tconst),
           terms(std::move(terms))
     {}
-    EventTime(EventTime&&) = default;
-    EventTime(const EventTime&);
+    // We want pointer identity and this will be kept track of by the parent (BasicSeq)
+    // so we don't want or need moving.
+    EventTime(EventTime&&) = delete;
+    explicit EventTime(const EventTime&); // We don't want to accidentally copy either
     bool operator==(const EventTime &other) const
     {
         return tconst == other.tconst && terms == other.terms;
@@ -90,6 +128,18 @@ struct EventTime {
     // but I also don't want to expose any LLVM linkage directly
     // (in order to support statically linking LLVM).
     std::vector<Term> terms;
+
+private:
+    void incref()
+    {
+        m_ref_count++;
+    }
+    void unref()
+    {
+        --m_ref_count;
+    }
+    uint32_t m_ref_count = 0;
+    friend class BasicSeq;
 };
 
 static inline std::ostream &operator<<(std::ostream &stm, const EventTime &t)

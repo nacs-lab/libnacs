@@ -50,10 +50,10 @@ static void test_basic_single_channel(llvm::LLVMContext &llvm_ctx)
     t.add_term(Seq::EventTime::Pos, seq.get_slot(IR::Type::Float64, 0));
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(5.45)));
     t.add_term(Seq::EventTime::NonNeg, seq.get_slot(IR::Type::Float64, 1));
-    auto p1 = bs->add_pulse(1, 1, Seq::EventTime(t), nullptr, seq.get_const(IR::TagVal(0.3)));
+    auto p1 = bs->add_pulse(1, 1, bs->track_time(t), nullptr, seq.get_const(IR::TagVal(0.3)));
     assert(p1->id() == 1);
     assert(!p1->needs_oldval());
-    auto p2 = bs->add_pulse(1, 2, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p2 = bs->add_pulse(1, 2, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64});
@@ -101,7 +101,7 @@ static void test_basic_single_channel_measure_known_time1(llvm::LLVMContext &llv
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(5.45)));
 
     seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
-    auto p1 = bs->add_pulse(1, 1, Seq::EventTime(0), nullptr,
+    auto p1 = bs->add_pulse(1, 1, bs->track_time(Seq::EventTime(0)), nullptr,
                             [&] {
                                 IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
                                 builder.createRet(builder.createSub(0, builder.getConst(2)));
@@ -109,7 +109,7 @@ static void test_basic_single_channel_measure_known_time1(llvm::LLVMContext &llv
                             }());
     assert(p1->id() == 1);
     assert(p1->needs_oldval());
-    auto p2 = bs->add_pulse(1, 2, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p2 = bs->add_pulse(1, 2, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64});
@@ -121,11 +121,11 @@ static void test_basic_single_channel_measure_known_time1(llvm::LLVMContext &llv
     assert(p2->id() == 2);
     assert(p2->needs_oldval());
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(30)));
-    auto m1 = bs->add_measure(1, 3, Seq::EventTime(t), bs->new_measure(seq.env(), 1));
+    auto m1 = bs->add_measure(1, 3, bs->track_time(t), bs->new_measure(seq.env(), 1));
     assert(m1->id() == 3);
     assert(m1->is_measure());
     t.add_term(Seq::EventTime::Pos, seq.get_slot(IR::Type::Float64, 1));
-    auto p3 = bs->add_pulse(1, 4, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p3 = bs->add_pulse(1, 4, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64,
@@ -193,7 +193,7 @@ static void test_basic_single_channel_measure_known_time2(llvm::LLVMContext &llv
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(5.45)));
 
     seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
-    auto p1 = bs->add_pulse(1, 1, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs->add_pulse(1, 1, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64});
@@ -206,11 +206,11 @@ static void test_basic_single_channel_measure_known_time2(llvm::LLVMContext &llv
     assert(p1->needs_oldval());
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(1000)));
     t.add_term(Seq::EventTime::NonNeg, seq.get_slot(IR::Type::Float64, 1));
-    auto m1 = bs->add_measure(1, 2, Seq::EventTime(t), bs->new_measure(seq.env(), 1));
+    auto m1 = bs->add_measure(1, 2, bs->track_time(t), bs->new_measure(seq.env(), 1));
     assert(m1->id() == 2);
     assert(m1->is_measure());
     t.add_term(Seq::EventTime::Pos, seq.get_slot(IR::Type::Float64, 2));
-    auto p2 = bs->add_pulse(1, 3, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p2 = bs->add_pulse(1, 3, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64,
@@ -257,7 +257,7 @@ static void test_basic_single_channel_measure_unknown_time(llvm::LLVMContext &ll
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(5.45)));
 
     seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
-    auto p1 = bs->add_pulse(1, 1, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs->add_pulse(1, 1, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64});
@@ -269,11 +269,11 @@ static void test_basic_single_channel_measure_unknown_time(llvm::LLVMContext &ll
     assert(p1->id() == 1);
     assert(p1->needs_oldval());
     t.add_term(Seq::EventTime::NonNeg, seq.get_slot(IR::Type::Float64, 1));
-    auto m1 = bs->add_measure(1, 2, Seq::EventTime(t), bs->new_measure(seq.env(), 1));
+    auto m1 = bs->add_measure(1, 2, bs->track_time(t), bs->new_measure(seq.env(), 1));
     assert(m1->id() == 2);
     assert(m1->is_measure());
     t.add_term(Seq::EventTime::Pos, seq.get_slot(IR::Type::Float64, 2));
-    auto p2 = bs->add_pulse(1, 3, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p2 = bs->add_pulse(1, 3, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64,
@@ -340,7 +340,7 @@ static void test_basic_single_channel_unused_measure(llvm::LLVMContext &llvm_ctx
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(5.45)));
 
     seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
-    auto p1 = bs->add_pulse(1, 1, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs->add_pulse(1, 1, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64});
@@ -352,7 +352,7 @@ static void test_basic_single_channel_unused_measure(llvm::LLVMContext &llvm_ctx
     assert(p1->id() == 1);
     assert(p1->needs_oldval());
     t.add_term(Seq::EventTime::Unknown, seq.get_slot(IR::Type::Float64, 1));
-    auto m1 = bs->add_measure(1, 2, Seq::EventTime(t), bs->new_measure(seq.env(), 1));
+    auto m1 = bs->add_measure(1, 2, bs->track_time(t), bs->new_measure(seq.env(), 1));
     assert(m1->id() == 2);
     assert(m1->is_measure());
     assert(bs->get_pulses(1)->size() == 2);
@@ -382,7 +382,7 @@ static void test_basic_two_channel_measure_time(llvm::LLVMContext &llvm_ctx)
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(5.45)));
 
     seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
-    auto p1 = bs->add_pulse(1, 1, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs->add_pulse(1, 1, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64});
@@ -394,7 +394,7 @@ static void test_basic_two_channel_measure_time(llvm::LLVMContext &llvm_ctx)
     assert(p1->id() == 1);
     assert(p1->needs_oldval());
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(1000)));
-    auto m1 = bs->add_measure(1, 2, Seq::EventTime(t), bs->new_measure(seq.env(), 1));
+    auto m1 = bs->add_measure(1, 2, bs->track_time(t), bs->new_measure(seq.env(), 1));
     assert(m1->id() == 2);
     assert(m1->is_measure());
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(10)));
@@ -403,7 +403,7 @@ static void test_basic_two_channel_measure_time(llvm::LLVMContext &llvm_ctx)
         builder.createRet(builder.createMul(0, builder.getConst(1234)));
         return seq.get_call(builder.get(), {Seq::Arg::create_var(m1->val())}, 0);
     }());
-    auto p2 = bs->add_pulse(2, 3, Seq::EventTime(t), nullptr, m1->val());
+    auto p2 = bs->add_pulse(2, 3, bs->track_time(t), nullptr, m1->val());
     assert(p2->id() == 3);
     assert(!p2->needs_oldval());
     assert(bs->get_pulses(1)->size() == 2);
@@ -453,7 +453,7 @@ static void test_basic_single_channel_measure_unknown_order(llvm::LLVMContext &l
     // Note that in this case p1 and p2 commutes
     // so we can in theory determine the measure value.
     // This test needs to be fixed to account for that if we acquires such capability.
-    auto p1 = bs->add_pulse(1, 1, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs->add_pulse(1, 1, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64});
@@ -464,7 +464,7 @@ static void test_basic_single_channel_measure_unknown_order(llvm::LLVMContext &l
                             }());
     assert(p1->id() == 1);
     assert(p1->needs_oldval());
-    auto p2 = bs->add_pulse(1, 2, Seq::EventTime(t2), seq.get_const(IR::TagVal(1000)),
+    auto p2 = bs->add_pulse(1, 2, bs->track_time(t2), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64});
@@ -477,12 +477,12 @@ static void test_basic_single_channel_measure_unknown_order(llvm::LLVMContext &l
     assert(p2->needs_oldval());
 
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(1200)));
-    auto m1 = bs->add_measure(1, 3, Seq::EventTime(t), bs->new_measure(seq.env(), 1));
+    auto m1 = bs->add_measure(1, 3, bs->track_time(t), bs->new_measure(seq.env(), 1));
     assert(m1->id() == 3);
     assert(m1->is_measure());
 
     t.add_term(Seq::EventTime::Pos, seq.get_slot(IR::Type::Float64, 1));
-    auto p3 = bs->add_pulse(1, 4, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p3 = bs->add_pulse(1, 4, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64,
@@ -525,7 +525,7 @@ static void test_basic_single_channel_measure_time_violation(llvm::LLVMContext &
     assert(bs->id() == 1);
     Seq::EventTime t;
     seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
-    auto p1 = bs->add_pulse(1, 1, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs->add_pulse(1, 1, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64});
@@ -537,7 +537,7 @@ static void test_basic_single_channel_measure_time_violation(llvm::LLVMContext &
     assert(p1->id() == 1);
     assert(p1->needs_oldval());
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(900)), 1);
-    auto m1 = bs->add_measure(1, 2, Seq::EventTime(t), bs->new_measure(seq.env(), 1));
+    auto m1 = bs->add_measure(1, 2, bs->track_time(t), bs->new_measure(seq.env(), 1));
     assert(m1->id() == 2);
     assert(m1->is_measure());
     t.add_term(Seq::EventTime::Pos, [&] {
@@ -545,7 +545,7 @@ static void test_basic_single_channel_measure_time_violation(llvm::LLVMContext &
         builder.createRet(builder.createMul(0, builder.getConst(1234)));
         return seq.get_call(builder.get(), {Seq::Arg::create_var(m1->val())}, 0);
     }(), 2);
-    auto p2 = bs->add_pulse(1, 3, Seq::EventTime(t), nullptr, m1->val());
+    auto p2 = bs->add_pulse(1, 3, bs->track_time(t), nullptr, m1->val());
     assert(p2->id() == 3);
     assert(!p2->needs_oldval());
     assert(bs->get_pulses(1)->size() == 3);
@@ -575,7 +575,7 @@ static void test_single_channel_branch(llvm::LLVMContext &llvm_ctx)
     assert(bs1->id() == 1);
     Seq::EventTime t;
     seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
-    auto p1 = bs1->add_pulse(1, 1, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs1->add_pulse(1, 1, bs1->track_time(t), seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -590,7 +590,8 @@ static void test_single_channel_branch(llvm::LLVMContext &llvm_ctx)
     auto bs2 = seq.add_basicseq(2);
     assert(bs2->id() == 2);
     bs1->set_default_branch(bs2);
-    auto p2 = bs2->add_pulse(1, 1, Seq::EventTime(0), seq.get_const(IR::TagVal(2000)),
+    auto p2 = bs2->add_pulse(1, 1, bs2->track_time(Seq::EventTime(0)),
+                             seq.get_const(IR::TagVal(2000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -641,7 +642,8 @@ static void test_single_channel_branch_merge(llvm::LLVMContext &llvm_ctx)
 
     seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
 
-    auto p1 = bs1->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs1->add_pulse(1, 1, bs1->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -655,7 +657,8 @@ static void test_single_channel_branch_merge(llvm::LLVMContext &llvm_ctx)
     bs1->set_default_branch(bs2);
     bs1->add_branch(seq.get_slot(IR::Type::Float64, 0), bs3, 1);
 
-    auto p2 = bs2->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p2 = bs2->add_pulse(1, 1, bs2->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -668,7 +671,8 @@ static void test_single_channel_branch_merge(llvm::LLVMContext &llvm_ctx)
     assert(p2->needs_oldval());
     bs2->set_default_branch(bs4);
 
-    auto p3 = bs3->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p3 = bs3->add_pulse(1, 1, bs3->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -681,7 +685,8 @@ static void test_single_channel_branch_merge(llvm::LLVMContext &llvm_ctx)
     assert(p3->needs_oldval());
     bs3->set_default_branch(bs4);
 
-    auto p4 = bs4->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p4 = bs4->add_pulse(1, 1, bs4->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -766,7 +771,8 @@ static void test_single_channel_branch_not_merge(llvm::LLVMContext &llvm_ctx)
 
     seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
 
-    auto p1 = bs1->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs1->add_pulse(1, 1, bs1->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -780,7 +786,8 @@ static void test_single_channel_branch_not_merge(llvm::LLVMContext &llvm_ctx)
     bs1->set_default_branch(bs2);
     bs1->add_branch(seq.get_slot(IR::Type::Float64, 0), bs3, 1);
 
-    auto p2 = bs2->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p2 = bs2->add_pulse(1, 1, bs2->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -793,7 +800,8 @@ static void test_single_channel_branch_not_merge(llvm::LLVMContext &llvm_ctx)
     assert(p2->needs_oldval());
     bs2->set_default_branch(bs4);
 
-    auto p3 = bs3->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p3 = bs3->add_pulse(1, 1, bs3->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -806,7 +814,8 @@ static void test_single_channel_branch_not_merge(llvm::LLVMContext &llvm_ctx)
     assert(p3->needs_oldval());
     bs3->set_default_branch(bs4);
 
-    auto p4 = bs4->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p4 = bs4->add_pulse(1, 1, bs4->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -890,13 +899,15 @@ static void test_single_channel_branch_nonconst(llvm::LLVMContext &llvm_ctx)
     auto bs2 = seq.add_basicseq(2);
     assert(bs2->id() == 2);
 
-    auto p1 = bs1->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs1->add_pulse(1, 1, bs1->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              seq.get_slot(IR::Type::Float64, 0));
     assert(p1->id() == 1);
     assert(!p1->needs_oldval());
     bs1->set_default_branch(bs2);
 
-    auto p2 = bs2->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p2 = bs2->add_pulse(1, 1, bs2->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -945,7 +956,8 @@ static void test_branch_loop_const(llvm::LLVMContext &llvm_ctx)
 
     seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
 
-    auto p1 = bs1->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs1->add_pulse(1, 1, bs1->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -958,10 +970,12 @@ static void test_branch_loop_const(llvm::LLVMContext &llvm_ctx)
     assert(p1->needs_oldval());
     bs1->set_default_branch(bs2);
 
-    auto m1 = bs2->add_measure(1, 1, Seq::EventTime(100), bs2->new_measure(seq.env(), 1));
+    auto m1 = bs2->add_measure(1, 1, bs2->track_time(Seq::EventTime(100)),
+                               bs2->new_measure(seq.env(), 1));
     assert(m1->id() == 1);
     assert(m1->is_measure());
-    auto p2 = bs2->add_pulse(2, 2, Seq::EventTime(200), seq.get_const(IR::TagVal(1000)),
+    auto p2 = bs2->add_pulse(2, 2, bs2->track_time(Seq::EventTime(200)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64,
@@ -1034,7 +1048,8 @@ static void test_single_channel_loop_first(llvm::LLVMContext &llvm_ctx)
     assert(bs1->id() == 1);
 
     seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
-    auto p1 = bs1->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs1->add_pulse(1, 1, bs1->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -1080,7 +1095,8 @@ static void test_single_channel_loop_first2(llvm::LLVMContext &llvm_ctx)
     assert(bs1->id() == 1);
 
     seq.set_defval(1, seq.get_const(IR::TagVal(1.0)));
-    auto p1 = bs1->add_pulse(1, 1, Seq::EventTime(10), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs1->add_pulse(1, 1, bs1->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
                              [&] {
                                  IR::Builder builder(IR::Type::Float64,
                                                      {IR::Type::Float64, IR::Type::Float64});
@@ -1274,7 +1290,7 @@ static void test_basic_single_channel_assumption(llvm::LLVMContext &llvm_ctx)
 
     Seq::EventTime t;
     seq.set_defval(1, seq.get_const(IR::TagVal(23)));
-    auto p1 = bs->add_pulse(1, 1, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs->add_pulse(1, 1, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64});
@@ -1286,7 +1302,7 @@ static void test_basic_single_channel_assumption(llvm::LLVMContext &llvm_ctx)
     assert(p1->id() == 1);
     assert(p1->needs_oldval());
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(900)), 1);
-    auto m1 = bs->add_measure(1, 2, Seq::EventTime(t), bs->new_measure(seq.env(), 1));
+    auto m1 = bs->add_measure(1, 2, bs->track_time(t), bs->new_measure(seq.env(), 1));
     assert(m1->id() == 2);
     assert(m1->is_measure());
     bs->add_assume(Seq::EventTime::Pos, m1->val(), 43);
@@ -1310,7 +1326,7 @@ static void test_basic_single_channel_assumption_violation(llvm::LLVMContext &ll
 
     Seq::EventTime t;
     seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
-    auto p1 = bs->add_pulse(1, 1, Seq::EventTime(t), seq.get_const(IR::TagVal(1000)),
+    auto p1 = bs->add_pulse(1, 1, bs->track_time(t), seq.get_const(IR::TagVal(1000)),
                             [&] {
                                 IR::Builder builder(IR::Type::Float64,
                                                     {IR::Type::Float64, IR::Type::Float64});
@@ -1322,7 +1338,7 @@ static void test_basic_single_channel_assumption_violation(llvm::LLVMContext &ll
     assert(p1->id() == 1);
     assert(p1->needs_oldval());
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(900)), 1);
-    auto m1 = bs->add_measure(1, 2, Seq::EventTime(t), bs->new_measure(seq.env(), 1));
+    auto m1 = bs->add_measure(1, 2, bs->track_time(t), bs->new_measure(seq.env(), 1));
     assert(m1->id() == 2);
     assert(m1->is_measure());
     // `m1->val()` should be `0.14` but will be rounded to `0`
@@ -1358,7 +1374,7 @@ static void test_endtimes_normalize(llvm::LLVMContext &llvm_ctx)
     t.add_term(Seq::EventTime::Pos, seq.get_slot(IR::Type::Float64, 0), 4);
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(5.45)), 5);
     t.add_term(Seq::EventTime::NonNeg, seq.get_slot(IR::Type::Float64, 1), 8);
-    bs->add_endtime(Seq::EventTime(t));
+    bs->add_endtime(bs->track_time(t));
 
     assert(bs->get_endtimes().size() == 1);
 
@@ -1366,14 +1382,14 @@ static void test_endtimes_normalize(llvm::LLVMContext &llvm_ctx)
     seq.optimize();
 
     assert(bs->get_endtimes().size() == 1);
-    assert(bs->get_endtimes().front().tconst == 11);
-    assert(bs->get_endtimes().front().terms.size() == 2);
-    assert(bs->get_endtimes().front().terms[0].sign == Seq::EventTime::Pos);
-    assert(bs->get_endtimes().front().terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
-    assert(bs->get_endtimes().front().terms[0].id == 4);
-    assert(bs->get_endtimes().front().terms[1].sign == Seq::EventTime::NonNeg);
-    assert(bs->get_endtimes().front().terms[1].var.get() == seq.get_slot(IR::Type::Float64, 1));
-    assert(bs->get_endtimes().front().terms[1].id == 8);
+    assert(bs->get_endtimes().front()->tconst == 11);
+    assert(bs->get_endtimes().front()->terms.size() == 2);
+    assert(bs->get_endtimes().front()->terms[0].sign == Seq::EventTime::Pos);
+    assert(bs->get_endtimes().front()->terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
+    assert(bs->get_endtimes().front()->terms[0].id == 4);
+    assert(bs->get_endtimes().front()->terms[1].sign == Seq::EventTime::NonNeg);
+    assert(bs->get_endtimes().front()->terms[1].var.get() == seq.get_slot(IR::Type::Float64, 1));
+    assert(bs->get_endtimes().front()->terms[1].id == 8);
 }
 
 static void test_endtimes_elim_diamond(llvm::LLVMContext &llvm_ctx)
@@ -1384,16 +1400,16 @@ static void test_endtimes_elim_diamond(llvm::LLVMContext &llvm_ctx)
 
     Seq::EventTime t(5);
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(1.45)), 2);
-    bs->add_endtime(Seq::EventTime(t));
+    bs->add_endtime(bs->track_time(t));
     t.add_term(Seq::EventTime::Pos, seq.get_slot(IR::Type::Float64, 0), 4);
-    bs->add_endtime(Seq::EventTime(t));
+    bs->add_endtime(bs->track_time(t));
     Seq::EventTime t2(t);
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(5.45)), 5);
-    bs->add_endtime(Seq::EventTime(t));
+    bs->add_endtime(bs->track_time(t));
     t2.add_term(Seq::EventTime::NonNeg, seq.get_slot(IR::Type::Float64, 1), 6);
-    bs->add_endtime(Seq::EventTime(t2));
+    bs->add_endtime(bs->track_time(t2));
     t.add_term(Seq::EventTime::NonNeg, seq.get_slot(IR::Type::Float64, 1), 8);
-    bs->add_endtime(Seq::EventTime(t));
+    bs->add_endtime(bs->track_time(t));
 
     assert(bs->get_endtimes().size() == 5);
 
@@ -1401,14 +1417,14 @@ static void test_endtimes_elim_diamond(llvm::LLVMContext &llvm_ctx)
     seq.optimize();
 
     assert(bs->get_endtimes().size() == 1);
-    assert(bs->get_endtimes().front().tconst == 11);
-    assert(bs->get_endtimes().front().terms.size() == 2);
-    assert(bs->get_endtimes().front().terms[0].sign == Seq::EventTime::Pos);
-    assert(bs->get_endtimes().front().terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
-    assert(bs->get_endtimes().front().terms[0].id == 4);
-    assert(bs->get_endtimes().front().terms[1].sign == Seq::EventTime::NonNeg);
-    assert(bs->get_endtimes().front().terms[1].var.get() == seq.get_slot(IR::Type::Float64, 1));
-    assert(bs->get_endtimes().front().terms[1].id == 8);
+    assert(bs->get_endtimes().front()->tconst == 11);
+    assert(bs->get_endtimes().front()->terms.size() == 2);
+    assert(bs->get_endtimes().front()->terms[0].sign == Seq::EventTime::Pos);
+    assert(bs->get_endtimes().front()->terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
+    assert(bs->get_endtimes().front()->terms[0].id == 4);
+    assert(bs->get_endtimes().front()->terms[1].sign == Seq::EventTime::NonNeg);
+    assert(bs->get_endtimes().front()->terms[1].var.get() == seq.get_slot(IR::Type::Float64, 1));
+    assert(bs->get_endtimes().front()->terms[1].id == 8);
 }
 
 static void test_endtimes_elim_Y(llvm::LLVMContext &llvm_ctx)
@@ -1419,14 +1435,14 @@ static void test_endtimes_elim_Y(llvm::LLVMContext &llvm_ctx)
 
     Seq::EventTime t(5);
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(1.45)), 2);
-    bs->add_endtime(Seq::EventTime(t));
+    bs->add_endtime(bs->track_time(t));
     t.add_term(Seq::EventTime::Pos, seq.get_slot(IR::Type::Float64, 0), 4);
-    bs->add_endtime(Seq::EventTime(t));
+    bs->add_endtime(bs->track_time(t));
     Seq::EventTime t2(t);
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(5.45)), 5);
-    bs->add_endtime(Seq::EventTime(t));
+    bs->add_endtime(bs->track_time(t));
     t2.add_term(Seq::EventTime::NonNeg, seq.get_slot(IR::Type::Float64, 1), 6);
-    bs->add_endtime(Seq::EventTime(t2));
+    bs->add_endtime(bs->track_time(t2));
 
     assert(bs->get_endtimes().size() == 4);
 
@@ -1436,20 +1452,20 @@ static void test_endtimes_elim_Y(llvm::LLVMContext &llvm_ctx)
     assert(bs->get_endtimes().size() == 2);
 
     // t2 having smaller tconst will be sorted to the front.
-    assert(bs->get_endtimes().front().tconst == 6);
-    assert(bs->get_endtimes().front().terms.size() == 2);
-    assert(bs->get_endtimes().front().terms[0].sign == Seq::EventTime::Pos);
-    assert(bs->get_endtimes().front().terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
-    assert(bs->get_endtimes().front().terms[0].id == 4);
-    assert(bs->get_endtimes().front().terms[1].sign == Seq::EventTime::NonNeg);
-    assert(bs->get_endtimes().front().terms[1].var.get() == seq.get_slot(IR::Type::Float64, 1));
-    assert(bs->get_endtimes().front().terms[1].id == 6);
+    assert(bs->get_endtimes().front()->tconst == 6);
+    assert(bs->get_endtimes().front()->terms.size() == 2);
+    assert(bs->get_endtimes().front()->terms[0].sign == Seq::EventTime::Pos);
+    assert(bs->get_endtimes().front()->terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
+    assert(bs->get_endtimes().front()->terms[0].id == 4);
+    assert(bs->get_endtimes().front()->terms[1].sign == Seq::EventTime::NonNeg);
+    assert(bs->get_endtimes().front()->terms[1].var.get() == seq.get_slot(IR::Type::Float64, 1));
+    assert(bs->get_endtimes().front()->terms[1].id == 6);
 
-    assert(bs->get_endtimes().back().tconst == 11);
-    assert(bs->get_endtimes().back().terms.size() == 1);
-    assert(bs->get_endtimes().back().terms[0].sign == Seq::EventTime::Pos);
-    assert(bs->get_endtimes().back().terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
-    assert(bs->get_endtimes().back().terms[0].id == 4);
+    assert(bs->get_endtimes().back()->tconst == 11);
+    assert(bs->get_endtimes().back()->terms.size() == 1);
+    assert(bs->get_endtimes().back()->terms[0].sign == Seq::EventTime::Pos);
+    assert(bs->get_endtimes().back()->terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
+    assert(bs->get_endtimes().back()->terms[0].id == 4);
 }
 
 static void test_endtimes_elim_repeat(llvm::LLVMContext &llvm_ctx)
@@ -1463,11 +1479,11 @@ static void test_endtimes_elim_repeat(llvm::LLVMContext &llvm_ctx)
     t.add_term(Seq::EventTime::Pos, seq.get_slot(IR::Type::Float64, 0), 4);
     t.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(5.45)), 5);
     t.add_term(Seq::EventTime::NonNeg, seq.get_slot(IR::Type::Float64, 1), 7);
-    bs->add_endtime(Seq::EventTime(t));
-    bs->add_endtime(Seq::EventTime(t));
-    bs->add_endtime(Seq::EventTime(t));
-    bs->add_endtime(Seq::EventTime(t));
-    bs->add_endtime(Seq::EventTime(t));
+    bs->add_endtime(bs->track_time(t));
+    bs->add_endtime(bs->track_time(t));
+    bs->add_endtime(bs->track_time(t));
+    bs->add_endtime(bs->track_time(t));
+    bs->add_endtime(bs->track_time(t));
 
     assert(bs->get_endtimes().size() == 5);
 
@@ -1477,14 +1493,14 @@ static void test_endtimes_elim_repeat(llvm::LLVMContext &llvm_ctx)
     assert(bs->get_endtimes().size() == 1);
 
     // t2 having smaller tconst will be sorted to the front.
-    assert(bs->get_endtimes().front().tconst == 11);
-    assert(bs->get_endtimes().front().terms.size() == 2);
-    assert(bs->get_endtimes().front().terms[0].sign == Seq::EventTime::Pos);
-    assert(bs->get_endtimes().front().terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
-    assert(bs->get_endtimes().front().terms[0].id == 4);
-    assert(bs->get_endtimes().front().terms[1].sign == Seq::EventTime::NonNeg);
-    assert(bs->get_endtimes().front().terms[1].var.get() == seq.get_slot(IR::Type::Float64, 1));
-    assert(bs->get_endtimes().front().terms[1].id == 7);
+    assert(bs->get_endtimes().front()->tconst == 11);
+    assert(bs->get_endtimes().front()->terms.size() == 2);
+    assert(bs->get_endtimes().front()->terms[0].sign == Seq::EventTime::Pos);
+    assert(bs->get_endtimes().front()->terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
+    assert(bs->get_endtimes().front()->terms[0].id == 4);
+    assert(bs->get_endtimes().front()->terms[1].sign == Seq::EventTime::NonNeg);
+    assert(bs->get_endtimes().front()->terms[1].var.get() == seq.get_slot(IR::Type::Float64, 1));
+    assert(bs->get_endtimes().front()->terms[1].id == 7);
 }
 
 int main()
