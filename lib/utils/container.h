@@ -48,15 +48,15 @@ class AnyPtr : std::unique_ptr<void,void(*)(void*)> {
     {}
 public:
     using std::unique_ptr<void,void(*)(void*)>::unique_ptr;
-    template<typename T, class=std::enable_if_t<!std::is_same<T,void>::value>>
+    template<typename T, class=std::enable_if_t<!std::is_same_v<T,void>>>
     AnyPtr(T *v)
         : unique_ptr((void*)v, Destructor<T>::deleter)
     {
     }
     template<typename T,
-             class=std::enable_if_t<!std::is_lvalue_reference<T>::value &&
-                                    !std::is_same<remove_cvref_t<T>,AnyPtr>::value &&
-                                    !std::is_pointer<T>::value>>
+             class=std::enable_if_t<!std::is_lvalue_reference_v<T> &&
+                                    !std::is_same_v<remove_cvref_t<T>,AnyPtr> &&
+                                    !std::is_pointer_v<T>>>
     AnyPtr(T &&v)
         : AnyPtr(new T(std::move(v)))
     {

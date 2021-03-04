@@ -37,6 +37,9 @@ template<> struct type_id<double> {
     constexpr static auto value = IR::Type::Float64;
 };
 
+template<typename T>
+inline constexpr auto type_id_v = type_id<T>::value;
+
 class ArgSetBase {
     virtual bool get_bool(int i) const = 0;
     virtual int32_t get_int32(int i) const = 0;
@@ -111,7 +114,7 @@ template<typename Ret, typename... Arg, int... I>
 static void test_single_arg(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
                             int arg, const std::vector<IR::Type> &ids, const ArgSetBase &argset)
 {
-    IR::Builder builder(type_id<Ret>::value, ids);
+    IR::Builder builder(type_id_v<Ret>, ids);
     builder.createRet(arg);
     auto f = exectx->getFunc<Ret(Arg...)>(builder.get());
     argset.test(f(argset.get<Arg>(I)...), arg, ids[arg]);
@@ -121,17 +124,17 @@ template<typename Ret, typename... Arg, int... I>
 static void test_const_ret(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
                            const std::vector<IR::Type> &ids, const ArgSetBase &argset)
 {
-    IR::Builder builder(type_id<Ret>::value, ids);
+    IR::Builder builder(type_id_v<Ret>, ids);
     builder.createRet(builder.getConst(IR::TagVal(argset.get<Ret>(-1))));
     auto f = exectx->getFunc<Ret(Arg...)>(builder.get());
-    argset.test(f(argset.get<Arg>(I)...), -1, type_id<Ret>::value);
+    argset.test(f(argset.get<Arg>(I)...), -1, type_id_v<Ret>);
 }
 
 template<typename Ret, typename... Arg, int... I>
 static void _test_cc_sig(IR::ExeContext *exectx, std::integer_sequence<int,I...> seq,
                          const ArgSetBase &argset)
 {
-    std::vector<IR::Type> ids = {type_id<Arg>::value...};
+    std::vector<IR::Type> ids = {type_id_v<Arg>...};
     for (size_t i = 0; i < sizeof...(Arg); i++)
         test_single_arg<Ret,Arg...>(exectx, seq, int(i), ids, argset);
     test_const_ret<Ret,Arg...>(exectx, seq, ids, argset);

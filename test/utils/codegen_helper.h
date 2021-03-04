@@ -229,17 +229,15 @@ private:
         test_res("Alias return", res, args2...);
     }
     template<size_t i, typename F>
-    std::enable_if_t<
-        std::is_same<std::tuple_element_t<i, std::tuple<Args...>>,
-                     Res>::value> test_ref_alias_i(F &&f, Args... args)
+    std::enable_if_t<std::is_same_v<std::tuple_element_t<i, std::tuple<Args...>>,Res>>
+    test_ref_alias_i(F &&f, Args... args)
     {
         // Copy arguments since we'll override them.
         _test_ref_alias_i<i>(f, args..., args...);
     }
     template<size_t i, typename F>
-    std::enable_if_t<
-        !std::is_same<std::tuple_element_t<i, std::tuple<Args...>>,
-                      Res>::value> test_ref_alias_i(F&&, Args...)
+    std::enable_if_t<!std::is_same_v<std::tuple_element_t<i, std::tuple<Args...>>, Res>>
+    test_ref_alias_i(F&&, Args...)
     {
     }
     LLVMTest &_get_llvm_test()

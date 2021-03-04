@@ -67,7 +67,7 @@ static Value *simplify_inst(Instruction *I, const SimplifyQuery &SQ,
         auto ci = dyn_cast<ConstantInt>(v);
         if (!ci)
             return false;
-        if (std::is_signed<decltype(*res)>::value) {
+        if (std::is_signed_v<decltype(*res)>) {
             *res = ci->getSExtValue();
         }
         else {

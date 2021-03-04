@@ -73,7 +73,7 @@ template<typename T>
 static void print_tuple(T &&t)
 {
     _print_tuple(std::forward<T>(t), std::make_index_sequence<
-                 std::tuple_size<std::decay_t<T>>::value>{});
+                 std::tuple_size_v<std::decay_t<T>>>{});
 }
 
 template<bool _approx, typename T1, typename T2, typename Tuple>

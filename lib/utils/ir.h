@@ -176,13 +176,13 @@ struct TagVal {
         val.b = b;
     }
     template<typename T>
-    TagVal(T i, std::enable_if_t<std::is_integral<T>::value>* = nullptr)
+    TagVal(T i, std::enable_if_t<std::is_integral_v<T>>* = nullptr)
         : typ(Type::Int32)
     {
         val.i32 = int32_t(i);
     }
     template<typename T>
-    TagVal(T f, std::enable_if_t<std::is_floating_point<T>::value>* = nullptr)
+    TagVal(T f, std::enable_if_t<std::is_floating_point_v<T>>* = nullptr)
         : typ(Type::Float64)
     {
         val.f64 = double(f);
@@ -437,7 +437,7 @@ public:
                      new std::remove_reference_t<T>(std::forward<T>(v)),
                      GenericCallback<std::remove_reference_t<T>,FT>::free)
         {
-            static_assert(!std::is_same<std::decay_t<T>,Func<FT>>::value, "");
+            static_assert(!std::is_same_v<std::decay_t<T>,Func<FT>>, "");
         }
         Func()
             : m_base()

@@ -228,7 +228,7 @@ std::pair<T,int> ParserBase::read_dec(T lo, T hi)
     auto startptr = &line[startcol];
     char *endptr;
     T res;
-    if (std::is_signed<T>::value) {
+    if (std::is_signed_v<T>) {
         res = (T)strtoll(startptr, &endptr, 10);
     }
     else {

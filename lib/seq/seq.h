@@ -81,7 +81,7 @@ struct Val {
     }
 private:
     template<typename T, typename T2>
-    static inline std::enable_if_t<std::is_same<T,double>::value, IR::GenVal>
+    static inline std::enable_if_t<std::is_same_v<T,double>, IR::GenVal>
     getGenVal(T2 val)
     {
         IR::GenVal gv;
@@ -89,7 +89,7 @@ private:
         return gv;
     }
     template<typename T, typename T2>
-    static inline std::enable_if_t<std::is_same<T,uint32_t>::value, IR::GenVal>
+    static inline std::enable_if_t<std::is_same_v<T,uint32_t>, IR::GenVal>
     getGenVal(T2 val)
     {
         IR::GenVal gv;
