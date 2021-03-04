@@ -253,6 +253,117 @@ template <class To, template<class...> class Op, class... Args>
 constexpr inline bool is_detected_convertible_v =
     is_detected_convertible<To, Op, Args...>::value;
 
+namespace detail {
+// Detect if method exist.
+// See https://stackoverflow.com/questions/257288/templated-check-for-the-existence-of-a-class-member-function
+template<typename T,typename V>
+using has_postvisit_t =
+    decltype(std::declval<std::remove_reference_t<T>>().postvisit(std::declval<V>()));
+template<typename T,typename V>
+inline constexpr auto has_postvisit_v = is_detected_v<has_postvisit_t,T,V>;
+
+template<typename T,bool>
+struct postvisit_caller {
+    template<typename V>
+    static void call(T&&, V&&)
+    {
+    }
+};
+
+template<typename T>
+struct postvisit_caller<T,true> {
+    template<typename V>
+    static void call(T &&visitor, V &&v)
+    {
+        visitor.postvisit(std::forward<V>(v));
+    }
+};
+
+template<typename T,typename V>
+void postvisit(T &&visitor, V &&v)
+{
+    postvisit_caller<T,has_postvisit_v<T,V>>::call(std::forward<T>(visitor),
+                                                   std::forward<V>(v));
+}
+
+}
+
+template<typename T>
+struct FieldIterator {
+    // FieldIterator(T);
+    // T get();
+    // T parent();
+    // bool is_end();
+    // FieldIterator &operator++();
+};
+
+template<typename T, typename Visitor>
+void visit_dfs(T v, Visitor &&visitor);
+
+template<typename T,typename Iterator,template<typename...> class Vector>
+struct DFSVisitor {
+    // Process an object before scanning. Return `true` if it should be scanned.
+    // `postvisit` will be called on this visit IFF this returns `true`.
+    // bool previsit(T); // Required
+    // void postvisit(T); // Optional
+
+private:
+    using iterator = Iterator;
+    Vector<Iterator> m_stack;
+    template<typename T2, typename Visitor> friend void visit_dfs(T2 v, Visitor &&visitor);
+};
+
+template<typename T, typename Visitor>
+void visit_dfs(T v, Visitor &&visitor)
+{
+    using Iterator = typename std::decay_t<Visitor>::iterator;
+    // Use a manual stack for better optimization and less actual stack usage so that
+    // we don't need to worry about stack overflow.
+    // If postvisit isn't used,
+    // all items on the stack are inbound (see `push` below)
+    // and `pop` does not need bounds check
+    auto &stack = visitor.m_stack;
+    Iterator it(v);
+    constexpr bool has_postvisit = detail::has_postvisit_v<Visitor,T>;
+    auto next = [&] {
+        ++it;
+        // Next argument
+        if (!it.is_end())
+            return true;
+        detail::postvisit(visitor, it.parent());
+        // Done
+        if (stack.empty())
+            return false;
+        it = stack.back();
+        stack.pop_back();
+        if (has_postvisit) {
+            while (it.is_end()) {
+                detail::postvisit(visitor, it.parent());
+                if (stack.empty())
+                    return false;
+                it = stack.back();
+                stack.pop_back();
+            }
+        }
+        return true;
+    };
+    auto iterate = [&] {
+        auto new_v = it.get();
+        if (!new_v || !visitor.previsit(new_v))
+            return next();
+        // Save the next one to be processed to the stack
+        // If we are already at the last one and don't have postvisit,
+        // we don't need to do anything.
+        ++it;
+        if (has_postvisit || !it.is_end())
+            stack.push_back(std::move(it));
+        it = Iterator(new_v);
+        return true;
+    };
+    while (iterate()) {
+    }
+}
+
 }
 
 #endif
