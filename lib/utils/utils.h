@@ -306,9 +306,13 @@ struct DFSVisitor {
     // `postvisit` will be called on this visit IFF this returns `true`.
     // bool previsit(T); // Required
     // void postvisit(T); // Optional
+    template<typename T2>
+    Iterator begin(T2 &&v)
+    {
+        return Iterator(std::forward<T2>(v));
+    }
 
 private:
-    using iterator = Iterator;
     Vector<Iterator> m_stack;
     template<typename T2, typename Visitor> friend void visit_dfs(T2 v, Visitor &&visitor);
 };
@@ -316,14 +320,13 @@ private:
 template<typename T, typename Visitor>
 void visit_dfs(T v, Visitor &&visitor)
 {
-    using Iterator = typename std::decay_t<Visitor>::iterator;
     // Use a manual stack for better optimization and less actual stack usage so that
     // we don't need to worry about stack overflow.
     // If postvisit isn't used,
     // all items on the stack are inbound (see `push` below)
     // and `pop` does not need bounds check
     auto &stack = visitor.m_stack;
-    Iterator it(v);
+    auto it = visitor.begin(v);
     constexpr bool has_postvisit = detail::has_postvisit_v<Visitor,T>;
     auto next = [&] {
         ++it;
@@ -357,7 +360,7 @@ void visit_dfs(T v, Visitor &&visitor)
         ++it;
         if (has_postvisit || !it.is_end())
             stack.push_back(std::move(it));
-        it = Iterator(new_v);
+        it = visitor.begin(new_v);
         return true;
     };
     while (iterate()) {
