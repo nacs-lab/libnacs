@@ -32,7 +32,8 @@ struct Error : std::runtime_error {
         BasicSeq,
         Assignment,
         Branch,
-        Seq
+        Seq,
+        Channel
     };
 
     Error(uint32_t code, ErrorType type1, uint64_t id1, const char *what);
