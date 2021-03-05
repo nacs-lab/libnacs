@@ -20,6 +20,7 @@ add_utils_test(dl)
 add_utils_test(filterqueue)
 add_utils_test(fixedqueue)
 add_utils_test(interp)
+add_utils_test(ir)
 
 foreach(TESTSET RANGE 8)
   add_utils_test(ir_cc-${TESTSET} test_ir_cc.cpp)

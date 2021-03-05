@@ -328,7 +328,7 @@ public:
     {
         return createCall(id, (int32_t)args.size(), args.data());
     }
-    NACS_EXPORT(utils) int32_t createInterp(int32_t v, double x0, double dx, uint32_t npoints,
+    NACS_EXPORT(utils) int32_t createInterp(int32_t v, int32_t x0, int32_t dx, uint32_t npoints,
                                             const double *points);
     NACS_EXPORT(utils) int32_t createConvert(Type typ, int32_t v);
     NACS_EXPORT(utils) int32_t createSelect(int32_t cond, int32_t val1, int32_t val2);

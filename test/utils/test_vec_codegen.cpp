@@ -653,11 +653,12 @@ int main()
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
         const double data[] = {0.0, 0.1, 0.2, 0.6};
-        auto val1 = builder.createInterp(0, 2, 3, sizeof(data) / sizeof(double), data);
+        auto val1 = builder.createInterp(0, builder.getConstFloat(2), builder.getConstFloat(3),
+                                         sizeof(data) / sizeof(double), data);
         builder.createRet(val1);
         test_str_eq(builder.get(), "Float64 (Float64 %0) {\n"
                     "L0:\n"
-                    "  Float64 %1 = interp [2, (4) +3] (Float64 %0) {0, 0.1, 0.2, 0.6}\n"
+                    "  Float64 %1 = interp [Float64 2, (4) +Float64 3] (Float64 %0) {0, 0.1, 0.2, 0.6}\n"
                     "  ret Float64 %1\n"
                     "}");
         auto test = TestVec<double(double), true>(

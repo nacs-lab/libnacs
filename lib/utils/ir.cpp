@@ -757,9 +757,9 @@ void Function::printBB(std::ostream &stm, const BB &bb) const
             pc++;
             auto input = *pc;
             pc++;
-            auto x0 = evalConst(*pc).get<double>();
+            auto x0 = *pc;
             pc++;
-            auto dx = evalConst(*pc).get<double>();
+            auto dx = *pc;
             pc++;
             auto data = *pc;
             pc++;
@@ -768,7 +768,11 @@ void Function::printBB(std::ostream &stm, const BB &bb) const
             stm << "  ";
             printVal(stm, res);
             stm << " = " << opName(op)
-                << " [" << x0 << ", (" << ndata << ") +" << dx << "] (";
+                << " [";
+            printVal(stm, x0);
+            stm << ", (" << ndata << ") +";
+            printVal(stm, dx);
+            stm << "] (";
             printVal(stm, input);
             stm << ") {";
             auto datap = &float_table[data];
@@ -1206,18 +1210,16 @@ NACS_EXPORT() int32_t Builder::createCall(Builtins id, int32_t nargs, const int3
     return res;
 }
 
-NACS_EXPORT() int32_t Builder::createInterp(int32_t v, double x0, double dx,
+NACS_EXPORT() int32_t Builder::createInterp(int32_t v, int32_t x0, int32_t dx,
                                             uint32_t npoints, const double *points)
 {
-    auto x0id = getConstFloat(x0);
-    auto dxid = getConstFloat(dx);
     auto data_id = addFloatData(points, npoints);
     auto *ptr = addInst(Opcode::Interp, 6);
     auto res = newSSA(Type::Float64);
     ptr[0] = res;
     ptr[1] = v;
-    ptr[2] = x0id;
-    ptr[3] = dxid;
+    ptr[2] = x0;
+    ptr[3] = dx;
     ptr[4] = data_id;
     ptr[5] = (int32_t)npoints;
     return res;
