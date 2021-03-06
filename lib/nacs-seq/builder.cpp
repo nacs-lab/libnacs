@@ -22,6 +22,7 @@
 
 #include "../nacs-utils/llvm/codegen.h"
 #include "../nacs-utils/log.h"
+#include "../nacs-utils/mem.h"
 
 namespace NaCs::Seq {
 
@@ -730,6 +731,211 @@ std::pair<Var*,bool> Builder::node_to_rampvar(Node *node)
     assert(ir_it != irmap.end());
     visitor.irbuilder.createRet(ir_it->second);
     return {m_seq.get_call(visitor.irbuilder.get(), callargs, 2), previsitor.argused[0]};
+}
+
+NACS_EXPORT() void Builder::deserialize(const uint8_t *data, size_t size)
+{
+    // Assume little endian...
+    Mem::Reader reader(data, size);
+
+    // NodeArg:
+    //   Node ID:
+    //     1-based index into the node array. (for use in sequence)
+    //   Global slot ID: 0-based index into the slot types array.
+    //   Measure ID: globally unique ID
+    //   Arg: 0-based index of argument
+    // Data ID: 0-based index into the data array
+    // Channel ID: 1-based index into the channel name array
+    // Time ID: 1-based index into the time array
+    // Basic Sequence ID: 1-based index into the bseq array. 0 means end of sequence.
+
+    // Format:
+    //   [version <0>: 1B]
+    //   [nnodes: 4B]
+    //   [[[OpCode: 1B][[ArgType: 1B][NodeArg: 1-8B] x narg] /
+    //     [OpCode <Interp>: 1B][[ArgType: 1B][NodeArg: 1-8B] x 3][data_id: 4B]] x nnodes]
+    //   [nchns: 4B][[chnname: non-empty NUL-terminated string] x nchns]
+    //   [ndefvals: 4B][[chnid: 4B][Type: 1B][value: 1-8B] x ndefvals]
+    //   [nslots: 4B][[Type: 1B] x nslots]
+    //   [nnoramp: 4B][[chnid: 4B] x nnoramp]
+    //   [nbasicseqs: 4B][[Basic Sequence] x nbasicseqs]
+    //   [ndatas: 4B][[ndouble: 4B][data: 8B x ndouble] x ndatas]
+    //   [nbackenddatas: 4B][[device_name: NUL-terminated string]
+    //                       [size: 4B][data: size B] x nbackenddatas]
+    //
+    // Basic Sequence format:
+    //   [ntimes: 4B][[sign: 1B][id: 4B][delta_node: 4B][prev_id: 4B] x ntimes]
+    //   [nendtimes: 4B][[time_id: 4B] x nendtimes]
+    //   [ntimeorders: 4B][[sign: 1B][id: 4B][before_id: 4B][after_id: 4B] x ntimeorders]
+    //   [noutputs: 4B][[id: 4B][time_id: 4B][len: 4B][val: 4B][cond: 4B][chn: 4B] x noutputs]
+    //   [nmeasures: 4B][[id: 4B][time_id: 4B][chn: 4B] x nmeasures]
+    //   [nassigns: 4B][[assign_id: 4B][global_id: 4B][val: 4B] x nassigns]
+    //   [nbranches: 4B][[branch_id: 4B][target_id: 4B][cond: 4B] x nbranches]
+    //   [default_target: 4B]
+
+    // [version <0>: 1B]
+    if (reader.read<int8_t>() != 0)
+        throw std::runtime_error("Unknown sequence serialization version");
+    // [nnodes: 4B]
+    // [[[OpCode: 1B][[ArgType: 1B][NodeArg: 1-8B] x narg] /
+    //   [OpCode <Interp> : 1B][[ArgType: 1B][NodeArg: 1-8B] x 3][data_id: 4B]] x nnodes]
+    nodes.resize(reader.read<uint32_t>());
+    for (auto &node: nodes) {
+        auto _op = reader.read<uint8_t>();
+        if (!_op || _op > uint8_t(OpCode::_MaxOP))
+            throw std::runtime_error("Invalid Node OpCode");
+        auto op = OpCode(_op);
+        auto narg = node_narg(op);
+        node.op = op;
+        for (int i = 0; i < narg; i++) {
+            auto _atype = reader.read<uint8_t>();
+            if (_atype > uint8_t(ArgType::_MaxType))
+                throw std::runtime_error("Invalid Node argument type");
+            auto atype = ArgType(_atype);
+            node.argtypes[i] = atype;
+            auto &arg = node.args[i];
+            switch (atype) {
+            case ArgType::ConstBool:
+                arg.b = reader.read<uint8_t>() != 0;
+                break;
+            case ArgType::ConstInt32:
+                arg.i32 = reader.read<int32_t>();
+                break;
+            case ArgType::ConstFloat64:
+                arg.f64 = reader.read<double>();
+                break;
+            case ArgType::Measure:
+            case ArgType::Node:
+            case ArgType::Global:
+            case ArgType::Arg:
+                arg.id = reader.read<uint32_t>();
+                break;
+            default:
+                throw std::runtime_error("Invalid Node argument type");
+            }
+        }
+        if (op == OpCode::Interp) {
+            node.data_id = reader.read<uint32_t>();
+        }
+    }
+    // [nchns: 4B][[chnname: non-empty NUL-terminated string] x nchns]
+    chnnames.resize(reader.read<uint32_t>());
+    for (auto &chnname: chnnames) {
+        auto [name, sz] = reader.read_string();
+        chnname.append(name, sz);
+    }
+    // [ndefvals: 4B][[chnid: 4B][Type: 1B][value: 1-8B] x ndefvals]
+    auto ndefvals = reader.read<uint32_t>();
+    for (uint32_t i = 0; i < ndefvals; i++) {
+        auto chnid = reader.read<uint32_t>();
+        auto _type = reader.read<uint8_t>();
+        switch (_type) {
+        case uint8_t(IR::Type::Bool):
+            defvals[chnid] = IR::TagVal(reader.read<uint8_t>() != 0);
+            break;
+        case uint8_t(IR::Type::Int32):
+            defvals[chnid] = IR::TagVal(reader.read<int32_t>());
+            break;
+        case uint8_t(IR::Type::Float64):
+            defvals[chnid] = IR::TagVal(reader.read<double>());
+            break;
+        }
+    }
+    // [nslots: 4B][[Type: 1B] x nslots]
+    slots.resize(reader.read<uint32_t>());
+    for (auto &slot: slots) {
+        auto _type = reader.read<uint8_t>();
+        if (_type != uint8_t(IR::Type::Bool) && _type != uint8_t(IR::Type::Int32) &&
+            _type != uint8_t(IR::Type::Float64))
+            throw std::runtime_error("Invalid value type");
+        slot = IR::Type(_type);
+    }
+    // [nnoramp: 4B][[chnid: 4B] x nnoramp]
+    noramp_chns.resize(reader.read<uint32_t>());
+    for (auto &chn: noramp_chns)
+        chn = reader.read<uint32_t>();
+    // [nbasicseqs: 4B][[Basic Sequence] x nbasicseqs]
+    auto nbasicseqs = reader.read<uint32_t>();
+    seqs.resize(nbasicseqs);
+    for (auto &seq: seqs) {
+        // [ntimes: 4B][[sign: 1B][id: 4B][delta_node: 4B][prev_id: 4B] x ntimes]
+        seq.times.resize(reader.read<uint32_t>());
+        for (auto &time: seq.times) {
+            auto sign = reader.read<uint8_t>();
+            if (sign != uint8_t(Sign::Unknown) && sign != uint8_t(Sign::NonNeg) &&
+                sign != uint8_t(Sign::Pos))
+                throw std::runtime_error("Invalid sign specification");
+            time.sign = Sign(sign);
+            time.id = reader.read<uint32_t>();
+            time.delta_node = reader.read<uint32_t>();
+            time.prev_id = reader.read<uint32_t>();
+        }
+        // [nendtimes: 4B][[time_id: 4B] x nendtimes]
+        seq.endtimes.resize(reader.read<uint32_t>());
+        for (auto &endtime: seq.endtimes)
+            endtime = reader.read<uint32_t>();
+        // [ntimeorders: 4B][[sign: 1B][id: 4B][before_id: 4B][after_id: 4B] x ntimeorders]
+        seq.timeorders.resize(reader.read<uint32_t>());
+        for (auto &timeorder: seq.timeorders) {
+            auto sign = reader.read<uint8_t>();
+            if (sign != uint8_t(Sign::NonNeg) && sign != uint8_t(Sign::Pos))
+                throw std::runtime_error("Invalid sign specification");
+            timeorder.sign = Sign(sign);
+            timeorder.id = reader.read<uint32_t>();
+            timeorder.before_time_id = reader.read<uint32_t>();
+            timeorder.after_time_id = reader.read<uint32_t>();
+        }
+        // [noutputs: 4B][[id: 4B][time_id: 4B][len: 4B][val: 4B][cond: 4B][chn: 4B] x noutputs]
+        auto noutputs = reader.read<uint32_t>();
+        for (uint32_t i = 0; i < noutputs; i++) {
+            auto &output = seq.outputs[reader.read<uint32_t>()];
+            output.time_id = reader.read<uint32_t>();
+            output.len_node = reader.read<uint32_t>();
+            output.val_node = reader.read<uint32_t>();
+            output.cond_node = reader.read<uint32_t>();
+            output.chn = reader.read<uint32_t>();
+        }
+        // [nmeasures: 4B][[id: 4B][time_id: 4B][chn: 4B] x nmeasures]
+        auto nmeasures = reader.read<uint32_t>();
+        for (uint32_t i = 0; i < nmeasures; i++) {
+            auto &measure = seq.measures[reader.read<uint32_t>()];
+            measure.time_id = reader.read<uint32_t>();
+            measure.chn = reader.read<uint32_t>();
+        }
+        // [nassigns: 4B][[assign_id: 4B][global_id: 4B][val: 4B] x nassigns]
+        seq.assignments.resize(reader.read<uint32_t>());
+        for (auto &assign: seq.assignments) {
+            assign.assign_id = reader.read<uint32_t>();
+            assign.global_id = reader.read<uint32_t>();
+            assign.val_node = reader.read<uint32_t>();
+        }
+        // [nbranches: 4B][[branch_id: 4B][target_id: 4B][cond: 4B] x nbranches]
+        seq.branches.resize(reader.read<uint32_t>());
+        for (auto &branch: seq.branches) {
+            branch.branch_id = reader.read<uint32_t>();
+            branch.target_id = reader.read<uint32_t>();
+            branch.cond_node = reader.read<uint32_t>();
+        }
+        // [default_target: 4B]
+        seq.default_target = reader.read<uint32_t>();
+    }
+    // [ndatas: 4B][[ndouble: 4B][data: 8B x ndouble] x ndatas]
+    datas.resize(reader.read<uint32_t>());
+    for (auto &data: datas) {
+        auto sz = reader.read<uint32_t>();
+        auto p = reader.read_array<double>(sz);
+        data.assign(p, p + sz);
+    }
+    // [nbackenddatas: 4B][[device_name: NUL-terminated string]
+    //                     [size: 4B][data: size B] x nbackenddatas]
+    auto nbackenddatas = reader.read<uint32_t>();
+    for (uint32_t i = 0; i < nbackenddatas; i++) {
+        auto [name, name_sz] = reader.read_string();
+        std::string chnname(name, name_sz);
+        auto sz = reader.read<uint32_t>();
+        auto data = reader.read_array<uint8_t>(sz);
+        backend_datas.try_emplace(std::move(chnname), data, data + sz);
+    }
 }
 
 void Builder::print_node_arg(std::ostream &stm, ArgType argtype, NodeArg arg) const
