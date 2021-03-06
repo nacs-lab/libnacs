@@ -147,6 +147,7 @@ public:
     }
 
     void buildseq();
+    void deserialize(const uint8_t *data, size_t size);
 
     std::vector<Node> nodes;
     std::vector<BasicSeq> seqs;
