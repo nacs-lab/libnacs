@@ -44,4 +44,5 @@ if(ENABLE_LLVM)
 
   add_llvm_test(builder)
   add_llvm_test(builder_check)
+  add_llvm_test(builder_deserial)
 endif()
