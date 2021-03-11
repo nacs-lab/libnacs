@@ -167,7 +167,7 @@ NACS_INTERNAL bool Seq::optimize_chn(uint32_t chn)
     for (auto &v: startval) {
         if (!v.second)
             continue;
-        auto &sv = v.first->m_startval[chn];
+        auto &sv = v.first->m_channels[chn].startval;
         if (sv) // Already has a value
             continue;
         assert(v.second->is_const());

@@ -29,6 +29,11 @@ namespace NaCs::Seq {
 class Seq;
 
 class BasicSeq {
+    struct ChannelInfo {
+        std::list<Pulse> pulses;
+        Var::Ref startval;
+        Var::Ref endval;
+    };
 public:
     enum Errno : uint8_t {
         ExternMeasure,
@@ -67,24 +72,24 @@ public:
     void set_default_branch(BasicSeq *target);
     Var *endval(uint32_t chn) const
     {
-        auto it = m_endval.find(chn);
-        if (it == m_endval.end())
+        auto it = m_channels.find(chn);
+        if (it == m_channels.end())
             return nullptr;
-        return it->second.get();
+        return it->second.endval.get();
     }
     Var *startval(uint32_t chn) const
     {
-        auto it = m_startval.find(chn);
-        if (it == m_startval.end())
+        auto it = m_channels.find(chn);
+        if (it == m_channels.end())
             return nullptr;
-        return it->second.get();
+        return it->second.startval.get();
     }
     const std::list<Pulse> *get_pulses(uint32_t chn) const
     {
-        auto it = m_pulses.find(chn);
-        if (it == m_pulses.end())
+        auto it = m_channels.find(chn);
+        if (it == m_channels.end())
             return nullptr;
-        return &it->second;
+        return &it->second.pulses;
     }
     const std::map<uint32_t,Assignment> &get_assigns() const
     {
@@ -129,10 +134,7 @@ private:
 
     const uint32_t m_id;
     bool m_used = false; // Used by GC
-    std::map<uint32_t,std::list<Pulse>> m_pulses;
-    // The maps below is guaranteed to not have empty Var::Ref
-    std::map<uint32_t,Var::Ref> m_startval;
-    std::map<uint32_t,Var::Ref> m_endval;
+    std::map<uint32_t,ChannelInfo> m_channels;
     std::map<uint32_t,Assignment> m_assign;
     std::list<Assumption> m_assume;
     // We use a different list to keep track of the sequence times

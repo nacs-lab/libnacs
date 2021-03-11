@@ -37,7 +37,7 @@ BasicSeq::BasicSeq(uint32_t id)
 NACS_EXPORT() Pulse *BasicSeq::add_pulse(uint32_t chn, uint32_t id,
                                          EventTime &start, Var *len, Var *val)
 {
-    return &m_pulses[chn].emplace_back(id, start, len, val, false);
+    return &m_channels[chn].pulses.emplace_back(id, start, len, val, false);
 }
 
 NACS_EXPORT() Pulse *BasicSeq::add_measure(uint32_t chn, uint32_t id,
@@ -45,7 +45,7 @@ NACS_EXPORT() Pulse *BasicSeq::add_measure(uint32_t chn, uint32_t id,
 {
     assert(val->is_extern());
     assert((val->get_extern().second >> 32) == m_id);
-    return &m_pulses[chn].emplace_back(id, start, nullptr, val, true);
+    return &m_channels[chn].pulses.emplace_back(id, start, nullptr, val, true);
 }
 
 NACS_EXPORT() Var *BasicSeq::new_measure(Env &env, uint32_t _measure_id) const
@@ -67,10 +67,10 @@ NACS_EXPORT() void BasicSeq::set_default_branch(BasicSeq *target)
 
 NACS_EXPORT() bool BasicSeq::has_output(uint32_t chn) const
 {
-    auto it = m_pulses.find(chn);
-    if (it == m_pulses.end())
+    auto it = m_channels.find(chn);
+    if (it == m_channels.end())
         return false;
-    for (auto &pulse: it->second) {
+    for (auto &pulse: it->second.pulses) {
         if (!pulse.is_measure()) {
             return true;
         }
@@ -205,8 +205,8 @@ NACS_EXPORT() void BasicSeq::check() const
     MeasureUseVisitor visitor(*this);
     std::map<const Pulse*,std::set<Var*>> pulse_depends;
     std::map<Var*,const Pulse*> measures;
-    for (auto &channel: m_pulses) {
-        auto &pulses = channel.second;
+    for (auto &[chn, info]: m_channels) {
+        auto &pulses = info.pulses;
         for (auto &pulse: pulses) {
             auto val = pulse.val();
             assert(val);
@@ -354,7 +354,7 @@ void BasicSeq::mark_recursive()
 bool BasicSeq::optimize_pulse(uint32_t chn)
 {
     bool changed = false;
-    auto &pulses = m_pulses[chn];
+    auto &pulses = m_channels[chn].pulses;
     for (auto it = pulses.begin(), end = pulses.end(); it != end;) {
         auto &pulse = *it;
         if (!pulse.is_measure()) {
@@ -378,15 +378,14 @@ bool BasicSeq::optimize_pulse(uint32_t chn)
 bool BasicSeq::optimize_order(uint32_t chn)
 {
     bool changed = false;
-    auto &pulses = m_pulses[chn];
+    auto &info = m_channels[chn];
+    auto &pulses = info.pulses;
     if (pulses.empty()) {
-        auto it = m_startval.find(chn);
-        if (it == m_startval.end())
+        if (!info.startval)
             return false;
-        auto &old_endval = m_endval[chn];
-        if (old_endval)
+        if (info.endval)
             return false;
-        old_endval.reset(it->second.get());
+        info.endval.reset(info.startval.get());
         return true;
     }
     bool should_continue = false;
@@ -554,19 +553,16 @@ bool BasicSeq::optimize_order(uint32_t chn)
 
     Var *curval = nullptr;
     bool measure_replaced = false;
-    {
-        auto it = m_startval.find(chn);
-        if (it != m_startval.end()) {
-            curval = it->second.get();
-            assert(curval);
-            for (auto m: measures.front()) {
-                measure_replaced = true;
-                m->val()->assign_var(curval);
-                assert(!m->val()->is_extern());
-            }
-            if (!next_unique.front()) {
-                curval = nullptr;
-            }
+    if (info.startval) {
+        curval = info.startval.get();
+        assert(curval);
+        for (auto m: measures.front()) {
+            measure_replaced = true;
+            m->val()->assign_var(curval);
+            assert(!m->val()->is_extern());
+        }
+        if (!next_unique.front()) {
+            curval = nullptr;
         }
     }
     auto use_val = [&] (Var *val, Pulse *measure) {
@@ -672,7 +668,7 @@ bool BasicSeq::optimize_order(uint32_t chn)
         curval = next_unique[i + 1] ? pulse->endval() : nullptr;
     }
     if (curval) {
-        auto &old_endval = m_endval[chn];
+        auto &old_endval = info.endval;
         if (!old_endval) {
             old_endval.reset(curval);
             changed = true;
@@ -750,16 +746,18 @@ bool BasicSeq::postoptimize_eventtimes()
 
 bool BasicSeq::optimize_vars()
 {
-    auto optimize_mapval = [] (auto &map) {
-        for (auto &kv: map) {
-            assert(kv.second);
-            if (auto v = kv.second->get_assigned_var()) {
-                kv.second.reset(v);
+    for (auto &[chn, info]: m_channels) {
+        if (info.startval) {
+            if (auto v = info.startval->get_assigned_var()) {
+                info.startval.reset(v);
             }
         }
-    };
-    optimize_mapval(m_startval);
-    optimize_mapval(m_endval);
+        if (info.endval) {
+            if (auto v = info.endval->get_assigned_var()) {
+                info.endval.reset(v);
+            }
+        }
+    }
     for (auto &kv: m_assign) {
         assert(kv.second.val);
         if (auto v = kv.second.val->get_assigned_var()) {
@@ -840,24 +838,21 @@ bool BasicSeq::optimize_branch()
 NACS_EXPORT() void BasicSeq::print(std::ostream &stm) const
 {
     stm << "BS(" << id() << "):" << std::endl;
-    for (auto &channel: m_pulses) {
-        auto chn = channel.first;
-        auto &pulses = channel.second;
+    for (auto &[chn, info]: m_channels) {
+        auto &pulses = info.pulses;
         stm << "  CH(" << chn << "):" << std::endl;
-        auto start_it = m_startval.find(chn);
-        if (start_it != m_startval.end() && start_it->second) {
+        if (info.startval) {
             stm << "   -init=";
-            start_it->second->print(stm, false, true);
+            info.startval->print(stm, false, true);
             stm << std::endl;
         }
         for (auto &pulse: pulses) {
             stm << "    ";
             pulse.print(stm, true);
         }
-        auto end_it = m_endval.find(chn);
-        if (end_it != m_endval.end() && end_it->second) {
+        if (info.endval) {
             stm << "   -final=";
-            end_it->second->print(stm, false, true);
+            info.endval->print(stm, false, true);
             stm << std::endl;
         }
     }
