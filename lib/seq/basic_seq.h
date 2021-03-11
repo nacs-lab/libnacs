@@ -33,6 +33,7 @@ class BasicSeq {
         std::list<Pulse> pulses;
         Var::Ref startval;
         Var::Ref endval;
+        std::map<Pulse*,Var::Ref> pulse_start_vars;
     };
 public:
     enum Errno : uint8_t {
@@ -91,6 +92,13 @@ public:
             return nullptr;
         return &it->second.pulses;
     }
+    const std::map<Pulse*,Var::Ref> *get_pulse_start_vars(uint32_t chn) const
+    {
+        auto it = m_channels.find(chn);
+        if (it == m_channels.end())
+            return nullptr;
+        return &it->second.pulse_start_vars;
+    }
     const std::map<uint32_t,Assignment> &get_assigns() const
     {
         return m_assign;
@@ -121,16 +129,25 @@ public:
     void check() const;
     void print(std::ostream &stm) const;
 
+    // For testing only
+    bool needs_oldval(Pulse *pulse) const;
+
 private:
     BasicSeq(BasicSeq&&) = delete;
     void mark_recursive();
-    bool optimize_pulse(uint32_t chn);
+    bool preoptimize_pulse(uint32_t chn, Env &env);
     bool optimize_order(uint32_t chn);
     bool optimize_endtimes();
     bool optimize_vars();
     bool optimize_branch();
     bool preoptimize_eventtimes();
     bool postoptimize_eventtimes();
+
+    Var *alloc_startval(Env &env)
+    {
+        uint64_t start_id = (uint64_t(m_id) << 32) | (--m_startval_count);
+        return env.new_extern({IR::Type::Float64, start_id});
+    };
 
     const uint32_t m_id;
     bool m_used = false; // Used by GC
@@ -149,6 +166,8 @@ private:
 
     std::vector<Branch> m_branches;
     BasicSeq *m_default_branch = nullptr;
+
+    int32_t m_startval_count = 0;
 
     friend class Seq;
 };

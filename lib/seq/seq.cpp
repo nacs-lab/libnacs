@@ -153,8 +153,9 @@ NACS_INTERNAL bool Seq::optimize_chn(uint32_t chn)
         if (!should_rescan && (!seq || seq->m_used))
             return;
         seq->m_used = true;
-        auto endval = seq->endval(chn);
-        if (!endval && val && !seq->has_output(chn))
+        auto &info = seq->m_channels.find(chn)->second;
+        auto endval = info.endval.get();
+        if (endval == info.startval.get()) // Endval was a simple forward of startval.
             endval = val;
         // Only allow constants to propagate.
         if (endval && !endval->is_const())
@@ -168,10 +169,10 @@ NACS_INTERNAL bool Seq::optimize_chn(uint32_t chn)
         if (!v.second)
             continue;
         auto &sv = v.first->m_channels[chn].startval;
-        if (sv) // Already has a value
+        if (sv->is_const()) // Already has a value
             continue;
         assert(v.second->is_const());
-        sv.reset(v.second);
+        sv->assign_const(v.second->get_const());
         changed = true;
     }
     return changed;
@@ -201,7 +202,7 @@ NACS_EXPORT() void Seq::optimize()
     unsigned nchns = m_chnnames.size();
     for (auto &seq: m_seqs) {
         for (unsigned i = 1; i <= nchns; i++)
-            seq.optimize_pulse(i);
+            seq.preoptimize_pulse(i, env());
         seq.preoptimize_eventtimes();
     }
     optimize_cfg();

@@ -499,6 +499,7 @@ static void test_check_measure_order_id_ok(llvm::LLVMContext &llvm_ctx)
 
     assert(p1->id() == 11);
     assert(!p1->needs_oldval());
+    assert(!bs1->needs_oldval(p1));
     assert(p1->endval());
     assert(approx(p1->endval()->get_const().get<double>(), -2.4));
 

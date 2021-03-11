@@ -351,15 +351,24 @@ void BasicSeq::mark_recursive()
     }
 }
 
-bool BasicSeq::optimize_pulse(uint32_t chn)
+bool BasicSeq::preoptimize_pulse(uint32_t chn, Env &env)
 {
     bool changed = false;
-    auto &pulses = m_channels[chn].pulses;
+    auto &info = m_channels[chn];
+    auto &pulses = info.pulses;
+    auto &pulse_start_vars = info.pulse_start_vars;
+    info.startval = alloc_startval(env)->ref();
     for (auto it = pulses.begin(), end = pulses.end(); it != end;) {
         auto &pulse = *it;
         if (!pulse.is_measure()) {
             changed |= pulse.clear_unused_args();
             changed |= pulse.optimize();
+            if (pulse.needs_oldval()) {
+                auto startval = alloc_startval(env);
+                pulse_start_vars.try_emplace(&pulse, startval->ref());
+                pulse.set_oldval(startval);
+            }
+            assert(!pulse.needs_oldval());
         }
         else {
             auto m = pulse.val();
@@ -381,8 +390,6 @@ bool BasicSeq::optimize_order(uint32_t chn)
     auto &info = m_channels[chn];
     auto &pulses = info.pulses;
     if (pulses.empty()) {
-        if (!info.startval)
-            return false;
         if (info.endval)
             return false;
         info.endval.reset(info.startval.get());
@@ -402,11 +409,23 @@ bool BasicSeq::optimize_order(uint32_t chn)
             should_continue = true;
         }
         else {
-            if (!should_continue && pulse.needs_oldval())
-                should_continue = true;
+            // Requires preoptimize_pulse
+            assert(!pulse.needs_oldval());
             changed |= pulse.clear_unused_args();
             changed |= pulse.optimize();
         }
+        ++it;
+    }
+    auto &pulse_start_vars = info.pulse_start_vars;
+    for (auto it = pulse_start_vars.begin(), end = pulse_start_vars.end(); it != end;) {
+        auto startval = it->second.get();
+        assert(startval->extern_used() >= 1);
+        if (startval->extern_used() == 1 && !startval->used(false)) {
+            it = pulse_start_vars.erase(it);
+            changed = true;
+            continue;
+        }
+        should_continue = true;
         ++it;
     }
     // Nothing more to optimize here...
@@ -551,20 +570,16 @@ bool BasicSeq::optimize_order(uint32_t chn)
         add_pulse(&pulse);
     latest.clear(); // Don't need anymore
 
-    Var *curval = nullptr;
+    Var *curval = info.startval.get();
+    assert(curval);
     bool measure_replaced = false;
-    if (info.startval) {
-        curval = info.startval.get();
-        assert(curval);
-        for (auto m: measures.front()) {
-            measure_replaced = true;
-            m->val()->assign_var(curval);
-            assert(!m->val()->is_extern());
-        }
-        if (!next_unique.front()) {
-            curval = nullptr;
-        }
+    for (auto m: measures.front()) {
+        measure_replaced = true;
+        m->val()->assign_var(curval);
+        assert(!m->val()->is_extern());
     }
+    if (!next_unique.front())
+        curval = nullptr;
     auto use_val = [&] (Var *val, Pulse *measure) {
         measure_replaced = true;
         measure->val()->assign_var(val);
@@ -572,11 +587,11 @@ bool BasicSeq::optimize_order(uint32_t chn)
     };
     auto use_pulse_end = [&] (Pulse *pulse, Pulse *measure) {
         auto val = pulse->endval();
-        assert(val); // Should be handled by needs_oldval
+        assert(val); // since we know `!pulse->needs_oldval()`
         use_val(val, measure);
     };
     auto replace_measure = [&] (Pulse *pulse, Pulse *measure) {
-        assert(!pulse->needs_oldval()); // Caller should check this.
+        assert(!pulse->needs_oldval());
         auto pulse_len = pulse->len();
         if (!pulse_len) {
             use_pulse_end(pulse, measure);
@@ -656,15 +671,16 @@ bool BasicSeq::optimize_order(uint32_t chn)
     for (unsigned i = 0; i < nordered; i++) {
         auto pulse = ordered[i];
         assert(!pulse->is_measure());
-        if (pulse->needs_oldval() && curval) {
-            pulse->set_oldval(curval);
-            changed = true;
-        }
-        if (!pulse->needs_oldval()) {
-            for (auto m: measures[i + 1]) {
-                replace_measure(pulse, m);
+        if (curval) {
+            auto it = pulse_start_vars.find(pulse);
+            if (it != pulse_start_vars.end()) {
+                it->second->assign_var(curval);
+                pulse_start_vars.erase(it);
+                changed = true;
             }
         }
+        for (auto m: measures[i + 1])
+            replace_measure(pulse, m);
         curval = next_unique[i + 1] ? pulse->endval() : nullptr;
     }
     if (curval) {
@@ -747,11 +763,8 @@ bool BasicSeq::postoptimize_eventtimes()
 bool BasicSeq::optimize_vars()
 {
     for (auto &[chn, info]: m_channels) {
-        if (info.startval) {
-            if (auto v = info.startval->get_assigned_var()) {
-                info.startval.reset(v);
-            }
-        }
+        if (auto v = info.startval->get_assigned_var())
+            info.startval.reset(v);
         if (info.endval) {
             if (auto v = info.endval->get_assigned_var()) {
                 info.endval.reset(v);
@@ -844,8 +857,8 @@ NACS_EXPORT() void BasicSeq::print(std::ostream &stm) const
         if (info.startval) {
             stm << "   -init=";
             info.startval->print(stm, false, true);
-            stm << std::endl;
         }
+        stm << std::endl;
         for (auto &pulse: pulses) {
             stm << "    ";
             pulse.print(stm, true);
@@ -906,6 +919,33 @@ NACS_EXPORT() void BasicSeq::print(std::ostream &stm) const
             stm << "    " << *time << std::endl;
         }
     }
+}
+
+NACS_EXPORT() bool BasicSeq::needs_oldval(Pulse *p) const
+{
+    bool found = false;
+    for (auto &[chn, info]: m_channels) {
+        bool found_in_info = false;
+        for (auto &pulse: info.pulses) {
+            if (&pulse == p) {
+                assert(!found);
+                assert(!found_in_info);
+                found_in_info = true;
+            }
+        }
+        if (found_in_info)
+            found = true;
+        for (auto &[pulse, val]: info.pulse_start_vars) {
+            assert(val);
+            if (pulse == p) {
+                assert(found_in_info);
+                return true;
+            }
+        }
+    }
+    assert(found);
+    (void)found;
+    return false;
 }
 
 }

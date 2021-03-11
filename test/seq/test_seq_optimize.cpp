@@ -78,6 +78,8 @@ static void test_basic_single_channel(llvm::LLVMContext &llvm_ctx)
     assert(approx(p2->endval()->get_const().get<double>(), -0.2));
     assert(!p1->needs_oldval());
     assert(!p2->needs_oldval());
+    assert(!bs->needs_oldval(p1));
+    assert(!bs->needs_oldval(p2));
     assert(bs->startval(1)->get_const().is(IR::TagVal(false)));
     assert(approx(bs->endval(1)->get_const().get<double>(), -0.2));
     assert(!bs->get_default_branch());
@@ -169,6 +171,9 @@ static void test_basic_single_channel_measure_known_time1(llvm::LLVMContext &llv
     assert(!p1->needs_oldval());
     assert(!p2->needs_oldval());
     assert(!p3->needs_oldval());
+    assert(!bs->needs_oldval(p1));
+    assert(!bs->needs_oldval(p2));
+    assert(!bs->needs_oldval(p3));
     assert(!p1->len());
     assert(p2->len());
     assert(p3->len());
@@ -242,6 +247,8 @@ static void test_basic_single_channel_measure_known_time2(llvm::LLVMContext &llv
     assert(approx(p2->endval()->get_const().get<double>(), 1.8));
     assert(!p1->needs_oldval());
     assert(!p2->needs_oldval());
+    assert(!bs->needs_oldval(p1));
+    assert(!bs->needs_oldval(p2));
     assert(bs->startval(1)->get_const().is(IR::TagVal(2.3)));
     assert(approx(bs->endval(1)->get_const().get<double>(), 1.8));
 }
@@ -305,6 +312,8 @@ static void test_basic_single_channel_measure_unknown_time(llvm::LLVMContext &ll
     assert(p2->endval()->is_call());
     assert(!p1->needs_oldval());
     assert(!p2->needs_oldval());
+    assert(!bs->needs_oldval(p1));
+    assert(!bs->needs_oldval(p2));
     assert(bs->startval(1)->get_const().is(IR::TagVal(2.3)));
     assert(bs->endval(1) == p2->endval());
 
@@ -423,8 +432,10 @@ static void test_basic_two_channel_measure_time(llvm::LLVMContext &llvm_ctx)
     assert(p2->start().terms[0].sign == Seq::EventTime::Pos);
     assert(p2->start().terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
     assert(!p1->needs_oldval());
+    assert(!bs->needs_oldval(p1));
     assert(p1->val()->is_call());
     assert(!p2->needs_oldval());
+    assert(!bs->needs_oldval(p2));
     assert(p2->val()->is_const());
     assert(approx(p2->val()->get_const().get<double>(), 1.8));
     assert(p1->endval()->is_const());
@@ -504,17 +515,20 @@ static void test_basic_single_channel_measure_unknown_order(llvm::LLVMContext &l
     seq.optimize();
     assert(bs->get_pulses(1)->size() == 4);
     assert(p1->id() == 1);
-    assert(p1->needs_oldval());
-    assert(!p1->endval());
+    assert(!p1->needs_oldval());
+    assert(bs->needs_oldval(p1));
+    assert(p1->endval());
     assert(p2->id() == 2);
-    assert(p2->needs_oldval());
-    assert(!p2->endval());
+    assert(!p2->needs_oldval());
+    assert(bs->needs_oldval(p2));
+    assert(p2->endval());
     assert(m1->id() == 3);
     assert(m1->is_measure());
     assert(p3->id() == 4);
-    assert(p3->needs_oldval());
-    assert(!p3->endval());
-    assert(!bs->endval(1));
+    assert(!p3->needs_oldval());
+    assert(bs->needs_oldval(p3));
+    assert(p3->endval());
+    assert(bs->endval(1));
 }
 
 static void test_basic_single_channel_measure_time_violation(llvm::LLVMContext &llvm_ctx)
@@ -567,6 +581,44 @@ static void test_basic_single_channel_measure_time_violation(llvm::LLVMContext &
     assert(errored);
 }
 
+static void test_basic_single_channel_output_unknown_order(llvm::LLVMContext &llvm_ctx)
+{
+    Seq::Seq seq(llvm_ctx);
+    assert(seq.get_chn_id("test_chn", true) == 1);
+    auto bs = seq.add_basicseq(1);
+    assert(bs->id() == 1);
+    seq.set_defval(1, seq.get_const(IR::TagVal(2.3)));
+
+    Seq::EventTime t;
+    t.add_term(Seq::EventTime::Pos, seq.get_slot(IR::Type::Float64, 0));
+    Seq::EventTime t2;
+    t2.add_term(Seq::EventTime::Pos, seq.get_const(IR::TagVal(1200)));
+
+    // Test that we do not compute end value of basic sequence
+    // when we cannot determine which one is the last output pulse.
+    auto p1 = bs->add_pulse(1, 1, bs->track_time(t), nullptr,
+                            seq.get_const(IR::TagVal(1.0)));
+    assert(p1->id() == 1);
+    assert(!p1->needs_oldval());
+    auto p2 = bs->add_pulse(1, 2, bs->track_time(t2), nullptr,
+                            seq.get_const(IR::TagVal(2.0)));
+    assert(p2->id() == 2);
+    assert(!p2->needs_oldval());
+
+    seq.check();
+    seq.optimize();
+    assert(bs->get_pulses(1)->size() == 2);
+    assert(p1->id() == 1);
+    assert(!p1->needs_oldval());
+    assert(!bs->needs_oldval(p1));
+    assert(p1->endval()->is_const());
+    assert(p2->id() == 2);
+    assert(!p2->needs_oldval());
+    assert(!bs->needs_oldval(p2));
+    assert(p2->endval()->is_const());
+    assert(!bs->endval(1));
+}
+
 static void test_single_channel_branch(llvm::LLVMContext &llvm_ctx)
 {
     Seq::Seq seq(llvm_ctx);
@@ -614,10 +666,12 @@ static void test_single_channel_branch(llvm::LLVMContext &llvm_ctx)
 
     assert(p1->id() == 1);
     assert(!p1->needs_oldval());
+    assert(!bs1->needs_oldval(p1));
     assert(p1->endval());
     assert(approx(p1->endval()->get_const().get<double>(), 1.5));
     assert(p2->id() == 1);
     assert(!p2->needs_oldval());
+    assert(!bs2->needs_oldval(p2));
     assert(p2->endval());
     assert(approx(p2->endval()->get_const().get<double>(), 1.9));
 
@@ -724,16 +778,19 @@ static void test_single_channel_branch_merge(llvm::LLVMContext &llvm_ctx)
 
     assert(p1->id() == 1);
     assert(!p1->needs_oldval());
+    assert(!bs1->needs_oldval(p1));
     assert(p1->endval());
     assert(approx(p1->endval()->get_const().get<double>(), -0.7));
 
     assert(p2->id() == 1);
     assert(!p2->needs_oldval());
+    assert(!bs2->needs_oldval(p2));
     assert(p2->endval());
     assert(approx(p2->endval()->get_const().get<double>(), 0.1));
 
     assert(p3->id() == 1);
     assert(!p3->needs_oldval());
+    assert(!bs3->needs_oldval(p3));
     assert(p3->endval());
     assert(approx(p3->endval()->get_const().get<double>(), 0.1));
 
@@ -741,6 +798,7 @@ static void test_single_channel_branch_merge(llvm::LLVMContext &llvm_ctx)
 
     assert(p4->id() == 1);
     assert(!p4->needs_oldval());
+    assert(!bs4->needs_oldval(p4));
     assert(p4->endval());
     assert(approx(p4->endval()->get_const().get<double>(), 1.1));
 
@@ -857,22 +915,26 @@ static void test_single_channel_branch_not_merge(llvm::LLVMContext &llvm_ctx)
 
     assert(p1->id() == 1);
     assert(!p1->needs_oldval());
+    assert(!bs1->needs_oldval(p1));
     assert(p1->endval());
     assert(approx(p1->endval()->get_const().get<double>(), -0.7));
 
     assert(p2->id() == 1);
     assert(!p2->needs_oldval());
+    assert(!bs2->needs_oldval(p2));
     assert(p2->endval());
     assert(approx(p2->endval()->get_const().get<double>(), 0.1));
 
     assert(p3->id() == 1);
     assert(!p3->needs_oldval());
+    assert(!bs3->needs_oldval(p3));
     assert(p3->endval());
     assert(approx(p3->endval()->get_const().get<double>(), -1.5));
 
     assert(p4->id() == 1);
-    assert(p4->needs_oldval());
-    assert(!p4->endval());
+    assert(!p4->needs_oldval());
+    assert(!bs4->needs_oldval(p4));
+    assert(p4->endval());
 
     assert(approx(bs1->startval(1)->get_const().get<double>(), 2.3));
     assert(approx(bs1->endval(1)->get_const().get<double>(), -0.7));
@@ -882,8 +944,8 @@ static void test_single_channel_branch_not_merge(llvm::LLVMContext &llvm_ctx)
     assert(approx(bs3->startval(1)->get_const().get<double>(), -0.7));
     assert(approx(bs3->endval(1)->get_const().get<double>(), -1.5));
 
-    assert(!bs4->startval(1));
-    assert(!bs4->endval(1));
+    assert(bs4->startval(1)->is_extern());
+    assert(bs4->endval(1));
 }
 
 static void test_single_channel_branch_nonconst(llvm::LLVMContext &llvm_ctx)
@@ -928,20 +990,22 @@ static void test_single_channel_branch_nonconst(llvm::LLVMContext &llvm_ctx)
 
     assert(p1->id() == 1);
     assert(!p1->needs_oldval());
+    assert(!bs1->needs_oldval(p1));
     assert(p1->endval());
     assert(p1->endval() == seq.get_slot(IR::Type::Float64, 0));
 
     assert(p2->id() == 1);
-    assert(p2->needs_oldval());
-    assert(!p2->endval());
+    assert(!p2->needs_oldval());
+    assert(!bs2->needs_oldval(p2));
+    assert(p2->endval());
     assert(!p2->len());
 
     assert(bs1->startval(1)->get_const().is(IR::TagVal(false)));
     assert(bs1->endval(1));
     assert(bs1->endval(1) == seq.get_slot(IR::Type::Float64, 0));
 
-    assert(!bs2->startval(1));
-    assert(!bs2->endval(1));
+    assert(bs2->startval(1)->is_extern());
+    assert(bs2->endval(1));
 }
 
 static void test_branch_loop_const(llvm::LLVMContext &llvm_ctx)
@@ -1021,11 +1085,13 @@ static void test_branch_loop_const(llvm::LLVMContext &llvm_ctx)
 
     assert(p1->id() == 1);
     assert(!p1->needs_oldval());
+    assert(!bs1->needs_oldval(p1));
     assert(p1->endval());
     assert(approx(p1->endval()->get_const().get<double>(), -0.7));
 
     assert(p2->id() == 2);
     assert(!p2->needs_oldval());
+    assert(!bs2->needs_oldval(p2));
     assert(p2->endval());
     assert(approx(p2->endval()->get_const().get<double>(), 0.2));
 
@@ -1036,7 +1102,7 @@ static void test_branch_loop_const(llvm::LLVMContext &llvm_ctx)
 
     assert(approx(bs2->startval(1)->get_const().get<double>(), -0.7));
     assert(approx(bs2->endval(1)->get_const().get<double>(), -0.7));
-    assert(!bs2->startval(2));
+    assert(bs2->startval(2)->is_extern());
     assert(approx(bs2->endval(2)->get_const().get<double>(), 0.2));
 }
 
@@ -1076,12 +1142,13 @@ static void test_single_channel_loop_first(llvm::LLVMContext &llvm_ctx)
     assert(bs1->get_branches()[0].id == 10);
 
     assert(p1->id() == 1);
-    assert(p1->needs_oldval());
-    assert(!p1->endval());
+    assert(!p1->needs_oldval());
+    assert(!bs1->needs_oldval(p1));
+    assert(p1->endval());
     assert(!p1->len());
 
-    assert(!bs1->startval(1));
-    assert(!bs1->endval(1));
+    assert(bs1->startval(1)->is_extern());
+    assert(bs1->endval(1));
 }
 
 #if 0
@@ -1124,6 +1191,7 @@ static void test_single_channel_loop_first2(llvm::LLVMContext &llvm_ctx)
 
     assert(p1->id() == 1);
     assert(!p1->needs_oldval());
+    assert(!bs1->needs_oldval(p1));
     assert(p1->endval());
     assert(p1->endval()->is_const());
     assert(p1->endval()->get_const().is(IR::TagVal(1.0)));
@@ -1135,6 +1203,55 @@ static void test_single_channel_loop_first2(llvm::LLVMContext &llvm_ctx)
     assert(bs1->endval(1)->get_const().is(IR::TagVal(1.0)));
 }
 #endif
+
+static void test_single_channel_loop_first3(llvm::LLVMContext &llvm_ctx)
+{
+    Seq::Seq seq(llvm_ctx);
+    assert(seq.get_chn_id("test_chn", true) == 1);
+    auto bs1 = seq.add_basicseq(1);
+    assert(bs1->id() == 1);
+
+    seq.set_defval(1, seq.get_const(IR::TagVal(1.0)));
+    auto p1 = bs1->add_pulse(1, 1, bs1->track_time(Seq::EventTime(10)),
+                             seq.get_const(IR::TagVal(1000)),
+                             [&] {
+                                 IR::Builder builder(IR::Type::Float64,
+                                                     {IR::Type::Float64, IR::Type::Float64});
+                                 auto v = builder.createSub(0, builder.getConst(1000.0));
+                                 builder.createRet(builder.createAdd(1, v));
+                                 return seq.get_call(builder.get(), {Seq::Arg::create_arg(0),
+                                         Seq::Arg::create_arg(1)}, 2);
+                             }());
+    assert(p1->id() == 1);
+    assert(p1->needs_oldval());
+    bs1->set_default_branch(bs1);
+    bs1->add_branch(seq.get_slot(IR::Type::Float64, 0), nullptr, 10);
+
+    seq.check();
+    seq.optimize();
+
+    assert(bs1->get_pulses(1)->size() == 1);
+    assert(seq.get_basicseqs().size() == 1);
+
+    assert(bs1->get_default_branch() == bs1);
+    assert(bs1->get_branches().size() == 1);
+    assert(bs1->get_branches()[0].cond.get() == seq.get_slot(IR::Type::Float64, 0));
+    assert(bs1->get_branches()[0].target == nullptr);
+    assert(bs1->get_branches()[0].id == 10);
+
+    assert(p1->id() == 1);
+    assert(!p1->needs_oldval());
+    assert(!bs1->needs_oldval(p1));
+    assert(p1->endval());
+    assert(p1->endval()->is_const());
+    assert(p1->endval()->get_const().is(IR::TagVal(1.0)));
+    assert(p1->len());
+
+    assert(bs1->startval(1)->is_const());
+    assert(bs1->startval(1)->get_const().is(IR::TagVal(1.0)));
+    assert(bs1->endval(1)->is_const());
+    assert(bs1->endval(1)->get_const().is(IR::TagVal(1.0)));
+}
 
 static void test_optimize_cfg_shortcut(llvm::LLVMContext &llvm_ctx)
 {
@@ -1515,6 +1632,7 @@ int main()
     test_basic_two_channel_measure_time(*llvm_ctx);
     test_basic_single_channel_measure_unknown_order(*llvm_ctx);
     test_basic_single_channel_measure_time_violation(*llvm_ctx);
+    test_basic_single_channel_output_unknown_order(*llvm_ctx);
 
     test_single_channel_branch(*llvm_ctx);
     test_single_channel_branch_merge(*llvm_ctx);
@@ -1523,6 +1641,7 @@ int main()
     test_branch_loop_const(*llvm_ctx);
     test_single_channel_loop_first(*llvm_ctx);
     // test_single_channel_loop_first2(*llvm_ctx);
+    test_single_channel_loop_first3(*llvm_ctx);
 
     test_optimize_cfg_shortcut(*llvm_ctx);
     test_optimize_cfg_delete(*llvm_ctx);
