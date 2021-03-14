@@ -150,6 +150,97 @@ bound(T1 &&v1, T2 &&v2, T3 &&v3)
                                          std::forward<T3>(v3)));
 }
 
+namespace detail {
+
+template<typename I, typename F>
+struct rounder {
+    static I round(F d)
+    {
+        return d < 0 ? I(d - F(0.5)) : I(d + F(0.5));
+    }
+};
+
+#if NACS_CPU_X86 || NACS_CPU_X86_64
+template<typename I>
+struct rounder<I, std::enable_if_t<sizeof(I) <= 4 && std::is_signed_v<I> &&
+                                   std::is_integral_v<I>, float>> {
+    static I round(float d)
+    {
+        return I(_mm_cvtss_si32(_mm_set_ss(d)));
+    }
+};
+
+template<typename I>
+struct rounder<I, std::enable_if_t<sizeof(I) <= 8 && (sizeof(I) > 4) && std::is_signed_v<I> &&
+                                   std::is_integral_v<I>, float>> {
+    static I round(float d)
+    {
+        return I(_mm_cvtss_si64(_mm_set_ss(d)));
+    }
+};
+
+template<typename I>
+struct rounder<I, std::enable_if_t<sizeof(I) <= 4 && std::is_signed_v<I> &&
+                                   std::is_integral_v<I>, double>> {
+    static I round(double d)
+    {
+        return I(_mm_cvtsd_si32(_mm_set_sd(d)));
+    }
+};
+
+template<typename I>
+struct rounder<I, std::enable_if_t<sizeof(I) <= 8 && (sizeof(I) > 4) && std::is_signed_v<I> &&
+                                   std::is_integral_v<I>, double>> {
+    static I round(double d)
+    {
+        return I(_mm_cvtsd_si64(_mm_set_sd(d)));
+    }
+};
+#elif NACS_CPU_AARCH64
+template<typename I>
+struct rounder<I, std::enable_if_t<sizeof(I) <= 4 && std::is_signed_v<I> &&
+                                   std::is_integral_v<I>, float>> {
+    static I round(float d)
+    {
+        return I(vcvtns_s32_f32(d));
+    }
+};
+template<typename I>
+struct rounder<I, std::enable_if_t<sizeof(I) <= 4 && std::is_unsigned_v<I> &&
+                                   std::is_integral_v<I>, float>> {
+    static I round(float d)
+    {
+        return I(vcvtns_u32_f32(d));
+    }
+};
+
+template<typename I>
+struct rounder<I, std::enable_if_t<sizeof(I) <= 8 && std::is_signed_v<I> &&
+                                   std::is_integral_v<I>, double>> {
+    static I round(double d)
+    {
+        return I(vcvtnd_s64_f64(d));
+    }
+};
+template<typename I>
+struct rounder<I, std::enable_if_t<sizeof(I) <= 8 && std::is_unsigned_v<I> &&
+                                   std::is_integral_v<I>, double>> {
+    static I round(double d)
+    {
+        return I(vcvtnd_u64_f64(d));
+    }
+};
+#endif
+
+}
+
+template<typename I, typename F>
+static inline I
+round(F d)
+{
+    return detail::rounder<I,std::remove_reference_t<F>>::round(d);
+}
+
 template<typename T>
 static inline constexpr auto
 square(const T &a)
