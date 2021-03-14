@@ -27,7 +27,8 @@ class Pulse {
 public:
     enum Errno : uint8_t {
         NegTime,
-        NoRamp
+        NoRamp,
+        NonPosLen
     };
     // id must be unique in the whole sequence
     // A pulse with the same time but a larger ID will be treated as happens after
