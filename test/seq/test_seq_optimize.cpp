@@ -16,15 +16,12 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#define LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING 1
 #define CATCH_CONFIG_MAIN
+
+#include "compiler_helper.h"
 
 #include "../error_helper.h"
 
-#include "../../lib/nacs-seq/seq.h"
-#include "../../lib/nacs-seq/error.h"
-
-#include "../../lib/nacs-utils/llvm/codegen.h"
 #include "../../lib/nacs-utils/llvm/utils.h"
 #include "../../lib/nacs-utils/number.h"
 
@@ -92,6 +89,8 @@ TEST_CASE("basic_single_channel") {
     REQUIRE(slots[0].get() == seq.get_slot(IR::Type::Float64, 0));
     REQUIRE((slots[1]->get_extern() == std::make_pair(IR::Type::Float64, uint64_t(1))));
     REQUIRE(slots[1].get() == seq.get_slot(IR::Type::Float64, 1));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("basic_single_channel_measure_known_time1") {
@@ -190,6 +189,8 @@ TEST_CASE("basic_single_channel_measure_known_time1") {
     // No approx comparison needed.
     REQUIRE(bs->startval(1)->get_const().is(IR::TagVal(2.3)));
     REQUIRE(bs->endval(1)->get_const().get<double>() == Approx(0.285));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("basic_single_channel_measure_known_time2") {
@@ -258,6 +259,8 @@ TEST_CASE("basic_single_channel_measure_known_time2") {
     REQUIRE(!bs->needs_oldval(p2));
     REQUIRE(bs->startval(1)->get_const().is(IR::TagVal(2.3)));
     REQUIRE(bs->endval(1)->get_const().get<double>() == Approx(1.8));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("basic_single_channel_measure_unknown_time") {
@@ -345,6 +348,8 @@ TEST_CASE("basic_single_channel_measure_unknown_time") {
     REQUIRE(var2->get_const().get<double>() == Approx(1.8));
     REQUIRE(var3->is_const());
     REQUIRE(var3->get_const().get<double>() == Approx(1.8));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("basic_single_channel_unused_measure") {
@@ -387,6 +392,8 @@ TEST_CASE("basic_single_channel_unused_measure") {
     REQUIRE(p1->endval()->get_const().get<double>() == Approx(1.8));
     REQUIRE(bs->startval(1)->get_const().is(IR::TagVal(2.3)));
     REQUIRE(bs->endval(1)->get_const().get<double>() == Approx(1.8));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("basic_two_channel_measure_time") {
@@ -457,6 +464,8 @@ TEST_CASE("basic_two_channel_measure_time") {
     REQUIRE(bs->startval(2)->get_const().is(IR::TagVal(0.0)));
     REQUIRE(bs->endval(1)->get_const().get<double>() == Approx(1.8));
     REQUIRE(bs->endval(2)->get_const().get<double>() == Approx(1.8));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("basic_single_channel_measure_unknown_order") {
@@ -544,6 +553,8 @@ TEST_CASE("basic_single_channel_measure_unknown_order") {
     REQUIRE(!p2->is_ordered);
     REQUIRE(p3->is_ordered);
     REQUIRE(bs->endval(1));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("basic_single_channel_measure_time_violation") {
@@ -628,6 +639,8 @@ TEST_CASE("basic_single_channel_output_unknown_order") {
     REQUIRE(!p1->is_ordered);
     REQUIRE(!p2->is_ordered);
     REQUIRE(!bs->endval(1));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("basic_single_channel_neg_time_offset") {
@@ -656,6 +669,8 @@ TEST_CASE("basic_single_channel_neg_time_offset") {
     REQUIRE(p1->start().terms[0].sign == Seq::Sign::Pos);
     REQUIRE(p1->start().terms[0].id == 29);
     REQUIRE(p1->start().terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("basic_single_channel_neg_time_output_violation") {
@@ -767,6 +782,8 @@ TEST_CASE("single_channel_branch") {
     REQUIRE(bs1->endval(1)->get_const().get<double>() == Approx(1.5));
     REQUIRE(bs2->startval(1)->get_const().get<double>() == Approx(1.5));
     REQUIRE(bs2->endval(1)->get_const().get<double>() == Approx(1.9));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("single_channel_branch_merge") {
@@ -904,6 +921,8 @@ TEST_CASE("single_channel_branch_merge") {
 
     REQUIRE(bs4->startval(1)->get_const().get<double>() == Approx(0.1));
     REQUIRE(bs4->endval(1)->get_const().get<double>() == Approx(1.1));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("single_channel_branch_not_merge") {
@@ -1042,6 +1061,8 @@ TEST_CASE("single_channel_branch_not_merge") {
 
     REQUIRE(bs4->startval(1)->is_extern());
     REQUIRE(bs4->endval(1));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("single_channel_branch_nonconst") {
@@ -1104,6 +1125,8 @@ TEST_CASE("single_channel_branch_nonconst") {
 
     REQUIRE(bs2->startval(1)->is_extern());
     REQUIRE(bs2->endval(1));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("branch_cond_clone_point") {
@@ -1243,6 +1266,8 @@ TEST_CASE("branch_cond_clone_point") {
     REQUIRE(bs1->get_assigns().find(2) != bs1->get_assigns().end());
     REQUIRE(bs1->get_assigns().find(2)->second.id == 0);
     REQUIRE(bs1->get_assigns().find(2)->second.val.get() == lv2);
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("branch_cond_clone_const_opt") {
@@ -1429,6 +1454,8 @@ TEST_CASE("branch_cond_clone_const_opt") {
     REQUIRE(bs2->get_assigns().find(2) != bs1->get_assigns().end());
     REQUIRE(bs2->get_assigns().find(2)->second.id == 0);
     REQUIRE(bs2->get_assigns().find(2)->second.val.get() == seq.get_slot(IR::Type::Float64, 0));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("branch_cond_clone_unused_opt") {
@@ -1494,6 +1521,8 @@ TEST_CASE("branch_cond_clone_unused_opt") {
 
     REQUIRE(bs1->get_branches().empty());
     REQUIRE(bs1->get_assigns().empty());
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("branch_loop_const") {
@@ -1594,6 +1623,8 @@ TEST_CASE("branch_loop_const") {
     REQUIRE(bs2->endval(1)->get_const().get<double>() == Approx(-0.7));
     REQUIRE(bs2->startval(2)->is_extern());
     REQUIRE(bs2->endval(2)->get_const().get<double>() == Approx(0.2));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("single_channel_loop_first") {
@@ -1639,6 +1670,8 @@ TEST_CASE("single_channel_loop_first") {
 
     REQUIRE(bs1->startval(1)->is_extern());
     REQUIRE(bs1->endval(1));
+
+    CompileSeq cs(seq);
 }
 
 #if 0
@@ -1741,6 +1774,8 @@ TEST_CASE("single_channel_loop_first3") {
     REQUIRE(bs1->startval(1)->get_const().is(IR::TagVal(1.0)));
     REQUIRE(bs1->endval(1)->is_const());
     REQUIRE(bs1->endval(1)->get_const().is(IR::TagVal(1.0)));
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("optimize_cfg_shortcut") {
@@ -1772,6 +1807,8 @@ TEST_CASE("optimize_cfg_shortcut") {
     REQUIRE(bs1->get_branches()[0].target == bs1);
     REQUIRE(bs1->get_branches()[0].id == 1);
     REQUIRE(bs2->get_branches().empty());
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("optimize_cfg_delete") {
@@ -1803,6 +1840,8 @@ TEST_CASE("optimize_cfg_delete") {
     REQUIRE(bs1->get_branches()[0].target == bs1);
     REQUIRE(bs1->get_branches()[0].id == 1);
     REQUIRE(bs3->get_branches().empty());
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("optimize_cfg_merge") {
@@ -1841,6 +1880,8 @@ TEST_CASE("optimize_cfg_merge") {
     REQUIRE(bs1->get_branches()[1].id == 2);
     REQUIRE(bs2->get_branches().empty());
     REQUIRE(bs3->get_branches().empty());
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("optimize_cfg_merge_null") {
@@ -1882,6 +1923,8 @@ TEST_CASE("optimize_cfg_merge_null") {
     REQUIRE(bs1->get_branches()[2].id == 3);
     REQUIRE(bs2->get_branches().empty());
     REQUIRE(bs3->get_branches().empty());
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("basic_single_channel_assumption") {
@@ -1917,6 +1960,8 @@ TEST_CASE("basic_single_channel_assumption") {
     REQUIRE(bs->get_assumes().begin()->second.sign == Seq::Sign::Pos);
     REQUIRE(bs->get_assumes().begin()->first.get() == seq.get_slot(IR::Type::Float64, 0));
     REQUIRE(bs->get_assumes().begin()->second.id == 3);
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("basic_single_channel_assumption_merge") {
@@ -1945,6 +1990,8 @@ TEST_CASE("basic_single_channel_assumption_merge") {
     REQUIRE(bs->get_assumes().begin()->second.sign == Seq::Sign::Pos);
     REQUIRE(bs->get_assumes().begin()->first.get() == seq.get_slot(IR::Type::Float64, 0));
     REQUIRE(bs->get_assumes().begin()->second.id == 43);
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("basic_single_channel_assumption_violation") {
@@ -2012,6 +2059,8 @@ TEST_CASE("endtimes_normalize") {
     REQUIRE(bs->get_endtimes().front()->terms[1].sign == Seq::Sign::NonNeg);
     REQUIRE(bs->get_endtimes().front()->terms[1].var.get() == seq.get_slot(IR::Type::Float64, 1));
     REQUIRE(bs->get_endtimes().front()->terms[1].id == 8);
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("endtimes_elim_diamond") {
@@ -2046,6 +2095,8 @@ TEST_CASE("endtimes_elim_diamond") {
     REQUIRE(bs->get_endtimes().front()->terms[1].sign == Seq::Sign::NonNeg);
     REQUIRE(bs->get_endtimes().front()->terms[1].var.get() == seq.get_slot(IR::Type::Float64, 1));
     REQUIRE(bs->get_endtimes().front()->terms[1].id == 8);
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("endtimes_elim_Y") {
@@ -2086,6 +2137,8 @@ TEST_CASE("endtimes_elim_Y") {
     REQUIRE(bs->get_endtimes().front()->terms[0].sign == Seq::Sign::Pos);
     REQUIRE(bs->get_endtimes().front()->terms[0].var.get() == seq.get_slot(IR::Type::Float64, 0));
     REQUIRE(bs->get_endtimes().front()->terms[0].id == 4);
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("endtimes_elim_repeat") {
@@ -2120,6 +2173,8 @@ TEST_CASE("endtimes_elim_repeat") {
     REQUIRE(bs->get_endtimes().front()->terms[1].sign == Seq::Sign::NonNeg);
     REQUIRE(bs->get_endtimes().front()->terms[1].var.get() == seq.get_slot(IR::Type::Float64, 1));
     REQUIRE(bs->get_endtimes().front()->terms[1].id == 7);
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("endtimes_elim_nonpos") {
@@ -2136,6 +2191,8 @@ TEST_CASE("endtimes_elim_nonpos") {
     seq.optimize();
 
     REQUIRE(bs->get_endtimes().size() == 0);
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("cond_elim_true") {
@@ -2156,6 +2213,8 @@ TEST_CASE("cond_elim_true") {
     REQUIRE(p1->val()->is_const());
     REQUIRE(p1->val()->get_const().is(IR::TagVal(0.3)));
     REQUIRE(!p1->cond());
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("cond_elim_false") {
@@ -2174,6 +2233,8 @@ TEST_CASE("cond_elim_false") {
     seq.optimize();
 
     REQUIRE(bs->get_pulses(1)->empty());
+
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("cond_no_forward_pulse") {
@@ -2215,6 +2276,8 @@ TEST_CASE("cond_no_forward_pulse") {
             REQUIRE(bs->needs_oldval(p2));
         else
             REQUIRE(!bs->needs_oldval(p2));
+
+        CompileSeq cs(seq);
     };
     do_test(false);
     do_test(true);
@@ -2272,6 +2335,8 @@ TEST_CASE("cond_no_forward_measure") {
             REQUIRE(p2->val()->is_const());
             REQUIRE(p2->val()->get_const().get<double>() == Approx(-1.7));
         }
+
+        CompileSeq cs(seq);
     };
     do_test(false);
     do_test(true);
