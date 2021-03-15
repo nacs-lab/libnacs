@@ -52,6 +52,7 @@ struct NACS_EXPORT_ Error : std::runtime_error {
         ExternMeasureLength,
         ExternMeasureCond,
         MeasureOrder,
+        LengthLimit,
     };
 
     Error(Type type, uint16_t code, Type type1, uint64_t id1, const char *what);
