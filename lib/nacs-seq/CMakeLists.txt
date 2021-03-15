@@ -23,6 +23,7 @@ set(nacs_seq_llvm_HDRS
   compiler.h
   env.h
   event_time.h
+  manager.h
   pulse.h
   seq.h)
 set(nacs_seq_llvm_SRCS
@@ -31,6 +32,7 @@ set(nacs_seq_llvm_SRCS
   compiler.cpp
   env.cpp
   event_time.cpp
+  manager.cpp
   pulse.cpp
   seq.cpp
   var.cpp)
