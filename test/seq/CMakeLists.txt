@@ -45,4 +45,5 @@ if(ENABLE_LLVM)
 
   add_llvm_test(host_seq)
   add_llvm_test(host_seq_error)
+  add_llvm_test(compiler)
 endif()
