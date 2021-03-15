@@ -20,6 +20,7 @@ set(nacs_seq_llvm_HDRS
   event_time.h
   host_seq.h
   pulse.h
+  manager.h
   seq.h)
 set(nacs_seq_llvm_SRCS
   basic_seq.cpp
@@ -30,6 +31,7 @@ set(nacs_seq_llvm_SRCS
   event_time.cpp
   host_seq.cpp
   pulse.cpp
+  manager.cpp
   seq.cpp
   var.cpp)
 
