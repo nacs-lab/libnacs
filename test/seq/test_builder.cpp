@@ -16,22 +16,18 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#define LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING 1
 #define CATCH_CONFIG_MAIN
 
-#include "../../lib/nacs-seq/builder.h"
-#include "../../lib/nacs-seq/error.h"
-#include "../../lib/nacs-seq/seq.h"
+#include "compiler_helper.h"
 
-#include "../../lib/nacs-utils/llvm/codegen.h"
+#include "../../lib/nacs-seq/builder.h"
+
 #include "../../lib/nacs-utils/llvm/utils.h"
 
 #include <llvm/IR/LLVMContext.h>
 
 #include <iostream>
 #include <memory>
-
-#include <catch2/catch.hpp>
 
 using namespace NaCs;
 
@@ -55,6 +51,7 @@ TEST_CASE("channels") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("default") {
@@ -72,6 +69,7 @@ TEST_CASE("default") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("global") {
@@ -97,6 +95,7 @@ TEST_CASE("global") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("assign") {
@@ -140,6 +139,7 @@ TEST_CASE("assign") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("node_cse") {
@@ -222,6 +222,7 @@ TEST_CASE("node_cse") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("node_commute") {
@@ -287,6 +288,7 @@ TEST_CASE("node_commute") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("node_interp") {
@@ -333,6 +335,7 @@ TEST_CASE("node_interp") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("time") {
@@ -408,6 +411,7 @@ TEST_CASE("time") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("measure") {
@@ -462,6 +466,7 @@ TEST_CASE("measure") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("measure_val") {
@@ -530,6 +535,7 @@ TEST_CASE("measure_val") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("output") {
@@ -629,6 +635,7 @@ TEST_CASE("output") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("output_len0") {
@@ -692,6 +699,7 @@ TEST_CASE("output_len0") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("output_cond") {
@@ -766,6 +774,7 @@ TEST_CASE("output_cond") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
 
 TEST_CASE("branch") {
@@ -810,4 +819,5 @@ TEST_CASE("branch") {
 
     seq.prepare();
     seq.optimize();
+    CompileSeq cs(seq);
 }
