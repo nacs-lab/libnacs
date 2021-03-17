@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <utility>
 #include <type_traits>
 #include <tuple>
@@ -366,6 +367,38 @@ void visit_dfs(T v, Visitor &&visitor)
     while (iterate()) {
     }
 }
+
+// This can be used as key to lookup in a `map` or `set`
+// without eagerly creating a copy of the data.
+template<typename T>
+struct ArrayKey {
+    const T *data;
+    size_t size;
+    const T *begin() const
+    {
+        return data;
+    }
+    const T *end() const
+    {
+        return data + size;
+    }
+    template<typename T2>
+    friend inline std::enable_if_t<!std::is_same_v<ArrayKey<T>,
+                                                   std::remove_cv_t<
+                                                       std::remove_reference_t<T2>>>,bool>
+    operator<(const ArrayKey<T> &lhs, T2 &&rhs)
+    {
+        return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+    }
+    template<typename T2>
+    friend inline std::enable_if_t<!std::is_same_v<ArrayKey<T>,
+                                       std::remove_cv_t<
+                                           std::remove_reference_t<T2>>>,bool>
+    operator<(const T2 &lhs, const ArrayKey<T> &rhs)
+    {
+        return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+    }
+};
 
 }
 
