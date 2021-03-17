@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -373,11 +373,11 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             max_offset = max(max_offset, offset + 1);
             auto load = builder.CreateLoad(argt, ptr);
 #if LLVM_VERSION_MAJOR >= 11
-            load->setAlignment(Align(8));
+            load->setAlignment(Align(alignof(double)));
 #elif LLVM_VERSION_MAJOR >= 10
-            load->setAlignment(MaybeAlign(8));
+            load->setAlignment(MaybeAlign(alignof(double)));
 #else
-            load->setAlignment(8);
+            load->setAlignment(alignof(double));
 #endif
             load->setMetadata(LLVMContext::MD_tbaa, tbaa_const);
             call_args[i] = load;
