@@ -254,7 +254,7 @@ locks_tester()
     std::cout << "PthreadMutex" << std::endl;
     Tester<PthreadMutex>()();
     std::cout << "SpinLock<false>" << std::endl;
-    Tester<SpinLock<false> >()();
+    Tester<SpinLock<false>>()();
     std::cout << "SpinLock<true>" << std::endl;
     Tester<NaCs::SpinLock>()();
     std::cout << "DummyLock" << std::endl;
@@ -265,7 +265,7 @@ int
 main()
 {
     std::cout << "Condition Variable, unique_lock<mutex>" << std::endl;
-    test_cond_var<std::condition_variable, uniqueMutex<> >();
+    test_cond_var<std::condition_variable, uniqueMutex<>>();
 
     locks_tester<test_lock>();
     locks_tester<test_thread_lock>();

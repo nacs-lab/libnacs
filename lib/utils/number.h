@@ -336,7 +336,7 @@ static constexpr struct {
     inline constexpr auto
     operator()(First &&first) const
     {
-        return _SumSingle<std::decay_t<First> >()(std::forward<First>(first));
+        return _SumSingle<std::decay_t<First>>()(std::forward<First>(first));
     }
     template<typename First, typename... Rest>
     inline constexpr auto
@@ -348,7 +348,7 @@ static constexpr struct {
 } sumAll{};
 
 template<typename... Args>
-struct _SumSingle<std::tuple<Args...> > {
+struct _SumSingle<std::tuple<Args...>> {
     template<typename Tuple>
     constexpr inline auto
     operator()(Tuple &&tuple)
