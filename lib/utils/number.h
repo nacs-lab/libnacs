@@ -353,7 +353,7 @@ struct _SumSingle<std::tuple<Args...> > {
     constexpr inline auto
     operator()(Tuple &&tuple)
     {
-        return applyTuple(sumAll, std::forward<Tuple>(tuple));
+        return std::apply(sumAll, std::forward<Tuple>(tuple));
     }
 };
 

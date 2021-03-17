@@ -190,22 +190,6 @@ struct CDeleter {
 template<typename T1, typename T2>
 static constexpr bool isBaseOf = std::is_base_of_v<T1, std::decay_t<T2>>;
 
-// std::experimental::apply
-template<class F, class Tuple, std::size_t... I>
-static inline constexpr decltype(auto)
-_applyTupleImpl(F &&f, Tuple &&t, std::index_sequence<I...>)
-{
-    return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...);
-}
-
-template<class F, class Tuple>
-static inline constexpr decltype(auto) applyTuple(F&& f, Tuple&& t)
-{
-    return _applyTupleImpl(std::forward<F>(f), std::forward<Tuple>(t),
-                           std::make_index_sequence<
-                           std::tuple_size<std::decay_t<Tuple>>::value>{});
-}
-
 // Library Fundamentals TS v2. Most likely replaced by concept in C++20.
 namespace detail {
 template <class Default, class AlwaysVoid,
