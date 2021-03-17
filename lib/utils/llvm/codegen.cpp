@@ -298,6 +298,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
         func->setName(name + ".vec");
     }
 
+    uint32_t max_offset = 0;
     // 1. Create function signature
     auto fty = func->getFunctionType();
     assert(!fty->isVarArg());
@@ -305,11 +306,18 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     auto rt = fty->getReturnType();
     SmallVector<Type*, 8> fsig;
     bool ret_ref = false;
+    bool ret_closure = false;
     auto ret_spec = spec.arg_map.find(uint32_t(-1));
     if (ret_spec != spec.arg_map.end()) {
-        if (ret_spec->second.type == Wrapper::Closure)
-            return nullptr;
-        if (ret_spec->second.type & Wrapper::ByRef) {
+        if (ret_spec->second.type == Wrapper::Closure) {
+            if (!spec.closure || spec.vector_size > 1)
+                return nullptr;
+            auto offset = ret_spec->second.idx;
+            max_offset = max(max_offset, offset + 1);
+            rt = Type::getVoidTy(func->getContext());
+            ret_closure = true;
+        }
+        else if (ret_spec->second.type & Wrapper::ByRef) {
             fsig.push_back(rt->getPointerTo());
             rt = Type::getVoidTy(func->getContext());
             ret_ref = true;
@@ -344,7 +352,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     wrapf->addFnAttr(Attribute::Speculatable);
     wrapf->addFnAttr(Attribute::NoRecurse);
     wrapf->addFnAttr(Attribute::NoUnwind);
-    if (!ret_ref)
+    if (!ret_ref && !ret_closure)
         wrapf->addFnAttr(Attribute::ReadOnly);
 
     BasicBlock *b0 = BasicBlock::Create(m_ctx, "top", wrapf);
@@ -357,7 +365,6 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     argit = wrapf->arg_begin();
     if (ret_ref)
         ++argit;
-    uint32_t max_offset = 0;
     for (unsigned i = 0, j = 0; i < nargs; i++) {
         auto arg_spec = spec.arg_map.find(i);
         if (arg_spec == spec.arg_map.end()) {
@@ -403,6 +410,20 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     auto res = builder.CreateCall(func, call_args);
     if (ret_ref) {
         builder.CreateStore(res, &*wrapf->arg_begin());
+        builder.CreateRetVoid();
+    }
+    else if (ret_closure) {
+        auto offset = ret_spec->second.idx;
+        auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(T_i8, clarg, offset * 8),
+                                         res->getType()->getPointerTo());
+        auto store = builder.CreateStore(res, ptr);
+#if LLVM_VERSION_MAJOR >= 11
+        store->setAlignment(Align(alignof(double)));
+#elif LLVM_VERSION_MAJOR >= 10
+        store->setAlignment(MaybeAlign(alignof(double)));
+#else
+        store->setAlignment(alignof(double));
+#endif
         builder.CreateRetVoid();
     }
     else {

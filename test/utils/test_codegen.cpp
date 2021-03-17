@@ -317,7 +317,7 @@ int main()
         test->testeach_args([&] (double a, double b) { return f0(a, b, nullptr); },
                             "NULL closure");
 
-        IR::GenVal vals[2];
+        IR::GenVal vals[3];
 
         LLVM::Codegen::Wrapper wrap11{true};
         wrap11.add_closure(0, 0);
@@ -347,6 +347,30 @@ int main()
                                 vals[1] = IR::TagVal(a).val;
                                 return f2(vals);
                             }, "Closure 2");
+
+        LLVM::Codegen::Wrapper wrap_ret{true};
+        wrap_ret.add_closure(-1, 0)
+            .add_closure(0, 1);
+        auto test_ret = test->get_llvm_test(wrap_ret);
+        auto f_ret = (void(*)(double, IR::GenVal*))test_ret.get_ptr();
+        test->testeach_args([&] (double a, double b) {
+                                vals[1] = IR::TagVal(a).val;
+                                f_ret(b, vals);
+                                return vals[0].f64;
+                            }, "Closure Return");
+
+        LLVM::Codegen::Wrapper wrap_ret2{true};
+        wrap_ret2.add_closure(-1, 0)
+            .add_closure(0, 2)
+            .add_closure(1, 1);
+        auto test_ret2 = test->get_llvm_test(wrap_ret2);
+        auto f_ret2 = (void(*)(IR::GenVal*))test_ret2.get_ptr();
+        test->testeach_args([&] (double a, double b) {
+                                vals[1] = IR::TagVal(b).val;
+                                vals[2] = IR::TagVal(a).val;
+                                f_ret2(vals);
+                                return vals[0].f64;
+                            }, "Closure Return 2");
     }
 
     {
