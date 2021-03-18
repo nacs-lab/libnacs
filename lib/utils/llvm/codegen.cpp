@@ -646,7 +646,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
                 largs[i] = emit_val(args[i]);
             auto emit_intrinsic =
                 [&] (Intrinsic::ID intrinsic, unsigned _nargs) {
-                    assert(nargs == _nargs);
+                    assert((unsigned)nargs == _nargs);
                     auto intrin = Intrinsic::getDeclaration(m_mod, intrinsic, {T_f64});
                     for (unsigned i = 0; i < _nargs; i++)
                         largs[i] = emit_convert(builder, IR::Type::Float64, largs[i]);
