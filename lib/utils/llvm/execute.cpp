@@ -322,7 +322,7 @@ NACS_EXPORT() Engine::~Engine()
 {
 }
 
-void Engine::reset_dyld()
+NACS_EXPORT() void Engine::reset_dyld()
 {
     m_dyld.reset(new RuntimeDyld(m_memmgr, m_resolver));
 }

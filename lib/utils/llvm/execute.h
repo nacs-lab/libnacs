@@ -200,8 +200,8 @@ public:
     {
         return m_errstr;
     }
+    NACS_EXPORT(utils) void reset_dyld();
 private:
-    void reset_dyld();
     MemMgr m_memmgr;
     Resolver m_resolver;
     std::unique_ptr<RuntimeDyld> m_dyld;
