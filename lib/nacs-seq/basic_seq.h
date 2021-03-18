@@ -143,7 +143,7 @@ public:
         return m_has_branchin;
     }
 
-    void prepare();
+    void prepare(Seq &seq);
     void print(std::ostream &stm) const;
 
     // For testing only
@@ -157,11 +157,12 @@ private:
     bool preoptimize_pulse(uint32_t chn, Env &env);
     bool optimize_order(uint32_t chn);
     bool optimize_endtimes();
-    bool optimize_vars();
+    bool optimize_vars(Seq &seq);
     bool optimize_branch();
     bool preoptimize_eventtimes();
     bool postoptimize_eventtimes();
     EventTime *normalize(const EventTime *time) const;
+    bool optimize_final(Seq &seq);
     void reset_used()
     {
         m_used = false;
@@ -192,6 +193,7 @@ private:
     // Using a different list allows us to not reprocess all of those
     // in each optimization cycle.
     std::list<EventTime::Ref> m_endtimes;
+    std::vector<Var::Ref> m_global_escapes;
 
     // Records the times that are known before
     // We use bare pointers to reference EventTime

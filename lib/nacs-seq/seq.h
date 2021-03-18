@@ -71,6 +71,10 @@ public:
     {
         return m_slot_vars;
     }
+    uint32_t npublic_globals() const
+    {
+        return m_npublic_globals;
+    }
 
     void optimize();
     void prepare();
@@ -89,6 +93,7 @@ private:
     std::vector<Var::Ref> m_slot_vars;
     llvm::StringMap<uint32_t> m_chnids;
     std::vector<std::string> m_chnnames;
+    uint32_t m_npublic_globals;
 };
 
 static inline std::ostream &operator<<(std::ostream &stm, const Seq &seq)
