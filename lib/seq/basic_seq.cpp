@@ -17,7 +17,9 @@
  *************************************************************************/
 
 #include "basic_seq.h"
+
 #include "error.h"
+#include "seq.h"
 
 #include "../utils/llvm/codegen.h"
 #include "../utils/number.h"
@@ -103,7 +105,7 @@ NACS_EXPORT() EventTime &BasicSeq::track_time(const EventTime &t)
     return m_eventtimes.emplace_back(t);
 }
 
-NACS_EXPORT() void BasicSeq::check() const
+NACS_EXPORT() void BasicSeq::prepare(Seq &seq)
 {
     // Pre-compile check to make sure the sequence is computable.
     // 1. Measurements are not accessed from a different basic sequence.
@@ -299,6 +301,116 @@ NACS_EXPORT() void BasicSeq::check() const
             throw error;
         }
     }
+    struct CondVisitor : Env::Visitor {
+        CondVisitor(Seq &seq, BasicSeq &bseq)
+            : seq(seq),
+              bseq(bseq)
+        {
+        }
+
+        bool previsit(Var *var)
+        {
+            if (var->is_const())
+                return false;
+            if (var->is_extern()) {
+                auto id = uint32_t(var->get_extern().second >> 32);
+                if (id == 0) {
+                    ref_types[var] = {true, false};
+                }
+                else {
+                    ref_types[var] = {false, true};
+                }
+                return false;
+            }
+            assert(var->is_call());
+            if (var->ref_none())
+                return false;
+            return ref_types.find(var) == ref_types.end();
+        }
+        void postvisit(Var *var)
+        {
+            assert(var->is_call());
+            int nargs = var->args().size();
+            assert(ref_types.find(var) == ref_types.end());
+            auto &ref_type = ref_types[var];
+            ref_type = {false, false};
+            for (int i = -1; i < nargs; i++) {
+                auto ref = var->get_ref(i);
+                if (!ref)
+                    continue;
+                auto it = ref_types.find(ref);
+                if (it == ref_types.end())
+                    continue;
+                ref_type.first |= it->second.first;
+                ref_type.second |= it->second.second;
+            }
+            if (!ref_type.first || !ref_type.second)
+                return;
+            auto callee = var->get_callee();
+            assert(var->nfreeargs() == 0);
+            auto _args = var->args();
+            llvm::SmallVector<Arg,4> args(_args.begin(), _args.end());
+            for (int i = -1; i < nargs; i++) {
+                auto ref = var->get_ref(i);
+                if (!ref)
+                    continue;
+                auto it = ref_types.find(ref);
+                if (it == ref_types.end() || !it->second.second)
+                    continue;
+                ref = escape_var(ref);
+                if (i < 0) {
+                    callee.var = ref;
+                }
+                else {
+                    args[i] = Arg::create_var(ref);
+                }
+            }
+            auto newvar = callee.is_llvm ? seq.env().new_call(callee.llvm, args, 0) :
+                seq.env().new_call(callee.var, args, 0);
+            global_escapes.emplace(var, newvar);
+        }
+        Var *escape_var(Var *var)
+        {
+            auto &res = global_escapes[var];
+            if (!res) {
+                uint32_t offset = bseq.m_global_escapes.size();
+                assert(offset + 1 <= global_escapes.size());
+                uint32_t global_id = seq.npublic_globals() + offset;
+                bseq.assign_global(global_id, var, 0);
+                // Create global `Var` with a sequence specific pointer identity
+                // so that we can replace it with a normal variable later.
+                // We will allocate the actual global variables
+                // after all the optimizations are done in `optimize_final`.
+                res = seq.env().new_extern({IR::Type::Float64, global_id});
+                // We need to keep a reference to it
+                // so that `Env` will honer the pointer identity
+                bseq.m_global_escapes.push_back(res->ref());
+                assert(bseq.m_global_escapes.size() <= global_escapes.size());
+            }
+            return res;
+        }
+        Var *check_var(Var *var)
+        {
+            if (var->is_const())
+                return var;
+            if (previsit(var))
+                Env::scan_dfs(var, *this);
+            auto it = global_escapes.find(var);
+            if (it != global_escapes.end())
+                return it->second;
+            auto it2 = ref_types.find(var);
+            if (it2 == ref_types.end() || !it2->second.second)
+                return var;
+            return escape_var(var);
+        }
+
+        Seq &seq;
+        BasicSeq &bseq;
+        std::map<Var*,std::pair<bool,bool>> ref_types; // ref_global, ref_measure
+        std::map<Var*,Var*> global_escapes;
+    };
+    CondVisitor cond_visitor(seq, *this);
+
     // Make sure branch conditions are valid.
     for (auto &br: m_branches) {
         auto var = br.cond.get();
@@ -315,6 +427,19 @@ NACS_EXPORT() void BasicSeq::check() const
             }
             throw error;
         }
+        // Unlike everything else, the use of the branch condition
+        // happens **AFTER** user callback, which may change global variables
+        // and we would like to reflect such change in the condition.
+        // However, if the condition depends on a measure in the sequence
+        // that ends up being a function of a global variable, we do not want to update those.
+        // Therefore, create an assignment of global variable from the measure results.
+        // and make the branch condition use those instead.
+        // This way, the result of the measure would be frozen after the sequence.
+        // Due to the explicit escape through global variable assignment
+        // we won't automatically optimize measured results in the conditions.
+        // However, we explicitly check if the assignment is constant
+        // and replace the use of the global variable if that is the case.
+        br.cond.reset(cond_visitor.check_var(var));
     }
     // Make sure endtimes are valid.
     for (auto &time: m_endtimes) {
@@ -794,8 +919,9 @@ bool BasicSeq::postoptimize_eventtimes()
     return changed;
 }
 
-bool BasicSeq::optimize_vars()
+bool BasicSeq::optimize_vars(Seq &seq)
 {
+    bool changed = false;
     for (auto &[chn, info]: m_channels) {
         if (auto v = info.startval->get_assigned_var())
             info.startval.reset(v);
@@ -805,11 +931,37 @@ bool BasicSeq::optimize_vars()
             }
         }
     }
-    for (auto &kv: m_assign) {
-        assert(kv.second.val);
-        if (auto v = kv.second.val->get_assigned_var()) {
-            kv.second.val.reset(v);
+    auto npublic_globals = seq.npublic_globals();
+    for (auto it = m_assign.begin(), end = m_assign.end(); it != end;) {
+        auto &[global_id, assign] = *it;
+        assert(assign.val);
+        if (auto v = assign.val->get_assigned_var())
+            assign.val.reset(v);
+        if (global_id < npublic_globals) {
+            ++it;
+            continue;
         }
+        auto local_id = global_id - npublic_globals;
+        auto &escape = m_global_escapes[local_id];
+        assert(escape);
+        assert(escape->extern_used() >= 1);
+        if (escape->extern_used() == 1 && !escape->used(false)) {
+            // No other of this value anymore
+            changed = true;
+            escape.reset(nullptr);
+            it = m_assign.erase(it);
+            continue;
+        }
+        else if (!assign.val->is_const()) {
+            ++it;
+            continue;
+        }
+        changed = true;
+        // If the assignment to a global escape value is constant,
+        // we can replace it with the constant.
+        escape->assign_var(assign.val.get());
+        escape.reset(nullptr);
+        it = m_assign.erase(it);
     }
     auto check_assumption = [&] (Var *var, auto &as) {
         assert(var->is_const());
@@ -852,7 +1004,8 @@ bool BasicSeq::optimize_vars()
             br.cond.reset(v);
         }
     }
-    return preoptimize_eventtimes();
+    changed |=  preoptimize_eventtimes();
+    return changed;
 }
 
 bool BasicSeq::optimize_branch()
@@ -895,6 +1048,57 @@ bool BasicSeq::optimize_branch()
     m_branches.erase(std::remove_if(m_branches.begin(), m_branches.end(), [&] (const auto &br) {
         return !br.cond;
     }), m_branches.end());
+    return changed;
+}
+
+bool BasicSeq::optimize_final(Seq &seq)
+{
+    bool changed = false;
+    uint32_t npublic_globals = seq.npublic_globals();
+    uint32_t nescape = m_global_escapes.size();
+    int32_t cond_use = 0;
+    for (uint32_t old_id = 0, new_id = 0; old_id < nescape; old_id++) {
+        auto &escape = m_global_escapes[old_id];
+        if (!escape) {
+            assert(m_assign.find(npublic_globals + old_id) == m_assign.end());
+            continue;
+        }
+        changed = true;
+        if (old_id != new_id) {
+            assert(new_id < old_id);
+            auto node = m_assign.extract(npublic_globals + old_id);
+            assert(node);
+            node.key() = npublic_globals + new_id;
+            auto res = m_assign.insert(std::move(node));
+            assert(res.inserted);
+            (void)res;
+        }
+        else {
+            assert(m_assign.find(npublic_globals + new_id) != m_assign.end());
+        }
+        escape->assign_var(seq.get_slot(IR::Type::Float64, npublic_globals + new_id));
+        cond_use += escape->extern_used() - 1;
+        escape.reset(nullptr);
+        new_id++;
+    }
+    if (cond_use > 0) {
+        assert(changed);
+        // If we've created variables assignments, we need to optimize those out.
+        // They can either be used by other values (which are then used in conditions)
+        // or in a condition directly.
+        // The former will be handled by a variable optimization done by the caller,
+        // but we need to handle the latter here.
+        for (auto &br: m_branches) {
+            auto &cond = br.cond;
+            if (auto v = cond->get_assigned_var()) {
+                cond = v->ref();
+                assert(cond->is_extern());
+                cond_use--;
+            }
+            assert(!cond->is_const());
+        }
+        assert(cond_use == 0);
+    }
     return changed;
 }
 

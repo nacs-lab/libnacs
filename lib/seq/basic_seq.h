@@ -134,7 +134,7 @@ public:
     void add_endtime(EventTime &t);
     EventTime &track_time(const EventTime &t);
 
-    void check() const;
+    void prepare(Seq &seq);
     void print(std::ostream &stm) const;
 
     // For testing only
@@ -146,10 +146,11 @@ private:
     bool preoptimize_pulse(uint32_t chn, Env &env);
     bool optimize_order(uint32_t chn);
     bool optimize_endtimes();
-    bool optimize_vars();
+    bool optimize_vars(Seq &seq);
     bool optimize_branch();
     bool preoptimize_eventtimes();
     bool postoptimize_eventtimes();
+    bool optimize_final(Seq &seq);
 
     Var *alloc_startval(Env &env)
     {
@@ -172,6 +173,7 @@ private:
     std::list<EventTime::Ref> m_endtimes;
     // All the times used in the sequence
     std::list<EventTime> m_eventtimes;
+    std::vector<Var::Ref> m_global_escapes;
 
     std::vector<Branch> m_branches;
     BasicSeq *m_default_branch = nullptr;

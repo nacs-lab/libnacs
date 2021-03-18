@@ -202,7 +202,7 @@ NACS_EXPORT() void Seq::optimize()
         m_env.optimize();
         bool changed = false;
         for (auto &seq: m_seqs)
-            changed |= seq.optimize_vars();
+            changed |= seq.optimize_vars(*this);
         changed |= optimize_cfg();
         for (auto &seq: m_seqs)
             changed |= seq.optimize_endtimes();
@@ -214,13 +214,22 @@ NACS_EXPORT() void Seq::optimize()
             break;
         }
     }
-    m_env.gc();
+    bool changed = false;
+    for (auto &seq: m_seqs)
+        changed |= seq.optimize_final(*this);
+    if (changed) {
+        m_env.optimize();
+    }
+    else {
+        m_env.gc();
+    }
 }
 
-NACS_EXPORT() void Seq::check() const
+NACS_EXPORT() void Seq::prepare()
 {
+    m_npublic_globals = m_slot_vars.size();
     for (auto &seq: m_seqs) {
-        seq.check();
+        seq.prepare(*this);
     }
 }
 
