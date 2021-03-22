@@ -226,10 +226,11 @@ test_cond_var()
         cv.notify_all();
     }
     tocPerCycle(timer);
+    std::atomic_bool exit{false};
     std::thread thread([&] {
             Locker locker;
-            for (int i = 0;i < N * 2;i++) {
-                cv.wait(locker);
+            while (!exit) {
+                cv.wait_for(locker, 50ms);
                 std::this_thread::yield();
             }
         });
@@ -243,6 +244,8 @@ test_cond_var()
         cv.notify_all();
     }
     tocPerCycle(timer);
+    exit = true;
+    cv.notify_all();
 }
 
 template<template<typename...> class Tester>
