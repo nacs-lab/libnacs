@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 
 project(libnacs C CXX ASM)
 
@@ -27,6 +27,7 @@ option(ENABLE_INSTALL_NONLIB
   ${IS_UNIX})
 option(ENABLE_SIMD "Enable simd optimization" On)
 option(SEQ_IN_UTILS "Build nacs-seq as part of nacs-utils" Off)
+option(ENABLE_TESTING "Enable building and running testing" On)
 if (ENABLE_LLVM AND STATIC_LLVM)
   set(SEQ_IN_UTILS On FORCE)
 endif()
@@ -133,7 +134,10 @@ endif()
 
 add_subdirectory(lib)
 add_subdirectory(tools)
-add_subdirectory(test)
+if(ENABLE_TESTING)
+  enable_testing()
+  add_subdirectory(test)
+endif()
 
 if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
   include(InstallRequiredSystemLibraries)
