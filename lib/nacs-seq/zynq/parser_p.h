@@ -19,6 +19,8 @@
 #ifndef __NACS_SEQ_ZYNQ_PARSER_P_H__
 #define __NACS_SEQ_ZYNQ_PARSER_P_H__
 
+#include "pulse_time.h"
+
 #include "../../nacs-utils/utils.h"
 
 #include <cmath>
@@ -40,6 +42,8 @@ namespace NaCs::Seq::Zynq {
 // For all of the `read_*` functions, white space are insignificant unless otherwise noted
 // and are ignored between syntax elements.
 struct ParserBase {
+    uint8_t min_time = PulseTime::Min;
+
     std::istream &istm;
     std::string line;
     std::string buff;
@@ -146,7 +150,7 @@ struct ParserBase {
     // This can either be specified as a hex number of cycles (10ns per cycle)
     // or as a decimal floating point followed by a unit.
     // The unit can be either `s`, `ms`, `us` or `ns`.
-    // The smallest time allowed is `PulseTime::Min` cycles or `30ns`.
+    // The smallest time allowed is `min_time` cycles or `30ns/10ns`.
     // Return the number of cycles correspond to the time.
     uint64_t read_waittime();
     // Read a wait command in the format of `(<time>)`.
@@ -156,7 +160,7 @@ struct ParserBase {
     // The returned number is the number of cycles to wait in additional the the
     // minimum time of a TTL pulse.
     // The time specification could either be empty, in which case `0` is returned,
-    // or `t=<time>`, in which case the cycle number minus PulseTime::Min is returned.
+    // or `t=<time>`, in which case the cycle number minus `min_time` is returned.
     uint64_t read_ttlwait();
 
     // Read a TTL all command. Assume (and assert) the first character is `=`.
