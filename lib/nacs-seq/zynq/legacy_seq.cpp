@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "seq.h"
+#include "legacy_seq.h"
 #include "bytecode.h"
 
 #include "../../nacs-utils/number.h"
@@ -28,7 +28,7 @@
 
 namespace NaCs::Seq::Zynq {
 
-NACS_EXPORT() Sequence Sequence::fromBinary(const uint32_t *bin, size_t len)
+NACS_EXPORT() LegacySeq LegacySeq::fromBinary(const uint32_t *bin, size_t len)
 {
     auto exectx = IR::ExeContext::get();
     // [TTL default: 4B]
@@ -88,7 +88,7 @@ NACS_EXPORT() Sequence Sequence::fromBinary(const uint32_t *bin, size_t len)
         cursor += code_len;
     }
     if (cursor >= len)
-        return Sequence(std::move(seq), std::move(defaults), {}, std::move(exectx));
+        return LegacySeq(std::move(seq), std::move(defaults), {}, std::move(exectx));
     uint32_t n_clocks = bin[cursor];
     cursor++;
     std::vector<Clock> clocks(n_clocks);
@@ -104,24 +104,24 @@ NACS_EXPORT() Sequence Sequence::fromBinary(const uint32_t *bin, size_t len)
         clock.len = t_len_ns / 10;
         clock.div = clock_div;
     }
-    return Sequence(std::move(seq), std::move(defaults), std::move(clocks), std::move(exectx));
+    return LegacySeq(std::move(seq), std::move(defaults), std::move(clocks), std::move(exectx));
 }
 
-static void print_channel(std::ostream &stm, Channel::Type chn_type, int chn_id,
+static void print_channel(std::ostream &stm, LegacySeq::Channel::Type chn_type, int chn_id,
                           bool allow_ttl=true, bool allow_clock=false)
 {
     auto invalid_type = [&] { stm << "<invalid channel type" << (int)chn_type << ">"; };
     switch (chn_type) {
-    case Channel::DDS_FREQ:
+    case LegacySeq::Channel::DDS_FREQ:
         stm << "dds_freq";
         break;
-    case Channel::DDS_AMP:
+    case LegacySeq::Channel::DDS_AMP:
         stm << "dds_amp";
         break;
-    case Channel::DAC:
+    case LegacySeq::Channel::DAC:
         stm << "dac";
         break;
-    case Channel::TTL:
+    case LegacySeq::Channel::TTL:
         if (!allow_ttl) {
             invalid_type();
         }
@@ -129,7 +129,7 @@ static void print_channel(std::ostream &stm, Channel::Type chn_type, int chn_id,
             stm << "ttl";
         }
         break;
-    case Channel::CLOCK:
+    case LegacySeq::Channel::CLOCK:
         if (!allow_clock) {
             invalid_type();
         }
@@ -144,7 +144,7 @@ static void print_channel(std::ostream &stm, Channel::Type chn_type, int chn_id,
     stm << "(" << chn_id << ")";
 }
 
-NACS_EXPORT() void Sequence::dumpBinary(std::ostream &stm, const uint32_t *bin, size_t len)
+NACS_EXPORT() void LegacySeq::dumpBinary(std::ostream &stm, const uint32_t *bin, size_t len)
 {
     stm << "TTL default: 0x" << std::hex << std::setfill('0')
         << std::setw(8) << bin[0] << std::dec << std::endl;
@@ -625,22 +625,22 @@ public:
         addWait(t - cur_t);
     }
 
-    int addPulse(Channel chn, Val val, uint64_t t, uint64_t tlim)
+    int addPulse(LegacySeq::Channel chn, LegacySeq::Val val, uint64_t t, uint64_t tlim)
     {
         int mint;
-        if (chn.typ == Channel::TTL) {
+        if (chn.typ == LegacySeq::Channel::TTL) {
             mint = PulseTime::Min;
         }
-        else if (chn.typ == Channel::CLOCK) {
+        else if (chn.typ == LegacySeq::Channel::CLOCK) {
             mint = PulseTime::Clock;
         }
-        else if (chn.typ == Channel::DAC) {
+        else if (chn.typ == LegacySeq::Channel::DAC) {
             mint = PulseTime::DAC;
         }
-        else if (chn.typ == Channel::DDS_FREQ) {
+        else if (chn.typ == LegacySeq::Channel::DDS_FREQ) {
             mint = PulseTime::DDSFreq;
         }
-        else if (chn.typ == Channel::DDS_AMP) {
+        else if (chn.typ == LegacySeq::Channel::DDS_AMP) {
             mint = PulseTime::DDSAmp;
         }
         else {
@@ -649,15 +649,15 @@ public:
         if (t + mint > tlim)
             return -1;
         switch (chn.typ) {
-        case Channel::TTL:
+        case LegacySeq::Channel::TTL:
             return addTTL(t, val.val.i32);
-        case Channel::DDS_FREQ:
+        case LegacySeq::Channel::DDS_FREQ:
             return addDDSFreq(t, uint8_t(chn.id), val.val.f64);
-        case Channel::DDS_AMP:
+        case LegacySeq::Channel::DDS_AMP:
             return addDDSAmp(t, uint8_t(chn.id), val.val.f64);
-        case Channel::DAC:
+        case LegacySeq::Channel::DAC:
             return addDAC(t, uint8_t(chn.id), val.val.f64);
-        case Channel::CLOCK:
+        case LegacySeq::Channel::CLOCK:
             return addClock(t, uint8_t(val.val.i32 - 1));
         default:
             throw std::runtime_error("Invalid Pulse.");
@@ -669,14 +669,14 @@ public:
 };
 
 // Easier to deal with than static members.
-static constexpr Channel clock_chn{Channel::Type::CLOCK, 0};
+static constexpr LegacySeq::Channel clock_chn{LegacySeq::Channel::CLOCK, 0};
 static constexpr int default_clock_div = 100;
 
 class Scheduler {
-    std::vector<Sequence::Pulse> &pulses;
+    std::vector<LegacySeq::Pulse> &pulses;
     size_t n_pulses;
-    std::map<Channel,Val> &defaults;
-    std::vector<Sequence::Clock> &clocks;
+    std::map<LegacySeq::Channel,LegacySeq::Val> &defaults;
+    std::vector<LegacySeq::Clock> &clocks;
     Writer writer;
 
     Time::Constraints t_cons;
@@ -688,9 +688,9 @@ class Scheduler {
     // Final value for each pulses.
     // This value can be computed from `start_vals` and `pulses` but is cached because
     // it is already computed when initializing `start_vals`. See `init_pulse_vals`
-    std::vector<Val> end_vals;
+    std::vector<LegacySeq::Val> end_vals;
     // The value we should initialize the channel to at the beginning of the sequence.
-    std::map<Channel,Val> init_vals;
+    std::map<LegacySeq::Channel,LegacySeq::Val> init_vals;
 
     /**
      * States for timing.
@@ -729,7 +729,7 @@ class Scheduler {
     // The only code that mutate this is `record_pulse` and `finalize_chn`.
     // * `record_pulse` adds a new pulse to `cur_pulses` if it's not finished already.
     // * `finalize_chn` removes pulses from `cur_pulses` after their end time.
-    std::map<Channel,size_t> cur_pulses;
+    std::map<LegacySeq::Channel,size_t> cur_pulses;
     size_t cursor = 0;
 
     /**
@@ -770,7 +770,7 @@ class Scheduler {
 
     // Add a pulse at `t`. The caller is expected to check the time limit
     // before calling this function.
-    void output_pulse(Channel cid, Val val, uint64_t t)
+    void output_pulse(LegacySeq::Channel cid, LegacySeq::Val val, uint64_t t)
     {
         while (true) {
             uint64_t tlim = next_clock_time;
@@ -778,7 +778,7 @@ class Scheduler {
                 tlim += start_t;
             int min_dt = writer.addPulse(cid, val, t + start_t, tlim);
             if (min_dt < 0) {
-                int min_dt = writer.addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
+                int min_dt = writer.addPulse(clock_chn, LegacySeq::Val::get<uint32_t>(next_clock_div),
                                              next_clock_time + start_t, UINT64_MAX);
                 prev_t = next_clock_time;
                 next_t = prev_t + min_dt;
@@ -795,7 +795,7 @@ class Scheduler {
         }
     }
 
-    Val calc_pulse(size_t id, uint64_t t)
+    LegacySeq::Val calc_pulse(size_t id, uint64_t t)
     {
         auto &pulse = pulses[id];
         uint64_t rel_t = t < pulse.t ? 0 : t - pulse.t;
@@ -823,7 +823,7 @@ class Scheduler {
     // * Remove the pulse from `cur_pulses`
     // * Does **NOT** add any output. If the user want to output the final value
     //   of the pulse, the value can be read from the `end_vals`.
-    auto finalize_chn(Channel cid) -> decltype(cur_pulses.find(cid))
+    auto finalize_chn(LegacySeq::Channel cid) -> decltype(cur_pulses.find(cid))
     {
         auto it = cur_pulses.find(cid);
         if (it == cur_pulses.end())
@@ -837,13 +837,13 @@ class Scheduler {
      */
     // Channels that are finished and needs their final value outputted.
     // This will be overwritten if a new pulse is taking over on the channel.
-    std::map<Channel,Val> to_flush;
+    std::map<LegacySeq::Channel,LegacySeq::Val> to_flush;
     // New pulse on the channel. We don't output immediately in case
     // the next pulse starts before that.
     // The one we actually need to output is recorded for the channel in
     // `latest_pending`.
     std::vector<size_t> pending;
-    std::map<Channel,size_t> latest_pending;
+    std::map<LegacySeq::Channel,size_t> latest_pending;
     // Check if any channel has overdue changes.
     // This includes new pulses or finishing of pulses that should happen
     // before the next preferred time point.
@@ -968,16 +968,16 @@ class Scheduler {
     {
         // Populate `start_vals` and `end_vals` for all pulses,
         // and `init_vals` for all channels.
-        std::map<Channel,Val> cur_vals;
+        std::map<LegacySeq::Channel,LegacySeq::Val> cur_vals;
         for (size_t i = 0; i < n_pulses; i++) {
             auto &pulse = pulses[i];
             auto cid = pulse.chn;
             auto it = cur_vals.find(cid);
-            Val val;
+            LegacySeq::Val val;
             if (it == cur_vals.end()) {
                 // This is a new channel, find it's default value and populate `init_vals`
                 auto dit = defaults.find(cid);
-                val = dit == defaults.end() ? Val() : dit->second;
+                val = dit == defaults.end() ? LegacySeq::Val() : dit->second;
                 it = cur_vals.insert({cid, val}).first;
                 init_vals[cid] = val;
             }
@@ -992,7 +992,7 @@ class Scheduler {
     }
 
 public:
-    Scheduler(Sequence &seq, buff_ostream &stm, Time::Constraints t_cons)
+    Scheduler(LegacySeq &seq, buff_ostream &stm, Time::Constraints t_cons)
         : pulses(seq.pulses),
           n_pulses(pulses.size()),
           defaults(seq.defaults),
@@ -1006,7 +1006,7 @@ public:
 
     void init()
     {
-        auto ttl_it = defaults.find({Channel::TTL, 0});
+        auto ttl_it = defaults.find({LegacySeq::Channel::TTL, 0});
         uint32_t cur_ttl = 0;
         uint32_t all_ttl_mask = 0;
         if (ttl_it != defaults.end())
@@ -1022,7 +1022,7 @@ public:
         size_t to = 0, from = 0;
         for (;from < n_pulses;from++, to++) {
             auto &pulse = pulses[from];
-            if (pulse.chn.typ != Channel::TTL) {
+            if (pulse.chn.typ != LegacySeq::Channel::TTL) {
                 if (from != to)
                     pulses[to] = std::move(pulse);
                 continue;
@@ -1031,7 +1031,7 @@ public:
             assert(pulse.chn.id < 32);
             uint32_t mask = uint32_t(1) << pulse.chn.id;
             all_ttl_mask = all_ttl_mask | mask;
-            pulse.set_start(Val::get<double>((ttl_val & mask) != 0));
+            pulse.set_start(LegacySeq::Val::get<double>((ttl_val & mask) != 0));
             bool val = pulse(pulse.t).val.f64 != 0;
             uint32_t new_ttl_val;
             if (val) {
@@ -1045,13 +1045,13 @@ public:
             }
             ttl_val = new_ttl_val;
             if (prev_ttl_idx != -1 && prev_ttl_t == pulse.t) {
-                pulses[prev_ttl_idx].set(Val::get<uint32_t>(new_ttl_val));
+                pulses[prev_ttl_idx].set(LegacySeq::Val::get<uint32_t>(new_ttl_val));
                 to--;
             } else {
                 prev_ttl_idx = to;
                 prev_ttl_t = pulse.t;
-                pulse.chn = {Channel::Type::TTL, 0};
-                pulse.set(Val::get<uint32_t>(new_ttl_val));
+                pulse.chn = {LegacySeq::Channel::TTL, 0};
+                pulse.set(LegacySeq::Val::get<uint32_t>(new_ttl_val));
                 if (from != to) {
                     pulses[to] = std::move(pulse);
                 }
@@ -1081,7 +1081,7 @@ public:
         start_t = writer.start(next_t);
         if (clocks.empty()) {
             // Start continuous clock with default divider
-            writer.addPulse(clock_chn, Val::get<uint32_t>(default_clock_div),
+            writer.addPulse(clock_chn, LegacySeq::Val::get<uint32_t>(default_clock_div),
                             start_t, UINT64_MAX);
             start_t += default_clock_div;
         }
@@ -1091,7 +1091,7 @@ public:
             auto first_clock = clocks[0];
             if (first_clock.t <= first_clock.div) {
                 clock_neg_offset = int(first_clock.div - first_clock.t);
-                writer.addPulse(clock_chn, Val::get<uint32_t>(first_clock.div),
+                writer.addPulse(clock_chn, LegacySeq::Val::get<uint32_t>(first_clock.div),
                                 start_t, UINT64_MAX);
                 next_clock_time = first_clock.len - clock_neg_offset;
                 start_t += clock_neg_offset;
@@ -1140,7 +1140,7 @@ public:
             }
         }
         while (next_clock_time != UINT64_MAX) {
-            int mindt = writer.addPulse(clock_chn, Val::get<uint32_t>(next_clock_div),
+            int mindt = writer.addPulse(clock_chn, LegacySeq::Val::get<uint32_t>(next_clock_div),
                                         next_clock_time + start_t, UINT64_MAX);
             next_t = next_clock_time + mindt;
             forward_clock();
@@ -1152,7 +1152,7 @@ public:
 
 } // anonymous
 
-static uint32_t SeqToByteCode(buff_ostream &stm, Sequence &seq)
+static uint32_t SeqToByteCode(buff_ostream &stm, LegacySeq &seq)
 {
     // The bytecode is guaranteed to not enable any channel that is not present in the mask.
     Scheduler state(seq, stm, {50, 40, 4096});
@@ -1162,7 +1162,7 @@ static uint32_t SeqToByteCode(buff_ostream &stm, Sequence &seq)
 
 } // ByteCode
 
-NACS_EXPORT() std::vector<uint8_t> Sequence::toByteCode(uint32_t *ttl_mask)
+NACS_EXPORT() std::vector<uint8_t> LegacySeq::toByteCode(uint32_t *ttl_mask)
 {
     basic_vector_ostream<std::vector<uint8_t>> stm;
     auto tm = ByteCode::SeqToByteCode(stm, *this);
@@ -1171,7 +1171,7 @@ NACS_EXPORT() std::vector<uint8_t> Sequence::toByteCode(uint32_t *ttl_mask)
     return stm.get_buf();
 }
 
-NACS_EXPORT() uint8_t *Sequence::toByteCode(size_t *sz, uint32_t *ttl_mask)
+NACS_EXPORT() uint8_t *LegacySeq::toByteCode(size_t *sz, uint32_t *ttl_mask)
 {
     malloc_ostream stm;
     auto tm = ByteCode::SeqToByteCode(stm, *this);
@@ -1189,7 +1189,7 @@ extern "C" NACS_EXPORT() uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data,
                                                            size_t *code_len,
                                                            uint32_t *ttl_mask)
 {
-    return Sequence::fromBinary(data, data_len).toByteCode(code_len, ttl_mask);
+    return LegacySeq::fromBinary(data, data_len).toByteCode(code_len, ttl_mask);
 }
 
 extern "C" NACS_EXPORT() uint64_t nacs_seq_bytecode_total_time(const uint8_t *code,

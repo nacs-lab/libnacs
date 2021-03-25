@@ -26,7 +26,6 @@
  * This is currently sequential and being executed on the CPU but a future version
  * could be executed on the ZYNQ direction and exploid more parallelism.
  *
- * The main way to generate bytecode is from a `Sequence`.
  * There is no way provided to manually construct a bytecode since that is not
  * the (main) usecase.
  */
