@@ -24,67 +24,64 @@
 #include <set>
 #include <stdint.h>
 
-#ifndef __NACS_SEQ_ZYNQ_SEQ_H__
-#define __NACS_SEQ_ZYNQ_SEQ_H__
+#ifndef __NACS_SEQ_ZYNQ_LEGACY_SEQ_H__
+#define __NACS_SEQ_ZYNQ_LEGACY_SEQ_H__
 
 namespace NaCs::Seq::Zynq {
 
-struct Channel {
-    enum Type {
-        TTL = 1,
-        DDS_FREQ = 2,
-        DDS_AMP = 3,
-        DAC = 4,
-        CLOCK = 5
+struct LegacySeq {
+    struct Channel {
+        enum Type {
+            TTL = 1,
+            DDS_FREQ = 2,
+            DDS_AMP = 3,
+            DAC = 4,
+            CLOCK = 5
+        };
+        Type typ;
+        int id;
+        friend inline bool operator<(const Channel &id1, const Channel id2)
+        {
+            if (id1.typ < id2.typ) {
+                return true;
+            } else if (id1.typ > id2.typ) {
+                return false;
+            }
+            return id1.id < id2.id;
+        }
     };
-    Type typ;
-    int id;
-};
-
-static inline bool operator<(const Channel &id1, const Channel id2)
-{
-    if (id1.typ < id2.typ) {
-        return true;
-    } else if (id1.typ > id2.typ) {
-        return false;
-    }
-    return id1.id < id2.id;
-}
-
-struct Val {
-    IR::GenVal val;
-    Val(IR::GenVal v=getGenVal<double>(0)) : val(v)
-    {}
-    template<typename T, typename T2> static inline Val get(T2 val=0)
-    {
-        Val v;
-        v.val = getGenVal<T>(val);
-        return v;
-    }
-    template<typename T> static inline Val get()
-    {
-        return get<T>(0);
-    }
-private:
-    template<typename T, typename T2>
-    static inline std::enable_if_t<std::is_same_v<T,double>, IR::GenVal>
-    getGenVal(T2 val)
-    {
-        IR::GenVal gv;
-        gv.f64 = val;
-        return gv;
-    }
-    template<typename T, typename T2>
-    static inline std::enable_if_t<std::is_same_v<T,uint32_t>, IR::GenVal>
-    getGenVal(T2 val)
-    {
-        IR::GenVal gv;
-        gv.i32 = val;
-        return gv;
-    }
-};
-
-struct Sequence {
+    struct Val {
+        IR::GenVal val;
+        Val(IR::GenVal v=getGenVal<double>(0)) : val(v)
+        {}
+        template<typename T, typename T2> static inline Val get(T2 val=0)
+        {
+            Val v;
+            v.val = getGenVal<T>(val);
+            return v;
+        }
+        template<typename T> static inline Val get()
+        {
+            return get<T>(0);
+        }
+    private:
+        template<typename T, typename T2>
+        static inline std::enable_if_t<std::is_same_v<T,double>, IR::GenVal>
+        getGenVal(T2 val)
+        {
+            IR::GenVal gv;
+            gv.f64 = val;
+            return gv;
+        }
+        template<typename T, typename T2>
+        static inline std::enable_if_t<std::is_same_v<T,uint32_t>, IR::GenVal>
+        getGenVal(T2 val)
+        {
+            IR::GenVal gv;
+            gv.i32 = val;
+            return gv;
+        }
+    };
     struct Pulse {
         typedef IR::ExeContext::Func<double(double,double)> func_t;
         uint64_t t;
@@ -140,16 +137,16 @@ struct Sequence {
     std::map<Channel,Val> defaults;
     std::vector<Clock> clocks;
     std::unique_ptr<IR::ExeContext> exectx;
-    Sequence(std::vector<Pulse> &&_pulses, std::map<Channel,Val> &&_defaults,
-             std::vector<Clock> &&_clocks={},
-             std::unique_ptr<IR::ExeContext> _exectx=IR::ExeContext::get())
+    LegacySeq(std::vector<Pulse> &&_pulses, std::map<Channel,Val> &&_defaults,
+              std::vector<Clock> &&_clocks={},
+              std::unique_ptr<IR::ExeContext> _exectx=IR::ExeContext::get())
         : pulses(std::move(_pulses)),
           defaults(std::move(_defaults)),
           clocks(std::move(_clocks)),
           exectx(std::move(_exectx))
     {
     }
-    static Sequence fromBinary(const uint32_t *data, size_t len);
+    static LegacySeq fromBinary(const uint32_t *data, size_t len);
     static void dumpBinary(std::ostream &stm, const uint32_t *data, size_t len);
     std::vector<uint8_t> toByteCode(uint32_t *ttl_mask);
     uint8_t *toByteCode(size_t *sz, uint32_t *ttl_mask);
