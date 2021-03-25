@@ -17,7 +17,7 @@
  *************************************************************************/
 
 #include "parser_p.h"
-#include "seq.h"
+#include "pulse_time.h"
 
 #include "../../utils/errors.h"
 

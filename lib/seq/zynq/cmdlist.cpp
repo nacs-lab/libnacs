@@ -27,6 +27,8 @@
 #include <iomanip>
 #include <type_traits>
 
+#include <assert.h>
+
 namespace NaCs::Seq::Zynq::CmdList {
 
 NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)

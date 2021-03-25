@@ -25,6 +25,8 @@
 #include <fstream>
 #include <sstream>
 
+#include <assert.h>
+
 using namespace NaCs;
 using namespace NaCs::Seq::Zynq;
 

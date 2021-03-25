@@ -21,7 +21,7 @@
 
 #include <ostream>
 
-#include "seq.h"
+#include "pulse_time.h"
 
 // This file contains a few classes/functions that are useful for both bytecode
 // and command list.
