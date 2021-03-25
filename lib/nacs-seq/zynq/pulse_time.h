@@ -23,6 +23,8 @@
 
 namespace NaCs::Seq::Zynq::PulseTime {
 static constexpr uint8_t Min = 3;
+// New version of the FPGA code has smaller minimum pulse time.
+static constexpr uint8_t Min2 = 1;
 static constexpr uint8_t _DDS = 50;
 static constexpr uint8_t DDSFreq = _DDS;
 static constexpr uint8_t DDSAmp = _DDS;
