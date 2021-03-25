@@ -25,8 +25,10 @@
 
 namespace NaCs::Seq::Zynq::ByteCode {
 
-NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
+NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len, uint32_t version)
 {
+    if (version == 0 || version > 2)
+        throw std::runtime_error("Invalid ByteCode version number.");
     // Do not use the `ExeState` helper to avoid fusing of instructions.
     size_t count = 0;
     for (size_t i = 0; i < code_len;) {
@@ -40,8 +42,10 @@ NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
     return count;
 }
 
-NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code_len)
+NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code_len,
+                             uint32_t version)
 {
+    int min_time = version >= 2 ? PulseTime::Min2 : PulseTime::Min;
     for (size_t i = 0; i < code_len;) {
         auto *p = &code[i];
         uint8_t b = *p;
@@ -52,13 +56,13 @@ NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code
         case OpCode::TTLAll: {
             auto inst = Mem::load_unalign<Inst::TTLAll>(p);
             stm << "ttl=0x" << std::hex << inst.val << " t=0x" << int(inst.t)
-                << "(+0x" << int(PulseTime::Min) << ")" << std::dec << std::endl;
+                << "(+0x" << min_time << ")" << std::dec << std::endl;
             break;
         }
         case OpCode::TTL2: {
             auto inst = Mem::load_unalign<Inst::TTL2>(p);
             stm << "ttl2(" << int(inst.val1) << ", " << int(inst.val2)
-                << ") t=0x" << int(inst.t) << "(+0x" << int(PulseTime::Min) << ")"
+                << ") t=0x" << int(inst.t) << "(+0x" << min_time << ")"
                 << std::dec << std::endl;
             break;
         }
@@ -66,14 +70,14 @@ NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code
             auto inst = Mem::load_unalign<Inst::TTL4>(p);
             stm << "ttl4(" << int(inst.val1) << ", " << int(inst.val2) << ", "
                 << int(inst.val3) << ", " << int(inst.val4) << ") t=0x0(+0x"
-                << int(PulseTime::Min) << ")" << std::dec << std::endl;
+                << min_time << ")" << std::dec << std::endl;
             break;
         }
         case OpCode::TTL5: {
             auto inst = Mem::load_unalign<Inst::TTL5>(p);
             stm << "ttl5(" << int(inst.val1) << ", " << int(inst.val2) << ", "
                 << int(inst.val3) << ", " << int(inst.val4) << ", " << int(inst.val5)
-                << ") t=0x" << int(inst.t) << "(+0x" << int(PulseTime::Min) << ")"
+                << ") t=0x" << int(inst.t) << "(+0x" << min_time << ")"
                 << std::dec << std::endl;
             break;
         }
@@ -179,19 +183,27 @@ NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code
 }
 
 NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len,
-                         uint32_t ttl_mask)
+                         uint32_t ttl_mask, uint32_t version)
 {
+    if (version == 0 || version > 2)
+        throw std::runtime_error("Invalid ByteCode version number.");
     if (ttl_mask)
         stm << "ttl_mask=0x" << std::hex << ttl_mask << std::dec << std::endl;
     Printer printer{stm};
     ExeState state;
+    if (version >= 2)
+        state.min_time = PulseTime::Min2;
     state.run(printer, code, code_len);
 }
 
-NACS_EXPORT() uint64_t total_time(const uint8_t *code, size_t code_len)
+NACS_EXPORT() uint64_t total_time(const uint8_t *code, size_t code_len, uint32_t version)
 {
+    if (version == 0 || version > 2)
+        throw std::runtime_error("Invalid ByteCode version number.");
     TimeKeeper keeper;
     ExeState state;
+    if (version >= 2)
+        state.min_time = PulseTime::Min2;
     state.run(keeper, code, code_len);
     return keeper.total_t;
 }

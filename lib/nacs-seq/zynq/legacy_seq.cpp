@@ -1195,5 +1195,5 @@ extern "C" NACS_EXPORT() uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data,
 extern "C" NACS_EXPORT() uint64_t nacs_seq_bytecode_total_time(const uint8_t *code,
                                                                size_t code_len)
 {
-    return ByteCode::total_time(code, code_len);
+    return ByteCode::total_time(code, code_len, 1);
 }

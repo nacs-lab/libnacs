@@ -31,8 +31,10 @@
 
 namespace NaCs::Seq::Zynq::CmdList {
 
-NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
+NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len, uint32_t version)
 {
+    if (version == 0 || version > 2)
+        throw std::runtime_error("Invalid CmdList version number.");
     size_t count = 0;
     for (size_t i = 0; i < code_len;) {
         uint8_t b = code[i];
@@ -46,19 +48,27 @@ NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
 }
 
 NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len,
-                         uint32_t ttl_mask)
+                         uint32_t ttl_mask, uint32_t version)
 {
+    if (version == 0 || version > 2)
+        throw std::runtime_error("Invalid CmdList version number.");
     if (ttl_mask)
         stm << "ttl_mask=0x" << std::hex << ttl_mask << std::dec << std::endl;
     Printer printer{stm};
     ExeState state;
+    if (version >= 2)
+        state.min_time = PulseTime::Min2;
     state.run(printer, code, code_len);
 }
 
-NACS_EXPORT() uint64_t total_time(const uint8_t *code, size_t code_len)
+NACS_EXPORT() uint64_t total_time(const uint8_t *code, size_t code_len, uint32_t version)
 {
+    if (version == 0 || version > 2)
+        throw std::runtime_error("Invalid CmdList version number.");
     TimeKeeper keeper;
     ExeState state;
+    if (version >= 2)
+        state.min_time = PulseTime::Min2;
     state.run(keeper, code, code_len);
     return keeper.total_t;
 }
@@ -266,9 +276,13 @@ struct Parser : ParserBase {
 
 }
 
-NACS_EXPORT() uint32_t parse(buff_ostream &ostm, std::istream &istm)
+NACS_EXPORT() uint32_t parse(buff_ostream &ostm, std::istream &istm, uint32_t version)
 {
     Parser parser(istm);
+    if (version == 0 || version > 2)
+        throw std::runtime_error("Invalid CmdList version number.");
+    if (version >= 2)
+        parser.min_time = PulseTime::Min2;
     auto [cont, ttl_mask] = parser.read_ttlmask();
     if (!cont)
         return ttl_mask;
