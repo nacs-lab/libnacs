@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../lib/nacs-seq/zynq/cmdlist.h"
+#include "../lib/nacs-seq/zynq/bytecode.h"
 #include "../lib/nacs-utils/log.h"
 #include "../lib/nacs-utils/errors.h"
 #include "../lib/nacs-utils/streams.h"
@@ -25,52 +25,6 @@
 #include <fstream>
 
 using namespace NaCs;
-
-int parse(int argc, char **argv)
-{
-    if (argc < 1) {
-        Log::error("No input file specified.\n");
-        return 1;
-    }
-    else if (argc < 2) {
-        Log::error("No output file specified.\n");
-        return 1;
-    }
-    else if (argc != 2) {
-        Log::error("Wrong number of arguments.\n");
-        return 1;
-    }
-    std::ifstream istm(argv[0]);
-    if (!istm) {
-        Log::error("Cannot open input file.\n");
-        return 1;
-    }
-
-    // Hard code for now
-    uint32_t ver = 2;
-
-    uvector_ostream vstm;
-    uint32_t ttl_mask;
-    try {
-        ttl_mask = Seq::Zynq::CmdList::parse(vstm, istm, ver);
-    }
-    catch (const SyntaxError &err) {
-        std::cerr << err;
-        return 1;
-    }
-    std::ofstream ostm(argv[1], std::ios::binary);
-    if (!ostm) {
-        Log::error("Cannot open output file.\n");
-        return 1;
-    }
-    ostm.write((char*)&ver, 4);
-    auto v = vstm.get_buf();
-    uint64_t len_ns = Seq::Zynq::CmdList::total_time(v.data(), v.size(), ver) * 10;
-    ostm.write((char*)&len_ns, 8);
-    ostm.write((char*)&ttl_mask, 4);
-    ostm.write((char*)v.data(), v.size());
-    return 0;
-}
 
 int print(int argc, char **argv)
 {
@@ -103,7 +57,7 @@ int print(int argc, char **argv)
 
     std::string str(std::istreambuf_iterator<char>(istm), {});
     if (str.size() < 16) {
-        Log::error("Cmd list too short.\n");
+        Log::error("Bytecode too short.\n");
         return 1;
     }
     auto str_data = (const uint8_t*)str.data();
@@ -114,7 +68,7 @@ int print(int argc, char **argv)
     str_data += 4;
     str_sz -= 4;
     if (ver == 0 || ver > 2) {
-        Log::error("Wrong cmd list file version.\n");
+        Log::error("Wrong bytecode file version.\n");
         return 1;
     }
 
@@ -129,7 +83,7 @@ int print(int argc, char **argv)
     str_sz -= 4;
 
     *stm << "# " << len_ns << " ns" << std::endl;
-    Seq::Zynq::CmdList::print(*stm, str_data, str_sz, ttl_mask, ver);
+    Seq::Zynq::ByteCode::print(*stm, str_data, str_sz, ttl_mask, ver);
     return 0;
 }
 
@@ -139,10 +93,7 @@ int main(int argc, char **argv)
         Log::error("No action specified.\n");
         return 1;
     }
-    if (strcmp(argv[1], "parse") == 0) {
-        return parse(argc - 2, argv + 2);
-    }
-    else if (strcmp(argv[1], "print") == 0) {
+    if (strcmp(argv[1], "print") == 0) {
         return print(argc - 2, argv + 2);
     }
     else {
