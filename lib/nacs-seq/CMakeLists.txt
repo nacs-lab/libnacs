@@ -4,13 +4,13 @@ set(nacs_seq_HDRS)
 set(nacs_seq_zynq_HDRS
   zynq/bytecode.h
   zynq/cmdlist.h
-  zynq/pulse_time.h
-  zynq/seq.h)
+  zynq/legacy_seq.h
+  zynq/pulse_time.h)
 set(nacs_seq_SRCS
   zynq/bytecode.cpp
   zynq/cmdlist.cpp
   zynq/parser.cpp
-  zynq/seq.cpp)
+  zynq/legacy_seq.cpp)
 set(nacs_seq_LINKS)
 
 if(SEQ_IN_UTILS)

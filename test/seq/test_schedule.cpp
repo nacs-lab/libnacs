@@ -18,7 +18,7 @@
 
 #include "../../lib/nacs-utils/timer.h"
 #include "../../lib/nacs-seq/zynq/bytecode.h"
-#include "../../lib/nacs-seq/zynq/seq.h"
+#include "../../lib/nacs-seq/zynq/legacy_seq.h"
 
 #include <iostream>
 #include <fstream>
@@ -38,11 +38,11 @@ int main(int argc, char **argv)
     std::vector<uint32_t> data(filesize / 4);
     istm.read((char*)data.data(), filesize);
     Timer timer;
-    auto code = Sequence::fromBinary(data.data(), data.size())
+    auto code = LegacySeq::fromBinary(data.data(), data.size())
         .toByteCode(nullptr);
     timer.print();
     size_t code_len;
-    auto code2 = Sequence::fromBinary(data.data(), data.size())
+    auto code2 = LegacySeq::fromBinary(data.data(), data.size())
         .toByteCode(&code_len, nullptr);
 
     if (argc >= 3) {
