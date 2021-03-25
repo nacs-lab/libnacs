@@ -210,10 +210,10 @@ static constexpr uint8_t inst_size[14] = {
  *
  * Note that this does not merge wait instructions.
  */
-size_t count(const uint8_t *code, size_t code_len);
-static inline size_t count(const std::vector<uint8_t> &code)
+size_t count(const uint8_t *code, size_t code_len, uint32_t version);
+static inline size_t count(const std::vector<uint8_t> &code, uint32_t version)
 {
-    return count(&code[0], code.size());
+    return count(&code[0], code.size(), version);
 }
 
 /**
@@ -222,20 +222,21 @@ static inline size_t count(const std::vector<uint8_t> &code)
  * Similar to most other functions on the bytecode, this merge wait instructions together
  * and also merge wait into TTL instructions.
  */
-void print(std::ostream &stm, const uint8_t *code, size_t code_len, uint32_t ttl_mask=0);
+void print(std::ostream &stm, const uint8_t *code, size_t code_len,
+           uint32_t ttl_mask, uint32_t version);
 static inline void print(std::ostream &stm, const std::vector<uint8_t> &code,
-                         uint32_t ttl_mask=0)
+                         uint32_t ttl_mask, uint32_t version)
 {
-    print(stm, &code[0], code.size(), ttl_mask);
+    print(stm, &code[0], code.size(), ttl_mask, version);
 }
 
 /**
  * Total time it takes to execute the bytecode.
  */
-uint64_t total_time(const uint8_t *code, size_t code_len);
-static inline uint64_t total_time(const std::vector<uint8_t> &code)
+uint64_t total_time(const uint8_t *code, size_t code_len, uint32_t version);
+static inline uint64_t total_time(const std::vector<uint8_t> &code, uint32_t version)
 {
-    return total_time(&code[0], code.size());
+    return total_time(&code[0], code.size(), version);
 }
 
 // Keep track of user state during execution of bytecode
@@ -272,6 +273,8 @@ struct ExeState {
      */
     template<typename T>
     void run(T &&cb, const uint8_t *code, size_t len);
+
+    uint8_t min_time = PulseTime::Min;
 
 private:
     // Unaligned and typed load.
@@ -346,7 +349,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
         switch (op) {
         case OpCode::TTLAll: {
             auto inst = loadInst<Inst::TTLAll>(p);
-            runTTL(inst.val, inst.t + PulseTime::Min);
+            runTTL(inst.val, inst.t + min_time);
             break;
         }
         case OpCode::TTL2: {
@@ -355,7 +358,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             ttl = ttl ^ (1 << inst.val1);
             if (inst.val2 != inst.val1)
                 ttl = ttl ^ (1 << inst.val2);
-            runTTL(ttl, inst.t + PulseTime::Min);
+            runTTL(ttl, inst.t + min_time);
             break;
         }
         case OpCode::TTL4: {
@@ -366,7 +369,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             ttl = ttl ^ (1 << inst.val3);
             if (inst.val4 != inst.val3)
                 ttl = ttl ^ (1 << inst.val4);
-            runTTL(ttl, PulseTime::Min);
+            runTTL(ttl, min_time);
             break;
         }
         case OpCode::TTL5: {
@@ -377,7 +380,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             ttl = ttl ^ (1 << inst.val3);
             ttl = ttl ^ (1 << inst.val4);
             ttl = ttl ^ (1 << inst.val5);
-            runTTL(ttl, inst.t + PulseTime::Min);
+            runTTL(ttl, inst.t + min_time);
             break;
         }
         case OpCode::Wait: {

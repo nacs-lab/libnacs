@@ -181,9 +181,9 @@ uint8_t ParserBase::read_ddschn(const char *name)
 
 uint64_t ParserBase::read_waittime()
 {
-    auto t_hex = read_hex(PulseTime::Min);
+    auto t_hex = read_hex(min_time);
     if (t_hex.second != -1) {
-        assert(t_hex.first >= PulseTime::Min);
+        assert(t_hex.first >= min_time);
         return t_hex.first;
     }
     auto t_flt = read_float();
@@ -244,7 +244,7 @@ uint64_t ParserBase::read_ttlwait()
     if (peek() != '=')
         syntax_error("Invalid ttl time: expecting `=`", colno + 1);
     colno++;
-    return read_waittime() - PulseTime::Min;
+    return read_waittime() - min_time;
 }
 
 uint32_t ParserBase::read_ttlall()

@@ -152,10 +152,10 @@ static constexpr uint8_t cmd_size[10] = {
  *
  * Note that this does not merge wait instructions.
  */
-size_t count(const uint8_t *code, size_t code_len);
-static inline size_t count(const std::vector<uint8_t> &code)
+size_t count(const uint8_t *code, size_t code_len, uint32_t version);
+static inline size_t count(const std::vector<uint8_t> &code, uint32_t version)
 {
-    return count(&code[0], code.size());
+    return count(&code[0], code.size(), version);
 }
 
 /**
@@ -164,20 +164,21 @@ static inline size_t count(const std::vector<uint8_t> &code)
  * Similar to most other functions on the cmdlist, this merge wait instructions together
  * and also merge wait into TTL instructions.
  */
-void print(std::ostream &stm, const uint8_t *code, size_t code_len, uint32_t ttl_mask=0);
+void print(std::ostream &stm, const uint8_t *code, size_t code_len,
+           uint32_t ttl_mask, uint32_t version);
 static inline void print(std::ostream &stm, const std::vector<uint8_t> &code,
-                         uint32_t ttl_mask=0)
+                         uint32_t ttl_mask, uint32_t version)
 {
-    print(stm, &code[0], code.size(), ttl_mask);
+    print(stm, &code[0], code.size(), ttl_mask, version);
 }
 
 /**
  * Total time it takes to execute the cmdlist.
  */
-uint64_t total_time(const uint8_t *code, size_t code_len);
-static inline uint64_t total_time(const std::vector<uint8_t> &code)
+uint64_t total_time(const uint8_t *code, size_t code_len, uint32_t version);
+static inline uint64_t total_time(const std::vector<uint8_t> &code, uint32_t version)
 {
-    return total_time(&code[0], code.size());
+    return total_time(&code[0], code.size(), version);
 }
 
 // Keep track of user state during execution of cmdlist
@@ -232,6 +233,8 @@ struct ExeState {
     template<typename T>
     void run(T &&cb, const uint8_t *code, size_t len);
 
+    uint8_t min_time = PulseTime::Min;
+
 private:
     // Unaligned and typed load.
     template<typename T>
@@ -267,7 +270,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             return t;
         };
         auto runTTL = [&] (uint32_t ttl) {
-            cb.ttl(ttl, consumeAllWait() + PulseTime::Min);
+            cb.ttl(ttl, consumeAllWait() + min_time);
         };
         auto runTTL1 = [&] (uint8_t chn, bool val, uint64_t t) {
             t += consumeAllWait();
@@ -281,7 +284,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
         }
         case OpCode::TTL1: {
             auto inst = loadInst<Inst::TTL1>(p);
-            runTTL1(inst.chn, inst.val, inst.t + PulseTime::Min);
+            runTTL1(inst.chn, inst.val, inst.t + min_time);
             break;
         }
         case OpCode::Wait: {
@@ -330,7 +333,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
     }
 }
 
-uint32_t parse(buff_ostream &output, std::istream &input);
+uint32_t parse(buff_ostream &output, std::istream &input, uint32_t version);
 
 }
 

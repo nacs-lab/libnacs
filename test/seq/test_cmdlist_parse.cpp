@@ -41,10 +41,10 @@ static void test_file_eq(const std::string &fname, const std::string &cmp)
 static uint64_t test_cmdlist_eq(const std::string &cmdlist, uint32_t ttl_mask,
                                 const std::string &cmp)
 {
-    uint64_t len_ns = CmdList::total_time((uint8_t*)cmdlist.data(), cmdlist.size()) * 10;
+    uint32_t ver = 1;
+    uint64_t len_ns = CmdList::total_time((uint8_t*)cmdlist.data(), cmdlist.size(), ver) * 10;
     auto str_data = (const uint8_t*)cmp.data();
     auto str_sz = cmp.size();
-    uint32_t ver = 1;
     assert(memcmp(str_data, &ver, 4) == 0);
     str_data += 4;
     str_sz -= 4;
@@ -66,8 +66,9 @@ static void test(const std::string &dir, const std::string &name)
     std::ifstream istm(path);
     assert(istm.good());
     string_ostream vstm;
+    uint32_t ver = 1;
     try {
-        uint32_t ttl_mask = CmdList::parse(vstm, istm);
+        uint32_t ttl_mask = CmdList::parse(vstm, istm, ver);
         auto vec = vstm.get_buf();
         std::ifstream bstm(path + ".cmdbin");
         assert(bstm.good());
@@ -76,12 +77,12 @@ static void test(const std::string &dir, const std::string &name)
 
         string_ostream tstm;
         tstm << "# " << len_ns << " ns" << std::endl;
-        CmdList::print(tstm, (uint8_t*)vec.data(), vec.size(), ttl_mask);
+        CmdList::print(tstm, (uint8_t*)vec.data(), vec.size(), ttl_mask, ver);
         auto text = tstm.get_buf();
         test_file_eq(path + ".txt", text);
 
         const_istream tistm(text);
-        auto ttl_mask2 = CmdList::parse(vstm, tistm);
+        auto ttl_mask2 = CmdList::parse(vstm, tistm, ver);
         assert(ttl_mask == ttl_mask2);
         assert(vec == vstm.get_buf());
     }

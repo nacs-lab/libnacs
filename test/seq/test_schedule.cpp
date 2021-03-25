@@ -56,7 +56,7 @@ int main(int argc, char **argv)
 
     // ByteCode::print(std::cout, code);
 
-    std::cout << ByteCode::count(code) << std::endl;
+    std::cout << ByteCode::count(code, 1) << std::endl;
     std::cout << code.size() << std::endl;
 
     return 0;
