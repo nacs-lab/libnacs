@@ -313,11 +313,7 @@ void visit_dfs(T v, Visitor &&visitor)
     auto &stack = visitor.m_stack;
     auto it = visitor.begin(v);
     constexpr bool has_postvisit = detail::has_postvisit_v<Visitor,T>;
-    auto next = [&] {
-        ++it;
-        // Next argument
-        if (!it.is_end())
-            return true;
+    auto pop = [&] {
         detail::postvisit(visitor, it.parent());
         // Done
         if (stack.empty())
@@ -335,6 +331,13 @@ void visit_dfs(T v, Visitor &&visitor)
         }
         return true;
     };
+    auto next = [&] {
+        ++it;
+        // Next argument
+        if (!it.is_end())
+            return true;
+        return pop();
+    };
     auto iterate = [&] {
         auto new_v = it.get();
         if (!new_v || !visitor.previsit(new_v))
@@ -346,8 +349,14 @@ void visit_dfs(T v, Visitor &&visitor)
         if (has_postvisit || !it.is_end())
             stack.push_back(std::move(it));
         it = visitor.begin(new_v);
+        if (it.is_end())
+            return pop();
         return true;
     };
+    if (it.is_end()) {
+        pop();
+        return;
+    }
     while (iterate()) {
     }
 }
