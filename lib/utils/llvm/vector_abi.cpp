@@ -53,6 +53,10 @@ using namespace llvm;
 
 namespace {
 
+#if LLVM_VERSION_MAJOR < 11
+#  define FixedVectorType VectorType
+#endif
+
 struct VectorABIPass : public ModulePass {
     static char ID;
     VectorABIPass()
