@@ -5,6 +5,7 @@ set(nacs_seq_HDRS
   host_seq.h
   sign.h)
 set(nacs_seq_zynq_HDRS
+  zynq/bc_gen.h
   zynq/bytecode.h
   zynq/cmdlist.h
   zynq/legacy_seq.h
@@ -12,6 +13,7 @@ set(nacs_seq_zynq_HDRS
 set(nacs_seq_SRCS
   error.cpp
   host_seq.cpp
+  zynq/bc_gen.cpp
   zynq/bytecode.cpp
   zynq/cmdlist.cpp
   zynq/parser.cpp
@@ -38,6 +40,8 @@ set(nacs_seq_llvm_SRCS
   pulse.cpp
   seq.cpp
   var.cpp)
+set_source_files_properties(zynq/bc_gen.cpp
+  PROPERTIES COMPILE_FLAGS "-ffp-contract=fast")
 
 if(ENABLE_LLVM)
   set(nacs_seq_SRCS ${nacs_seq_SRCS} ${nacs_seq_llvm_SRCS})
