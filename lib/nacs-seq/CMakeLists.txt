@@ -56,6 +56,7 @@ if(SEQ_IN_UTILS)
       PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
     set_property(TARGET nacs-utils APPEND_STRING
       PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+    target_link_libraries(nacs-utils PRIVATE yaml-cpp)
   endif()
 else()
   add_library(nacs-seq SHARED
@@ -75,7 +76,7 @@ else()
       set_property(SOURCE ${nacs_seq_llvm_SRCS} APPEND
         PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
     endif()
-    target_link_libraries(nacs-seq PRIVATE LLVM)
+    target_link_libraries(nacs-seq PRIVATE LLVM yaml-cpp)
   endif()
 endif()
 
