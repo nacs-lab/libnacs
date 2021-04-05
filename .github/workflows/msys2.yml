@@ -68,6 +68,7 @@ jobs:
           mingw-w64-x86_64-llvm
           mingw-w64-x86_64-openlibm
           mingw-w64-x86_64-polly
+          mingw-w64-x86_64-yaml-cpp
           mingw-w64-x86_64-zeromq
           unzip
 
