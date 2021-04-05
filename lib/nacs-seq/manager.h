@@ -29,7 +29,11 @@
 #include <yaml-cpp/yaml.h>
 
 #include <algorithm>
+#include <atomic>
+#include <condition_variable>
 #include <map>
+#include <memory>
+#include <mutex>
 #include <vector>
 
 namespace NaCs::LLVM::Codegen {
@@ -37,6 +41,8 @@ class CachedContext;
 }
 
 namespace NaCs::Seq {
+
+class Device;
 
 class Manager {
     using dataset_t = std::map<std::vector<uint8_t>,uint64_t,std::less<>>;
@@ -87,6 +93,12 @@ public:
             return m_cgctx;
         }
         uint64_t get_dataid(llvm::StringRef name) const;
+        Device *get_device(const std::string &name, bool create);
+        Device *get_device(std::string &&name, bool create);
+        const std::map<std::string,std::unique_ptr<Device>> &devices()
+        {
+            return m_devices;
+        }
 
         void init_run();
         void pre_run();
@@ -96,12 +108,19 @@ public:
         uint32_t post_run();
 
     private:
+        template<typename Str>
+        Device *_get_device(Str &&name, bool create);
         CGContext *_cgctx() const;
 
         Manager &m_mgr;
         LLVM::Codegen::CachedContext *m_cgctx;
         std::vector<uint64_t> m_dataids;
-        // TODO backends
+        std::map<std::string,std::unique_ptr<Device>> m_devices;
+
+        bool m_running = false;
+        std::atomic<bool> m_cancelled = false;
+        std::mutex m_run_lock;
+        std::condition_variable m_run_cond;
     };
 
     Manager();

@@ -248,6 +248,10 @@ if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
     endif()
     set(CPACK_DEBIAN_PACKAGE_DEPENDS
       "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libyaml-cpp${YAML_CPP_PKGVER}")
+
+    # Hard code for now...
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS
+      "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libtbb2")
   endif()
   if(ENABLE_SIMD)
     get_soname(SLEEF_SOVER libsleef SLEEF_LIBRARIES)

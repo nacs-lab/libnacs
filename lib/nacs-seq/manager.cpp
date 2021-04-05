@@ -20,6 +20,7 @@
 
 #include "builder.h"
 #include "compiler.h"
+#include "device.h"
 #include "error.h"
 
 #include "../nacs-utils/llvm/codegen.h"
@@ -29,6 +30,13 @@
 
 #include <llvm/ADT/StringMap.h>
 #include <llvm/ADT/StringSet.h>
+
+#include <algorithm>
+#include <chrono>
+#ifdef __cpp_lib_execution
+#  include <execution>
+#endif
+#include <thread>
 
 namespace NaCs::Seq {
 
@@ -122,11 +130,46 @@ NACS_EXPORT() uint64_t Manager::ExpSeq::get_dataid(llvm::StringRef name) const
     return it->second;
 }
 
+template<typename Str>
+Device *Manager::ExpSeq::_get_device(Str &&name, bool create)
+{
+    auto it = m_devices.find(name);
+    if (it != m_devices.end())
+        return it->second.get();
+    if (!create)
+        return nullptr;
+    auto it2 = m_mgr.m_device_info.find(name);
+    if (it2 == m_mgr.m_device_info.end())
+        return nullptr;
+    auto dev = Device::create(m_mgr, it2->second.backend, name);
+    auto res = dev.get();
+    if (dev) {
+        dev->config(it2->second.config);
+        auto data_it = m_mgr.m_backend_datas.find(name);
+        if (data_it != m_mgr.m_backend_datas.end())
+            dev->parse_data(data_it->second.data(), data_it->second.size());
+        m_devices.emplace(std::forward<Str>(name), std::move(dev));
+    }
+    return res;
+}
+
+NACS_EXPORT() Device *Manager::ExpSeq::get_device(const std::string &name, bool create)
+{
+    return _get_device(name, create);
+}
+
+NACS_EXPORT() Device *Manager::ExpSeq::get_device(std::string &&name, bool create)
+{
+    return _get_device(std::move(name), create);
+}
+
 NACS_EXPORT() void Manager::ExpSeq::init_run()
 {
     mgr().add_debug("Initialize sequence run\n");
     host_seq.init_run();
-    // TODO backend
+    for (auto &[name, dev]: m_devices) {
+        dev->init_run(host_seq);
+    }
 }
 
 NACS_EXPORT() void Manager::ExpSeq::pre_run()
@@ -142,34 +185,75 @@ NACS_EXPORT() void Manager::ExpSeq::pre_run()
                         Error::Type::BasicSeq, host_bseq.id, "Sequence exceeds length limit.");
         }
     }
-    // TODO backend
+    // Assuming there's no complex dependencies between different `prepare_run`s
+    // or that the backend can handle those themselves.
+    for (auto &[name, dev]: m_devices)
+        dev->prepare_run(host_seq);
+#ifdef __cpp_lib_execution
+    std::for_each(std::execution::par_unseq, m_devices.begin(), m_devices.end(),
+                  [&] (auto &item) { item.second->pre_run(host_seq); });
+#else
+    std::for_each(m_devices.begin(), m_devices.end(),
+                  [&] (auto &item) { item.second->pre_run(host_seq); });
+#endif
 }
 
 NACS_EXPORT() void Manager::ExpSeq::start()
 {
     mgr().add_debug_printf("Starting basic sequence [index %d]\n", host_seq.cur_seq_idx());
-    // TODO backend
-    // TODO backend ordering
+    m_cancelled.store(false, std::memory_order_relaxed);
+    for (auto &name: m_mgr.m_device_order) {
+        // Start in the correct order
+        if (auto dev = get_device(name, false)) {
+            dev->start(host_seq);
+        }
+    }
+    m_running = true;
+    std::thread wait_thread([this] {
+        for (auto &[name, dev]: m_devices) {
+            if (m_cancelled.load(std::memory_order_relaxed))
+                break;
+            dev->wait(host_seq);
+        }
+        {
+            std::unique_lock locker(m_run_lock);
+            m_running = false;
+        }
+        m_run_cond.notify_all();
+    });
+    wait_thread.detach();
 }
 
 NACS_EXPORT() void Manager::ExpSeq::cancel()
 {
     mgr().add_debug_printf("Cancelling basic sequence [index %d]\n", host_seq.cur_seq_idx());
-    // TODO backend
+    m_cancelled.store(true, std::memory_order_relaxed);
+    for (auto &[name, dev]: m_devices) {
+        dev->cancel(host_seq);
+    }
 }
 
 NACS_EXPORT() bool Manager::ExpSeq::wait(uint64_t timeout_ms)
 {
     mgr().add_debug_printf("Waiting for basic sequence [index %d]\n", host_seq.cur_seq_idx());
-    // TODO backend
-    return false;
+    std::unique_lock locker(m_run_lock);
+    return m_run_cond.wait_for(locker, std::chrono::milliseconds(timeout_ms), [&] {
+        return !m_running || m_cancelled;
+    });
 }
 
 NACS_EXPORT() uint32_t Manager::ExpSeq::post_run()
 {
     mgr().add_debug_printf("Finishing basic sequence [index %d]\n", host_seq.cur_seq_idx());
-    return host_seq.post_run();
-    // TODO backend
+    auto id = host_seq.post_run();
+    mgr().add_debug_printf("Next basic sequence [index %d]\n", host_seq.cur_seq_idx());
+    if (id == 0) {
+        mgr().add_debug_printf("Sequence ended\n");
+        for (auto &[name, dev]: m_devices) {
+            dev->finish_run(host_seq);
+        }
+    }
+    return id;
 }
 
 NACS_EXPORT_ Manager::Manager()
@@ -191,7 +275,23 @@ NACS_EXPORT() Manager::ExpSeq *Manager::create_sequence(const uint8_t *data, siz
         add_debug("Deserializig sequence.\n");
         builder.deserialize(data, size);
         m_backend_datas = std::move(builder.backend_datas);
-        // TODO: apply noramp sequence setting from backend
+        auto nchn = builder.chnnames.size();
+        for (uint32_t i = 0; i < nchn; i++) {
+            const auto &name = builder.chnnames[i];
+            auto chn_id = i + 1;
+            auto sep = name.find_first_of('/');
+            auto name_len = name.size();
+            if (sep == name.npos || sep == name_len - 1)
+                throw std::runtime_error("Invalid channel name.");
+            add_debug_printf("Adding channel: %s\n", name.c_str());
+            auto dev = expseq->get_device(name.substr(0, sep), true);
+            auto chn_name = name.substr(sep + 1);
+            assert(chn_name.size() == name_len - sep - 1);
+            dev->add_channel(chn_id, chn_name);
+            if (dev->check_noramp(chn_id, chn_name)) {
+                builder.noramp_chns.push_back(chn_id);
+            }
+        }
         add_debug("Building sequence\n");
         builder.buildseq();
     }
@@ -205,7 +305,19 @@ NACS_EXPORT() Manager::ExpSeq *Manager::create_sequence(const uint8_t *data, siz
     expseq->obj_id = compiler.compile();
     add_debug("Initializing runtime sequence\n");
     expseq->host_seq.init();
-    // TODO: call backends
+    // Note that backends may call `get_device` for other backends in `prepare`
+    // and the new device may not have `prepare` called on it.
+    // This shouldn't be a problem right now since we don't have very deep dependencies.
+    // I'd like to wait until we know what actually need before implementing a proper solution.
+    // (e.g. maybe record if something is prepared and call prepare on it,
+    // or re-prepare if one device triggers update on another one)
+    add_debug("Preparing backend drivers\n");
+    for (auto &[name, dev]: expseq->devices())
+        dev->prepare(*expseq, compiler);
+    add_debug("Generating backend sequences\n");
+    for (auto &[name, dev]: expseq->devices())
+        dev->generate(*expseq, compiler);
+    add_debug("Cleaning up compiler\n");
     expseq->clear_compiler();
     return expseq.release();
 }
