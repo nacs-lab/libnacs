@@ -97,7 +97,10 @@ if(ENABLE_LLVM)
   set(nacs_utils_SRCS ${nacs_utils_SRCS} ${nacs_utils_llvm_SRCS})
   set_property(SOURCE ${nacs_utils_llvm_SRCS} APPEND_STRING
     PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
-  if(${CMAKE_VERSION} VERSION_LESS "3.11.0")
+  # The INCLUDE_DIRECTORIES source property conflicts with the include directories
+  # from imported target. Don't use it until it's fixed.
+  # See https://gitlab.kitware.com/cmake/cmake/-/issues/22033
+  if(TRUE) # (${CMAKE_VERSION} VERSION_LESS "3.11.0")
     include_directories(${LLVM_INCLUDE_DIRS})
   else()
     set_property(SOURCE ${nacs_utils_llvm_SRCS} APPEND
