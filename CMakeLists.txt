@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.7)
 
+if(POLICY CMP0079)
+  # Causes yaml-cpp linking issue on msys2 otherwise.
+  cmake_policy(SET CMP0079 NEW)
+endif()
+
 set(MAJOR_VERSION 10)
 set(MINOR_VERSION 2)
 set(PATCH_VERSION 0)
@@ -70,6 +75,8 @@ if(ENABLE_LLVM)
 
   message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+  # Require this for now...
+  find_package(yaml-cpp REQUIRED CONFIG NO_SYSTEM_ENVIRONMENT_PATH)
 endif()
 
 if(ENABLE_SIMD)
@@ -229,6 +236,18 @@ if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
     list(GET LLVM_PACKAGE_VERSION_LIST 0 LLVM_PACKAGE_VERSION_MAJOR)
     set(CPACK_DEBIAN_PACKAGE_DEPENDS
       "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libllvm${LLVM_PACKAGE_VERSION_MAJOR}")
+
+    string(REGEX MATCH "^[0-9]*\\.[0-9]*" YAML_CPP_PKGVER "${yaml-cpp_VERSION}")
+    if("${YAML_CPP_PKGVER}" STREQUAL "0.3" OR "${YAML_CPP_PKGVER}" STREQUAL "0.5")
+      # This is the suffix in the Ubuntu 18.04 and Debian stretch package.
+      # I'm not really sure why it has a `v5` suffix but hopefully
+      # this is good enough for the ubuntu versions we support.
+      # If this is not good enough, we might need a separate option
+      # to pass the correct values in...
+      set(YAML_CPP_PKGVER "${YAML_CPP_PKGVER}v5")
+    endif()
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS
+      "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libyaml-cpp${YAML_CPP_PKGVER}")
   endif()
   if(ENABLE_SIMD)
     get_soname(SLEEF_SOVER libsleef SLEEF_LIBRARIES)
