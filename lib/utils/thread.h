@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2015 - 2019 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2015 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -250,6 +250,9 @@ private:
     Cache m_writer_cache __attribute__ ((aligned(64)));
 } __attribute__((aligned(64)));
 
+namespace Thread {
+NACS_EXPORT(utils) bool pin(int cpu);
+}
 
 }
 
