@@ -70,7 +70,7 @@ ensurePureExtern(Module *M, FunctionType *ft, StringRef name, bool canread)
     return f;
 }
 
-NACS_EXPORT_ Context::Context(LLVMContext &ctx)
+Context::Context(LLVMContext &ctx)
     : m_mod(nullptr),
       m_ctx(ctx),
       T_bool(Type::getInt1Ty(m_ctx)),
@@ -91,13 +91,13 @@ NACS_EXPORT_ Context::Context(LLVMContext &ctx)
     tbaa_const = m_mdbuilder.createTBAAStructTagNode(const_s, const_s, 0, true);
 }
 
-NACS_EXPORT_ Context::Context(Module *mod)
+Context::Context(Module *mod)
     : Context(mod->getContext())
 {
     set_module(mod);
 }
 
-NACS_EXPORT() Context::~Context()
+Context::~Context()
 {
 }
 
@@ -111,7 +111,7 @@ Context::ensurePureFunc(StringRef name, FunctionType *ft, bool canread) const
     return ensurePureExtern(m_mod, ft, name, canread);
 }
 
-NACS_EXPORT() Type *Context::llvm_ty(IR::Type ty) const
+Type *Context::llvm_ty(IR::Type ty) const
 {
     switch (ty) {
     case IR::Type::Bool:
@@ -125,7 +125,7 @@ NACS_EXPORT() Type *Context::llvm_ty(IR::Type ty) const
     }
 }
 
-NACS_EXPORT() Type *Context::llvm_argty(IR::Type ty) const
+Type *Context::llvm_argty(IR::Type ty) const
 {
     switch (ty) {
     case IR::Type::Bool:
@@ -139,7 +139,7 @@ NACS_EXPORT() Type *Context::llvm_argty(IR::Type ty) const
     }
 }
 
-NACS_EXPORT() Value *Context::emit_const(IR::TagVal c) const
+Value *Context::emit_const(IR::TagVal c) const
 {
     switch (c.typ) {
     case IR::Type::Bool:
@@ -153,7 +153,7 @@ NACS_EXPORT() Value *Context::emit_const(IR::TagVal c) const
     }
 }
 
-NACS_EXPORT() Value *Context::emit_convert(IRBuilder<> &builder, IR::Type ty, Value *val) const
+Value *Context::emit_convert(IRBuilder<> &builder, IR::Type ty, Value *val) const
 {
     auto lty = val->getType();
     switch (ty) {
@@ -277,7 +277,6 @@ Value *Context::emit_cmp(IRBuilder<> &builder, IR::CmpType cmptyp,
     }
 }
 
-NACS_EXPORT()
 Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &spec)
 {
     assert(get_module());
@@ -432,7 +431,6 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     return wrapf;
 }
 
-NACS_EXPORT()
 Function *Context::emit_function(const IR::Function &func, StringRef name, bool _export)
 {
     assert(get_module());
@@ -788,7 +786,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             input = builder.CreateFDiv(input, dx);
             auto interp_f = ensurePureFunc("interp", F_f64_f64i32pf64, true);
             lres = builder.CreateCall(interp_f, {input,
-                                                 ConstantInt::get(T_i32, ndata), datap});
+                    ConstantInt::get(T_i32, ndata), datap});
             break;
         }
         case IR::Opcode::Convert: {
@@ -861,28 +859,27 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
     return f;
 }
 
-NACS_EXPORT()
 Function *Context::emit_function(const uint8_t *data, size_t sz, StringRef name, bool _export)
 {
     return emit_function(IR::Function(data, sz), name, _export);
 }
 
-NACS_EXPORT_ CachedContext::CachedContext(Module *mod)
+CachedContext::CachedContext(Module *mod)
     : Context(mod)
 {
 }
 
-NACS_EXPORT_ CachedContext::CachedContext(LLVMContext &ctx)
+CachedContext::CachedContext(LLVMContext &ctx)
     : Context(ctx)
 {
 }
 
-NACS_EXPORT() CachedContext::~CachedContext()
+CachedContext::~CachedContext()
 {
 }
 
-NACS_EXPORT() Function *CachedContext::emit_function(const uint8_t *data, size_t sz,
-                                                     StringRef name, bool _export)
+Function *CachedContext::emit_function(const uint8_t *data, size_t sz,
+                                       StringRef name, bool _export)
 {
     llvm::StringRef code((const char*)data, sz);
     auto &f = m_cache[code];
@@ -891,7 +888,7 @@ NACS_EXPORT() Function *CachedContext::emit_function(const uint8_t *data, size_t
     return f;
 }
 
-NACS_EXPORT() void CachedContext::clear_cache()
+void CachedContext::clear_cache()
 {
     m_cache.clear();
 }

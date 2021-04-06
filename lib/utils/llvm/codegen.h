@@ -73,7 +73,7 @@ struct Wrapper {
     }
 };
 
-class Context {
+class NACS_EXPORT_ Context {
 public:
     Context(Module *mod);
     Context(LLVMContext &ctx);
@@ -154,7 +154,7 @@ public:
     MDNode *tbaa_const;
 };
 
-class CachedContext: public Context {
+class NACS_EXPORT_ CachedContext: public Context {
 public:
     CachedContext(Module *mod);
     CachedContext(LLVMContext &ctx);
