@@ -53,6 +53,7 @@ set(nacs_utils_SRCS
   processor.cpp
   streams.cpp
   term.cpp
+  thread.cpp
   timer.cpp
   tweezer.cpp
   utils.cpp
