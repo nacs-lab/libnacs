@@ -29,6 +29,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <functional>
 #include <utility>
 #include <type_traits>
 #include <tuple>
@@ -390,6 +391,16 @@ struct ArrayKey {
     operator<(const T2 &lhs, const ArrayKey<T> &rhs)
     {
         return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+    }
+};
+
+// Call the function passed in at construction time.
+// Useful for initialization.
+struct Call {
+    template<class... Args>
+    Call(Args&&... args)
+    {
+        std::invoke(std::forward<Args>(args)...);
     }
 };
 
