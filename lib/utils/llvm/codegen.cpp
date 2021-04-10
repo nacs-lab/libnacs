@@ -282,7 +282,9 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     assert(get_module());
     if (spec.vector_size > 1) {
         SmallVector<unsigned, 8> vec_args;
-        bool vec_only = true;
+        // The function signature is different with closure
+        // even if there's no actual closure arguments.
+        bool vec_only = !spec.closure;
         for (auto &arg: spec.arg_map) {
             if (arg.second.type & Wrapper::Vector)
                 vec_args.push_back(arg.first);
