@@ -50,4 +50,5 @@ if(ENABLE_LLVM)
   add_llvm_test(builder_deserial)
 
   add_llvm_test(compiler)
+  add_llvm_test(zynq_backend)
 endif()
