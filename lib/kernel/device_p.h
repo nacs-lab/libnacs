@@ -19,12 +19,10 @@
 #ifndef __NACS_KERNEL_DEVICE_P_H__
 #define __NACS_KERNEL_DEVICE_P_H__
 
-namespace NaCs {
-namespace Kernel {
+namespace NaCs::Kernel {
 
 int getFD();
 
-}
 }
 
 #endif

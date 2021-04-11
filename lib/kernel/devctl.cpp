@@ -26,8 +26,7 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 
-namespace NaCs {
-namespace Kernel {
+namespace NaCs::Kernel {
 
 NACS_EXPORT() knacs_version_t
 getDriverVersion()
@@ -73,5 +72,4 @@ sendDmaBuffer(void *buff, size_t len)
 }
 #endif
 
-}
 }

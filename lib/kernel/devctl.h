@@ -21,13 +21,11 @@
 #ifndef __NACS_KERNEL_DEVCTL_H__
 #define __NACS_KERNEL_DEVCTL_H__
 
-namespace NaCs {
-namespace Kernel {
+namespace NaCs::Kernel {
 
 knacs_version_t getDriverVersion();
 void *mapPulseCtrl();
 
-}
 }
 
 #endif

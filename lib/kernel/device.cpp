@@ -25,8 +25,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-namespace NaCs {
-namespace Kernel {
+namespace NaCs::Kernel {
 
 static int knacs_fd = -1;
 
@@ -64,5 +63,4 @@ getFD()
     return fd;
 }
 
-}
 }

@@ -19,15 +19,13 @@
 #ifndef __NACS_KERNEL_DEVICE_H__
 #define __NACS_KERNEL_DEVICE_H__
 
-namespace NaCs {
-namespace Kernel {
+namespace NaCs::Kernel {
 
 void init();
 void init(const char*);
 void init(int fd);
 bool initialized();
 
-}
 }
 
 #endif

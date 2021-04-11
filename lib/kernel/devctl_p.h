@@ -22,15 +22,13 @@
 #ifndef __NACS_KERNEL_DEVCTL_P_H__
 #define __NACS_KERNEL_DEVCTL_P_H__
 
-namespace NaCs {
-namespace Kernel {
+namespace NaCs::Kernel {
 
 void *allocDmaBuffer(size_t);
 void *reallocDmaBuffer(void*, size_t old_size, size_t new_size);
 void freeDmaBuffer(void*, size_t old_size);
 void sendDmaBuffer(void*, size_t);
 
-}
 }
 
 #endif

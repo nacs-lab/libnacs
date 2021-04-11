@@ -23,8 +23,7 @@
 
 #include <type_traits>
 
-namespace NaCs {
-namespace Kernel {
+namespace NaCs::Kernel {
 
 class DMABufferBase {
     void resize_slow(size_t);
@@ -105,7 +104,6 @@ public:
     }
 };
 
-}
 }
 
 #endif

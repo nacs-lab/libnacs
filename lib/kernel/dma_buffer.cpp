@@ -23,11 +23,7 @@
 #include "../utils/mem.h"
 #include "../utils/number.h"
 
-namespace NaCs {
-
-using namespace NaCs;
-
-namespace Kernel {
+namespace NaCs::Kernel {
 
 NACS_EXPORT_
 DMABufferBase::DMABufferBase(size_t size)
@@ -73,5 +69,4 @@ DMABufferBase::send(size_t len)
     m_size = 0;
 }
 
-}
 }
