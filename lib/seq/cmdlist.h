@@ -38,8 +38,7 @@ namespace NaCs {
 
 class buff_ostream;
 
-namespace Seq {
-namespace CmdList {
+namespace Seq::CmdList {
 
 // Each cmdlist instruction has a 4 bit opcode followed by a instruction length that's
 // a function of the opcode.
@@ -332,8 +331,6 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
 }
 
 uint32_t parse(buff_ostream &output, std::istream &input);
-
-}
 
 }
 }

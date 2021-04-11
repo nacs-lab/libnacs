@@ -27,9 +27,7 @@
 #include <iomanip>
 #include <type_traits>
 
-namespace NaCs {
-namespace Seq {
-namespace CmdList {
+namespace NaCs::Seq::CmdList {
 
 NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
 {
@@ -280,6 +278,4 @@ NACS_EXPORT() uint32_t parse(buff_ostream &ostm, std::istream &istm)
     return writer.get_ttl_mask();
 }
 
-}
-}
 }

@@ -25,8 +25,7 @@
 
 #include <math.h>
 
-namespace NaCs {
-namespace Seq {
+namespace NaCs::Seq {
 
 namespace ByteCode {
 
@@ -1033,7 +1032,6 @@ NACS_EXPORT() uint8_t *Sequence::toByteCode(size_t *sz, uint32_t *ttl_mask)
     return (uint8_t*)stm.get_buf(*sz);
 }
 
-}
 }
 
 using namespace NaCs::Seq;

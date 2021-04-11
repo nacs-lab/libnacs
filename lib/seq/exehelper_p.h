@@ -26,8 +26,7 @@
 // This file contains a few classes/functions that are useful for both bytecode
 // and command list.
 
-namespace NaCs {
-namespace Seq {
+namespace NaCs::Seq {
 
 namespace {
 
@@ -126,7 +125,6 @@ struct TimeKeeper {
 
 }
 
-} // Seq
-} // NaCs
+} // NaCs::Seq
 
 #endif // __NACS_SEQ_EXEHELPER_P_H__

@@ -23,8 +23,7 @@
 #include <type_traits>
 #include <iomanip>
 
-namespace NaCs {
-namespace Seq {
+namespace NaCs::Seq {
 
 NACS_EXPORT() Sequence
 Sequence::fromBinary(const uint32_t *bin, size_t len)
@@ -207,5 +206,4 @@ NACS_EXPORT() void Sequence::dumpBinary(std::ostream &stm, const uint32_t *bin, 
     }
 }
 
-} // Seq
-} // NaCs
+} // NaCs::Seq

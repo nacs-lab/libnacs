@@ -27,8 +27,7 @@
 #ifndef __NACS_SEQ_SEQ_H__
 #define __NACS_SEQ_SEQ_H__
 
-namespace NaCs {
-namespace Seq {
+namespace NaCs::Seq {
 
 struct Channel {
     enum Type {
@@ -169,7 +168,6 @@ struct Sequence {
     uint8_t *toByteCode(size_t *sz, uint32_t *ttl_mask);
 };
 
-}
 }
 
 #endif

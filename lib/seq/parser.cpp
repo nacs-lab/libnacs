@@ -23,8 +23,7 @@
 
 #include <assert.h>
 
-namespace NaCs {
-namespace Seq {
+namespace NaCs::Seq {
 
 ParserBase::ParserBase(std::istream &istm)
     : istm(istm)
@@ -518,5 +517,4 @@ std::pair<bool,uint32_t> ParserBase::read_ttlmask()
     return {true, ttl_mask};
 }
 
-}
 }

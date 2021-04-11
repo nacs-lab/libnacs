@@ -33,9 +33,7 @@
 
 #include <stdexcept>
 
-namespace NaCs {
-namespace Seq {
-namespace ByteCode {
+namespace NaCs::Seq::ByteCode {
 
 // Each bytecode instruction has a 4 bit opcode followed by a instruction length that's
 // a function of the opcode.
@@ -464,9 +462,6 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
     }
 }
 
-}
-
-}
 }
 
 extern "C" {

@@ -28,8 +28,7 @@
 #include <string>
 #include <utility>
 
-namespace NaCs {
-namespace Seq {
+namespace NaCs::Seq {
 
 // This parses the output format from the `Printer` in `exechelper_p.h`
 // The parser read a line of text each time and keeps track of the current position
@@ -250,7 +249,6 @@ std::pair<T,int> ParserBase::read_dec(T lo, T hi)
 
 extern template std::pair<int,int> ParserBase::read_dec<int>(int lo, int hi);
 
-}
 }
 
 #endif // __NACS_SEQ_PARSER_P_H__
