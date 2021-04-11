@@ -29,8 +29,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Value.h>
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 using namespace llvm;
 
@@ -338,5 +337,4 @@ void mergePhi(Function &F)
     }
 }
 
-}
 }

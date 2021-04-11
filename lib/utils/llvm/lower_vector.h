@@ -21,14 +21,12 @@
 
 #include <llvm/Pass.h>
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 using namespace llvm;
 
 Pass *createLowerVectorPass();
 
-}
 }
 
 #endif

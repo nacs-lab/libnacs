@@ -36,8 +36,7 @@
 #include <llvm/Transforms/Utils/Local.h>
 
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 template<typename... Args>
 static double call_ptr(uintptr_t ptr, Args... args)
@@ -274,5 +273,4 @@ NACS_EXPORT() FunctionPass *createNaCsInstSimplifyPass(const resolver_cb_t &cb)
     return new NaCsInstSimplify(cb);
 }
 
-}
 }

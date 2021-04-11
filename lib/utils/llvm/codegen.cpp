@@ -33,9 +33,7 @@
 #include <llvm/Transforms/Utils/PromoteMemToReg.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
-namespace NaCs {
-namespace LLVM {
-namespace Codegen {
+namespace NaCs::LLVM::Codegen {
 
 #if LLVM_VERSION_MAJOR >= 11
 FunctionCallee
@@ -895,6 +893,4 @@ void CachedContext::clear_cache()
     m_cache.clear();
 }
 
-}
-}
 }

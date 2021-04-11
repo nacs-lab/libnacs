@@ -47,9 +47,7 @@
 
 #include <mutex>
 
-namespace NaCs {
-namespace LLVM {
-namespace Compile {
+namespace NaCs::LLVM::Compile {
 
 void addOptimization(legacy::PassManagerBase &pm)
 {
@@ -227,6 +225,4 @@ NACS_EXPORT() std::unique_ptr<TargetMachine> create_target(StringRef triple,
     return std::unique_ptr<TargetMachine>(tgt);
 }
 
-}
-}
 }

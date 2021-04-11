@@ -26,9 +26,7 @@
 
 #include <llvm/Support/MemoryBuffer.h>
 
-namespace NaCs {
-namespace LLVM {
-namespace Exe {
+namespace NaCs::LLVM::Exe {
 
 #define __asm_sym_real(var_suffix, name, suffix, type)                  \
     ([] {                                                               \
@@ -373,8 +371,6 @@ NACS_EXPORT() void Engine::free(uint64_t id)
     m_dyld.reset(nullptr);
 }
 
-}
-}
 }
 
 #ifdef ENABLE_SIMD

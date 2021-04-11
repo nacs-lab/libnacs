@@ -21,9 +21,7 @@
 
 #include "utils.h"
 
-namespace NaCs {
-
-namespace DL {
+namespace NaCs::DL {
 
 enum Flags {
     LOCAL = 1,
@@ -42,8 +40,6 @@ enum Flags {
 NACS_EXPORT(utils) void *open(const char *filename, int flags);
 NACS_EXPORT(utils) bool close(void *handle);
 NACS_EXPORT(utils) void *sym(void *handle, const char *symbol);
-
-}
 
 }
 

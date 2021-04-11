@@ -34,8 +34,7 @@
 #define NACS_LLVM_VER (LLVM_VERSION_MAJOR * 10000 + LLVM_VERSION_MINOR * 100 \
                        + LLVM_VERSION_PATCH)
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 NACS_EXPORT(utils) void dump(const llvm::Value *v);
 NACS_EXPORT(utils) void dump(const llvm::Type *v);
@@ -91,7 +90,6 @@ private:
     llvm::Value *materialize(llvm::Value *V) override;
 };
 
-}
 }
 
 #endif

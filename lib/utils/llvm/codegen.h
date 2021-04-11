@@ -31,9 +31,7 @@
 
 #include <functional>
 
-namespace NaCs {
-namespace LLVM {
-namespace Codegen {
+namespace NaCs::LLVM::Codegen {
 
 using namespace llvm;
 
@@ -166,8 +164,6 @@ private:
     llvm::StringMap<llvm::Function*> m_cache;
 };
 
-}
-}
 }
 
 #endif

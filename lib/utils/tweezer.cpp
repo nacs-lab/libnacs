@@ -20,8 +20,7 @@
 
 #include <cmath>
 
-namespace NaCs {
-namespace Tweezer {
+namespace NaCs::Tweezer {
 
 NACS_EXPORT() double sideband(double eta, int n1, int n2)
 {
@@ -73,7 +72,6 @@ NACS_EXPORT() void max_sideband_ratios(double eta, int orders, double *ratios)
     }
 }
 
-}
 }
 
 extern "C" NACS_EXPORT() double nacs_tweezer_sideband(double eta, int n1, int n2)

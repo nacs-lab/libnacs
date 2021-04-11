@@ -22,8 +22,7 @@
 #ifndef __NACS_UTILS_INTERP_P_H__
 #define __NACS_UTILS_INTERP_P_H__
 
-namespace NaCs {
-namespace IR {
+namespace NaCs::IR {
 
 // Functions that are used both by the interpreter as well as for constant propagation.
 static NACS_UNUSED TagVal evalAdd(Type typ, TagVal val1, TagVal val2)
@@ -91,7 +90,6 @@ static NACS_UNUSED TagVal evalCmp(CmpType cmptyp, TagVal val1, TagVal val2)
 
 ExeContext *get_interp_context();
 
-}
 }
 
 #endif

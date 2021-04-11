@@ -29,8 +29,7 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 using namespace llvm;
 
@@ -171,5 +170,4 @@ Pass *createLowerVectorPass()
     return new LowerVectorPass();
 }
 
-}
 }

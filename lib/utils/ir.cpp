@@ -34,8 +34,7 @@ NACS_EXPORT() double nacs_exp10(double x)
 }
 #endif
 
-namespace NaCs {
-namespace IR {
+namespace NaCs::IR {
 
 void *get_openlibm_handle()
 {
@@ -1359,5 +1358,4 @@ NACS_EXPORT() std::unique_ptr<ExeContext> ExeContext::get()
     return std::unique_ptr<ExeContext>(get_interp_context());
 }
 
-}
 }

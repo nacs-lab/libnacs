@@ -23,8 +23,7 @@
 
 #include <ostream>
 
-namespace NaCs {
-namespace Term {
+namespace NaCs::Term {
 
 struct _TermState {
     static constexpr _TermState get_fg(int fg)
@@ -94,7 +93,6 @@ constexpr auto bold = _TermState::get_bold();
 NACS_EXPORT(utils) std::ostream &operator<<(std::ostream &stm, _TermState state);
 NACS_EXPORT(utils) std::ostream &reset(std::ostream &stm);
 
-}
 }
 
 #endif

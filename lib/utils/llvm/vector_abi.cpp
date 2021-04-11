@@ -28,8 +28,7 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 using namespace llvm;
 
@@ -450,5 +449,4 @@ bool fixVectorABI(Function &F)
     return VectorABIPass::run_on_function(F);
 }
 
-}
 }

@@ -28,9 +28,7 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Target/TargetMachine.h>
 
-namespace NaCs {
-namespace LLVM {
-namespace Compile {
+namespace NaCs::LLVM::Compile {
 
 using namespace llvm;
 
@@ -41,8 +39,6 @@ NACS_EXPORT(utils) TargetMachine *get_native_target();
 NACS_EXPORT(utils) std::unique_ptr<TargetMachine> create_target(StringRef triple, StringRef cpu,
                                                                 StringRef features);
 
-}
-}
 }
 
 #endif

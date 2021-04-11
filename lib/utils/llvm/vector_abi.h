@@ -21,15 +21,13 @@
 
 #include <llvm/Pass.h>
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 using namespace llvm;
 
 Pass *createVectorABIPass();
 bool fixVectorABI(Function &F);
 
-}
 }
 
 #endif

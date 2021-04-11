@@ -18,8 +18,7 @@
 
 #include "cpu_p.h"
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 const std::string &get_cpu_arch()
 {
@@ -65,5 +64,4 @@ const std::string &get_cpu_features()
     return features;
 }
 
-}
 }

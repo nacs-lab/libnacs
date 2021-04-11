@@ -21,8 +21,7 @@
 #include "global_rename.h"
 #include "utils.h"
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 using namespace llvm;
 
@@ -99,5 +98,4 @@ NACS_EXPORT() Pass *createGlobalRenamePass()
     return new GlobalRenamePass();
 }
 
-}
 }

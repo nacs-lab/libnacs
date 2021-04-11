@@ -29,9 +29,7 @@
 
 #include <string>
 
-namespace NaCs {
-
-namespace DL {
+namespace NaCs::DL {
 
 #if NACS_OS_WINDOWS
 static HMODULE get_libnacs_handle()
@@ -230,7 +228,5 @@ NACS_EXPORT() void *sym(void *handle, const char *symbol)
     return dlsym(handle, symbol);
 }
 #endif
-
-}
 
 }

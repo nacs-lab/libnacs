@@ -21,8 +21,7 @@
 #ifndef __NACS_UTILS_IR_P_H__
 #define __NACS_UTILS_IR_P_H__
 
-namespace NaCs {
-namespace IR {
+namespace NaCs::IR {
 
 typedef double (*fptr_t)(double);
 
@@ -39,7 +38,6 @@ const char *getBuiltinSymbol(Builtins id);
 BuiltinType getBuiltinType(Builtins id);
 void *get_openlibm_handle();
 
-}
 }
 
 #ifndef NACS_HAS_EXP10

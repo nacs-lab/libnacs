@@ -21,14 +21,12 @@
 
 #include <llvm/IR/Function.h>
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 using namespace llvm;
 
 void mergePhi(Function &F);
 
-}
 }
 
 #endif

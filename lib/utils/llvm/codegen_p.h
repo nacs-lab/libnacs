@@ -21,9 +21,7 @@
 
 #include <llvm/IR/Module.h>
 
-namespace NaCs {
-namespace LLVM {
-namespace Codegen {
+namespace NaCs::LLVM::Codegen {
 
 using namespace llvm;
 
@@ -33,8 +31,6 @@ FunctionCallee ensurePureExtern(Module *M, FunctionType *ft, StringRef name, boo
 Constant *ensurePureExtern(Module *M, FunctionType *ft, StringRef name, bool canread=false);
 #endif
 
-}
-}
 }
 
 #endif

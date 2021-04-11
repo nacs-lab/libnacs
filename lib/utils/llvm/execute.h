@@ -28,9 +28,7 @@
 #include <memory>
 #include <utility>
 
-namespace NaCs {
-namespace LLVM {
-namespace Exe {
+namespace NaCs::LLVM::Exe {
 
 using namespace llvm;
 
@@ -208,8 +206,6 @@ private:
     std::string m_errstr;
 };
 
-}
-}
 }
 
 #endif

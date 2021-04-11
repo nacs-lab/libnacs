@@ -24,8 +24,7 @@
 #include <llvm/IR/Function.h>
 #include <llvm/Pass.h>
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 using namespace llvm;
 
@@ -38,7 +37,6 @@ bool instSimplify(Function &F, const resolver_cb_t &cb=resolver_cb_t(),
                   OptimizationRemarkEmitter *ORE=nullptr);
 FunctionPass *createNaCsInstSimplifyPass(const resolver_cb_t &cb=resolver_cb_t());
 
-}
 }
 
 #endif

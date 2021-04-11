@@ -23,8 +23,7 @@
 #include <llvm/Support/Host.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 using namespace llvm;
 
@@ -240,5 +239,4 @@ const std::string &get_cpu_features()
     return features;
 }
 
-}
 }

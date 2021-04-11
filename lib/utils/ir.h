@@ -27,8 +27,7 @@
 #ifndef __NACS_UTILS_IR_H__
 #define __NACS_UTILS_IR_H__
 
-namespace NaCs {
-namespace IR {
+namespace NaCs::IR {
 
 enum class Type : uint8_t {
     _Min = 0,
@@ -479,7 +478,6 @@ public:
     {}
 };
 
-}
 }
 
 #endif

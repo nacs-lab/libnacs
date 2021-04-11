@@ -33,8 +33,7 @@
 
 #include <iostream>
 
-namespace NaCs {
-namespace Term {
+namespace NaCs::Term {
 
 static bool has_color()
 {
@@ -150,5 +149,4 @@ NACS_EXPORT() std::ostream &reset(std::ostream &stm)
     return stm;
 }
 
-}
 }

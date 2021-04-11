@@ -23,9 +23,7 @@
 
 #include <llvm/IR/Function.h>
 
-namespace NaCs {
-namespace LLVM {
-namespace Analysis {
+namespace NaCs::LLVM::Analysis {
 
 using namespace llvm;
 
@@ -35,8 +33,6 @@ NACS_EXPORT(utils) Constant *returns_const(const Function &f);
 // Check if the function always returns an argument without side-effect.
 NACS_EXPORT(utils) Argument *returns_argument(const Function &f);
 
-}
-}
 }
 
 #endif

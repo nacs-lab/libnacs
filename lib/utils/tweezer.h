@@ -18,11 +18,9 @@
 
 #include "utils.h"
 
-namespace NaCs {
-namespace Tweezer {
+namespace NaCs::Tweezer {
 
 NACS_EXPORT(utils) double sideband(double eta, int n1, int n2);
 NACS_EXPORT(utils) void max_sideband_ratios(double eta, int orders, double *ratios);
 
-}
 }

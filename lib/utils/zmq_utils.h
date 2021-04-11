@@ -26,8 +26,7 @@
 #ifndef __NACS_UTILS_ZMQ_H__
 #define __NACS_UTILS_ZMQ_H__
 
-namespace NaCs {
-namespace ZMQ {
+namespace NaCs::ZMQ {
 
 // Wrapper functions for CPPZMQ 4.3.1 deprecation.
 static inline void send(zmq::socket_t &sock, zmq::message_t &msg)
@@ -145,7 +144,6 @@ static inline zmq::message_t str_msg(const char *str)
     return zmq::message_t(str, strlen(str));
 }
 
-}
 }
 
 #endif

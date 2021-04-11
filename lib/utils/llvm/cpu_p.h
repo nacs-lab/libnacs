@@ -21,14 +21,12 @@
 
 #include <string>
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 const std::string &get_cpu_arch();
 const std::string &get_cpu_name();
 const std::string &get_cpu_features();
 
-}
 }
 
 #endif

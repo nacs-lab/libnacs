@@ -22,12 +22,7 @@
 
 #include "execute.h"
 
-namespace NaCs {
-namespace LLVM {
-namespace Exe {
-
-/**
- */
+namespace NaCs::LLVM::Exe {
 
 template<typename BlockAlloc>
 void *AllocTracker::alloc(size_t sz, size_t align, BlockAlloc &&block_alloc)
@@ -462,6 +457,4 @@ void MemMgr::notifyObjectLoaded(RuntimeDyld &dyld, const object::ObjectFile&)
     }
 }
 
-}
-}
 }

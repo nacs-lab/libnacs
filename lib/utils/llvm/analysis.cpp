@@ -21,9 +21,7 @@
 
 #include <llvm/IR/Instructions.h>
 
-namespace NaCs {
-namespace LLVM {
-namespace Analysis {
+namespace NaCs::LLVM::Analysis {
 
 // We could do something fancier like detecting no-op uses of the argument
 // However, that's a better job for DCE and our input shouldn't have a lot of (any?)
@@ -76,6 +74,4 @@ NACS_EXPORT(utils) Argument *returns_argument(const Function &f)
     return ret_val;
 }
 
-}
-}
 }

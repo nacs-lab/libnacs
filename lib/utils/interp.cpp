@@ -18,16 +18,13 @@
 
 #include "interp_p.h"
 
-using namespace NaCs::IR;
-
 // This is the assembly function defined in `ir-interp-shim.S` that grabs
 // function arguments from the correct location and rearange them into a format
 // that can be understand by the interpreter.
 // This will be used as the function pointer returned by the interpreter execution context.
 extern "C" void nacs_exefunc_cb(void);
 
-namespace NaCs {
-namespace IR {
+namespace NaCs::IR {
 
 static inline TagVal eval_val(const Function &f, const GenVal *vals, int32_t id)
 {
@@ -441,9 +438,9 @@ ExeContext *get_interp_context()
     return new InterpExeContext();
 }
 
-} // IR
-} // NaCs
+} // NaCs::IR
 
+using namespace NaCs::IR;
 // This is called from the assembly callback function after rearranging the argument format.
 extern "C" TagVal nacs_exefunc_real(uint32_t *data, GenVal *vals)
 {

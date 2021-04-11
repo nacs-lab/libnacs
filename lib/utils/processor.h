@@ -33,20 +33,14 @@ namespace NaCs {
 
 #define NACS_FEATURE_DEF_NAME(name, bit, llvmver, str) NACS_FEATURE_DEF(name, bit, llvmver)
 #define NACS_FEATURE_DEF(name, bit, llvmver) constexpr int name = bit;
-namespace X86 {
-namespace Feature {
+namespace X86::Feature {
 #include "features_x86.h"
 }
-}
-namespace AArch32 {
-namespace Feature {
+namespace AArch32::Feature {
 #include "features_aarch32.h"
 }
-}
-namespace AArch64 {
-namespace Feature {
+namespace AArch64::Feature {
 #include "features_aarch64.h"
-}
 }
 #undef NACS_FEATURE_DEF
 #undef NACS_FEATURE_DEF_NAME

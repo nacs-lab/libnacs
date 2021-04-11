@@ -23,15 +23,13 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/IR/Function.h>
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 using namespace llvm;
 
 Function *vectorizeFunction(const Function &F, StringRef name, unsigned vec_size,
                             const SmallVectorImpl<unsigned> &vec_args, bool _export);
 
-}
 }
 
 #endif

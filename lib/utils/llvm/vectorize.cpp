@@ -32,8 +32,7 @@
 
 #include <algorithm>
 
-namespace NaCs {
-namespace LLVM {
+namespace NaCs::LLVM {
 
 namespace {
 
@@ -397,5 +396,4 @@ Function *vectorizeFunction(const Function &F, StringRef name, unsigned vec_size
     return vectorizer.vectorize(name, vec_size, _export);
 }
 
-}
 }
