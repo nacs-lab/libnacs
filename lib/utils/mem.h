@@ -61,6 +61,61 @@ write(volatile void *addr, T2 val, size_t idx=0)
 {
     ((volatile T*)addr)[idx] = val;
 }
+
+struct Reader {
+    Reader(const uint8_t *data, size_t size)
+        : data(data),
+          size(size),
+          cursor(0)
+    {
+    }
+    template<typename T>
+    T read()
+    {
+        static_assert(std::is_trivial_v<T>);
+        auto sz = sizeof(T);
+        if (cursor + sz > size) {
+            overflow(cursor + sz);
+            return T{};
+        }
+        auto res = load_unalign<T>(&data[cursor]);
+        cursor += sz;
+        return res;
+    }
+    std::pair<const char*,size_t> read_string()
+    {
+        auto p = (const char*)data + cursor;
+        size_t len = strnlen(p, size - cursor);
+        if (cursor + len >= size) {
+            overflow(cursor + len);
+            return {nullptr, 0};
+        }
+        cursor += len + 1;
+        return {p, len};
+    }
+    template<typename T>
+    const T *read_array(size_t n)
+    {
+        auto p = (const T*)(data + cursor);
+        static_assert(std::is_trivial_v<T>);
+        auto sz = sizeof(T) * n;
+        if (cursor + sz > size) {
+            overflow(cursor + sz);
+            return nullptr;
+        }
+        cursor += sz;
+        return p;
+    }
+    virtual void overflow(size_t)
+    {
+        throw std::overflow_error("Data terminates unexpectedly");
+    }
+
+    const uint8_t *const data;
+    size_t const size;
+    size_t cursor;
+};
+
 }
 
 NACS_EXPORT(utils) extern const size_t page_size;
