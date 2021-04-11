@@ -57,8 +57,9 @@ set(nacs_utils_SRCS
   timer.cpp
   tweezer.cpp
   utils.cpp
-  wavemeter.cpp)
-set(nacs_utils_LINKS m pthread)
+  wavemeter.cpp
+  zmq_utils.cpp)
+set(nacs_utils_LINKS m pthread zmq)
 set_source_files_properties(number.cpp
   PROPERTIES COMPILE_FLAGS "-ffp-contract=fast")
 if(IS_UNIX)
