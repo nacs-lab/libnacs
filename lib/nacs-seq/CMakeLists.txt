@@ -9,11 +9,14 @@ set(nacs_seq_zynq_HDRS
   zynq/bc_gen.h
   zynq/bytecode.h
   zynq/cmdlist.h
-  zynq/legacy_seq.h
-  zynq/pulse_time.h)
+  zynq/pulse_time.h
+  zynq/legacy_seq.h)
+set(nacs_seq_nidaq_HDRS
+  nidaq/data_gen.h)
 set(nacs_seq_SRCS
   error.cpp
   host_seq.cpp
+  nidaq/data_gen.cpp
   zynq/bc_gen.cpp
   zynq/bytecode.cpp
   zynq/cmdlist.cpp
@@ -107,6 +110,8 @@ if(ENABLE_INSTALL_NONLIB)
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-seq")
   install(FILES ${nacs_seq_zynq_HDRS}
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-seq/zynq")
+  install(FILES ${nacs_seq_nidaq_HDRS}
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-seq/nidaq")
 endif()
 
 install(TARGETS nacs-seq
