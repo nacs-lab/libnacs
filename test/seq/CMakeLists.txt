@@ -25,6 +25,7 @@ add_test(NAME test/normal/seq/cmdlist_parse
   "$<TARGET_FILE:test-cmdlist_parse>")
 add_seq_test(host_seq)
 add_seq_test(host_seq_error)
+add_seq_test(nidaq_data_gen)
 add_seq_test(zynq_bc_gen)
 
 if(ENABLE_LLVM)
