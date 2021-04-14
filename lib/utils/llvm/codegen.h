@@ -53,15 +53,16 @@ struct Wrapper {
         arg_map.emplace(arg, Arg{Closure, idx});
         return *this;
     }
-    Wrapper &add_byref(uint32_t arg)
+    Wrapper &add_byref(uint32_t arg, uint32_t alignment=0)
     {
         auto &spec = arg_map[arg];
         spec.type = ArgType(spec.type | ByRef);
+        spec.idx = alignment;
         return *this;
     }
-    Wrapper &add_ret_ref()
+    Wrapper &add_ret_ref(uint32_t alignment=0)
     {
-        return add_byref(uint32_t(-1));
+        return add_byref(uint32_t(-1), alignment);
     }
     Wrapper &add_vector(uint32_t arg)
     {

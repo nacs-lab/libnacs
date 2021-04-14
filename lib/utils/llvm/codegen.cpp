@@ -306,6 +306,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     SmallVector<Type*, 8> fsig;
     bool ret_ref = false;
     bool ret_closure = false;
+    uint32_t ret_ref_align = 0;
     auto ret_spec = spec.arg_map.find(uint32_t(-1));
     if (ret_spec != spec.arg_map.end()) {
         if (ret_spec->second.type == Wrapper::Closure) {
@@ -320,6 +321,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             fsig.push_back(rt->getPointerTo());
             rt = Type::getVoidTy(func->getContext());
             ret_ref = true;
+            ret_ref_align = ret_spec->second.idx;
         }
     }
     for (unsigned i = 0; i < nargs; i++) {
@@ -395,6 +397,15 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             // Allow aliasing.
             auto load = builder.CreateLoad(argt, arg);
             call_args[i] = load;
+            if (auto align = arg_spec->second.idx) {
+#if LLVM_VERSION_MAJOR >= 11
+                load->setAlignment(Align(align));
+#elif LLVM_VERSION_MAJOR >= 10
+                load->setAlignment(MaybeAlign(align));
+#else
+                load->setAlignment(align);
+#endif
+            }
         }
         else {
             call_args[i] = &*(argit + j);
@@ -408,7 +419,16 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     }
     auto res = builder.CreateCall(func, call_args);
     if (ret_ref) {
-        builder.CreateStore(res, &*wrapf->arg_begin());
+        auto store = builder.CreateStore(res, &*wrapf->arg_begin());
+        if (ret_ref_align) {
+#if LLVM_VERSION_MAJOR >= 11
+            store->setAlignment(Align(ret_ref_align));
+#elif LLVM_VERSION_MAJOR >= 10
+            store->setAlignment(MaybeAlign(ret_ref_align));
+#else
+            store->setAlignment(ret_ref_align);
+#endif
+        }
         builder.CreateRetVoid();
     }
     else if (ret_closure) {
