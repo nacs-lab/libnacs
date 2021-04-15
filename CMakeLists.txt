@@ -129,6 +129,11 @@ cmake_c_add_flags(CMAKE_SHARED_LINKER_FLAGS ${LINKER_FLAGS})
 cmake_c_add_flags(CMAKE_MODULE_LINKER_FLAGS ${LINKER_FLAGS})
 cmake_c_add_flags(CMAKE_C_FLAGS_DEBUG -ggdb3 -O0)
 cmake_c_add_flags(CMAKE_CXX_FLAGS_DEBUG -ggdb3 -O0)
+cmake_c_add_flags(CMAKE_C_FLAGS_RELEASE -O3)
+cmake_c_add_flags(CMAKE_CXX_FLAGS_RELEASE -O3)
+# GCC does not turn on loop vectorizer at -O2
+cmake_c_add_flags(CMAKE_C_FLAGS_RELWITHDEBINFO -O3)
+cmake_c_add_flags(CMAKE_CXX_FLAGS_RELWITHDEBINFO -O3)
 
 cmake_c_include_fix_path()
 
