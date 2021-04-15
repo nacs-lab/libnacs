@@ -12,6 +12,7 @@ set(nacs_seq_zynq_HDRS
   zynq/pulse_time.h
   zynq/legacy_seq.h)
 set(nacs_seq_nidaq_HDRS
+  nidaq/backend.h
   nidaq/data_gen.h)
 set(nacs_seq_SRCS
   error.cpp
@@ -41,6 +42,7 @@ set(nacs_seq_llvm_SRCS
   env.cpp
   event_time.cpp
   manager.cpp
+  nidaq/backend.cpp
   pulse.cpp
   seq.cpp
   var.cpp
