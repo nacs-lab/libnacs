@@ -437,7 +437,9 @@ NACS_EXPORT() void DataGen::compute_times()
         std::sort(active_times.begin(), active_times.end(), [&] (auto &p1, auto &p2) {
             return p1 < p2;
         });
-        nsamples = 1001;
+        // Note that if active_times contains a time that's earlier than `0, 1000`
+        // the initial nsamples might not be 1001.
+        nsamples = active_times[0].second - active_times[0].first + 1;
         uint32_t from = 1;
         uint32_t ntimes = (uint32_t)active_times.size();
         auto *prev_time = &active_times[0];
