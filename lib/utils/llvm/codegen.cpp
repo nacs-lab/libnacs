@@ -343,7 +343,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             fsig.push_back(argt);
         }
     }
-    if (spec.closure)
+    if (spec.closure && !spec.closure_ptr)
         fsig.push_back(T_i8->getPointerTo());
     auto wrapf_type = FunctionType::get(rt, fsig, false);
 
@@ -362,7 +362,10 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     // 3. Create arguments
     SmallVector<Value*, 8> call_args(nargs);
     auto argit = wrapf->arg_end();
-    auto clarg = spec.closure ? &*(--argit) : nullptr;
+    auto clarg = (spec.closure && !spec.closure_ptr) ? &*(--argit) : nullptr;
+    Value *closure_ptr = clarg;
+    if (spec.closure && spec.closure_ptr)
+        closure_ptr = builder.CreateBitCast(spec.closure_ptr, T_i8->getPointerTo());
     argit = wrapf->arg_begin();
     if (ret_ref)
         ++argit;
@@ -376,7 +379,8 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
         if (arg_spec->second.type == Wrapper::Closure) {
             auto offset = arg_spec->second.idx;
             auto argt = fty->getParamType(i);
-            auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(T_i8, clarg, offset * 8),
+            auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(T_i8, closure_ptr,
+                                                                        offset * 8),
                                              argt->getPointerTo());
             max_offset = max(max_offset, offset + 1);
             auto load = builder.CreateLoad(argt, ptr);
@@ -414,8 +418,10 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     }
     if (max_offset) {
         assert(spec.closure);
-        clarg->addAttr(Attribute::NonNull);
-        wrapf->addDereferenceableParamAttr(fsig.size() - 1, max_offset * 8);
+        if (clarg) {
+            clarg->addAttr(Attribute::NonNull);
+            wrapf->addDereferenceableParamAttr(fsig.size() - 1, max_offset * 8);
+        }
     }
     auto res = builder.CreateCall(func, call_args);
     if (ret_ref) {

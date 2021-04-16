@@ -48,6 +48,7 @@ struct Wrapper {
     bool closure = false;
     unsigned vector_size = 1;
     std::map<uint32_t,Arg> arg_map{};
+    Constant *closure_ptr = nullptr;
     Wrapper &add_closure(uint32_t arg, uint32_t idx)
     {
         arg_map.emplace(arg, Arg{Closure, idx});
