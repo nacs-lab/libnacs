@@ -97,6 +97,36 @@ NACS_EXPORT() IR::Type get_ir_type(llvm::Type *typ, bool apitype)
     return IR::Type::_Min;
 }
 
+NACS_EXPORT() Value *convert_scalar(IRBuilder<> &builder, Type *typ, Value *val)
+{
+    auto vt = val->getType();
+    if (vt == typ)
+        return val;
+    if (typ->isIntegerTy()) {
+        if (vt->isIntegerTy()) {
+            // bool
+            if (vt->getPrimitiveSizeInBits() == 1)
+                return builder.CreateZExtOrTrunc(val, typ);
+            return builder.CreateSExtOrTrunc(val, typ);
+        }
+        else if (vt->isFloatingPointTy()) {
+            return builder.CreateFPToSI(val, typ);
+        }
+    }
+    else if (typ->isFloatingPointTy()) {
+        if (vt->isIntegerTy()) {
+            // bool
+            if (vt->getPrimitiveSizeInBits() == 1)
+                return builder.CreateUIToFP(val, typ);
+            return builder.CreateSIToFP(val, typ);
+        }
+        else if (vt->isFloatingPointTy()) {
+            return builder.CreateFPCast(val, typ);
+        }
+    }
+    throw std::invalid_argument("Unable to convert value.");
+}
+
 NACS_EXPORT_ FunctionMover::FunctionMover(Module *dest)
     : ValueMaterializer(), m_vmap(), m_dest(dest), m_lazy_funcs(0)
 {

@@ -24,6 +24,7 @@
 
 #include <llvm/IR/DebugLoc.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Type.h>
@@ -66,6 +67,8 @@ struct context_deleter {
 using context_ref = std::unique_ptr<llvm::LLVMContext,context_deleter>;
 NACS_EXPORT(utils) context_ref new_context();
 NACS_EXPORT(utils) IR::Type get_ir_type(llvm::Type*, bool apitype=true);
+NACS_EXPORT(utils) llvm::Value *convert_scalar(llvm::IRBuilder<> &builder,
+                                               llvm::Type *typ, llvm::Value *val);
 
 /**
  * Clone a function from one module to another alone with all its dependencies.
