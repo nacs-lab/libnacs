@@ -59,6 +59,8 @@ if(ENABLE_LLVM)
   endfunction()
 
   add_llvm_test(codegen)
+  add_llvm_test(codegen_closure)
+  set_property(TARGET test-codegen_closure APPEND PROPERTY LINK_FLAGS "-rdynamic")
   add_llvm_test(codegen_dump)
   add_llvm_test(vec_codegen)
 endif()

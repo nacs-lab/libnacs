@@ -49,6 +49,16 @@ struct LLVMTest : LLVM::Codegen::Context {
     LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func)
         : LLVMTest(ll_ctx, engine)
     {
+        set_function(func);
+    }
+    LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func,
+             const LLVM::Codegen::Wrapper &wrapper)
+        : LLVMTest(ll_ctx, engine)
+    {
+        set_function(func, wrapper);
+    }
+    void set_function(const IR::Function &func)
+    {
         f = emit_function(func, "0");
         auto fty = f->getFunctionType();
         assert(!fty->isVarArg());
@@ -56,9 +66,7 @@ struct LLVMTest : LLVM::Codegen::Context {
             assert(argt == T_i8 || argt == T_i32 || argt == T_f64);
         }
     }
-    LLVMTest(llvm::LLVMContext &ll_ctx, LLVM::Exe::Engine &engine, const IR::Function &func,
-             const LLVM::Codegen::Wrapper &wrapper)
-        : LLVMTest(ll_ctx, engine)
+    void set_function(const IR::Function &func, const LLVM::Codegen::Wrapper &wrapper)
     {
         auto f0 = emit_function(func, "1", false);
         auto fty0 = f0->getFunctionType();
@@ -179,6 +187,10 @@ struct CodegenTest<Res(Args...), approx> : IRTest<Res(Args...), approx> {
     FT *get_llvm_func(const char *name=nullptr)
     {
         return (FT*)_get_llvm_test().get_ptr(name);
+    }
+    LLVMTest get_empty_llvm_test()
+    {
+        return ctx.get_llvm_test();
     }
     template<typename... Args2>
     LLVMTest get_llvm_test(Args2&&... args)
