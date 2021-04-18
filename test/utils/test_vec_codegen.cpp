@@ -171,8 +171,13 @@ struct _vec_sig<std::index_sequence<I...>, Res(Args...), vsize, vargi...> {
     using arg_t = std::conditional_t<num_in_pack<vargi...>(i), varg_t<i>, sarg_t<i>>;
     using func = api_type_t<Res,vsize>(arg_t<I>...) NACS_VECTORCALL;
     using func_ra = api_type_t<Res,vsize>(arg_t<I>&...) NACS_VECTORCALL;
-    using func_rr = void(api_type_t<Res,vsize>&,arg_t<I>...) NACS_VECTORCALL;
-    using func_rra = void(api_type_t<Res,vsize>&,arg_t<I>&...);
+    using func_rr = void(Res&,arg_t<I>...) NACS_VECTORCALL;
+    using func_rra = void(Res&,sarg_t<I>&...);
+};
+
+template<typename T, size_t vsize>
+struct aligned_array {
+    T ary[vsize] __attribute__((aligned(64)));
 };
 
 template<typename F, size_t vsize, size_t ...vargi>
@@ -252,20 +257,37 @@ private:
         LLVM::Codegen::Wrapper vec{false};
         vec.vector_size = vsize;
         vec.add_ret_ref();
+        LLVM::Codegen::Wrapper vec_unalign{false};
+        vec_unalign.vector_size = vsize;
+        vec_unalign.add_ret_ref(sizeof(Res));
         auto test_vec = this->get_llvm_test(vec);
         if (!test_vec.f) {
             std::cerr << "Vectorizing byref return failed." << std::endl;
             abort();
         }
+        auto test_vec_unalign = this->get_llvm_test(vec_unalign);
+        if (!test_vec_unalign.f) {
+            std::cerr << "Vectorizing unaligned byref return failed." << std::endl;
+            abort();
+        }
         if (vsize * 8 > (unsigned)host_info.get_vector_size())
             return;
         auto f = (void(*)(Res*, Args...))test_vec.get_ptr();
+        auto f_unalign = (void(*)(Res*, Args...))test_vec_unalign.get_ptr();
         foreach_args(
             [&] (Args... args) {
-                Res ares[vsize] __attribute__((aligned(64)));
+                Res ares[vsize * 2] __attribute__((aligned(64)));
+                memset(ares, 0, sizeof(ares));
                 f(ares, args...);
                 for (size_t i = 0; i < vsize; i++) {
                     test_res("Vector ref return", ares[i], args...);
+                }
+                for (size_t offset = 0; offset < vsize; offset++) {
+                    memset(ares, 0, sizeof(ares));
+                    f_unalign(ares + offset, args...);
+                    for (size_t i = 0; i < vsize; i++) {
+                        test_res("Vector ref return", ares[offset + i], args...);
+                    }
                 }
             });
     }
@@ -419,12 +441,20 @@ private:
     {
         LLVM::Codegen::Wrapper vec{false};
         vec.vector_size = vsize;
-        int l[] = {(vec.add_vector(vargi), 0)...};
+        LLVM::Codegen::Wrapper vec_unalign{false};
+        vec_unalign.vector_size = vsize;
+        int l[] = {(vec.add_vector(vargi), 0)..., (vec_unalign.add_vector(vargi), 0)...};
         (void)l;
         vec.add_ret_ref();
+        vec_unalign.add_ret_ref(sizeof(Res));
         auto test_vec = this->get_llvm_test(vec);
         if (!test_vec.f) {
-            std::cerr << "Vectorizing argument failed." << std::endl;
+            std::cerr << "Vectorizing argument with byref return failed." << std::endl;
+            abort();
+        }
+        auto test_vec_unalign = this->get_llvm_test(vec_unalign);
+        if (!test_vec_unalign.f) {
+            std::cerr << "Vectorizing argument with unaligned byref return failed." << std::endl;
             abort();
         }
         if (vsize * 8 > (unsigned)host_info.get_vector_size())
@@ -432,17 +462,31 @@ private:
 #if !REF_VEC_ONLY
         using vs = vec_sig<Res(Args...), vsize, vargi...>;
         auto fptr = test_vec.get_ptr();
+        auto fptr_unalign = test_vec_unalign.get_ptr();
         foreach_vecarg<vsize, vargi...>(
             [&] (typename vs::template arg_t<I>... args) {
-                api_type_t<Res, vsize> vres{};
+                Res ares[vsize * 2] __attribute__((aligned(64)));
+                memset(ares, 0, sizeof(ares));
                 vec_runner<vsize>::run(
                     [&] {
                         auto f = (typename vs::func_rr*)fptr;
-                        f(vres, args...);
+                        f(*ares, args...);
                     });
                 for (size_t i = 0; i < vsize; i++) {
-                    test_res("Vector arguments ret ref", vres[i],
+                    test_res("Vector arguments ret ref", ares[i],
                              get_sarg<I, vargi...>(args, i)...);
+                }
+                for (auto offset = 0; offset < vsize; offset++) {
+                    memset(ares, 0, sizeof(ares));
+                    vec_runner<vsize>::run(
+                        [&] {
+                            auto f_unalign = (typename vs::func_rr*)fptr_unalign;
+                            f_unalign(ares[offset], args...);
+                        });
+                    for (size_t i = 0; i < vsize; i++) {
+                        test_res("Vector arguments ret ref", ares[offset + i],
+                                 get_sarg<I, vargi...>(args, i)...);
+                    }
                 }
             });
 #endif
@@ -452,13 +496,24 @@ private:
     {
         LLVM::Codegen::Wrapper vec{false};
         vec.vector_size = vsize;
-        int l[] = {(vec.add_vector(vargi), 0)...};
+        LLVM::Codegen::Wrapper vec_unalign{false};
+        vec_unalign.vector_size = vsize;
+        int l[] = {(vec.add_vector(vargi), 0)..., (vec_unalign.add_vector(vargi), 0)...,
+            (vec.add_byref(I), 0)..., (vec_unalign.add_byref(I, sizeof(Args)), 0)..., };
         (void)l;
-        for (size_t i = 0; i < sizeof...(Args); i++)
-            vec.add_byref(i);
+        // for (size_t i = 0; i < sizeof...(Args); i++)
+        //     vec.add_byref(i);
         vec.add_ret_ref();
+        // for (size_t i = 0; i < sizeof...(Args); i++)
+        //     vec_unalign.add_byref(i);
+        vec_unalign.add_ret_ref(sizeof(Res));
         auto test_vec = this->get_llvm_test(vec);
         if (!test_vec.f) {
+            std::cerr << "Vectorizing argument failed." << std::endl;
+            abort();
+        }
+        auto test_vec_unalign = this->get_llvm_test(vec_unalign);
+        if (!test_vec_unalign.f) {
             std::cerr << "Vectorizing argument failed." << std::endl;
             abort();
         }
@@ -466,17 +521,37 @@ private:
             return;
         using vs = vec_sig<Res(Args...), vsize, vargi...>;
         auto fptr = test_vec.get_ptr();
+        auto fptr_unalign = test_vec_unalign.get_ptr();
         foreach_vecarg<vsize, vargi...>(
             [&] (typename vs::template arg_t<I>... args) {
-                api_type_t<Res, vsize> vres{};
+                std::tuple<aligned_array<Args, vsize * 2>...> aargs;
+                Res ares[vsize * 2] __attribute__((aligned(64)));
+                int init1[] = {(memcpy(std::get<I>(aargs).ary, &args, sizeof(args)), 0)...};
+                (void)init1;
+                memset(ares, 0, sizeof(ares));
                 vec_runner<vsize>::run(
                     [&] {
                         auto f = (typename vs::func_rra*)fptr;
-                        f(vres, args...);
+                        f(*ares, *std::get<I>(aargs).ary...);
                     });
                 for (size_t i = 0; i < vsize; i++) {
-                    test_res("Vector arguments ref all", vres[i],
+                    test_res("Vector arguments ref all", ares[i],
                              get_sarg<I, vargi...>(args, i)...);
+                }
+                for (size_t offset = 0; offset < vsize; offset++) {
+                    int init2[] = {(memcpy(std::get<I>(aargs).ary + offset,
+                                           &args, sizeof(args)), 0)...};
+                    (void)init2;
+                    memset(ares, 0, sizeof(ares));
+                    vec_runner<vsize>::run(
+                        [&] {
+                            auto f_unalign = (typename vs::func_rra*)fptr_unalign;
+                            f_unalign(ares[offset], std::get<I>(aargs).ary[offset]...);
+                        });
+                    for (size_t i = 0; i < vsize; i++) {
+                        test_res("Vector arguments ref all", ares[offset + i],
+                                 get_sarg<I, vargi...>(args, i)...);
+                    }
                 }
             });
     }
