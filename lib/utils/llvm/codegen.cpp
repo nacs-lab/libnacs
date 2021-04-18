@@ -439,7 +439,8 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     }
     else if (ret_closure) {
         auto offset = ret_spec->second.idx;
-        auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(T_i8, clarg, offset * 8),
+        auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(
+                                             T_i8, closure_ptr, offset * 8),
                                          res->getType()->getPointerTo());
         auto store = builder.CreateStore(res, ptr);
 #if LLVM_VERSION_MAJOR >= 11
