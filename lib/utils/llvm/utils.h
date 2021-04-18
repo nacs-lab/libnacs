@@ -66,6 +66,20 @@ struct context_deleter {
 };
 using context_ref = std::unique_ptr<llvm::LLVMContext,context_deleter>;
 NACS_EXPORT(utils) context_ref new_context();
+NACS_EXPORT(utils) llvm::GlobalVariable *new_global_variable(
+    llvm::Module &M, llvm::Type *Ty, bool isConstant,
+    llvm::GlobalValue::LinkageTypes Linkage,
+    llvm::Constant *Initializer,
+    const llvm::Twine &Name = "",
+    llvm::GlobalVariable *InsertBefore = nullptr);
+NACS_EXPORT(utils) llvm::GlobalVariable *new_global_variable(
+    llvm::Type *Ty, bool isConstant,
+    llvm::GlobalValue::LinkageTypes Linkage,
+    llvm::Constant *Initializer,
+    const llvm::Twine &Name = "");
+NACS_EXPORT(utils) llvm::ArrayType *get_array_type(llvm::Type *ElementType,
+                                                   uint64_t NumElements);
+
 NACS_EXPORT(utils) IR::Type get_ir_type(llvm::Type*, bool apitype=true);
 NACS_EXPORT(utils) llvm::Value *convert_scalar(llvm::IRBuilder<> &builder,
                                                llvm::Type *typ, llvm::Value *val);

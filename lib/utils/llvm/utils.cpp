@@ -81,6 +81,25 @@ NACS_EXPORT() void delete_context(LLVMContext *ctx)
     delete ctx;
 }
 
+NACS_EXPORT() GlobalVariable *new_global_variable(
+    Module &M, Type *Ty, bool isConstant, GlobalValue::LinkageTypes Linkage,
+    Constant *Initializer, const Twine &Name, GlobalVariable *InsertBefore)
+{
+    return new GlobalVariable(M, Ty, isConstant, Linkage, Initializer, Name, InsertBefore);
+}
+
+NACS_EXPORT() GlobalVariable *new_global_variable(
+    Type *Ty, bool isConstant, GlobalValue::LinkageTypes Linkage,
+    Constant *Initializer, const Twine &Name)
+{
+    return new GlobalVariable(Ty, isConstant, Linkage, Initializer, Name);
+}
+
+NACS_EXPORT() ArrayType *get_array_type(Type *ElementType, uint64_t NumElements)
+{
+    return ArrayType::get(ElementType, NumElements);
+}
+
 NACS_EXPORT() IR::Type get_ir_type(llvm::Type *typ, bool apitype)
 {
     if (typ->isDoubleTy())
