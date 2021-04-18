@@ -25,6 +25,8 @@
 
 using namespace NaCs;
 
+NACS_EXPORT() int global_symbol = 1;
+
 int main()
 {
     auto hdl = DL::open("libopenlibm", DL::GLOBAL | DL::NOW);
@@ -33,5 +35,9 @@ int main()
     assert(psin && "Cannot find sin in openlibm");
     assert(approx(sin(1.5), psin(1.5)));
     DL::close(hdl);
+
+    auto *pgv = DL::sym(nullptr, "global_symbol");
+    assert(pgv == (void*)&global_symbol);
+
     return 0;
 }

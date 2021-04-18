@@ -222,10 +222,19 @@ NACS_EXPORT() bool close(void *handle)
 
 NACS_EXPORT() void *sym(void *handle, const char *symbol)
 {
-    if (!handle)
-        handle = get_libnacs_handle();
+    if (handle) {
+        dlerror(); /* Reset error status. */
+        return dlsym(handle, symbol);
+    }
+    handle = get_libnacs_handle();
     dlerror(); /* Reset error status. */
-    return dlsym(handle, symbol);
+    if (auto res = dlsym(handle, symbol))
+        return res;
+    static auto exe_hdl = dlopen(nullptr, RTLD_LAZY);
+    dlerror(); /* Reset error status. */
+    if (auto res = dlsym(exe_hdl, symbol))
+        return res;
+    return nullptr;
 }
 #endif
 
