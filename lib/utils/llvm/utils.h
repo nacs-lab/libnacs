@@ -79,6 +79,9 @@ NACS_EXPORT(utils) llvm::GlobalVariable *new_global_variable(
     const llvm::Twine &Name = "");
 NACS_EXPORT(utils) llvm::ArrayType *get_array_type(llvm::Type *ElementType,
                                                    uint64_t NumElements);
+NACS_EXPORT(utils) llvm::ArrayType *get_array_type(llvm::Type *ElementType,
+                                                   uint64_t NumElements);
+NACS_EXPORT(utils) llvm::ConstantAggregateZero *get_aggregate_zero(llvm::Type *ty);
 
 NACS_EXPORT(utils) IR::Type get_ir_type(llvm::Type*, bool apitype=true);
 NACS_EXPORT(utils) llvm::Value *convert_scalar(llvm::IRBuilder<> &builder,

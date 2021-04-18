@@ -100,6 +100,11 @@ NACS_EXPORT() ArrayType *get_array_type(Type *ElementType, uint64_t NumElements)
     return ArrayType::get(ElementType, NumElements);
 }
 
+NACS_EXPORT() llvm::ConstantAggregateZero *get_aggregate_zero(llvm::Type *ty)
+{
+    return llvm::ConstantAggregateZero::get(ty);
+}
+
 NACS_EXPORT() IR::Type get_ir_type(llvm::Type *typ, bool apitype)
 {
     if (typ->isDoubleTy())
