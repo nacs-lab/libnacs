@@ -232,7 +232,8 @@ private:
     std::map<std::string,SocketInfo> m_sockets;
     std::mutex m_lock;
     std::thread m_worker;
-    bool m_running;
+    bool m_running = false;
+    bool m_finalize = false;
 };
 
 }

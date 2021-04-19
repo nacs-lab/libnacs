@@ -41,10 +41,11 @@ NACS_EXPORT() MultiClient::~MultiClient()
 {
     if (m_worker.joinable()) {
         std::unique_lock<std::mutex> locker(m_lock);
-        m_sockets.clear();
+        m_finalize = true;
         locker.unlock();
         m_worker.join();
     }
+    m_sockets.clear();
 }
 
 NACS_EXPORT() uint64_t MultiClient::SockRef::send_addr()
@@ -110,7 +111,7 @@ void MultiClient::worker_func()
                 ++it;
             }
         }
-        if (poll_items.empty())
+        if (poll_items.empty() || m_finalize)
             break;
         locker.unlock();
         // 15ms timeout. This is the maximum delay when we add a new socket.
