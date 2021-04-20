@@ -3,6 +3,7 @@ build*/
 .*
 !.git*
 !.mailmap
+!.travis.yml
 .git/
 *.tar.*
 *.kdev4
