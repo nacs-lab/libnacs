@@ -88,7 +88,8 @@ set_target_properties(zmq PROPERTIES
   IMPORTED_LOCATION "${PC_ZMQ_LINK_LIBRARIES}")
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden -Wconversion
-  -fno-math-errno -Wno-sign-conversion -Wno-unused-parameter -Wno-psabi -D_FILE_OFFSET_BITS=64)
+  -fno-math-errno -Wno-sign-conversion -Wsign-compare
+  -Wno-unused-parameter -Wno-psabi -D_FILE_OFFSET_BITS=64)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # We have GCC specific warning options that makes Clang unhappy.
   # Adding this unconditionally cause GCC to issue a warning if there are other warnings

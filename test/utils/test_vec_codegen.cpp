@@ -476,7 +476,7 @@ private:
                     test_res("Vector arguments ret ref", ares[i],
                              get_sarg<I, vargi...>(args, i)...);
                 }
-                for (auto offset = 0; offset < vsize; offset++) {
+                for (size_t offset = 0; offset < vsize; offset++) {
                     memset(ares, 0, sizeof(ares));
                     vec_runner<vsize>::run(
                         [&] {
