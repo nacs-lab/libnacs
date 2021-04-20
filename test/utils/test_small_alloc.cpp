@@ -100,7 +100,7 @@ private:
     {
         // The if constexpr is used to workaround
         // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=100161
-        if constexpr (nstatic) {
+        if constexpr (nstatic != 0) {
             for (size_t i = 0; i < nstatic; i++) {
                 assert(m_counters[i] == m_counters2[i]);
             }
