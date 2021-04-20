@@ -273,7 +273,10 @@ class SmallAllocator {
 public:
     SmallAllocator()
     {
-        memset(&m_bits, 0xff, sizeof(m_bits));
+        // The if constexpr is used to workaround
+        // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90728
+        if constexpr (nbits32)
+            memset(&m_bits, 0xff, sizeof(m_bits));
         if (auto nleft = n % 32) {
             m_bits[nbits32 - 1] = (1 << nleft) - 1;
         }
