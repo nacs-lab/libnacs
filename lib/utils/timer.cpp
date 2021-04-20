@@ -18,6 +18,7 @@
 
 #include "timer.h"
 
+#include <assert.h>
 #include <time.h>
 
 #include <vector>
@@ -153,7 +154,9 @@ NACS_EXPORT() int64_t PerfCounter::finish(bool stop)
     if (stop)
         ioctl(m_fd, PERF_EVENT_IOC_DISABLE, 0);
     long long res;
-    read(m_fd, &res, sizeof(res));
+    ssize_t r = read(m_fd, &res, sizeof(res));
+    assert(r == sizeof(res));
+    (void)r;
     return res;
 }
 #else
