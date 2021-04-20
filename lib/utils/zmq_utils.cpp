@@ -18,12 +18,30 @@
 
 #include "zmq_utils.h"
 
+#include <inttypes.h>
+#include <stdio.h>
+
 namespace NaCs::ZMQ {
 
 NACS_EXPORT() zmq::context_t &global_context()
 {
     static zmq::context_t context;
     return context;
+}
+
+NACS_EXPORT() std::pair<zmq::socket_t,zmq::socket_t> inproc_socketpair(zmq::context_t &ctx)
+{
+    // This should be unique among concurrent callers
+    void *ptr = __builtin_frame_address(0);
+    constexpr char fmt[] = "inproc://nacs/zmq/pair/%" PRIxPTR;
+    char addr[sizeof(fmt) + sizeof(ptr) * 2];
+    snprintf(addr, sizeof(addr), fmt, (uintptr_t)ptr);
+    std::pair<zmq::socket_t,zmq::socket_t> sockets{zmq::socket_t{ctx, ZMQ_PAIR},
+        zmq::socket_t{ctx, ZMQ_PAIR}};
+    sockets.first.bind(addr);
+    sockets.second.connect(addr);
+    sockets.first.unbind(addr);
+    return sockets;
 }
 
 NACS_EXPORT() MultiClient &MultiClient::global()
