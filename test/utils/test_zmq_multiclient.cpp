@@ -159,6 +159,57 @@ static void test_interleave(ZMQ::MultiClient::SockRef &sock)
     test_str_msg(msg, "finished");
 }
 
+static void test_interleave2(ZMQ::MultiClient::SockRef &sock, ZMQ::MultiClient::SockRef &sock2)
+{
+    auto reply = sock.send_msg([&] (auto &sock) {
+        ZMQ::send(sock, ZMQ::str_msg("wait"));
+    });
+    auto reply2 = sock2.send_msg([&] (auto &sock) {
+        ZMQ::send(sock, ZMQ::str_msg("wait"));
+    });
+    for (int i = 0; i < 10; i++)
+        ping_server(sock);
+    for (int i = 0; i < 10; i++)
+        ping_server(sock2);
+    auto status = reply.wait_for(std::chrono::milliseconds(1));
+    assert(status == std::future_status::timeout);
+    auto status2 = reply2.wait_for(std::chrono::milliseconds(1));
+    assert(status2 == std::future_status::timeout);
+
+    {
+        auto rel_reply = sock.send_msg([&] (auto &sock) {
+            ZMQ::send(sock, ZMQ::str_msg("release"));
+        });
+        auto rel_msgs = rel_reply.get();
+        assert(rel_msgs.size() == 1);
+        auto &rel_msg = rel_msgs[0];
+        test_str_msg(rel_msg, "releasing");
+
+        auto msgs = reply.get();
+        assert(msgs.size() == 1);
+        auto &msg = msgs[0];
+        test_str_msg(msg, "finished");
+    }
+
+    status2 = reply2.wait_for(std::chrono::milliseconds(1));
+    assert(status2 == std::future_status::timeout);
+
+    {
+        auto rel_reply2 = sock2.send_msg([&] (auto &sock) {
+            ZMQ::send(sock, ZMQ::str_msg("release"));
+        });
+        auto rel_msgs2 = rel_reply2.get();
+        assert(rel_msgs2.size() == 1);
+        auto &rel_msg2 = rel_msgs2[0];
+        test_str_msg(rel_msg2, "releasing");
+
+        auto msgs2 = reply2.get();
+        assert(msgs2.size() == 1);
+        auto &msg2 = msgs2[0];
+        test_str_msg(msg2, "finished");
+    }
+}
+
 static void exit_server(ZMQ::MultiClient::SockRef &sock)
 {
     auto reply = sock.send_msg([&] (auto &sock) {
@@ -175,9 +226,13 @@ int main(int argc, char **argv)
     Server server;
     int port = server.start();
     std::string addr("tcp://127.0.0.1:" + std::to_string(port));
+    Server server2;
+    int port2 = server2.start();
+    std::string addr2("tcp://127.0.0.1:" + std::to_string(port2));
 
     auto &client = ZMQ::MultiClient::global();
     auto sock = client.get_socket(addr.c_str());
+    auto sock2 = client.get_socket(addr2.c_str());
 
     // Single thread ping.
     ping_server(sock);
@@ -189,8 +244,11 @@ int main(int argc, char **argv)
     }
     // Make sure we can recieve things out-of-order
     test_interleave(sock);
+    test_interleave2(sock, sock2);
 
     exit_server(sock);
+    exit_server(sock2);
     server.thread.join();
+    server2.thread.join();
     return 0;
 }
