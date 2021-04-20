@@ -51,16 +51,15 @@ NACS_EXPORT() MultiClient &MultiClient::global()
 }
 
 NACS_EXPORT_ MultiClient::MultiClient(zmq::context_t &context)
-    : m_context(context)
+    : m_context(context),
+      m_cmd_sockets(inproc_socketpair(context))
 {
 }
 
 NACS_EXPORT() MultiClient::~MultiClient()
 {
     if (m_worker.joinable()) {
-        std::unique_lock<std::mutex> locker(m_lock);
-        m_finalize = true;
-        locker.unlock();
+        send(m_cmd_sockets.second, bits_msg((void*)nullptr));
         m_worker.join();
     }
     m_sockets.clear();
@@ -70,8 +69,10 @@ NACS_EXPORT() uint64_t MultiClient::SockRef::send_addr()
 {
     // Assume the client lock is held.
     uint64_t id = ++m_info.msg_counter;
-    send_more(m_info.sock, bits_msg(id));
-    send_more(m_info.sock, m_info.empty);
+    auto &sock = m_info.client.m_cmd_sockets.second;
+    send_more(sock, bits_msg(&m_info));
+    send_more(sock, bits_msg(id));
+    send_more(sock, m_info.empty);
     return id;
 }
 
@@ -108,19 +109,20 @@ void MultiClient::ensure_worker()
 
 void MultiClient::worker_func()
 {
-    std::unique_lock<std::mutex> locker(m_lock);
     // TODO: use poller when it's finalized.
     std::vector<zmq::pollitem_t> poll_items;
+    poll_items.push_back({(void*)m_cmd_sockets.first, 0, ZMQ_POLLIN, 0});
     std::vector<decltype(m_sockets.begin())> sockets;
     zmq::message_t msg;
     std::vector<zmq::message_t> msgs;
     while (true) {
-        poll_items.clear();
+        poll_items.resize(1);
         // Cache the socket since other thread may have added new ones when we are polling.
         sockets.clear();
+        std::unique_lock<std::mutex> locker(m_lock);
         for (auto it = m_sockets.begin(), end = m_sockets.end(); it != end;) {
             auto &info = it->second;
-            if (info.ref_count == 0) {
+            if (info.ref_count == 0 && info.callbacks.empty()) {
                 it = m_sockets.erase(it);
             }
             else {
@@ -129,15 +131,32 @@ void MultiClient::worker_func()
                 ++it;
             }
         }
-        if (poll_items.empty() || m_finalize)
-            break;
         locker.unlock();
-        // 15ms timeout. This is the maximum delay when we add a new socket.
-        zmq::poll(poll_items, 15);
-        locker.lock();
+        if (poll_items.size() == 1)
+            break;
+        zmq::poll(poll_items);
+        if (poll_items[0].revents) {
+            assert(poll_items[0].revents == ZMQ_POLLIN);
+            recv(m_cmd_sockets.first, msg);
+            assert(msg.size() == sizeof(void*));
+            SocketInfo *info;
+            memcpy(&info, msg.data(), sizeof(void*));
+            if (!info)
+                break;
+            while (true) {
+                recv(m_cmd_sockets.first, msg);
+                if (has_more(m_cmd_sockets.first)) {
+                    send_more(info->sock, msg);
+                }
+                else {
+                    send(info->sock, msg);
+                    break;
+                }
+            }
+        }
         auto nsockets = sockets.size();
         for (size_t i = 0; i < nsockets; i++) {
-            auto &item = poll_items[i];
+            auto &item = poll_items[i + 1];
             if (!item.revents)
                 continue;
             assert(item.revents == ZMQ_POLLIN);
@@ -156,16 +175,18 @@ void MultiClient::worker_func()
                 readall(info.sock);
                 continue;
             }
+            locker.lock();
             auto cb_it = info.callbacks.find(id);
             if (cb_it == info.callbacks.end()) {
+                locker.unlock();
                 readall(info.sock);
                 continue;
             }
             auto cb = cb_it->second;
             info.callbacks.erase(cb_it);
+            locker.unlock();
             while (recv_more(info.sock, msg))
                 msgs.push_back(std::move(msg));
-            locker.unlock();
             try {
                 cb(nullptr, std::move(msgs));
             }
@@ -173,7 +194,6 @@ void MultiClient::worker_func()
                 // Ignore
             }
             msgs.clear();
-            locker.lock();
         }
     }
     m_running = false;

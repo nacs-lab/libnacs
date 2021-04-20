@@ -237,7 +237,7 @@ int main(int argc, char **argv)
     // Single thread ping.
     ping_server(sock);
     // Multi thread ping.
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 100; i++) {
         test_multi_ping(client, addr.c_str(), 2);
         test_multi_ping(client, addr.c_str(), 4);
         test_multi_ping(client, addr.c_str(), 8);

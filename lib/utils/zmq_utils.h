@@ -198,7 +198,7 @@ public:
         {
             std::lock_guard<std::mutex> locker(m_info.client.m_lock);
             auto id = send_addr();
-            std::forward<SendFunc>(send_func)(m_info.sock);
+            std::forward<SendFunc>(send_func)(m_info.client.m_cmd_sockets.second);
             add_wait(id, finish_cb);
         }
         template<typename SendFunc>
@@ -232,10 +232,10 @@ private:
 
     zmq::context_t &m_context;
     std::map<std::string,SocketInfo> m_sockets;
+    std::pair<zmq::socket_t,zmq::socket_t> m_cmd_sockets;
     std::mutex m_lock;
     std::thread m_worker;
     bool m_running = false;
-    bool m_finalize = false;
 };
 
 }
