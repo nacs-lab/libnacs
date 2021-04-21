@@ -234,7 +234,6 @@ test_cond_var()
                 std::this_thread::yield();
             }
         });
-    thread.detach();
     timer.restart();
     for (int i = 0;i < N;i++) {
         cv.notify_one();
@@ -246,6 +245,7 @@ test_cond_var()
     tocPerCycle(timer);
     exit = true;
     cv.notify_all();
+    thread.join();
 }
 
 template<template<typename...> class Tester>
