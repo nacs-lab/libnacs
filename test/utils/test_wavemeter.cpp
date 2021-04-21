@@ -123,7 +123,11 @@ struct TestFile {
         const double *datas_ptr;
         const double *heights_ptr;
         std::tie(times_ptr, datas_ptr, heights_ptr) = parser.parse(stm, &sz, tstart, tend);
-        {
+        if (!times_ptr || *times_ptr <= tstart) {
+            // If the time that was right before the requested start time
+            // does not have a valid data point we'll omit it from the cache
+            // and the second run might expand the data range down.
+            // Only check that the cache is taken when we know this doesn't occur.
             size_t sz2;
             auto res = parser.parse(stm, &sz2, tstart, tend);
             assert(times_ptr == nullptr || sz == sz2);
