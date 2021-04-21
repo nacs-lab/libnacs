@@ -202,10 +202,10 @@ int main()
 
     test0(10);
     test0(1);
-    test0(0.1);
+    test0(0.3);
 
     auto test1 = [&] () {
-        TestFile test(1539887328, 1543334688, 1, 288000, 289000);
+        TestFile test(1539887328, 1543334688, 5, 288000, 289000);
 
         Wavemeter parser(test.lo, test.hi);
         test.test_parse(parser, 1543190400, 1543363200);
