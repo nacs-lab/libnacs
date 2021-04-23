@@ -45,6 +45,9 @@ class NameCounter {
 public:
     const char *next_name()
     {
+        // Do not include `.` in the list below since that can poentially cause names
+        // starting with `llvm.` to be generated.
+        // We may also want to avoid lib functions in the future.
         static constexpr char digits[] =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
         static_assert(sizeof(digits) == 65, "");
@@ -75,12 +78,19 @@ bool GlobalRenamePass::runOnModule(Module &M)
         // final binary anyway.
         if (g.isDeclaration() || g.hasLocalLinkage())
             continue;
+    retry:
         auto new_name = counter.next_name();
         if (g.getName() == new_name)
             continue;
-        changed = true;
-        if (auto old_g = M.getNamedValue(new_name))
+        if (auto old_g = M.getNamedValue(new_name)) {
+            // Don't rename declaration
+            if (old_g->isDeclaration())
+                goto retry;
+            // Either a local function or a global that we want to rename
+            // Just set the name to something random to avoid conflict.
             old_g->setName(".");
+        }
+        changed = true;
         g.setName(new_name);
     }
     return changed;
