@@ -2,6 +2,7 @@
 
 set(nacs_seq_HDRS
   error.h
+  host_seq.h
   sign.h)
 set(nacs_seq_zynq_HDRS
   zynq/bytecode.h
@@ -10,6 +11,7 @@ set(nacs_seq_zynq_HDRS
   zynq/pulse_time.h)
 set(nacs_seq_SRCS
   error.cpp
+  host_seq.cpp
   zynq/bytecode.cpp
   zynq/cmdlist.cpp
   zynq/parser.cpp
