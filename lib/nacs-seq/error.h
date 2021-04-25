@@ -45,6 +45,7 @@ struct NACS_EXPORT_ Error : std::runtime_error {
     enum class Pulse : uint8_t {
         NegTime,
         NoRamp,
+        NonPosLen,
     };
     enum class BasicSeq : uint8_t {
         ExternMeasure,
