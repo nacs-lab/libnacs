@@ -17,12 +17,14 @@ set(nacs_seq_SRCS
 set(nacs_seq_LINKS)
 set(nacs_seq_llvm_HDRS
   basic_seq.h
+  builder.h
   env.h
   event_time.h
   pulse.h
   seq.h)
 set(nacs_seq_llvm_SRCS
   basic_seq.cpp
+  builder.cpp
   env.cpp
   event_time.cpp
   pulse.cpp
