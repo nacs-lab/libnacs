@@ -1,6 +1,7 @@
 #
 
-set(nacs_seq_HDRS)
+set(nacs_seq_HDRS
+  sign.h)
 set(nacs_seq_zynq_HDRS
   zynq/bytecode.h
   zynq/cmdlist.h
