@@ -8,8 +8,10 @@ compiler:
   - clang
 
 env:
+  - CMAKE_BUILD_TYPE=Release LLVM_VER=
   - CMAKE_BUILD_TYPE=Release LLVM_VER=10
   - CMAKE_BUILD_TYPE=Release LLVM_VER=11
+  - CMAKE_BUILD_TYPE=Debug LLVM_VER=
   - CMAKE_BUILD_TYPE=Debug LLVM_VER=10
   - CMAKE_BUILD_TYPE=Debug LLVM_VER=11
 
@@ -21,7 +23,7 @@ addons:
       - libzmq3-dev
 
 before_script:
-  - sudo apt-get install llvm-${LLVM_VER}-dev
+  - if [ -n "${LLVM_VER}" ]; then sudo apt-get install llvm-${LLVM_VER}-dev; fi
 
 script:
   - bash -e test/travis_build.sh
