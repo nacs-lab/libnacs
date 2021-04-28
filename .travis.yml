@@ -26,4 +26,4 @@ before_script:
 
 script:
   - bash -e test/travis_build.sh
-  - cd build && ctest -E /excluded -j $(nproc)
+  - cd build && ctest -E /excluded -j $(nproc) --output-on-failure
