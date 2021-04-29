@@ -29,7 +29,7 @@
  * the (main) usecase.
  */
 
-#include "seq.h"
+#include "pulse_time.h"
 
 #include <stdexcept>
 
@@ -461,14 +461,6 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
         }
     }
 }
-
-}
-
-extern "C" {
-
-uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data, size_t data_len,
-                                  size_t *code_len, uint32_t *ttl_mask);
-uint64_t nacs_seq_bytecode_total_time(const uint8_t *code, size_t code_len);
 
 }
 

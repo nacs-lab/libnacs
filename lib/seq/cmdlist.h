@@ -29,7 +29,7 @@
  * only the ones that can be used in an experimental sequence.
  */
 
-#include "seq.h"
+#include "pulse_time.h"
 
 #include <istream>
 #include <stdexcept>

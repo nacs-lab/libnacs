@@ -41,19 +41,6 @@ struct Channel {
     int id;
 };
 
-namespace PulseTime {
-static constexpr uint8_t Min = 3;
-static constexpr uint8_t _DDS = 50;
-static constexpr uint8_t DDSFreq = _DDS;
-static constexpr uint8_t DDSAmp = _DDS;
-static constexpr uint8_t DDSPhase = _DDS;
-static constexpr uint8_t DDSReset = _DDS;
-static constexpr uint8_t Clear = 5;
-static constexpr uint8_t LoopBack = 5;
-static constexpr uint8_t Clock = 5;
-static constexpr uint8_t DAC = 45;
-};
-
 static inline bool operator<(const Channel &id1, const Channel id2)
 {
     if (id1.typ < id2.typ) {
@@ -167,6 +154,14 @@ struct Sequence {
     std::vector<uint8_t> toByteCode(uint32_t *ttl_mask);
     uint8_t *toByteCode(size_t *sz, uint32_t *ttl_mask);
 };
+
+}
+
+extern "C" {
+
+uint8_t *nacs_seq_bin_to_bytecode(const uint32_t *data, size_t data_len,
+                                  size_t *code_len, uint32_t *ttl_mask);
+uint64_t nacs_seq_bytecode_total_time(const uint8_t *code, size_t code_len);
 
 }
 

@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,27 +16,22 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../lib/seq/seq.h"
+#include <nacs-utils/utils.h>
 
-#include <iostream>
-#include <fstream>
+#ifndef __NACS_SEQ_PULSE_TIME_H__
+#define __NACS_SEQ_PULSE_TIME_H__
 
-using namespace NaCs;
-
-int main(int argc, char **argv)
-{
-    if (argc != 2) {
-        std::cout << "ERROR: wrong number of arguments." << std::endl;
-        return 1;
-    }
-
-    std::ifstream istm(argv[1]);
-    istm.seekg(0, std::ios::end);
-    auto filesize = (size_t)istm.tellg();
-    istm.seekg(0, std::ios::beg);
-    std::vector<uint32_t> data(filesize / 4);
-    istm.read((char*)data.data(), filesize);
-    Seq::Sequence::dumpBinary(std::cout, data.data(), data.size());
-
-    return 0;
+namespace NaCs::Seq::PulseTime {
+static constexpr uint8_t Min = 3;
+static constexpr uint8_t _DDS = 50;
+static constexpr uint8_t DDSFreq = _DDS;
+static constexpr uint8_t DDSAmp = _DDS;
+static constexpr uint8_t DDSPhase = _DDS;
+static constexpr uint8_t DDSReset = _DDS;
+static constexpr uint8_t Clear = 5;
+static constexpr uint8_t LoopBack = 5;
+static constexpr uint8_t Clock = 5;
+static constexpr uint8_t DAC = 45;
 }
+
+#endif
