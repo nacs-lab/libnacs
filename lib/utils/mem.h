@@ -47,7 +47,7 @@ load_unalign(const void *p, size_t idx=0)
 template<typename T> static inline void
 store_unalign(void *p, T v, size_t idx=0)
 {
-    std::memcpy((const char*)p + sizeof(T) * idx, &v, sizeof(T));
+    std::memcpy((char*)p + sizeof(T) * idx, &v, sizeof(T));
 }
 
 template<typename T> static inline T
