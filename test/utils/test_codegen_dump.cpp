@@ -16,21 +16,15 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "codegen_helper.h"
 
-#include "../../lib/utils/number.h"
-#include "../../lib/utils/streams.h"
-#include "../../lib/utils/timer.h"
-#include <assert.h>
-#include <iostream>
-#include <sstream>
-#include <math.h>
+#include <stdlib.h>
 
-int main(int, char **argv)
-{
+ANON_TEST_CASE() {
     TestCtx ctx;
     IR::Builder builder(IR::Type::Int32, {});
     builder.createRet(builder.getConstInt(0));
-    ctx.get_llvm_test(builder.get()).get_ptr(argv[1]);
-    return 0;
+    ctx.get_llvm_test(builder.get()).get_ptr(getenv("CODEGEN_DUMP_FILE"));
 }

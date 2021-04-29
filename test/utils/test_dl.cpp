@@ -16,28 +16,29 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "winpath_helper.h"
 
 #include "../../lib/utils/dlload.h"
 #include "../../lib/utils/number.h"
-#include <assert.h>
+
 #include <math.h>
+
+#include <catch2/catch.hpp>
 
 using namespace NaCs;
 
 NACS_EXPORT() int global_symbol = 1;
 
-int main()
-{
+TEST_CASE("dl") {
     auto hdl = DL::open("libopenlibm", DL::GLOBAL | DL::NOW);
-    assert(hdl && "Unable to load openlibm");
+    REQUIRE(hdl);
     auto psin = (double(*)(double))DL::sym(hdl, "sin");
-    assert(psin && "Cannot find sin in openlibm");
-    assert(approx(sin(1.5), psin(1.5)));
+    REQUIRE(psin);
+    REQUIRE(psin(1.5) == Approx(sin(1.5)));
     DL::close(hdl);
 
     auto *pgv = DL::sym(nullptr, "global_symbol");
-    assert(pgv == (void*)&global_symbol);
-
-    return 0;
+    REQUIRE(pgv == (void*)&global_symbol);
 }

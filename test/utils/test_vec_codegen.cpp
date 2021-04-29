@@ -16,13 +16,14 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "codegen_helper.h"
 
 #include "../../lib/utils/number.h"
 #include "../../lib/utils/streams.h"
 #include "../../lib/utils/timer.h"
 #include "../../lib/utils/processor.h"
-#include <assert.h>
 #include <iostream>
 #include <sstream>
 #include <tuple>
@@ -229,10 +230,8 @@ private:
         LLVM::Codegen::Wrapper vec{false};
         vec.vector_size = vsize;
         auto test_vec = get_llvm_test(vec);
-        if (!test_vec.f) {
-            std::cerr << "Vectorizing return failed." << std::endl;
-            abort();
-        }
+        if (!test_vec.f)
+            FAIL("Vectorizing return failed.");
         if (vsize * 8 > (unsigned)host_info.get_vector_size())
             return;
 #if !REF_VEC_ONLY
@@ -261,15 +260,11 @@ private:
         vec_unalign.vector_size = vsize;
         vec_unalign.add_ret_ref(sizeof(Res));
         auto test_vec = this->get_llvm_test(vec);
-        if (!test_vec.f) {
-            std::cerr << "Vectorizing byref return failed." << std::endl;
-            abort();
-        }
+        if (!test_vec.f)
+            FAIL("Vectorizing byref return failed.");
         auto test_vec_unalign = this->get_llvm_test(vec_unalign);
-        if (!test_vec_unalign.f) {
-            std::cerr << "Vectorizing unaligned byref return failed." << std::endl;
-            abort();
-        }
+        if (!test_vec_unalign.f)
+            FAIL("Vectorizing unaligned byref return failed.");
         if (vsize * 8 > (unsigned)host_info.get_vector_size())
             return;
         auto f = (void(*)(Res*, Args...))test_vec.get_ptr();
@@ -378,10 +373,8 @@ private:
         int l[] = {(vec.add_vector(vargi), 0)...};
         (void)l;
         auto test_vec = this->get_llvm_test(vec);
-        if (!test_vec.f) {
-            std::cerr << "Vectorizing argument failed." << std::endl;
-            abort();
-        }
+        if (!test_vec.f)
+            FAIL("Vectorizing argument failed.");
         if (vsize * 8 > (unsigned)host_info.get_vector_size())
             return;
 #if !REF_VEC_ONLY
@@ -412,10 +405,8 @@ private:
         for (size_t i = 0; i < sizeof...(Args); i++)
             vec.add_byref(i);
         auto test_vec = this->get_llvm_test(vec);
-        if (!test_vec.f) {
-            std::cerr << "Vectorizing argument failed." << std::endl;
-            abort();
-        }
+        if (!test_vec.f)
+            FAIL("Vectorizing argument failed.");
         if (vsize * 8 > (unsigned)host_info.get_vector_size())
             return;
 #if !REF_VEC_ONLY
@@ -448,15 +439,11 @@ private:
         vec.add_ret_ref();
         vec_unalign.add_ret_ref(sizeof(Res));
         auto test_vec = this->get_llvm_test(vec);
-        if (!test_vec.f) {
-            std::cerr << "Vectorizing argument with byref return failed." << std::endl;
-            abort();
-        }
+        if (!test_vec.f)
+            FAIL("Vectorizing argument with byref return failed.");
         auto test_vec_unalign = this->get_llvm_test(vec_unalign);
-        if (!test_vec_unalign.f) {
-            std::cerr << "Vectorizing argument with unaligned byref return failed." << std::endl;
-            abort();
-        }
+        if (!test_vec_unalign.f)
+            FAIL("Vectorizing argument with unaligned byref return failed.");
         if (vsize * 8 > (unsigned)host_info.get_vector_size())
             return;
 #if !REF_VEC_ONLY
@@ -508,15 +495,11 @@ private:
         //     vec_unalign.add_byref(i);
         vec_unalign.add_ret_ref(sizeof(Res));
         auto test_vec = this->get_llvm_test(vec);
-        if (!test_vec.f) {
-            std::cerr << "Vectorizing argument failed." << std::endl;
-            abort();
-        }
+        if (!test_vec.f)
+            FAIL("Vectorizing argument failed.");
         auto test_vec_unalign = this->get_llvm_test(vec_unalign);
-        if (!test_vec_unalign.f) {
-            std::cerr << "Vectorizing argument failed." << std::endl;
-            abort();
-        }
+        if (!test_vec_unalign.f)
+            FAIL("Vectorizing argument failed.");
         if (vsize * 8 > (unsigned)host_info.get_vector_size())
             return;
         using vs = vec_sig<Res(Args...), vsize, vargi...>;
@@ -560,8 +543,7 @@ private:
 template<typename FT, bool approx=false>
 using TestVec = MkTest<VecCodegenTest, FT, approx>;
 
-int main()
-{
+TEST_CASE("CodeGen (vector)") {
     TestCtx ctx;
 
     {
@@ -836,6 +818,4 @@ int main()
             }, {-1.4, 0.1, 0.5}, {-0.4, -0.5, 0.9, 1.4}, ctx, builder.get());
         test->test_vec_allarg();
     }
-
-    return 0;
 }

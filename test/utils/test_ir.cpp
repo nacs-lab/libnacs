@@ -16,23 +16,25 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "ir_helper.h"
 
 #include "../../lib/utils/number.h"
 #include "../../lib/utils/timer.h"
-#include <assert.h>
 #include <iostream>
 #include <math.h>
 
 using namespace NaCs;
 
-int main()
-{
-    assert(IR::validate(IR::Type::Bool));
-    assert(IR::validate(IR::Type::Int32));
-    assert(IR::validate(IR::Type::Float64));
-    assert(!IR::validate(IR::Type(4)));
+TEST_CASE("Basic") {
+    REQUIRE(IR::validate(IR::Type::Bool));
+    REQUIRE(IR::validate(IR::Type::Int32));
+    REQUIRE(IR::validate(IR::Type::Float64));
+    REQUIRE(!IR::validate(IR::Type(4)));
+}
 
+TEST_CASE("IR") {
     auto ctx = IR::ExeContext::get();
 
     {
@@ -231,7 +233,7 @@ int main()
     }
 
     {
-        static_assert(sizeof(IR::TagVal) == 16, "");
+        STATIC_REQUIRE(sizeof(IR::TagVal) == 16);
         const int32_t data[] = {
             3, 2, 7, 50529027, 197379, 2, 3, 0, 1072693248, 3, 0, 1073741824,
             1, 22, 4, 5, -3, 0, 5, 4, -3, 5, 5, 6, -4, 0, 3, 3, 4, 6, 6, 2, 3,
@@ -353,6 +355,4 @@ int main()
                 return b ? cos(i) : sin(v);
             }, {true, false}, {1, 2}, {2.3, 3.8}, *ctx, builder.get());
     }
-
-    return 0;
 }

@@ -16,24 +16,24 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "../../lib/utils/streams.h"
 
-#include <assert.h>
+#include <catch2/catch.hpp>
 
 using namespace NaCs;
 
 const char str[] = "123 3.4 0x123";
 
-int main()
-{
+TEST_CASE("const_istream") {
     int a;
     double b;
     unsigned c;
     const_istream istm(str, str + sizeof(str));
     istm >> a >> b >> std::hex >> c;
-    assert(a == 123);
-    assert(b == 3.4);
-    assert(c == 0x123);
-    assert(istm.good());
-    return 0;
+    REQUIRE(a == 123);
+    REQUIRE(b == 3.4);
+    REQUIRE(c == 0x123);
+    REQUIRE(istm.good());
 }

@@ -26,8 +26,10 @@
 #include "../../lib/utils/streams.h"
 
 #include <vector>
-#include <fstream>
+#include <sstream>
 #include <functional>
+
+#include <catch2/catch.hpp>
 
 namespace {
 
@@ -37,12 +39,7 @@ template<typename T>
 static void test_str_eq(T &&v, std::string val)
 {
     auto str = sprint(std::forward<T>(v));
-    if (val == str)
-        return;
-    std::cerr << "Test failed:" << std::endl;
-    std::cerr << "  Expect: \"" << val << "\"" << std::endl;
-    std::cerr << "  Got: \"" << str << "\"" << std::endl;
-    abort();
+    REQUIRE(val == str);
 }
 
 namespace detail {
@@ -56,12 +53,12 @@ static bool compare(T1 a, T2 b, bool _approx)
 }
 
 template<typename T, size_t... Is>
-static void _print_tuple(T &&t, std::index_sequence<Is...>)
+static void _print_tuple(std::ostream &stm, T &&t, std::index_sequence<Is...>)
 {
-    auto f = [] (auto &&v, size_t i) {
+    auto f = [&] (auto &&v, size_t i) {
                  if (i != 0)
-                     std::cerr << ", ";
-                 std::cerr << v;
+                     stm << ", ";
+                 stm << v;
                  return 0;
              };
     (void)f;
@@ -70,25 +67,29 @@ static void _print_tuple(T &&t, std::index_sequence<Is...>)
 }
 
 template<typename T>
-static void print_tuple(T &&t)
+static void print_tuple(std::ostream &stm, T &&t)
 {
-    _print_tuple(std::forward<T>(t), std::make_index_sequence<
+    _print_tuple(stm, std::forward<T>(t), std::make_index_sequence<
                  std::tuple_size_v<std::decay_t<T>>>{});
 }
 
 template<bool _approx, typename T1, typename T2, typename Tuple>
 static void _test_res(T1 res, T2 exp, const char *name, IR::Function &func,
-                       Tuple &&args)
+                      Tuple &&args)
 {
-    if (detail::compare(res, exp, _approx))
-        return;
-    std::cerr << name << " test failed on test case: (";
-    detail::print_tuple(args);
-    std::cerr << ")" << std::endl;
-    std::cerr << "Expected: " << (_approx ? "≈ " : "") << exp << std::endl;
-    std::cerr << "Got: " << res << std::endl;
-    std::cerr << "Code: " << func << std::endl;
-    abort();
+    if (!compare(res, exp, _approx)) {
+        std::stringstream stm;
+        stm << name << " test failed on test case: (";
+        print_tuple(stm, args);
+        stm << ")" << std::endl;
+        stm << "Expected: " << (_approx ? "≈ " : "") << exp << std::endl;
+        stm << "Got: " << res << std::endl;
+        stm << "Code: " << func << std::endl;
+        FAIL(stm.str());
+    }
+    else {
+        REQUIRE(true);
+    }
 }
 
 }

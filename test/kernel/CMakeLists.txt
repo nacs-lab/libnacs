@@ -7,7 +7,7 @@ function(add_kernel_test target)
     set(SOURCES ${ARGN})
   endif()
   add_executable(test-${target} ${SOURCES})
-  target_link_libraries(test-${target} nacs-kernel)
+  target_link_libraries(test-${target} nacs-kernel Catch2::Catch2)
 endfunction()
 
 add_kernel_test(getver)

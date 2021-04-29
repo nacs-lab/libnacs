@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "../../lib/utils/streams.h"
 #include "../../lib/utils/timer.h"
 #include "../../lib/utils/wavemeter.h"
@@ -30,7 +32,7 @@
 #include <string>
 #include <vector>
 
-#include <assert.h>
+#include <catch2/catch.hpp>
 
 using namespace NaCs;
 
@@ -40,7 +42,7 @@ struct TestFile {
         : lo(_lo),
           hi(_hi)
     {
-        assert(dt > 10 * teps);
+        REQUIRE(dt > 10 * teps);
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<> data_dis(lo, hi);
@@ -130,37 +132,38 @@ struct TestFile {
             // Only check that the cache is taken when we know this doesn't occur.
             size_t sz2;
             auto res = parser.parse(stm, &sz2, tstart, tend);
-            assert(times_ptr == nullptr || sz == sz2);
-            assert(res == std::make_tuple(times_ptr, datas_ptr, heights_ptr));
+            if (times_ptr)
+                REQUIRE(sz == sz2);
+            REQUIRE(res == std::make_tuple(times_ptr, datas_ptr, heights_ptr));
         }
         if (times_ptr == nullptr) {
-            assert(datas_ptr == nullptr);
-            assert(tstart + teps > times.back() ||
-                   tend - teps < times.front());
+            REQUIRE(datas_ptr == nullptr);
+            REQUIRE((tstart + teps > times.back() ||
+                     tend - teps < times.front()));
             return;
         }
-        assert(datas_ptr != nullptr);
+        REQUIRE(datas_ptr != nullptr);
         // The first data must be at least the same as tstart.
-        assert(*times_ptr >= tstart);
+        REQUIRE(*times_ptr >= tstart);
         // Given the constraint on `dt`, the first data must be `idx_start` or `idx_start + 1`.
         size_t idx_start = std::lower_bound(times.begin(), times.end(),
                                             tstart - teps) - times.begin();
         if (abs(*times_ptr - times[idx_start]) > teps) {
             idx_start++;
-            assert(idx_start < times.size());
-            assert(abs(*times_ptr - times[idx_start]) <= teps);
+            REQUIRE(idx_start < times.size());
+            REQUIRE(abs(*times_ptr - times[idx_start]) <= teps);
         }
         if (idx_start > 0) {
-            assert(times[idx_start - 1] < tstart + teps);
+            REQUIRE(times[idx_start - 1] < tstart + teps);
         }
         for (size_t i = 0; i < sz; i++) {
-            assert(abs(times_ptr[i] - times[idx_start + i]) <= teps);
-            assert(datas_ptr[i] == datas[idx_start + i]);
-            assert(datas_ptr[i] >= lo);
-            assert(datas_ptr[i] <= hi);
+            REQUIRE(abs(times_ptr[i] - times[idx_start + i]) <= teps);
+            REQUIRE(datas_ptr[i] == datas[idx_start + i]);
+            REQUIRE(datas_ptr[i] >= lo);
+            REQUIRE(datas_ptr[i] <= hi);
         }
         if (idx_start + sz < times.size() - 1) {
-            assert(times[idx_start + sz + 1] > tend - teps);
+            REQUIRE(times[idx_start + sz + 1] > tend - teps);
         }
     }
 
@@ -171,52 +174,55 @@ struct TestFile {
     std::vector<double> datas;
 };
 
-int main()
+void test0(double dt)
 {
-    auto test0 = [&] (double dt) {
-        TestFile test(1472368320, 1472549760, dt, 288000, 289000);
+    TestFile test(1472368320, 1472549760, dt, 288000, 289000);
 
-        Wavemeter parser(test.lo, test.hi);
-        test.test_parse(parser, 1472368320, 1472541120);
-        test.test_parse(parser, 1472368320, 1472541120);
-        test.test_parse(parser, 1472550000, 1472580000);
+    Wavemeter parser(test.lo, test.hi);
+    test.test_parse(parser, 1472368320, 1472541120);
+    test.test_parse(parser, 1472368320, 1472541120);
+    test.test_parse(parser, 1472550000, 1472580000);
 
-        parser.clear();
-        test.test_parse(parser, 1472368320, 1472376960);
-        test.test_parse(parser, 1472368320, 1472376960);
-        test.test_parse(parser, 1472385600, 1472411520);
-        test.test_parse(parser, 1472385600, 1472411520);
-        test.test_parse(parser, 1472428800, 1472515200);
-        test.test_parse(parser, 1472428800, 1472515200);
-        test.test_parse(parser, 1472368320, 1472549760);
-        test.test_parse(parser, 1472368320, 1472549760);
+    parser.clear();
+    test.test_parse(parser, 1472368320, 1472376960);
+    test.test_parse(parser, 1472368320, 1472376960);
+    test.test_parse(parser, 1472385600, 1472411520);
+    test.test_parse(parser, 1472385600, 1472411520);
+    test.test_parse(parser, 1472428800, 1472515200);
+    test.test_parse(parser, 1472428800, 1472515200);
+    test.test_parse(parser, 1472368320, 1472549760);
+    test.test_parse(parser, 1472368320, 1472549760);
 
-        parser.clear();
-        test.test_parse(parser, 1472428800, 1472515200);
-        test.test_parse(parser, 1472385600, 1472411520);
-        test.test_parse(parser, 1472368320, 1472376960);
-        test.test_parse(parser, 1472368320, 1472549760);
+    parser.clear();
+    test.test_parse(parser, 1472428800, 1472515200);
+    test.test_parse(parser, 1472385600, 1472411520);
+    test.test_parse(parser, 1472368320, 1472376960);
+    test.test_parse(parser, 1472368320, 1472549760);
 
-        parser.clear();
-        test.test_parse(parser, 1472428800, 1472515200);
-        test.test_parse(parser, 1472385600, 1472411520);
-        test.test_parse(parser, 1472402880, 1472437440);
-        test.test_parse(parser, 1472368320, 1472549760);
-    };
+    parser.clear();
+    test.test_parse(parser, 1472428800, 1472515200);
+    test.test_parse(parser, 1472385600, 1472411520);
+    test.test_parse(parser, 1472402880, 1472437440);
+    test.test_parse(parser, 1472368320, 1472549760);
+}
 
+TEST_CASE("test0(10)") {
     test0(10);
+}
+
+TEST_CASE("test0(1)") {
     test0(1);
+}
+
+TEST_CASE("test0(0.3)") {
     test0(0.3);
+}
 
-    auto test1 = [&] () {
-        TestFile test(1539887328, 1543334688, 5, 288000, 289000);
+TEST_CASE("test1") {
+    TestFile test(1539887328, 1543334688, 5, 288000, 289000);
 
-        Wavemeter parser(test.lo, test.hi);
-        test.test_parse(parser, 1543190400, 1543363200);
-        test.test_parse(parser, 1543190400, 1543363200);
-        test.test_parse(parser, 0, std::numeric_limits<double>::max());
-    };
-    test1();
-
-    return 0;
+    Wavemeter parser(test.lo, test.hi);
+    test.test_parse(parser, 1543190400, 1543363200);
+    test.test_parse(parser, 1543190400, 1543363200);
+    test.test_parse(parser, 0, std::numeric_limits<double>::max());
 }

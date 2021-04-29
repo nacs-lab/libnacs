@@ -16,13 +16,16 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "../../lib/utils/ir.h"
 #include "../../lib/utils/number.h"
 #include "../../lib/utils/timer.h"
-#include <assert.h>
 #include <iostream>
 #include <sstream>
 #include <math.h>
+
+#include <catch2/catch.hpp>
 
 using namespace NaCs;
 
@@ -51,16 +54,16 @@ public:
     {
         switch (t) {
         case IR::Type::Bool:
-            assert(res == (Res)get<bool>(i));
+            REQUIRE(res == (Res)get<bool>(i));
             return;
         case IR::Type::Int32:
-            assert(res == (Res)get<int32_t>(i));
+            REQUIRE(res == (Res)get<int32_t>(i));
             return;
         case IR::Type::Float64:
-            assert(res == (Res)get<double>(i));
+            REQUIRE(res == (Res)get<double>(i));
             return;
         default:
-            assert(0 && "Invalid type id");
+            FAIL("Invalid type id");
         }
     }
 };
@@ -179,8 +182,7 @@ static void test_prefix(IR::ExeContext *exectx)
     Tester<4,ArgPrefix...>::test(exectx);
 }
 
-int main()
-{
+ANON_TEST_CASE() {
     auto exectx = IR::ExeContext::get();
 
 #if IR_CC_TESTSET == 0
@@ -212,6 +214,4 @@ int main()
 #else
 #  error "Unknown test set."
 #endif
-
-    return 0;
 }

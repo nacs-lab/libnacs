@@ -16,18 +16,18 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_ENABLE_BENCHMARKING
+#define CATCH_CONFIG_MAIN
+
 #include "codegen_helper.h"
 
 #include "../../lib/utils/number.h"
 #include "../../lib/utils/streams.h"
-#include "../../lib/utils/timer.h"
-#include <assert.h>
 #include <iostream>
 #include <sstream>
 #include <math.h>
 
-int main()
-{
+TEST_CASE("CodeGen") {
     TestCtx ctx;
 
     {
@@ -196,13 +196,13 @@ int main()
             }, {1, 2}, {3, 1000}, ctx, builder.get());
 
         auto f = test->get_interp_func();
-        Timer timer;
-        f(2, 1000);
-        timer.print();
+        BENCHMARK("Interp") {
+            return f(2, 1000);
+        };
         auto f2 = test->get_llvm_func();
-        timer.restart();
-        f2(2, 1000);
-        timer.print();
+        BENCHMARK("Compile") {
+            return f2(2, 1000);
+        };
     }
 
     {
@@ -223,15 +223,13 @@ int main()
             [] (int v) { return sin(v) + sin(2 * v); }, {1, 2}, ctx, builder.get());
 
         auto f1 = test->get_interp_func();
-        Timer timer;
-        for (int i = 0;i < 1000000;i++)
-            f1(1);
-        timer.print();
+        BENCHMARK("Interp") {
+            return f1(1);
+        };
         auto f2 = test->get_llvm_func();
-        timer.restart();
-        for (int i = 0;i < 1000000;i++)
-            f2(1);
-        timer.print();
+        BENCHMARK("Compile") {
+            return f2(1);
+        };
     }
 
     {
@@ -335,6 +333,4 @@ int main()
                 return b ? cos(i) : sin(v);
             }, {true, false}, {1, 2}, {2.3, 3.8}, ctx, builder.get());
     }
-
-    return 0;
 }

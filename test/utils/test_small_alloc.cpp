@@ -16,12 +16,14 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "test_helpers.h"
 
 #include "../../lib/utils/mem.h"
 #include "../../lib/utils/timer.h"
 
-#include <assert.h>
+#include <catch2/catch.hpp>
 
 #include <random>
 
@@ -52,8 +54,8 @@ public:
         memset(m_counters2, 0, sizeof(m_counters2));
         m_allocator->free((Eltype*)m_base);
         if (nstatic) {
-            assert(m_palloc + padding <= m_base);
-            assert(m_pend - padding > m_base);
+            REQUIRE(m_palloc + padding <= m_base);
+            REQUIRE(m_pend - padding > m_base);
         }
     }
     ~AllocatorTester()
@@ -75,17 +77,18 @@ private:
     {
         if (m_palloc > p || p >= m_pend) {
             // Check that all slots are full
-            for (auto b: m_allocated)
-                assert(b);
+            REQUIRE(std::all_of(m_allocated,
+                                m_allocated + sizeof(m_allocated) / sizeof(m_allocated[0]),
+                                [] (auto b) { return b; }));
             return -1;
         }
-        assert(nstatic);
-        assert(p >= m_base);
-        assert(p < m_base + sizeof(Eltype) * nstatic);
+        REQUIRE(nstatic);
+        REQUIRE(p >= m_base);
+        REQUIRE(p < m_base + sizeof(Eltype) * nstatic);
         auto offset = p - m_base;
-        assert(offset % sizeof(Eltype) == 0);
+        REQUIRE(offset % sizeof(Eltype) == 0);
         auto idx = offset / sizeof(Eltype);
-        assert(!m_allocated[idx]);
+        REQUIRE(!m_allocated[idx]);
         m_allocated[idx] = true;
         return int(idx);
     }
@@ -98,30 +101,24 @@ private:
     }
     void check_counters()
     {
-        // The if constexpr is used to workaround
-        // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=100161
-        if constexpr (nstatic != 0) {
-            for (size_t i = 0; i < nstatic; i++) {
-                assert(m_counters[i] == m_counters2[i]);
-            }
-        }
+        REQUIRE(memcmp(m_counters, m_counters2, sizeof(m_counters)) == 0);
     }
     void free()
     {
-        assert(!m_allocations.empty());
+        REQUIRE(!m_allocations.empty());
         check_counters();
         auto to_free =
             std::uniform_int_distribution<size_t>{0, m_allocations.size() - 1}(m_rng);
         auto alloc = m_allocations[to_free];
         if (alloc.pool_idx >= 0) {
-            assert(m_base);
-            assert((char*)alloc.obj == m_base + sizeof(Eltype) * alloc.pool_idx);
-            assert(m_allocated[alloc.pool_idx]);
+            REQUIRE(m_base);
+            REQUIRE((char*)alloc.obj == m_base + sizeof(Eltype) * alloc.pool_idx);
+            REQUIRE(m_allocated[alloc.pool_idx]);
             m_allocated[alloc.pool_idx] = false;
         }
         m_allocator->free(alloc.obj);
         if (alloc.counter_idx >= 0) {
-            assert(m_counters[alloc.counter_idx] == m_counters2[alloc.counter_idx] + 1);
+            REQUIRE(m_counters[alloc.counter_idx] == m_counters2[alloc.counter_idx] + 1);
             m_counters2[alloc.counter_idx]++;
         }
         check_counters();
@@ -174,17 +171,27 @@ NACS_NOINLINE void benchmark(size_t nlive, size_t ncycle)
     }
 }
 
-int main()
-{
-    AllocatorTester<0> tester0;
-    tester0.test(100000);
+TEST_CASE("0") {
+    AllocatorTester<0> tester;
+    tester.test(100000);
+}
+
+TEST_CASE("10") {
     AllocatorTester<10> tester;
     tester.test(100000);
-    AllocatorTester<32> tester2;
-    tester2.test(100000);
-    AllocatorTester<1023> tester3;
-    tester3.test(10000000);
+}
 
+TEST_CASE("32") {
+    AllocatorTester<32> tester;
+    tester.test(100000);
+}
+
+TEST_CASE("1023") {
+    AllocatorTester<1023> tester;
+    tester.test(10000000);
+}
+
+TEST_CASE("benchmark") {
     benchmark<0>(10, 10000000);
     benchmark<4>(10, 10000000);
     benchmark<8>(10, 10000000);
@@ -193,6 +200,4 @@ int main()
     benchmark<0>(100, 10000000);
     benchmark<64>(100, 10000000);
     benchmark<128>(100, 10000000);
-
-    return 0;
 }

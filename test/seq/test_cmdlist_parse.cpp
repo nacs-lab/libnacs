@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "../../lib/seq/cmdlist.h"
 #include "../../lib/utils/streams.h"
 #include "../../lib/utils/errors.h"
@@ -25,14 +27,16 @@
 #include <fstream>
 #include <sstream>
 
+#include <catch2/catch.hpp>
+
 using namespace NaCs;
 
 static void test_file_eq(const std::string &fname, const std::string &cmp)
 {
     std::ifstream stm(fname);
-    assert(stm.good());
+    REQUIRE(stm.good());
     std::string fstr(std::istreambuf_iterator<char>(stm), {});
-    assert(cmp == fstr);
+    REQUIRE(cmp == fstr);
 }
 
 static uint64_t test_cmdlist_eq(const std::string &cmdlist, uint32_t ttl_mask,
@@ -42,17 +46,17 @@ static uint64_t test_cmdlist_eq(const std::string &cmdlist, uint32_t ttl_mask,
     auto str_data = (const uint8_t*)cmp.data();
     auto str_sz = cmp.size();
     uint32_t ver = 1;
-    assert(memcmp(str_data, &ver, 4) == 0);
+    REQUIRE(memcmp(str_data, &ver, 4) == 0);
     str_data += 4;
     str_sz -= 4;
-    assert(memcmp(str_data, &len_ns, 8) == 0);
+    REQUIRE(memcmp(str_data, &len_ns, 8) == 0);
     str_data += 8;
     str_sz -= 8;
-    assert(memcmp(str_data, &ttl_mask, 4) == 0);
+    REQUIRE(memcmp(str_data, &ttl_mask, 4) == 0);
     str_data += 4;
     str_sz -= 4;
-    assert(str_sz == cmdlist.size());
-    assert(memcmp(str_data, cmdlist.data(), str_sz) == 0);
+    REQUIRE(str_sz == cmdlist.size());
+    REQUIRE(memcmp(str_data, cmdlist.data(), str_sz) == 0);
     return len_ns;
 }
 
@@ -61,13 +65,13 @@ static void test(const std::string &dir, const std::string &name)
     Log::log("Testing: %s\n", name.c_str());
     auto path = dir + name;
     std::ifstream istm(path);
-    assert(istm.good());
+    REQUIRE(istm.good());
     string_ostream vstm;
     try {
         uint32_t ttl_mask = Seq::CmdList::parse(vstm, istm);
         auto vec = vstm.get_buf();
         std::ifstream bstm(path + ".cmdbin");
-        assert(bstm.good());
+        REQUIRE(bstm.good());
         std::string binstr(std::istreambuf_iterator<char>(bstm), {});
         uint64_t len_ns = test_cmdlist_eq(vec, ttl_mask, binstr);
 
@@ -79,8 +83,8 @@ static void test(const std::string &dir, const std::string &name)
 
         const_istream tistm(text);
         auto ttl_mask2 = Seq::CmdList::parse(vstm, tistm);
-        assert(ttl_mask == ttl_mask2);
-        assert(vec == vstm.get_buf());
+        REQUIRE(ttl_mask == ttl_mask2);
+        REQUIRE(vec == vstm.get_buf());
     }
     catch (const SyntaxError &err) {
         string_ostream sstr;
@@ -89,15 +93,8 @@ static void test(const std::string &dir, const std::string &name)
     }
 }
 
-int main(int argc, char **argv)
-{
-    Log::printPID(false);
-    if (argc != 2) {
-        Log::error("ERROR: wrong number of arguments.\n");
-        return 1;
-    }
-
-    std::string dir(argv[1]);
+TEST_CASE("CmdList") {
+    std::string dir(getenv("TEST_SOURCE_DIR"));
     dir += "/cmdlists/";
 
     test(dir, "ttl_mask_err1");
@@ -137,6 +134,4 @@ int main(int argc, char **argv)
 
     test(dir, "no_newline_invalid_start");
     test(dir, "no_newline_valid");
-
-    return 0;
 }

@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include <../../lib/utils/thread.h>
 #include <../../lib/utils/timer.h>
 #include <../../lib/utils/utils.h>
@@ -23,7 +25,7 @@
 #include <thread>
 #include <iostream>
 
-#include <assert.h>
+#include <catch2/catch.hpp>
 #include <stdint.h>
 
 using namespace NaCs;
@@ -81,7 +83,7 @@ void check_data(Pipe &pipe, size_t n)
             CPU::pause();
         }
         for (size_t j = 0; j < sz; j++) {
-            assert(ptr[j] == i);
+            REQUIRE(ptr[j] == i);
             i++;
         }
         // This can produce more data then n
@@ -93,9 +95,12 @@ void check_data(Pipe &pipe, size_t n)
     }
 }
 
-int main()
-{
-    static constexpr size_t n = 4096ul * 4096ul * 1000ul;
+TEST_CASE("DataPipe") {
+#ifdef  __OPTIMIZE__
+    static constexpr size_t n = 4096ul * 4096ul * 100ul;
+#else
+    static constexpr size_t n = 4096ul * 4096ul * 10ul;
+#endif
     Pipe pipe;
     std::thread writer{[&] {
             push_data(pipe, n);
@@ -105,5 +110,4 @@ int main()
     auto t2 = getTime();
     writer.join();
     std::cout << "Time per data = " << double(t2 - t1) / n << " (ns)" << std::endl;
-    return 0;
 }

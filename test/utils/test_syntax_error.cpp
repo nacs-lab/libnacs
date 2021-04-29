@@ -16,9 +16,11 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "../../lib/utils/errors.h"
 
-#include <assert.h>
+#include <catch2/catch.hpp>
 
 #include <iostream>
 #include <sstream>
@@ -36,23 +38,24 @@ static void check_err_strings(const SyntaxError &err, const std::string &what,
                               const std::string &printmsg)
 {
     auto res = get_strings(err);
-    assert(res.first == what);
-    assert(res.second == printmsg);
+    REQUIRE(res.first == what);
+    REQUIRE(res.second == printmsg);
 }
 
-int main()
-{
+TEST_CASE("Has Column") {
     check_err_strings(SyntaxError("Missing `)`", "a = f(1, 2) + g(12];", 10, 19, 16, 20),
                       "SyntaxError: Missing `)`\nL10:19 a = f(1, 2) + g(12];",
                       "SyntaxError: Missing `)`\n"
                       "Line: 10, Column: 19\n"
                       "a = f(1, 2) + g(12];\n"
                       "               ~~~^~\n");
+}
+
+TEST_CASE("NO Column") {
     check_err_strings(SyntaxError("Literal too long", "a = 12345678901234567890;", 3, -1, 5, 24),
                       "SyntaxError: Literal too long\nL3 a = 12345678901234567890;",
                       "SyntaxError: Literal too long\n"
                       "Line: 3\n"
                       "a = 12345678901234567890;\n"
                       "    ~~~~~~~~~~~~~~~~~~~~\n");
-    return 0;
 }

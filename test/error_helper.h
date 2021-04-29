@@ -19,19 +19,20 @@
 #ifndef _NACS_TEST_ERROR_HELPER_H_
 #define _NACS_TEST_ERROR_HELPER_H_
 
-#include <assert.h>
+#include <catch2/catch.hpp>
 
 template<typename T, typename CB>
 static T expect_error(CB &&cb)
 {
     try {
         cb();
-        assert(false);
+        FAIL("No exception thrown");
     }
     catch (const T &err) {
         return err;
     }
-    assert(false);
+    FAIL("No exception thrown");
+    abort();
 }
 
 #endif

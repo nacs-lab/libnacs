@@ -16,20 +16,20 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "codegen_helper.h"
 
 #include "../../lib/utils/number.h"
 #include "../../lib/utils/streams.h"
 #include "../../lib/utils/timer.h"
-#include <assert.h>
 #include <iostream>
 #include <sstream>
 #include <math.h>
 
 NACS_EXPORT() IR::GenVal global_vals[10];
 
-int main()
-{
+TEST_CASE("Closure") {
     TestCtx ctx;
 
     IR::Builder builder(IR::Type::Float64,
@@ -264,6 +264,4 @@ int main()
             return local_vals[0].f64;
         }, "Closure Return 2");
     }
-
-    return 0;
 }

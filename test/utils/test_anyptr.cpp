@@ -16,75 +16,75 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "test_helpers.h"
 
 #include "../../lib/utils/container.h"
 
-#include <assert.h>
+#include <catch2/catch.hpp>
 
 #include <utility>
 
 using namespace NaCs;
 
-int main()
-{
+TEST_CASE("AnyPtr") {
     int val = 0;
     // Make sure the increment class works.
     {
         Increment inc1(&val);
-        assert(val == 0);
+        REQUIRE(val == 0);
     }
-    assert(val == 1);
+    REQUIRE(val == 1);
     {
         Increment inc1;
     }
-    assert(val == 1);
+    REQUIRE(val == 1);
     {
         Increment inc1;
         {
             Increment inc2(&val);
             inc1 = std::move(inc2);
         }
-        assert(val == 1);
+        REQUIRE(val == 1);
     }
-    assert(val == 2);
+    REQUIRE(val == 2);
     {
         UnmovableIncrement inc1(&val);
-        assert(val == 2);
+        REQUIRE(val == 2);
     }
-    assert(val == 3);
+    REQUIRE(val == 3);
     {
         UnmovableIncrement inc1;
     }
-    assert(val == 3);
+    REQUIRE(val == 3);
 
     // Actually testing AnyPtr
     {
         AnyPtr ptr(new Increment(&val));
-        assert(val == 3);
+        REQUIRE(val == 3);
     }
-    assert(val == 4);
+    REQUIRE(val == 4);
     {
         // Should work for unmovable classes too
         AnyPtr ptr(new UnmovableIncrement(&val));
-        assert(val == 4);
+        REQUIRE(val == 4);
     }
-    assert(val == 5);
+    REQUIRE(val == 5);
     {
         // Only work for movable class
         AnyPtr ptr{Increment(&val)};
-        assert(val == 5);
+        REQUIRE(val == 5);
     }
-    assert(val == 6);
+    REQUIRE(val == 6);
     {
         // Arbitrary callback
         AnyPtr ptr{&val, [] (void *p) { ++*(int*)p; }};
-        assert(val == 6);
+        REQUIRE(val == 6);
     }
-    assert(val == 7);
+    REQUIRE(val == 7);
     {
         // Make sure we are default constructable.
         AnyPtr ptr;
     }
-    return 0;
 }

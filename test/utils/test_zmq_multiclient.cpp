@@ -16,11 +16,15 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "../../lib/utils/zmq_utils.h"
 
 #include <atomic>
 #include <chrono>
 #include <thread>
+
+#include <catch2/catch.hpp>
 
 using namespace NaCs;
 
@@ -93,8 +97,8 @@ struct Server {
 
 static void test_str_msg(zmq::message_t &msg, const char *str)
 {
-    assert(msg.size() == strlen(str));
-    assert(memcmp(msg.data(), str, strlen(str)) == 0);
+    REQUIRE(msg.size() == strlen(str));
+    REQUIRE(memcmp(msg.data(), str, strlen(str)) == 0);
 }
 
 static void ping_server(ZMQ::MultiClient::SockRef &sock)
@@ -103,7 +107,7 @@ static void ping_server(ZMQ::MultiClient::SockRef &sock)
         ZMQ::send(sock, ZMQ::str_msg("ping"));
     });
     auto msgs = reply.get();
-    assert(msgs.size() == 1);
+    REQUIRE(msgs.size() == 1);
     auto &msg = msgs[0];
     test_str_msg(msg, "pong");
 }
@@ -144,17 +148,17 @@ static void test_interleave(ZMQ::MultiClient::SockRef &sock)
     for (int i = 0; i < 10; i++)
         ping_server(sock);
     auto status = reply.wait_for(std::chrono::milliseconds(1));
-    assert(status == std::future_status::timeout);
+    REQUIRE(status == std::future_status::timeout);
     auto rel_reply = sock.send_msg([&] (auto &sock) {
         ZMQ::send(sock, ZMQ::str_msg("release"));
     });
     auto rel_msgs = rel_reply.get();
-    assert(rel_msgs.size() == 1);
+    REQUIRE(rel_msgs.size() == 1);
     auto &rel_msg = rel_msgs[0];
     test_str_msg(rel_msg, "releasing");
 
     auto msgs = reply.get();
-    assert(msgs.size() == 1);
+    REQUIRE(msgs.size() == 1);
     auto &msg = msgs[0];
     test_str_msg(msg, "finished");
 }
@@ -172,39 +176,39 @@ static void test_interleave2(ZMQ::MultiClient::SockRef &sock, ZMQ::MultiClient::
     for (int i = 0; i < 10; i++)
         ping_server(sock2);
     auto status = reply.wait_for(std::chrono::milliseconds(1));
-    assert(status == std::future_status::timeout);
+    REQUIRE(status == std::future_status::timeout);
     auto status2 = reply2.wait_for(std::chrono::milliseconds(1));
-    assert(status2 == std::future_status::timeout);
+    REQUIRE(status2 == std::future_status::timeout);
 
     {
         auto rel_reply = sock.send_msg([&] (auto &sock) {
             ZMQ::send(sock, ZMQ::str_msg("release"));
         });
         auto rel_msgs = rel_reply.get();
-        assert(rel_msgs.size() == 1);
+        REQUIRE(rel_msgs.size() == 1);
         auto &rel_msg = rel_msgs[0];
         test_str_msg(rel_msg, "releasing");
 
         auto msgs = reply.get();
-        assert(msgs.size() == 1);
+        REQUIRE(msgs.size() == 1);
         auto &msg = msgs[0];
         test_str_msg(msg, "finished");
     }
 
     status2 = reply2.wait_for(std::chrono::milliseconds(1));
-    assert(status2 == std::future_status::timeout);
+    REQUIRE(status2 == std::future_status::timeout);
 
     {
         auto rel_reply2 = sock2.send_msg([&] (auto &sock) {
             ZMQ::send(sock, ZMQ::str_msg("release"));
         });
         auto rel_msgs2 = rel_reply2.get();
-        assert(rel_msgs2.size() == 1);
+        REQUIRE(rel_msgs2.size() == 1);
         auto &rel_msg2 = rel_msgs2[0];
         test_str_msg(rel_msg2, "releasing");
 
         auto msgs2 = reply2.get();
-        assert(msgs2.size() == 1);
+        REQUIRE(msgs2.size() == 1);
         auto &msg2 = msgs2[0];
         test_str_msg(msg2, "finished");
     }
@@ -216,13 +220,12 @@ static void exit_server(ZMQ::MultiClient::SockRef &sock)
         ZMQ::send(sock, ZMQ::str_msg("exit"));
     });
     auto msgs = reply.get();
-    assert(msgs.size() == 1);
+    REQUIRE(msgs.size() == 1);
     auto &msg = msgs[0];
     test_str_msg(msg, "exit");
 }
 
-int main(int argc, char **argv)
-{
+ANON_TEST_CASE() {
     Server server;
     int port = server.start();
     std::string addr("tcp://127.0.0.1:" + std::to_string(port));
@@ -250,5 +253,4 @@ int main(int argc, char **argv)
     exit_server(sock2);
     server.thread.join();
     server2.thread.join();
-    return 0;
 }

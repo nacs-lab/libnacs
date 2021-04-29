@@ -16,12 +16,14 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../../lib/utils/container.h"
+#define CATCH_CONFIG_MAIN
 
-#include <assert.h>
+#include "../../lib/utils/container.h"
 
 #include <thread>
 #include <random>
+
+#include <catch2/catch.hpp>
 
 using namespace NaCs;
 
@@ -33,17 +35,17 @@ void test(int n)
     FilterQueue<std::atomic<int>> queue;
     {
         auto peekres = queue.peek();
-        assert(!peekres.first);
-        assert(!peekres.second);
-        assert(!queue.pop());
+        REQUIRE(!peekres.first);
+        REQUIRE(!peekres.second);
+        REQUIRE(!queue.pop());
     }
     std::thread tfilter([&] {
             for (int i = 0; i < n; i++) {
                 std::atomic<int> *p;
                 while ((p = queue.get_filter()) == nullptr)
                     CPU::pause();
-                assert(p == queue.get_filter());
-                assert(p->load(std::memory_order_relaxed) == i);
+                REQUIRE(p == queue.get_filter());
+                REQUIRE(p->load(std::memory_order_relaxed) == i);
                 p->store(i * 2 + 1, std::memory_order_relaxed);
                 queue.forward_filter();
                 CPU::wake();
@@ -56,7 +58,9 @@ void test(int n)
         for (auto p: queue) {
             int i = i0++;
             int v = p->load(std::memory_order_relaxed);
-            assert(v == (i * 2 + 1) || v == i);
+            if (v != i) {
+                REQUIRE(v == (i * 2 + 1));
+            }
         }
     };
     while (nread < n) {
@@ -72,24 +76,24 @@ void test(int n)
         if (do_read) {
             std::atomic<int> *p;
             auto exp = queue.peek();
-            assert(exp.first);
+            REQUIRE(exp.first);
             if (exp.second) {
                 p = queue.pop();
-                assert(p);
+                REQUIRE(p);
             }
             else {
                 while ((p = queue.pop()) == nullptr) {
                     CPU::pause();
                 }
             }
-            assert(exp.first == p);
-            assert(p->load(std::memory_order_relaxed) == 2 * nread + 1);
+            REQUIRE(exp.first == p);
+            REQUIRE(p->load(std::memory_order_relaxed) == 2 * nread + 1);
             delete p;
             nread++;
         }
         else {
             if (det)
-                assert(queue.peek().first);
+                REQUIRE(queue.peek().first);
             queue.push(new std::atomic<int>(nwrite));
             CPU::wake();
             nwrite++;
@@ -98,9 +102,8 @@ void test(int n)
     tfilter.join();
 }
 
-int main()
-{
-    for (int i = 0; i < 10; i++)
+ANON_TEST_CASE() {
+    for (int i = 0; i < 10; i++) {
         test(10000);
-    return 0;
+    }
 }

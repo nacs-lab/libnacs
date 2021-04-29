@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "../../lib/utils/streams.h"
 
 #include <string>
@@ -23,7 +25,7 @@
 
 #include <iostream>
 
-#include <assert.h>
+#include <catch2/catch.hpp>
 
 using namespace NaCs;
 
@@ -65,7 +67,7 @@ void test_streams(F &&f)
             std::stringstream sstm;
             f(sstm);
             sstm.seekp(0);
-            assert(res == sstm.str());
+            REQUIRE(res == sstm.str());
         }
 
         malloc_ostream mstm;
@@ -74,8 +76,8 @@ void test_streams(F &&f)
             mstm.seekp(0);
         size_t sz;
         auto p = mstm.get_buf(sz);
-        assert(sz == res.size());
-        assert(memcmp(p, &res[0], res.size()) == 0);
+        REQUIRE(sz == res.size());
+        REQUIRE(memcmp(p, &res[0], res.size()) == 0);
         free(p);
 
         vector_ostream vstm;
@@ -83,22 +85,26 @@ void test_streams(F &&f)
         if (i != 0)
             vstm.seekp(0);
         auto v = vstm.get_buf();
-        assert(v.size() == res.size());
-        assert(memcmp(&v[0], &res[0], res.size()) == 0);
+        REQUIRE(v.size() == res.size());
+        REQUIRE(memcmp(&v[0], &res[0], res.size()) == 0);
 
         string_ostream sstm2;
         f(sstm2);
         if (i != 0)
             sstm2.seekp(0);
         auto s = sstm2.get_buf();
-        assert(s == res);
+        REQUIRE(s == res);
     }
 }
 
-int main()
-{
+TEST_CASE("endl") {
     test_streams(test_endl);
+}
+
+TEST_CASE("print") {
     test_streams(test_print);
+}
+
+TEST_CASE("seek") {
     test_streams(test_seek);
-    return 0;
 }

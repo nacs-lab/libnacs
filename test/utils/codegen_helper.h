@@ -61,18 +61,18 @@ struct LLVMTest : LLVM::Codegen::Context {
     {
         f = emit_function(func, "0");
         auto fty = f->getFunctionType();
-        assert(!fty->isVarArg());
+        REQUIRE(!fty->isVarArg());
         for (auto argt: fty->params()) {
-            assert(argt == T_i8 || argt == T_i32 || argt == T_f64);
+            REQUIRE((argt == T_i8 || argt == T_i32 || argt == T_f64));
         }
     }
     void set_function(const IR::Function &func, const LLVM::Codegen::Wrapper &wrapper)
     {
         auto f0 = emit_function(func, "1", false);
         auto fty0 = f0->getFunctionType();
-        assert(!fty0->isVarArg());
+        REQUIRE(!fty0->isVarArg());
         for (auto argt: fty0->params())
-            assert(argt == T_i8 || argt == T_i32 || argt == T_f64);
+            REQUIRE((argt == T_i8 || argt == T_i32 || argt == T_f64));
         f = emit_wrapper(f0, "0", wrapper);
     }
     LLVMTest(LLVMTest&&) = default;
@@ -89,11 +89,11 @@ struct LLVMTest : LLVM::Codegen::Context {
     }
     void *get_ptr(const char *name=nullptr)
     {
-        assert(f);
+        REQUIRE(f);
         llvm::SmallVector<char,0> vec;
         auto res = LLVM::Compile::emit_objfile(vec, LLVM::Compile::get_native_target(),
                                                get_module());
-        assert(res);
+        REQUIRE(res);
         if (name && *name) {
             std::fstream stm(name, std::ios_base::out);
             if (stm) {
@@ -105,9 +105,9 @@ struct LLVMTest : LLVM::Codegen::Context {
         if (!obj_id)
             std::cerr << "Loading of object file errored: "
                       << engine.error_string() << std::endl;
-        assert(obj_id);
+        REQUIRE(obj_id);
         auto ptr = engine.get_symbol("0");
-        assert(ptr);
+        REQUIRE(ptr);
         return ptr;
     }
     ~LLVMTest()

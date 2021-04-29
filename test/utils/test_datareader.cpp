@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "../error_helper.h"
 
 #include <../../lib/utils/mem.h>
@@ -23,7 +25,6 @@
 
 #include <iostream>
 
-#include <assert.h>
 #include <stdint.h>
 
 using namespace NaCs;
@@ -33,7 +34,7 @@ struct ostream : uvector_ostream {
     template<typename T>
     void write(T v)
     {
-        static_assert(std::is_trivial_v<T>);
+        STATIC_REQUIRE(std::is_trivial_v<T>);
         write((const char*)&v, sizeof(T));
     }
     void write_string(const char *s)
@@ -42,8 +43,7 @@ struct ostream : uvector_ostream {
     }
 };
 
-int main()
-{
+TEST_CASE("DataReader") {
     ostream stm;
     stm.write<uint32_t>(1);
     stm.write<uint32_t>(32);
@@ -67,42 +67,40 @@ int main()
     auto buf = stm.get_buf();
     Mem::Reader reader(buf.data(), buf.size());
 
-    assert(reader.read<uint32_t>() == 1);
-    assert(reader.read<uint32_t>() == 32);
-    assert(reader.read<uint32_t>() == 98);
-    assert(reader.read<uint8_t>() == 2);
-    assert(reader.read<uint64_t>() == 0x24dbcdb209424a80ull);
+    REQUIRE(reader.read<uint32_t>() == 1);
+    REQUIRE(reader.read<uint32_t>() == 32);
+    REQUIRE(reader.read<uint32_t>() == 98);
+    REQUIRE(reader.read<uint8_t>() == 2);
+    REQUIRE(reader.read<uint64_t>() == 0x24dbcdb209424a80ull);
     auto [str1, len1] = reader.read_string();
-    assert(strcmp(str1, "hello") == 0);
-    assert(len1 == strlen("hello"));
-    assert(reader.read<uint16_t>() == 56898);
+    REQUIRE(strcmp(str1, "hello") == 0);
+    REQUIRE(len1 == strlen("hello"));
+    REQUIRE(reader.read<uint16_t>() == 56898);
     auto [str2, len2] = reader.read_string();
-    assert(strcmp(str2, "test") == 0);
-    assert(len2 == strlen("test"));
+    REQUIRE(strcmp(str2, "test") == 0);
+    REQUIRE(len2 == strlen("test"));
     auto p16 = reader.read_array<int16_t>(5);
-    assert(p16[0] == -98);
-    assert(p16[1] == -97);
-    assert(p16[2] == -86);
-    assert(p16[3] == 56);
-    assert(p16[4] == 12);
-    assert(reader.read<int32_t>() == -9);
+    REQUIRE(p16[0] == -98);
+    REQUIRE(p16[1] == -97);
+    REQUIRE(p16[2] == -86);
+    REQUIRE(p16[3] == 56);
+    REQUIRE(p16[4] == 12);
+    REQUIRE(reader.read<int32_t>() == -9);
 
     auto err = expect_error<std::overflow_error>([&] {
         reader.read<int32_t>();
     });
-    assert(strcmp(err.what(), "Data terminates unexpectedly") == 0);
+    REQUIRE(strcmp(err.what(), "Data terminates unexpectedly") == 0);
     err = expect_error<std::overflow_error>([&] {
         reader.read_string();
     });
-    assert(strcmp(err.what(), "Data terminates unexpectedly") == 0);
+    REQUIRE(strcmp(err.what(), "Data terminates unexpectedly") == 0);
     err = expect_error<std::overflow_error>([&] {
         reader.read_array<int8_t>(4);
     });
-    assert(strcmp(err.what(), "Data terminates unexpectedly") == 0);
+    REQUIRE(strcmp(err.what(), "Data terminates unexpectedly") == 0);
     auto p8 = reader.read_array<int8_t>(3);
-    assert(p8[0] == 1);
-    assert(p8[1] == 2);
-    assert(p8[2] == 3);
-
-    return 0;
+    REQUIRE(p8[0] == 1);
+    REQUIRE(p8[1] == 2);
+    REQUIRE(p8[2] == 3);
 }

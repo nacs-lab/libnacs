@@ -16,53 +16,58 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "../../lib/utils/container.h"
 
-#include <assert.h>
+#include <catch2/catch.hpp>
 
 using namespace NaCs;
 
-int main()
-{
+ANON_TEST_CASE() {
     FixedQueue<unsigned, 8> queue;
 
-    assert(!queue.full() && queue.empty());
+    REQUIRE(!queue.full());
+    REQUIRE(queue.empty());
     for (unsigned i = 0; i < 8; i++) {
-        assert(queue.size() == i);
+        REQUIRE(queue.size() == i);
         queue.push(i);
-        assert(queue.size() == i + 1);
+        REQUIRE(queue.size() == i + 1);
     }
-    assert(queue.full() && !queue.empty());
+    REQUIRE(queue.full());
+    REQUIRE(!queue.empty());
     for (unsigned i = 0; i < 5; i++) {
-        assert(queue.size() == 8 - i);
-        assert(queue.front() == i);
+        REQUIRE(queue.size() == 8 - i);
+        REQUIRE(queue.front() == i);
         auto v = queue.pop();
-        assert(v == i);
-        assert(queue.size() == 7 - i);
+        REQUIRE(v == i);
+        REQUIRE(queue.size() == 7 - i);
     }
-    assert(!queue.full() && !queue.empty());
+    REQUIRE(!queue.full());
+    REQUIRE(!queue.empty());
     for (unsigned i = 0; i < 5; i++) {
-        assert(queue.size() == 3 + i);
+        REQUIRE(queue.size() == 3 + i);
         queue.push(i);
-        assert(queue.size() == 4 + i);
+        REQUIRE(queue.size() == 4 + i);
     }
-    assert(queue.full() && !queue.empty());
+    REQUIRE(queue.full());
+    REQUIRE(!queue.empty());
     for (unsigned i = 5; i < 8; i++) {
-        assert(queue.size() == 13 - i);
-        assert(queue.front() == i);
+        REQUIRE(queue.size() == 13 - i);
+        REQUIRE(queue.front() == i);
         auto v = queue.pop();
-        assert(v == i);
-        assert(queue.size() == 12 - i);
+        REQUIRE(v == i);
+        REQUIRE(queue.size() == 12 - i);
     }
-    assert(!queue.full() && !queue.empty());
+    REQUIRE(!queue.full());
+    REQUIRE(!queue.empty());
     for (unsigned i = 0; i < 5; i++) {
-        assert(queue.size() == 5 - i);
-        assert(queue.front() == i);
+        REQUIRE(queue.size() == 5 - i);
+        REQUIRE(queue.front() == i);
         auto v = queue.pop();
-        assert(v == i);
-        assert(queue.size() == 4 - i);
+        REQUIRE(v == i);
+        REQUIRE(queue.size() == 4 - i);
     }
-    assert(!queue.full() && queue.empty());
-
-    return 0;
+    REQUIRE(!queue.full());
+    REQUIRE(queue.empty());
 }

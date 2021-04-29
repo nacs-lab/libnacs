@@ -16,9 +16,12 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#define CATCH_CONFIG_MAIN
+
 #include "../../lib/utils/number.h"
 #include "../../lib/utils/timer.h"
-#include <assert.h>
+
+#include <catch2/catch.hpp>
 
 #include <iostream>
 
@@ -29,12 +32,11 @@ static inline void
 test_single_get_bits(T i)
 {
     unsigned bits = getBits(i);
-    // std::cout << i << ", " << bits << std::endl;
     if (bits < sizeof(i) * 8) {
-        assert(i < (T(1) << bits));
+        REQUIRE(i < (T(1) << bits));
     }
     if (bits > 0) {
-        assert(i >= (T(1) << (bits - 1)));
+        REQUIRE(i >= (T(1) << (bits - 1)));
     }
 }
 
@@ -42,18 +44,29 @@ template<typename T>
 static inline void
 test_get_bits()
 {
-    Timer timer;
     T i(-1);
     do {
         test_single_get_bits(i);
     } while (i-- > 0);
-    timer.print();
 }
 
-int
-main()
-{
-    test_get_bits<uint16_t>();
-    test_get_bits<uint32_t>();
-    return 0;
+TEST_CASE("16 bits") {
+    uint16_t i(-1);
+    do {
+        test_single_get_bits(i);
+    } while (i-- > 0);
+}
+
+TEST_CASE("32 bits") {
+    uint32_t i(-1);
+    do {
+        test_single_get_bits(i);
+        if (i < 17)
+            break;
+        i -= 17;
+    } while (true);
+    i = 100;
+    do {
+        test_single_get_bits(i);
+    } while (i-- > 0);
 }
