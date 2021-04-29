@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#include <nacs-utils/mem.h>
+
 #ifndef __NACS_SEQ_CMDLIST_H__
 #define __NACS_SEQ_CMDLIST_H__
 
@@ -231,16 +233,6 @@ struct ExeState {
      */
     template<typename T>
     void run(T &&cb, const uint8_t *code, size_t len);
-
-private:
-    // Unaligned and typed load.
-    template<typename T>
-    T loadInst(const uint8_t *code, size_t idx=0)
-    {
-        T v;
-        memcpy(&v, &code[idx], sizeof(T));
-        return v;
-    }
 };
 
 template<typename T>
@@ -261,7 +253,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
                 if (op2 != OpCode::Wait)
                     break;
                 i += sizeof(Inst::Wait);
-                auto inst = loadInst<Inst::Wait>(p2);
+                auto inst = Mem::load_unalign<Inst::Wait>(p2);
                 t += inst.t;
             }
             return t;
@@ -275,52 +267,52 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
         };
         switch (op) {
         case OpCode::TTLAll: {
-            auto inst = loadInst<Inst::TTLAll>(p);
+            auto inst = Mem::load_unalign<Inst::TTLAll>(p);
             runTTL(inst.val);
             break;
         }
         case OpCode::TTL1: {
-            auto inst = loadInst<Inst::TTL1>(p);
+            auto inst = Mem::load_unalign<Inst::TTL1>(p);
             runTTL1(inst.chn, inst.val, inst.t + PulseTime::Min);
             break;
         }
         case OpCode::Wait: {
-            auto inst = loadInst<Inst::Wait>(p);
+            auto inst = Mem::load_unalign<Inst::Wait>(p);
             uint64_t t = inst.t;
             cb.wait(t + consumeAllWait());
             break;
         }
         case OpCode::Clock: {
-            cb.clock(loadInst<Inst::Clock>(p).period);
+            cb.clock(Mem::load_unalign<Inst::Clock>(p).period);
             break;
         }
         case OpCode::DDSFreq: {
-            auto inst = loadInst<Inst::DDSFreq>(p);
+            auto inst = Mem::load_unalign<Inst::DDSFreq>(p);
             cb.dds_freq(inst.chn, inst.freq);
             break;
         }
         case OpCode::DDSAmp: {
-            auto inst = loadInst<Inst::DDSAmp>(p);
+            auto inst = Mem::load_unalign<Inst::DDSAmp>(p);
             cb.dds_amp(inst.chn, inst.amp);
             break;
         }
         case OpCode::DDSPhase: {
-            auto inst = loadInst<Inst::DDSPhase>(p);
+            auto inst = Mem::load_unalign<Inst::DDSPhase>(p);
             cb.dds_phase(inst.chn, inst.phase);
             break;
         }
         case OpCode::DDSDetPhase: {
-            auto inst = loadInst<Inst::DDSDetPhase>(p);
+            auto inst = Mem::load_unalign<Inst::DDSDetPhase>(p);
             cb.dds_detphase(inst.chn, inst.det_phase);
             break;
         }
         case OpCode::DDSReset: {
-            auto inst = loadInst<Inst::DDSReset>(p);
+            auto inst = Mem::load_unalign<Inst::DDSReset>(p);
             cb.dds_reset(inst.chn);
             break;
         }
         case OpCode::DAC: {
-            auto inst = loadInst<Inst::DAC>(p);
+            auto inst = Mem::load_unalign<Inst::DAC>(p);
             cb.dac(inst.chn, inst.amp);
             break;
         }

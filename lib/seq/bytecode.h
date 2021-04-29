@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#include <nacs-utils/mem.h>
+
 #ifndef __NACS_SEQ_BYTECODE_H__
 #define __NACS_SEQ_BYTECODE_H__
 
@@ -274,14 +276,6 @@ struct ExeState {
     void run(T &&cb, const uint8_t *code, size_t len);
 
 private:
-    // Unaligned and typed load.
-    template<typename T>
-    T loadInst(const uint8_t *code, size_t idx=0)
-    {
-        T v;
-        memcpy(&v, &code[idx], sizeof(T));
-        return v;
-    }
     struct DDS {
         uint32_t freq = 0;
         uint16_t amp = 0;
@@ -312,7 +306,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
                     if (!(b2 & 0x10))
                         break;
                     i += sizeof(Inst::Wait2);
-                    auto inst = loadInst<Inst::Wait2>(p2);
+                    auto inst = Mem::load_unalign<Inst::Wait2>(p2);
                     t += uint64_t(inst.t);
                 }
                 else if (op2 != OpCode::Wait) {
@@ -320,7 +314,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
                 }
                 else {
                     i += sizeof(Inst::Wait);
-                    auto inst = loadInst<Inst::Wait>(p2);
+                    auto inst = Mem::load_unalign<Inst::Wait>(p2);
                     t += uint64_t(inst.t) << (inst.exp * 3);
                 }
             }
@@ -345,12 +339,12 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
         };
         switch (op) {
         case OpCode::TTLAll: {
-            auto inst = loadInst<Inst::TTLAll>(p);
+            auto inst = Mem::load_unalign<Inst::TTLAll>(p);
             runTTL(inst.val, inst.t + PulseTime::Min);
             break;
         }
         case OpCode::TTL2: {
-            auto inst = loadInst<Inst::TTL2>(p);
+            auto inst = Mem::load_unalign<Inst::TTL2>(p);
             uint32_t ttl = m_ttl;
             ttl = ttl ^ (1 << inst.val1);
             if (inst.val2 != inst.val1)
@@ -359,7 +353,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             break;
         }
         case OpCode::TTL4: {
-            auto inst = loadInst<Inst::TTL4>(p);
+            auto inst = Mem::load_unalign<Inst::TTL4>(p);
             uint32_t ttl = m_ttl;
             ttl = ttl ^ (1 << inst.val1);
             ttl = ttl ^ (1 << inst.val2);
@@ -370,7 +364,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             break;
         }
         case OpCode::TTL5: {
-            auto inst = loadInst<Inst::TTL5>(p);
+            auto inst = Mem::load_unalign<Inst::TTL5>(p);
             uint32_t ttl = m_ttl;
             ttl = ttl ^ (1 << inst.val1);
             ttl = ttl ^ (1 << inst.val2);
@@ -381,28 +375,28 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             break;
         }
         case OpCode::Wait: {
-            auto inst = loadInst<Inst::Wait>(p);
+            auto inst = Mem::load_unalign<Inst::Wait>(p);
             uint64_t t = uint64_t(inst.t) << (inst.exp * 3);
             cb.wait(t + consumeAllWait());
             break;
         }
         case OpCode::Clock: {
             if (b & 0x10) {
-                auto inst = loadInst<Inst::Wait2>(p);
+                auto inst = Mem::load_unalign<Inst::Wait2>(p);
                 cb.wait(uint64_t(inst.t) + consumeAllWait());
             }
             else {
-                cb.clock(loadInst<Inst::Clock>(p).period);
+                cb.clock(Mem::load_unalign<Inst::Clock>(p).period);
             }
             break;
         }
         case OpCode::DDSFreq: {
-            auto inst = loadInst<Inst::DDSFreq>(p);
+            auto inst = Mem::load_unalign<Inst::DDSFreq>(p);
             runDDSFreq(inst.chn, inst.freq);
             break;
         }
         case OpCode::DDSDetFreq2: {
-            auto inst = loadInst<Inst::DDSDetFreq2>(p);
+            auto inst = Mem::load_unalign<Inst::DDSDetFreq2>(p);
             uint8_t chn = inst.chn;
             uint32_t freq = inst.freq;
             if (freq & 0x40)
@@ -411,7 +405,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             break;
         }
         case OpCode::DDSDetFreq3: {
-            auto inst = loadInst<Inst::DDSDetFreq3>(p);
+            auto inst = Mem::load_unalign<Inst::DDSDetFreq3>(p);
             uint8_t chn = inst.chn;
             uint32_t freq = inst.freq;
             if (freq & 0x4000)
@@ -420,7 +414,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             break;
         }
         case OpCode::DDSDetFreq4: {
-            auto inst = loadInst<Inst::DDSDetFreq4>(p);
+            auto inst = Mem::load_unalign<Inst::DDSDetFreq4>(p);
             uint8_t chn = inst.chn;
             uint32_t freq = inst.freq;
             if (freq & 0x400000)
@@ -429,12 +423,12 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             break;
         }
         case OpCode::DDSAmp: {
-            auto inst = loadInst<Inst::DDSAmp>(p);
+            auto inst = Mem::load_unalign<Inst::DDSAmp>(p);
             runDDSAmp(inst.chn, inst.amp);
             break;
         }
         case OpCode::DDSDetAmp: {
-            auto inst = loadInst<Inst::DDSDetAmp>(p);
+            auto inst = Mem::load_unalign<Inst::DDSDetAmp>(p);
             uint8_t chn = inst.chn;
             uint16_t amp = inst.amp;
             if (amp & 0x40)
@@ -443,12 +437,12 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             break;
         }
         case OpCode::DAC: {
-            auto inst = loadInst<Inst::DAC>(p);
+            auto inst = Mem::load_unalign<Inst::DAC>(p);
             runDAC(inst.chn, inst.amp);
             break;
         }
         case OpCode::DACDet: {
-            auto inst = loadInst<Inst::DACDet>(p);
+            auto inst = Mem::load_unalign<Inst::DACDet>(p);
             uint8_t chn = inst.chn;
             uint16_t amp = inst.amp;
             if (amp & 0x200)
