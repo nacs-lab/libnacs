@@ -232,6 +232,13 @@ static inline void print(std::ostream &stm, const std::vector<uint8_t> &code,
 }
 
 /**
+ * Print all raw instructions in a human readable format.
+ *
+ * Unlike print, this will not merge wait/TTL instructoins.
+ */
+void print_raw(std::ostream &stm, const uint8_t *code, size_t code_len);
+
+/**
  * Total time it takes to execute the bytecode.
  */
 uint64_t total_time(const uint8_t *code, size_t code_len);

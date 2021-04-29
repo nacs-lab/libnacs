@@ -40,6 +40,144 @@ NACS_EXPORT() size_t count(const uint8_t *code, size_t code_len)
     return count;
 }
 
+NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code_len)
+{
+    for (size_t i = 0; i < code_len;) {
+        auto *p = &code[i];
+        uint8_t b = *p;
+        uint8_t op = b & 0xf;
+        auto inst_len = inst_size[op];
+        i += inst_len;
+        switch (op) {
+        case OpCode::TTLAll: {
+            auto inst = Mem::load_unalign<Inst::TTLAll>(p);
+            stm << "ttl=0x" << std::hex << inst.val << " t=0x" << int(inst.t)
+                << "(+0x" << int(PulseTime::Min) << ")" << std::dec << std::endl;
+            break;
+        }
+        case OpCode::TTL2: {
+            auto inst = Mem::load_unalign<Inst::TTL2>(p);
+            stm << "ttl2(" << int(inst.val1) << ", " << int(inst.val2)
+                << ") t=0x" << int(inst.t) << "(+0x" << int(PulseTime::Min) << ")"
+                << std::dec << std::endl;
+            break;
+        }
+        case OpCode::TTL4: {
+            auto inst = Mem::load_unalign<Inst::TTL4>(p);
+            stm << "ttl4(" << int(inst.val1) << ", " << int(inst.val2) << ", "
+                << int(inst.val3) << ", " << int(inst.val4) << ") t=0x0(+0x"
+                << int(PulseTime::Min) << ")" << std::dec << std::endl;
+            break;
+        }
+        case OpCode::TTL5: {
+            auto inst = Mem::load_unalign<Inst::TTL5>(p);
+            stm << "ttl5(" << int(inst.val1) << ", " << int(inst.val2) << ", "
+                << int(inst.val3) << ", " << int(inst.val4) << ", " << int(inst.val5)
+                << ") t=0x" << int(inst.t) << "(+0x" << int(PulseTime::Min) << ")"
+                << std::dec << std::endl;
+            break;
+        }
+        case OpCode::Wait: {
+            auto inst = Mem::load_unalign<Inst::Wait>(p);
+            stm << "wait(0x" << std::hex << int(inst.t) << std::dec
+                << " * 2^(" << int(inst.exp) << " * 3))" << std::endl;
+            break;
+        }
+        case OpCode::Clock: {
+            if (b & 0x10) {
+                auto inst = Mem::load_unalign<Inst::Wait2>(p);
+                stm << "wait2(0x" << std::hex << int(inst.t) << std::dec << ")" << std::endl;
+            }
+            else {
+                stm << "clock(" << int(Mem::load_unalign<Inst::Clock>(p).period)
+                    << ")" << std::endl;
+            }
+            break;
+        }
+        case OpCode::DDSFreq: {
+            auto inst = Mem::load_unalign<Inst::DDSFreq>(p);
+            stm << "freq(" << int(inst.chn) << ")=0x"
+                << std::hex << inst.freq << std::dec << std::endl;
+            break;
+        }
+        case OpCode::DDSDetFreq2: {
+            auto inst = Mem::load_unalign<Inst::DDSDetFreq2>(p);
+            uint32_t freq = inst.freq;
+            char sign = '+';
+            if (freq & 0x40) {
+                sign = '-';
+                freq = -(freq | 0xffffff80);
+            }
+            stm << "freq(" << int(inst.chn) << ")" << sign << "=0x"
+                << std::hex << freq << std::dec << std::endl;
+            break;
+        }
+        case OpCode::DDSDetFreq3: {
+            auto inst = Mem::load_unalign<Inst::DDSDetFreq3>(p);
+            uint32_t freq = inst.freq;
+            char sign = '+';
+            if (freq & 0x4000) {
+                sign = '-';
+                freq = freq | 0xffff8000;
+            }
+            stm << "freq(" << int(inst.chn) << ")" << sign << "=0x"
+                << std::hex << freq << std::dec << std::endl;
+            break;
+        }
+        case OpCode::DDSDetFreq4: {
+            auto inst = Mem::load_unalign<Inst::DDSDetFreq4>(p);
+            uint32_t freq = inst.freq;
+            char sign = '+';
+            if (freq & 0x400000) {
+                sign = '-';
+                freq = freq | 0xff800000;
+            }
+            stm << "freq(" << int(inst.chn) << ")" << sign << "=0x"
+                << std::hex << freq << std::dec << std::endl;
+            break;
+        }
+        case OpCode::DDSAmp: {
+            auto inst = Mem::load_unalign<Inst::DDSAmp>(p);
+            stm << "amp(" << int(inst.chn) << ")=0x"
+                << std::hex << inst.amp << std::dec << std::endl;
+            break;
+        }
+        case OpCode::DDSDetAmp: {
+            auto inst = Mem::load_unalign<Inst::DDSDetAmp>(p);
+            uint16_t amp = inst.amp;
+            char sign = '+';
+            if (amp & 0x40) {
+                sign = '-';
+                amp = amp | 0xff80;
+            }
+            stm << "amp(" << int(inst.chn) << ")" << sign << "=0x"
+                << std::hex << amp << std::dec << std::endl;
+            break;
+        }
+        case OpCode::DAC: {
+            auto inst = Mem::load_unalign<Inst::DAC>(p);
+            stm << "dac(" << int(inst.chn) << ")=0x"
+                << std::hex << inst.amp << std::dec << std::endl;
+            break;
+        }
+        case OpCode::DACDet: {
+            auto inst = Mem::load_unalign<Inst::DACDet>(p);
+            uint16_t amp = inst.amp;
+            char sign = '+';
+            if (amp & 0x200) {
+                sign = '-';
+                amp = amp | 0xfc00;
+            }
+            stm << "dac(" << int(inst.chn) << ")" << sign << "=0x"
+                << std::hex << amp << std::dec << std::endl;
+            break;
+        }
+        default:
+            throw std::runtime_error("Invalid opcode.");
+        }
+    }
+}
+
 NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len,
                          uint32_t ttl_mask)
 {
