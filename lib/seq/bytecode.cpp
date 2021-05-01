@@ -108,7 +108,7 @@ NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code
                 sign = '-';
                 freq = -(freq | 0xffffff80);
             }
-            stm << "freq(" << int(inst.chn) << ")" << sign << "=0x"
+            stm << "freq2(" << int(inst.chn) << ")" << sign << "=0x"
                 << std::hex << freq << std::dec << std::endl;
             break;
         }
@@ -118,9 +118,9 @@ NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code
             char sign = '+';
             if (freq & 0x4000) {
                 sign = '-';
-                freq = freq | 0xffff8000;
+                freq = -(freq | 0xffff8000);
             }
-            stm << "freq(" << int(inst.chn) << ")" << sign << "=0x"
+            stm << "freq3(" << int(inst.chn) << ")" << sign << "=0x"
                 << std::hex << freq << std::dec << std::endl;
             break;
         }
@@ -130,9 +130,9 @@ NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code
             char sign = '+';
             if (freq & 0x400000) {
                 sign = '-';
-                freq = freq | 0xff800000;
+                freq = -(freq | 0xff800000);
             }
-            stm << "freq(" << int(inst.chn) << ")" << sign << "=0x"
+            stm << "freq4(" << int(inst.chn) << ")" << sign << "=0x"
                 << std::hex << freq << std::dec << std::endl;
             break;
         }
@@ -148,7 +148,7 @@ NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code
             char sign = '+';
             if (amp & 0x40) {
                 sign = '-';
-                amp = amp | 0xff80;
+                amp = -(amp | 0xff80);
             }
             stm << "amp(" << int(inst.chn) << ")" << sign << "=0x"
                 << std::hex << amp << std::dec << std::endl;
@@ -166,7 +166,7 @@ NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code
             char sign = '+';
             if (amp & 0x200) {
                 sign = '-';
-                amp = amp | 0xfc00;
+                amp = -(amp | 0xfc00);
             }
             stm << "dac(" << int(inst.chn) << ")" << sign << "=0x"
                 << std::hex << amp << std::dec << std::endl;
