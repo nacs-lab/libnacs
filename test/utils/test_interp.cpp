@@ -61,7 +61,10 @@ __attribute__((target("sse2"))) static void test_sse2()
     REQUIRE(res[1] == Approx(0.6));
 
     BENCHMARK("SSE2<2>") __attribute__((target("sse2"))) {
-        return linearInterpolate2_sse2(__m128d{0.3, 1.4} / 3, 4, points);
+        auto res = linearInterpolate2_sse2(__m128d{0.3, 1.4} / 3, 4, points);
+        // Do not return the result since the caller may not have the correct ABI declared
+        // Instead, use an inline assembly to convince the compiler that the result is used.
+        asm volatile ("" :: "x"(res));
     };
 }
 
@@ -80,7 +83,10 @@ __attribute__((target("avx"))) void test_avx()
     REQUIRE(res[3] == Approx(0.6));
 
     BENCHMARK("AVX<4>") __attribute__((target("avx"))) {
-        return linearInterpolate4_avx(__m256d{-0.1, 0.3 / 3, 1.4 / 3, 1.1}, 4, points);
+        auto res = linearInterpolate4_avx(__m256d{-0.1, 0.3 / 3, 1.4 / 3, 1.1}, 4, points);
+        // Do not return the result since the caller may not have the correct ABI declared
+        // Instead, use an inline assembly to convince the compiler that the result is used.
+        asm volatile ("" :: "x"(res));
     };
 }
 
@@ -115,10 +121,16 @@ __attribute__((target("avx2,fma"))) void test_avx2()
     REQUIRE(res4[3] == Approx(0.6));
 
     BENCHMARK("AVX2<2>") __attribute__((target("avx2,fma"))) {
-        return linearInterpolate2_avx2(__m128d{0.3, 1.4} / 3, 4, points);
+        auto res = linearInterpolate2_avx2(__m128d{0.3, 1.4} / 3, 4, points);
+        // Do not return the result since the caller may not have the correct ABI declared
+        // Instead, use an inline assembly to convince the compiler that the result is used.
+        asm volatile ("" :: "x"(res));
     };
     BENCHMARK("AVX2<4>") __attribute__((target("avx2,fma"))) {
-        return linearInterpolate4_avx2(__m256d{-0.1, 0.3 / 3, 1.4 / 3, 1.1}, 4, points);
+        auto res = linearInterpolate4_avx2(__m256d{-0.1, 0.3 / 3, 1.4 / 3, 1.1}, 4, points);
+        // Do not return the result since the caller may not have the correct ABI declared
+        // Instead, use an inline assembly to convince the compiler that the result is used.
+        asm volatile ("" :: "x"(res));
     };
 }
 
@@ -147,8 +159,11 @@ __attribute__((target("avx512f,avx512dq"))) void test_avx512()
     REQUIRE(res[7] == Approx(0.6));
 
     BENCHMARK("AVX512<8>") __attribute__((target("avx512f,avx512dq"))) {
-        return linearInterpolate8_avx512f(__m512d{-0.1, 0.3 / 3, 1.4 / 3, 1.1,
+        auto res = linearInterpolate8_avx512f(__m512d{-0.1, 0.3 / 3, 1.4 / 3, 1.1,
                 -0.1, 0.3 / 3, 1.4 / 3, 1.1}, 4, points);
+        // Do not return the result since the caller may not have the correct ABI declared
+        // Instead, use an inline assembly to convince the compiler that the result is used.
+        asm volatile ("" :: "x"(res));
     };
 }
 #elif NACS_CPU_AARCH64
