@@ -3,6 +3,7 @@
 set(nacs_seq_HDRS
   bytecode.h
   cmdlist.h
+  pulse_time.h
   seq.h)
 set(nacs_seq_SRCS
   bytecode.cpp
