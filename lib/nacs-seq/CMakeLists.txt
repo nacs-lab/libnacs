@@ -14,6 +14,8 @@ set(nacs_seq_zynq_HDRS
 set(nacs_seq_nidaq_HDRS
   nidaq/backend.h
   nidaq/data_gen.h)
+set(nacs_seq_awg_HDRS
+  awg/backend.h)
 set(nacs_seq_SRCS
   error.cpp
   host_seq.cpp
@@ -35,6 +37,7 @@ set(nacs_seq_llvm_HDRS
   pulse.h
   seq.h)
 set(nacs_seq_llvm_SRCS
+  awg/backend.cpp
   basic_seq.cpp
   builder.cpp
   compiler.cpp
@@ -120,6 +123,8 @@ if(ENABLE_INSTALL_NONLIB)
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-seq/zynq")
   install(FILES ${nacs_seq_nidaq_HDRS}
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-seq/nidaq")
+  install(FILES ${nacs_seq_awg_HDRS}
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nacs-seq/awg")
 endif()
 
 install(TARGETS nacs-seq
