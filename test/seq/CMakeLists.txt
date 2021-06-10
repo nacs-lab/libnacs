@@ -27,6 +27,12 @@ add_seq_test(host_seq)
 add_seq_test(host_seq_error)
 add_seq_test(nidaq_data_gen)
 add_seq_test(zynq_bc_gen)
+#add_executable(test_awg_client test_awg_client.cpp)
+#target_link_libraries(test_awg_client nacs-seq Catch2::Catch2)
+#set_property(TARGET test_awg_client APPEND
+#      PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+#    set_property(TARGET test_awg_client APPEND_STRING
+#      PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
 
 if(ENABLE_LLVM)
   function(add_llvm_test target)
@@ -51,6 +57,10 @@ if(ENABLE_LLVM)
   add_llvm_test(builder_deserial)
 
   add_llvm_test(compiler)
+
   add_llvm_test(nidaq_backend)
   add_llvm_test(zynq_backend)
+
+  add_llvm_test(awg_client)
+
 endif()
