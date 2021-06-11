@@ -52,9 +52,9 @@ namespace NaCs::LLVM::Compile {
 void addOptimization(legacy::PassManagerBase &pm)
 {
     pm.add(createCFGSimplificationPass());
-    pm.add(createDeadInstEliminationPass());
+    pm.add(createDeadCodeEliminationPass());
     pm.add(createEarlyCSEPass());
-    pm.add(createDeadInstEliminationPass());
+    pm.add(createDeadCodeEliminationPass());
     pm.add(createInstructionCombiningPass());
 
     pm.add(createVectorABIPass());            // Fix vector ABI
