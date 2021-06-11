@@ -21,7 +21,7 @@
 
 namespace NaCs::Seq::AWG {
 
-static Device::Register<Backend> register_backend("awg");
+//static Device::Register<Backend> register_backend("awg");
 
 enum class Backend::ChnType : uint8_t
 {
