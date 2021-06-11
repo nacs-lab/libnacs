@@ -110,8 +110,11 @@ uint32_t write(std::vector<uint8_t> &vec, const void *src, size_t sz)
     return len;
 }
 
-//NACS_EXPORT() DummyClient::DummyClient()
-//{}
+NACS_EXPORT() DummyClient::DummyClient()
+{
+    std::cout << "calling constructor" << std::endl;
+    m_seq_cnt_offset = seqcount; //seqcount is a global
+}
 
 NACS_EXPORT() DummyClient::~DummyClient()
 {
@@ -197,7 +200,7 @@ const uint8_t *DummyClient::get_channel_info(uint32_t *sz)
     return nullptr;
 }
 
-void DummyClient::init_run()
+NACS_EXPORT() void DummyClient::init_run()
 {
     // TO DO:
     // Ask server for client_id, if don't have one
@@ -233,17 +236,17 @@ void DummyClient::init_run()
         }).get();
         if (reply.empty())
             throw std::runtime_error("triple not obtained");
-        std::string triple_str((char*) reply[0].data());
-        std::string cpu_str((char*) reply[1].data());
-        std::string feature_str((char*) reply[2].data());
+        std::string triple_str((char*) reply[0].data(), reply[0].size());
+        std::string cpu_str((char*) reply[1].data(), reply[1].size());
+        std::string feature_str((char*) reply[2].data(), reply[2].size());
         m_triple_str = triple_str;
         m_cpu_str = cpu_str;
         m_feature_str = feature_str;
         info_map.try_emplace(m_url, m_client_id, m_server_id, m_triple_str, m_cpu_str, m_feature_str);
         // fill in id_bc
         id_bc.resize(25); // 8 bytes server_id, 8 bytes_client_id, 8 bytes, 8 bytes seq_id, 1 byte is_first_seq, Fill in first 16 bytes
-        write(id_bc, 0, m_server_id);
-        write(id_bc, 8, m_client_id);
+        write(id_bc, (uint32_t) 0, m_server_id);
+        write(id_bc, (uint32_t) 8, m_client_id);
     }
 }
 void DummyClient::start()
