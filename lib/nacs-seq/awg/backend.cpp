@@ -47,7 +47,7 @@ static inline bool ends_with(T1 &&str, T2 &&prefix)
 }
 #endif
 
-static Device::Register<Backend> register_backend("awg");
+//static Device::Register<Backend> register_backend("awg");
 
 enum class Backend::ChnType : uint8_t
 {
