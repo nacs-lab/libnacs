@@ -55,10 +55,11 @@ class DummyClient {
     struct ChannelInfo;
 
 public:
-    DummyClient(){
-        std::cout << "calling constructor" << std::endl;
-        m_seq_cnt_offset = seqcount; //seqcount is a global
-    }
+    DummyClient();
+    //{
+    //    std::cout << "calling constructor" << std::endl;
+    //    m_seq_cnt_offset = seqcount; //seqcount is a global
+    //}
     ~DummyClient();
     const uint8_t *get_channel_info(uint32_t *sz);
 
