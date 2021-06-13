@@ -21,8 +21,10 @@
 
 #include "seq.h"
 #include "host_seq.h"
+#include "error.h"
 
 #include <nacs-utils/llvm/execute.h>
+#include <nacs-utils/streams.h>
 
 #include <yaml-cpp/yaml.h>
 
@@ -47,8 +49,22 @@ class Manager {
         std::string backend;
         YAML::Node config;
     };
+    struct LoggerRegister {
+        LoggerRegister(Manager*);
+        ~LoggerRegister();
+    private:
+        Manager &m_mgr;
+    };
 
 public:
+    enum class MsgType : uint8_t {
+        Info = 0,
+        Warn,
+        Error,
+        SeqError,
+        Debug,
+    };
+
     class ExpSeq {
     public:
         ExpSeq(Manager *mgr, CGContext *cgctx);
@@ -102,6 +118,93 @@ public:
         return m_engine;
     }
 
+    // Error+warning API for python/matlab
+    uint8_t *take_messages(size_t *sz);
+
+    // Error+warning API for C++
+    void add_info(const char *msg);
+    void add_warning(const char *msg);
+    void add_error(const char *msg);
+    void add_error(const std::exception &error);
+    void add_error(const Error &error);
+    void add_debug(const char *msg)
+    {
+        if (likely(!m_debug_messages))
+            return;
+        _add_debug(msg);
+    }
+    // This version allows the formatting to be skipped when debugging is off.
+    template<typename... Args>
+    void add_debug_printf(const char *fmt, Args&&... args)
+    {
+        if (likely(!m_debug_messages))
+            return;
+        _add_debug_printf(fmt, std::forward<Args>(args)...);
+    }
+    void enable_debug(bool enable);
+    bool debug_enabled()
+    {
+        return m_debug_messages;
+    }
+    void register_logger();
+    void unregister_logger();
+
+    void add_info(const std::string &msg)
+    {
+        add_info(msg.c_str());
+    }
+    void add_warning(const std::string &msg)
+    {
+        add_warning(msg.c_str());
+    }
+    void add_error(const std::string &msg)
+    {
+        add_error(msg.c_str());
+    }
+    void add_debug(const std::string &msg)
+    {
+        if (likely(!m_debug_messages))
+            return;
+        _add_debug(msg.c_str());
+    }
+
+    template<typename F>
+    void call_guarded(F &&func)
+    {
+        LoggerRegister reg(this);
+        try {
+            func();
+        }
+        catch (const Error &error) {
+            add_error(error);
+        }
+        catch (const std::exception &error) {
+            add_error(error);
+        }
+        catch (...) {
+            add_error("Unknown error");
+        }
+    }
+
+    template<typename F, typename T>
+    auto call_guarded(F &&func, T def) -> decltype(func())
+    {
+        LoggerRegister reg(this);
+        try {
+            return func();
+        }
+        catch (const Error &error) {
+            add_error(error);
+        }
+        catch (const std::exception &error) {
+            add_error(error);
+        }
+        catch (...) {
+            add_error("Unknown error");
+        }
+        return def;
+    }
+
     // Not affecting the manager itself very much
     // but let the backend know that it should not send any data for real execution
     bool dummy_mode = false;
@@ -110,6 +213,8 @@ private:
     uint64_t add_data(const void *data, size_t size);
     void unref_data(uint64_t id);
     void update_config(const YAML::Node &config);
+    void _add_debug(const char *msg);
+    void _add_debug_printf(const char *fmt, ...);
 
     llvm::LLVMContext m_llvm_ctx;
     LLVM::Exe::Engine m_engine;
@@ -122,7 +227,23 @@ private:
     std::vector<std::string> m_device_order;
     std::map<uint64_t,DataInfo> m_datainfo;
     std::map<std::string,std::vector<uint8_t>> m_backend_datas;
+
+    malloc_ostream m_messages;
+    std::mutex m_message_lock;
+    // Whether debug messages should be logged.
+    bool m_debug_messages = false;
 };
+
+inline Manager::LoggerRegister::LoggerRegister(Manager *mgr)
+    : m_mgr(*mgr)
+{
+    m_mgr.register_logger();
+}
+
+inline Manager::LoggerRegister::~LoggerRegister()
+{
+    m_mgr.unregister_logger();
+}
 
 }
 

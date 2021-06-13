@@ -23,7 +23,9 @@
 #include "error.h"
 
 #include "../nacs-utils/llvm/codegen.h"
+#include "../nacs-utils/log.h"
 #include "../nacs-utils/number.h"
+#include "../nacs-utils/timer.h"
 
 #include <llvm/ADT/StringMap.h>
 #include <llvm/ADT/StringSet.h>
@@ -122,12 +124,14 @@ NACS_EXPORT() uint64_t Manager::ExpSeq::get_dataid(llvm::StringRef name) const
 
 NACS_EXPORT() void Manager::ExpSeq::init_run()
 {
+    mgr().add_debug("Initialize sequence run\n");
     host_seq.init_run();
     // TODO backend
 }
 
 NACS_EXPORT() void Manager::ExpSeq::pre_run()
 {
+    mgr().add_debug_printf("Preparing basic sequence [index %d]\n", host_seq.cur_seq_idx());
     host_seq.pre_run();
     if (max_seq_length > 0) {
         auto seq_idx = host_seq.cur_seq_idx();
@@ -143,23 +147,27 @@ NACS_EXPORT() void Manager::ExpSeq::pre_run()
 
 NACS_EXPORT() void Manager::ExpSeq::start()
 {
+    mgr().add_debug_printf("Starting basic sequence [index %d]\n", host_seq.cur_seq_idx());
     // TODO backend
     // TODO backend ordering
 }
 
 NACS_EXPORT() void Manager::ExpSeq::cancel()
 {
+    mgr().add_debug_printf("Cancelling basic sequence [index %d]\n", host_seq.cur_seq_idx());
     // TODO backend
 }
 
 NACS_EXPORT() bool Manager::ExpSeq::wait(uint64_t timeout_ms)
 {
+    mgr().add_debug_printf("Waiting for basic sequence [index %d]\n", host_seq.cur_seq_idx());
     // TODO backend
     return false;
 }
 
 NACS_EXPORT() uint32_t Manager::ExpSeq::post_run()
 {
+    mgr().add_debug_printf("Finishing basic sequence [index %d]\n", host_seq.cur_seq_idx());
     return host_seq.post_run();
     // TODO backend
 }
@@ -180,16 +188,22 @@ NACS_EXPORT() Manager::ExpSeq *Manager::create_sequence(const uint8_t *data, siz
     expseq->max_seq_length = m_max_seq_length;
     {
         Builder builder(seq);
+        add_debug("Deserializig sequence.\n");
         builder.deserialize(data, size);
         m_backend_datas = std::move(builder.backend_datas);
         // TODO: apply noramp sequence setting from backend
+        add_debug("Building sequence\n");
         builder.buildseq();
     }
+    add_debug("Preparing sequence\n");
     seq.prepare();
+    add_debug("Optimizing sequence\n");
     seq.optimize();
     cgctx->remove_unused_data(seq.env().llvm_module());
     Compiler compiler(expseq->host_seq, seq, m_engine, cgctx->get_extern_resolver());
+    add_debug("Compiling sequence\n");
     expseq->obj_id = compiler.compile();
+    add_debug("Initializing runtime sequence\n");
     expseq->host_seq.init();
     // TODO: call backends
     expseq->clear_compiler();
@@ -198,6 +212,7 @@ NACS_EXPORT() Manager::ExpSeq *Manager::create_sequence(const uint8_t *data, siz
 
 NACS_EXPORT() void Manager::free_sequence(Manager::ExpSeq *expseq)
 {
+    add_debug("Freeing sequence\n");
     delete expseq;
 }
 
@@ -240,11 +255,13 @@ void Manager::unref_data(uint64_t id)
 
 NACS_EXPORT() void Manager::load_config_file(const char *fname)
 {
+    add_debug_printf("Loading config file %s\n", fname);
     update_config(YAML::LoadFile(fname));
 }
 
 NACS_EXPORT() void Manager::load_config_string(const char *str)
 {
+    add_debug_printf("Loading config string\n");
     update_config(YAML::Load(str));
 }
 
@@ -305,6 +322,148 @@ NACS_EXPORT() int64_t Manager::tick_per_sec() const
     if (m_tick_per_sec == 0)
         throw std::runtime_error("Sequence time unit not initialized.");
     return m_tick_per_sec;
+}
+
+// Error+warning API for python/matlab
+NACS_EXPORT() uint8_t *Manager::take_messages(size_t *sz)
+{
+    std::lock_guard<std::mutex> locker(m_message_lock);
+    return (uint8_t*)m_messages.get_buf(*sz);
+}
+
+// Error+warning API for C++
+NACS_EXPORT() void Manager::add_info(const char *msg)
+{
+    std::lock_guard<std::mutex> locker(m_message_lock);
+    m_messages.put((char)MsgType::Info);
+    uint64_t t = getTime();
+    m_messages.write((const char*)&t, sizeof(t));
+    uint32_t len = (uint32_t)strlen(msg);
+    m_messages.write((const char*)&len, sizeof(uint32_t));
+    m_messages.write(msg, len);
+}
+
+NACS_EXPORT() void Manager::add_warning(const char *msg)
+{
+    std::lock_guard<std::mutex> locker(m_message_lock);
+    m_messages.put((char)MsgType::Warn);
+    uint64_t t = getTime();
+    m_messages.write((const char*)&t, sizeof(t));
+    uint32_t len = (uint32_t)strlen(msg);
+    m_messages.write((const char*)&len, sizeof(uint32_t));
+    m_messages.write(msg, len);
+}
+
+NACS_EXPORT() void Manager::add_error(const char *msg)
+{
+    std::lock_guard<std::mutex> locker(m_message_lock);
+    m_messages.put((char)MsgType::Error);
+    uint64_t t = getTime();
+    m_messages.write((const char*)&t, sizeof(t));
+    uint32_t len = (uint32_t)strlen(msg);
+    // Automatically delete a new line from error messages
+    // to make `Log::error` and throwing an error more consistent.
+    if (len > 0 && msg[len - 1] == '\n')
+        len -= 1;
+    m_messages.write((const char*)&len, sizeof(uint32_t));
+    m_messages.write(msg, len);
+}
+
+NACS_EXPORT() void Manager::add_error(const std::exception &error)
+{
+    add_error(error.what());
+}
+
+NACS_EXPORT() void Manager::add_error(const Error &error)
+{
+    std::lock_guard<std::mutex> locker(m_message_lock);
+    m_messages.put((char)MsgType::SeqError);
+    uint64_t t = getTime();
+    m_messages.write((const char*)&t, sizeof(t));
+    write_bits(m_messages, error.type);
+    write_bits(m_messages, error.code);
+    write_bits(m_messages, error.type1);
+    write_bits(m_messages, error.id1);
+    write_bits(m_messages, error.type2);
+    write_bits(m_messages, error.id2);
+    auto msg = error.what();
+    uint32_t len = (uint32_t)strlen(msg);
+    m_messages.write((const char*)&len, sizeof(uint32_t));
+    m_messages.write(msg, len);
+}
+
+NACS_EXPORT() void Manager::_add_debug(const char *msg)
+{
+    std::lock_guard<std::mutex> locker(m_message_lock);
+    m_messages.put((char)MsgType::Debug);
+    uint64_t t = getTime();
+    m_messages.write((const char*)&t, sizeof(t));
+    uint32_t len = (uint32_t)strlen(msg);
+    m_messages.write((const char*)&len, sizeof(uint32_t));
+    m_messages.write(msg, len);
+}
+
+NACS_EXPORT() void Manager::_add_debug_printf(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+#if NACS_OS_LINUX
+    char *str = nullptr;
+    if (vasprintf(&str, fmt, ap) == -1) {
+        add_error("Unable to allocate memory for debug message\n");
+        va_end(ap);
+        return;
+    }
+#else
+    va_list aq;
+    va_copy(aq, ap);
+    auto size = vsnprintf(nullptr, 0, fmt, aq);
+    va_end(aq);
+    // size doesn't include the NUL byte at the end.
+    char *str = (char*)malloc(size + 1);
+    auto size2 = vsnprintf(str, size + 1, fmt, ap);
+    assert(size == size2);
+    (void)size2;
+#endif
+    va_end(ap);
+    _add_debug(str);
+    free(str);
+}
+
+NACS_EXPORT() void Manager::enable_debug(bool enable)
+{
+    if (m_debug_messages == enable)
+        return;
+    m_debug_messages = enable;
+    if (m_debug_messages) {
+        Log::level = Log::Debug;
+    }
+    else {
+        Log::level = Log::Info;
+    }
+}
+
+NACS_EXPORT() void Manager::register_logger()
+{
+    Log::pushLogger([&] (Log::Level level, const char *, const char *msg) {
+        if (level == Log::Info || level == Log::Force) {
+            add_info(msg);
+        }
+        else if (level == Log::Warn) {
+            add_warning(msg);
+        }
+        else if (level == Log::Error) {
+            add_error(msg);
+        }
+        else if (level == Log::Debug) {
+            add_debug(msg);
+        }
+    });
+}
+
+NACS_EXPORT() void Manager::unregister_logger()
+{
+    Log::popLogger();
 }
 
 }
