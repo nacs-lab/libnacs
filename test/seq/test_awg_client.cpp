@@ -44,8 +44,9 @@ int main ()
     for (int i = 0; i < nchns; i++) {
         printf("Channel: %i\n", i);
         client.get_chn_from_lin(i, chn_type, phys_id, chn_id);
-        std::cout << "Chn Type: " << (uint8_t) chn_type << std::endl;
-        std::cout << "Phys Chn: " << phys_id << std::endl;
-        std::cout << "Chn ID: " << chn_id << std::endl;
+        //std::cout << "Chn Type: " << (uint8_t) chn_type << std::endl;
+        //std::cout << "Phys Chn: " << phys_id << std::endl;
+        printf("Chn Type: %u\nPhys Chn: %u\nChn ID: %u\n\n", chn_type, phys_id, chn_id);
+        //std::cout << "Chn ID: " << chn_id << std::endl;
     }
 }
