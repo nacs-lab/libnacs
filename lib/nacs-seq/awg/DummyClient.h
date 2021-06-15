@@ -49,6 +49,7 @@ struct GlobalInfo {
 std::map <std::string, GlobalInfo> info_map;
 
 class DummyClient {
+public:
     enum class ChnType : uint8_t {
         Freq,
         Amp,
@@ -68,7 +69,6 @@ class DummyClient {
     };
     struct BasicSeq;
 
-public:
     DummyClient();
     //{
     //    std::cout << "calling constructor" << std::endl;
