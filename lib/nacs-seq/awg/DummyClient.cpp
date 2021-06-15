@@ -121,7 +121,7 @@ NACS_EXPORT() DummyClient::~DummyClient()
     // object files already freed...
 }
 
-void DummyClient::add_channel(uint32_t chn_id, const std::string &_chn_name)
+NACS_EXPORT() void DummyClient::add_channel(uint32_t chn_id, const std::string &_chn_name)
 {
     // OUT1/CHN1/AMP
     llvm::StringRef chn_name(_chn_name);
@@ -170,7 +170,7 @@ static unsigned get_vector_size()
 }
 
 
-void DummyClient::sort_channels()
+NACS_EXPORT() void DummyClient::sort_channels()
 {
     // assignment of linear channel id
     auto nchn = (uint32_t)m_chn_map.size();
@@ -302,7 +302,7 @@ uint8_t DummyClient::get_pulse_type(DummyClient::ChnType type, bool is_fn, bool 
         return base;
     }
 }
-void DummyClient::get_chn_from_lin(uint32_t lin_idx, DummyClient::ChnType &type, uint8_t &phys_chn_id, uint32_t &chn_id)
+NACS_EXPORT() void DummyClient::get_chn_from_lin(uint32_t lin_idx, DummyClient::ChnType &type, uint8_t &phys_chn_id, uint32_t &chn_id)
 {
     auto chn_info = m_linear_chns[lin_idx]->second;
     type = chn_info.m_chn_type;
