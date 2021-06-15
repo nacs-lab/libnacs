@@ -50,6 +50,7 @@ struct GlobalInfo {
 std::map <std::string, GlobalInfo> info_map;
 
 class DummyClient {
+public:
     enum class ChnType : uint8_t;
     struct BasicSeq;
     struct ChannelInfo;
