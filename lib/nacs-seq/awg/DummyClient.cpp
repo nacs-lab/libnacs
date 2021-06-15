@@ -18,11 +18,11 @@ enum class DummyClient::ChnType : uint8_t
 };
 
 struct DummyClient::ChannelInfo {
-    uint32_t m_phys_chn;
+    uint8_t m_phys_chn;
     uint32_t m_chn_num;
     uint32_t linear_idx = 0; // Linear channel number for BasicSeq's list of pulses
     DummyClient::ChnType m_chn_type;
-    ChannelInfo(uint32_t phys_chn, uint32_t chn_num, DummyClient::ChnType chn_type)
+    ChannelInfo(uint8_t phys_chn, uint32_t chn_num, DummyClient::ChnType chn_type)
         : m_phys_chn(phys_chn),
           m_chn_num(chn_num),
           m_chn_type(chn_type)
@@ -139,7 +139,7 @@ NACS_EXPORT() void DummyClient::add_channel(uint32_t chn_id, const std::string &
         throw std::runtime_error("No physical output number in AWG channel name.");
     if (type_str.empty())
         throw std::runtime_error("No type for channel specified in AWG channel name");
-    uint32_t phys_chn_num;
+    uint8_t phys_chn_num;
     uint32_t chn_num;
     DummyClient::ChnType chn_type;
     if (!phys_chn_str.startswith("OUT"))
@@ -177,7 +177,7 @@ NACS_EXPORT() void DummyClient::sort_channels()
     m_linear_chns.resize(nchn);
     auto it = m_chn_map.begin();
     for (uint32_t i = 0; i < nchn; i++)
-        m_linear_chns[i] = it;
+        m_linear_chns[i] = it++;
     std::sort(m_linear_chns.begin(), m_linear_chns.end(), [&] (auto it1, auto it2) {
         auto &info1 = it1->second;
         auto &info2 = it2->second;
