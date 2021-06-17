@@ -57,11 +57,11 @@ enum class Backend::ChnType : uint8_t
 };
 
 struct Backend::ChannelInfo {
-    uint32_t m_phys_chn;
+    uint8_t m_phys_chn;
     uint32_t m_chn_num;
     uint32_t linear_idx = 0; // Linear channel number for BasicSeq's list of pulses
     Backend::ChnType m_chn_type;
-    ChannelInfo(uint32_t phys_chn, uint32_t chn_num, Backend::ChnType chn_type)
+    ChannelInfo(uint8_t phys_chn, uint32_t chn_num, Backend::ChnType chn_type)
         : m_phys_chn(phys_chn),
           m_chn_num(chn_num),
           m_chn_type(chn_type)

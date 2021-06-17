@@ -154,12 +154,16 @@ NACS_EXPORT() void DummyClient::add_channel(uint32_t chn_id, const std::string &
         throw std::runtime_error("Virtual channel should be specified with CHN");
     phys_chn_str = phys_chn_str.substr(3);
     chn_num_str = chn_num_str.substr(3);
+    //std::cout << phys_chn_str.str() << std::endl;
     if (phys_chn_str.getAsInteger(10, phys_chn_num))
         throw std::runtime_error("Physical output for AWG must be a number.");
     if (chn_num_str.getAsInteger(10, chn_num))
         throw std::runtime_error("Channel for AWG must be a number.");
     if (type_str == "FREQ")
+    {
+        //std::cout << "This is a freq" << std::endl;
         chn_type = DummyClient::ChnType::Freq;
+    }
     else if (type_str == "AMP")
         chn_type = DummyClient::ChnType::Amp;
     else if (type_str == "PHASE")
@@ -167,6 +171,7 @@ NACS_EXPORT() void DummyClient::add_channel(uint32_t chn_id, const std::string &
     else {
         throw std::runtime_error("Unknown name for channel. Use FREQ, AMP, PHASE");
     }
+    std::cout << "phys_chn num:" << phys_chn_num << std::endl;
     m_chn_map.try_emplace(chn_id, phys_chn_num, chn_num, chn_type);
 }
 
@@ -312,8 +317,11 @@ NACS_EXPORT() void DummyClient::get_chn_from_lin(uint32_t lin_idx, DummyClient::
 {
     auto chn_info = m_linear_chns[lin_idx]->second;
     type = chn_info.m_chn_type;
+    //std::cout << "chn type: " << (uint8_t) type << std::endl;
     phys_chn_id = chn_info.m_phys_chn;
+    //std::cout << "phys chn_id " << phys_chn_id << std::endl;
     chn_id = chn_info.m_chn_num;
+    //std::cout << "chn num: " << chn_id << std::endl;
 }
 
 NACS_EXPORT() void DummyClient::loadConfig(const char *fname)
