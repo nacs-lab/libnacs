@@ -89,7 +89,7 @@ NACS_EXPORT() MultiClient::SockRef MultiClient::get_socket(const std::string &ad
     if (it == m_sockets.end()) {
         it = m_sockets.try_emplace(addr, *this).first;
         auto &info = it->second;
-        info.sock.setsockopt(ZMQ_LINGER, int(0));
+        set_linger(info.sock, 0);
         info.sock.connect(addr);
         ensure_worker();
     }
@@ -134,7 +134,9 @@ void MultiClient::worker_func()
         locker.unlock();
         if (poll_items.size() == 1)
             break;
-        zmq::poll(poll_items);
+        // `zmq::poll(poll_items)` causes deprecation warning.
+        // Ref https://github.com/zeromq/cppzmq/issues/494
+        zmq::poll(poll_items.data(), poll_items.size());
         if (poll_items[0].revents) {
             assert(poll_items[0].revents == ZMQ_POLLIN);
             recv(m_cmd_sockets.first, msg);

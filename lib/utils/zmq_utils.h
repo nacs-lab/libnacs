@@ -93,10 +93,14 @@ static inline auto recv(zmq::socket_t &sock, zmq::message_t &msg)
 
 static inline bool has_more(zmq::socket_t &sock)
 {
+#if CPPZMQ_VERSION >= 40700
+    return sock.get(zmq::sockopt::rcvmore_t());
+#else
     int more = 0;
     size_t more_size = sizeof(more);
     sock.getsockopt(ZMQ_RCVMORE, &more, &more_size);
     return more != 0;
+#endif
 }
 
 static inline bool recv_more(zmq::socket_t &sock, zmq::message_t &msg)
@@ -106,6 +110,15 @@ static inline bool recv_more(zmq::socket_t &sock, zmq::message_t &msg)
         return true;
     }
     return false;
+}
+
+static inline void set_linger(zmq::socket_t &sock, int linger)
+{
+#if CPPZMQ_VERSION >= 40700
+    sock.set(zmq::sockopt::linger_t(), 0);
+#else
+    sock.setsockopt(ZMQ_LINGER, int(0));
+#endif
 }
 
 // Read address messages up to and including the empty deliminator frame
