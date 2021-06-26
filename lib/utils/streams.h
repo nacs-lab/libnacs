@@ -304,6 +304,14 @@ static std::string sprint(T &&v)
     return stm.get_buf();
 }
 
+template<typename T>
+static inline std::ostream &write_bits(std::ostream &stm, T v)
+{
+    static_assert(std::is_trivial_v<T>);
+    stm.write((const char*)&v, sizeof(T));
+    return stm;
+}
+
 }
 
 #endif
