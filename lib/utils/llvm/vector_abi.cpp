@@ -65,7 +65,7 @@ struct VectorABIPass : public ModulePass {
 
 private:
     bool runOnModule(Module &M) override;
-    static bool handle_x86_func(const DataLayout &DL, VectorType *T_v128,
+    static bool handle_x86_func(const DataLayout &DL, FixedVectorType *T_v128,
                                 Function &f, bool is_win);
     static bool handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32,
                                     Function &f);
@@ -75,7 +75,7 @@ private:
     // the linkage of the old function and returns it.
     static Function *clone_to_api(Function &F, FunctionType *new_fty);
     static Value *set_nele_vector(IRBuilder<> &builder, Value *v, unsigned nele);
-    static Value *cast_vector(IRBuilder<> &builder, VectorType *ty, Value *v,
+    static Value *cast_vector(IRBuilder<> &builder, FixedVectorType *ty, Value *v,
                               const DataLayout &DL);
     static bool is_vector_func(Function &F, bool export_only);
     static bool x86_abi(Module &M, bool is_win);
@@ -105,7 +105,7 @@ Function *VectorABIPass::clone_to_api(Function &F, FunctionType *new_fty)
 
 Value *VectorABIPass::set_nele_vector(IRBuilder<> &builder, Value *v, unsigned nele)
 {
-    auto ty = cast<VectorType>(v->getType());
+    auto ty = cast<FixedVectorType>(v->getType());
     auto old_nele = ty->getNumElements();
 #if LLVM_VERSION_MAJOR >= 11
     SmallVector<int, 16> mask(nele);
@@ -119,10 +119,10 @@ Value *VectorABIPass::set_nele_vector(IRBuilder<> &builder, Value *v, unsigned n
     return builder.CreateShuffleVector(v, UndefValue::get(ty), mask);
 }
 
-Value *VectorABIPass::cast_vector(IRBuilder<> &builder, VectorType *ty, Value *v,
+Value *VectorABIPass::cast_vector(IRBuilder<> &builder, FixedVectorType *ty, Value *v,
                                   const DataLayout &DL)
 {
-    auto old_ty = cast<VectorType>(v->getType());
+    auto old_ty = cast<FixedVectorType>(v->getType());
     auto old_elsz = DL.getTypeSizeInBits(old_ty->getElementType());
     auto old_sz = old_ty->getNumElements() * old_elsz;
     auto elsz = DL.getTypeSizeInBits(ty->getElementType());
@@ -177,7 +177,7 @@ bool VectorABIPass::is_vector_func(Function &F, bool export_only)
     return false;
 }
 
-bool VectorABIPass::handle_x86_func(const DataLayout &DL, VectorType *T_v128,
+bool VectorABIPass::handle_x86_func(const DataLayout &DL, FixedVectorType *T_v128,
                                     Function &f, bool is_win32)
 {
     if (!is_vector_func(f, !is_win32))
@@ -249,7 +249,7 @@ bool VectorABIPass::handle_x86_func(const DataLayout &DL, VectorType *T_v128,
         }
         Value *res = builder.CreateCall(newf, args);
         if (fix_ret)
-            res = cast_vector(builder, cast<VectorType>(ft->getReturnType()), res, DL);
+            res = cast_vector(builder, cast<FixedVectorType>(ft->getReturnType()), res, DL);
         if (res->getType()->isVoidTy()) {
             builder.CreateRetVoid();
         }
@@ -268,7 +268,7 @@ bool VectorABIPass::handle_x86_func(const DataLayout &DL, VectorType *T_v128,
             args[argno] = &arg;
             continue;
         }
-        args[argno] = cast_vector(builder, cast<VectorType>(ft->getParamType(argno)),
+        args[argno] = cast_vector(builder, cast<FixedVectorType>(ft->getParamType(argno)),
                                   &arg, DL);
         fix_i++;
     }
@@ -323,7 +323,7 @@ bool VectorABIPass::handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32
             tofix.push_back(argts.size());
             // Now find the next power of 2
             auto sz = 1 << (32 - __builtin_clz(argsz));
-            auto ele = cast<VectorType>(t)->getElementType();
+            auto ele = cast<FixedVectorType>(t)->getElementType();
             auto elesz = DL.getTypeSizeInBits(t);
             if (sz % elesz == 0) {
                 argts.push_back(FixedVectorType::get(ele, sz / elesz));
@@ -352,7 +352,7 @@ bool VectorABIPass::handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32
                 args[argno] = &arg;
                 continue;
             }
-            args[argno] = cast_vector(builder, cast<VectorType>(argts[argno]), &arg, DL);
+            args[argno] = cast_vector(builder, cast<FixedVectorType>(argts[argno]), &arg, DL);
             fix_i++;
         }
         Value *res = builder.CreateCall(newf, args);
@@ -374,7 +374,7 @@ bool VectorABIPass::handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32
             args[argno] = &arg;
             continue;
         }
-        args[argno] = cast_vector(builder, cast<VectorType>(ft->getParamType(argno)),
+        args[argno] = cast_vector(builder, cast<FixedVectorType>(ft->getParamType(argno)),
                                   &arg, DL);
         fix_i++;
     }

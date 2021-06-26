@@ -38,6 +38,10 @@ using namespace llvm;
 
 namespace {
 
+#if LLVM_VERSION_MAJOR < 11
+#  define FixedVectorType VectorType
+#endif
+
 struct LowerVectorPass : public ModulePass {
     static char ID;
     LowerVectorPass()
@@ -85,7 +89,7 @@ bool LowerVectorPass::process_intrinsic(Function &F, const std::string &name)
 
 void LowerVectorPass::replace_frem(BinaryOperator *binop)
 {
-    auto ty = cast<VectorType>(binop->getType());
+    auto ty = cast<FixedVectorType>(binop->getType());
     auto nele = ty->getNumElements();
     std::string name = "fmod.";
     // No need to go through general purpose number -> string conversion.
@@ -129,7 +133,8 @@ bool LowerVectorPass::process_function(Function &F)
         auto ty = binop->getType();
         if (!ty->isVectorTy())
             continue;
-        auto vecty = cast<VectorType>(ty);
+        // No SVE support for now.
+        auto vecty = cast<FixedVectorType>(ty);
         if (!vecty->getElementType()->isDoubleTy())
             continue;
         switch (vecty->getNumElements()) {
