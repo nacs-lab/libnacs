@@ -64,7 +64,7 @@ __attribute__((target("sse2"))) static void test_sse2()
         auto res = linearInterpolate2_sse2(__m128d{0.3, 1.4} / 3, 4, points);
         // Do not return the result since the caller may not have the correct ABI declared
         // Instead, use an inline assembly to convince the compiler that the result is used.
-        asm volatile ("" :: "x"(res));
+        asm volatile ("" :: "v"(res));
     };
 }
 
@@ -86,7 +86,7 @@ __attribute__((target("avx"))) void test_avx()
         auto res = linearInterpolate4_avx(__m256d{-0.1, 0.3 / 3, 1.4 / 3, 1.1}, 4, points);
         // Do not return the result since the caller may not have the correct ABI declared
         // Instead, use an inline assembly to convince the compiler that the result is used.
-        asm volatile ("" :: "x"(res));
+        asm volatile ("" :: "v"(res));
     };
 }
 
@@ -124,13 +124,13 @@ __attribute__((target("avx2,fma"))) void test_avx2()
         auto res = linearInterpolate2_avx2(__m128d{0.3, 1.4} / 3, 4, points);
         // Do not return the result since the caller may not have the correct ABI declared
         // Instead, use an inline assembly to convince the compiler that the result is used.
-        asm volatile ("" :: "x"(res));
+        asm volatile ("" :: "v"(res));
     };
     BENCHMARK("AVX2<4>") __attribute__((target("avx2,fma"))) {
         auto res = linearInterpolate4_avx2(__m256d{-0.1, 0.3 / 3, 1.4 / 3, 1.1}, 4, points);
         // Do not return the result since the caller may not have the correct ABI declared
         // Instead, use an inline assembly to convince the compiler that the result is used.
-        asm volatile ("" :: "x"(res));
+        asm volatile ("" :: "v"(res));
     };
 }
 
@@ -163,7 +163,7 @@ __attribute__((target("avx512f,avx512dq"))) void test_avx512()
                 -0.1, 0.3 / 3, 1.4 / 3, 1.1}, 4, points);
         // Do not return the result since the caller may not have the correct ABI declared
         // Instead, use an inline assembly to convince the compiler that the result is used.
-        asm volatile ("" :: "x"(res));
+        asm volatile ("" :: "v"(res));
     };
 }
 #elif NACS_CPU_AARCH64
