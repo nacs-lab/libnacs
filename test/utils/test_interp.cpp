@@ -33,6 +33,14 @@ static bool has_avx = false;
 static bool has_avx2 = false;
 static bool has_avx512 = false;
 
+#if defined(__clang__) && __clang_major__ < 10
+// Clang < 10.0 has problem handling inline asm
+// with vector register enabled by target attribute.
+#  define ENABLE_VECTOR_BENCH 0
+#else
+#  define ENABLE_VECTOR_BENCH 1
+#endif
+
 static void init_cpu()
 {
     __builtin_cpu_init();
@@ -82,12 +90,14 @@ __attribute__((target("avx"))) void test_avx()
     REQUIRE(res[2] == Approx(0.14));
     REQUIRE(res[3] == Approx(0.6));
 
+#if ENABLE_VECTOR_BENCH
     BENCHMARK("AVX<4>") __attribute__((target("avx"))) {
         auto res = linearInterpolate4_avx(__m256d{-0.1, 0.3 / 3, 1.4 / 3, 1.1}, 4, points);
         // Do not return the result since the caller may not have the correct ABI declared
         // Instead, use an inline assembly to convince the compiler that the result is used.
         asm volatile ("" :: "v"(res));
     };
+#endif
 }
 
 __attribute__((target("avx2,fma"))) void test_avx2()
@@ -120,6 +130,7 @@ __attribute__((target("avx2,fma"))) void test_avx2()
     REQUIRE(res4[2] == Approx(0.14));
     REQUIRE(res4[3] == Approx(0.6));
 
+#if ENABLE_VECTOR_BENCH
     BENCHMARK("AVX2<2>") __attribute__((target("avx2,fma"))) {
         auto res = linearInterpolate2_avx2(__m128d{0.3, 1.4} / 3, 4, points);
         // Do not return the result since the caller may not have the correct ABI declared
@@ -132,6 +143,7 @@ __attribute__((target("avx2,fma"))) void test_avx2()
         // Instead, use an inline assembly to convince the compiler that the result is used.
         asm volatile ("" :: "v"(res));
     };
+#endif
 }
 
 __attribute__((target("avx512f,avx512dq"))) void test_avx512()
@@ -158,6 +170,7 @@ __attribute__((target("avx512f,avx512dq"))) void test_avx512()
     REQUIRE(res[6] == Approx(0.14));
     REQUIRE(res[7] == Approx(0.6));
 
+#if ENABLE_VECTOR_BENCH
     BENCHMARK("AVX512<8>") __attribute__((target("avx512f,avx512dq"))) {
         auto res = linearInterpolate8_avx512f(__m512d{-0.1, 0.3 / 3, 1.4 / 3, 1.1,
                 -0.1, 0.3 / 3, 1.4 / 3, 1.1}, 4, points);
@@ -165,6 +178,7 @@ __attribute__((target("avx512f,avx512dq"))) void test_avx512()
         // Instead, use an inline assembly to convince the compiler that the result is used.
         asm volatile ("" :: "v"(res));
     };
+#endif
 }
 #elif NACS_CPU_AARCH64
 static void test_asimd()
