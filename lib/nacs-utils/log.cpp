@@ -20,7 +20,10 @@
 #include "number.h"
 
 #include <mutex>
+#include <string>
+#include <vector>
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -31,6 +34,27 @@
 
 namespace NaCs {
 namespace Log {
+
+static thread_local std::vector<cb_t> loggers;
+
+NACS_EXPORT() void pushLogger(cb_t cb)
+{
+    loggers.push_back(cb);
+}
+
+NACS_EXPORT() void popLogger()
+{
+    if (loggers.empty())
+        return;
+    loggers.pop_back();
+}
+
+static cb_t get_logger()
+{
+    if (loggers.empty())
+        return cb_t();
+    return loggers.back();
+}
 
 NACS_EXPORT() Level level = [] {
     auto env = getenv("NACS_LOG");
@@ -48,18 +72,6 @@ NACS_EXPORT() Level level = [] {
         return Force;
     return Info;
 }();
-
-static FILE *log_f = stderr;
-
-NACS_EXPORT() FILE *getLog()
-{
-    return log_f;
-}
-
-NACS_EXPORT() void setLog(FILE *f)
-{
-    log_f = f ? f : stderr;
-}
 
 static bool print_pid = true;
 NACS_EXPORT() bool printPID()
@@ -80,6 +92,30 @@ static NACS_INLINE bool checkLevel(unsigned _level)
 NACS_EXPORT() void _logV(Level level, const char *func, const char *fmt, va_list ap)
 {
     NACS_RET_IF_FAIL(checkLevel(level));
+    auto logger = get_logger();
+    if (logger) {
+#if NACS_OS_LINUX
+        char *str = nullptr;
+        if (vasprintf(&str, fmt, ap) == -1) {
+            logger(Error, __func__, "Unable to allocate memory for message\n");
+            return;
+        }
+#else
+        va_list aq;
+        va_copy(aq, ap);
+        auto size = vsnprintf(nullptr, 0, fmt, aq);
+        va_end(aq);
+        // size doesn't include the NUL byte at the end.
+        char *str = (char*)malloc(size + 1);
+        auto size2 = vsnprintf(str, size + 1, fmt, ap);
+        assert(size == size2);
+        (void)size2;
+#endif
+        logger(level, func, str);
+        free(str);
+        return;
+    }
+
     static const char *log_prefixes[] = {
         [Debug] = "Debug",
         [Info] = "Info",
@@ -94,26 +130,26 @@ NACS_EXPORT() void _logV(Level level, const char *func, const char *fmt, va_list
         if (print_pid) {
             int pid = getpid();
             if (level == Force) {
-                fprintf(log_f, "%d: ", pid);
+                fprintf(stderr, "%d: ", pid);
             }
             else if (func) {
-                fprintf(log_f, "%s-%d %s ", log_prefixes[(int)level], pid, func);
+                fprintf(stderr, "%s-%d %s ", log_prefixes[(int)level], pid, func);
             }
             else {
-                fprintf(log_f, "%s-%d ", log_prefixes[(int)level], pid);
+                fprintf(stderr, "%s-%d ", log_prefixes[(int)level], pid);
             }
         }
         else if (level == Force) {
         }
         else if (func) {
-            fprintf(log_f, "%s: %s ", log_prefixes[(int)level], func);
+            fprintf(stderr, "%s: %s ", log_prefixes[(int)level], func);
         }
         else {
-            fprintf(log_f, "%s: ", log_prefixes[(int)level]);
+            fprintf(stderr, "%s: ", log_prefixes[(int)level]);
         }
-        vfprintf(log_f, fmt, ap);
+        vfprintf(stderr, fmt, ap);
     }
-    fflush(log_f);
+    fflush(stderr);
 }
 
 NACS_EXPORT() void _log(Level level, const char *func, const char *fmt, ...)
@@ -184,10 +220,19 @@ NACS_EXPORT() void backtrace()
 #if !NACS_OS_WINDOWS
     void *buff[1024];
     int size = ::backtrace(buff, 1024);
-    int fd = fileno(Log::log_f);
-    if (fd == -1)
-        fd = STDERR_FILENO;
-    backtrace_symbols_fd(buff, size, fd);
+    auto logger = Log::get_logger();
+    if (!logger) {
+        backtrace_symbols_fd(buff, size, STDERR_FILENO);
+        return;
+    }
+    auto strs = backtrace_symbols(buff, size);
+    std::string linebuff; // Buffer to add EOL
+    for (int i = 0; i < size; i++) {
+        linebuff = strs[i];
+        linebuff += '\n';
+        logger(Log::Force, nullptr, linebuff.data());
+    }
+    free(strs);
 #endif
 }
 

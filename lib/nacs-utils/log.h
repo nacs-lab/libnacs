@@ -20,6 +20,9 @@
 #define _NACS_UTILS_LOG_H_
 
 #include "utils.h"
+
+#include <functional>
+
 #include <stdarg.h>
 
 namespace NaCs {
@@ -43,8 +46,10 @@ typedef enum {
 
 extern NACS_EXPORT(utils) Level level;
 
-NACS_EXPORT(utils) void setLog(FILE *log_f);
-NACS_EXPORT(utils) FILE *getLog();
+using cb_t = std::function<void(Level,const char*,const char*)>;
+
+NACS_EXPORT(utils) void pushLogger(cb_t cb);
+NACS_EXPORT(utils) void popLogger();
 NACS_EXPORT(utils) bool printPID();
 NACS_EXPORT(utils) void printPID(bool b);
 
