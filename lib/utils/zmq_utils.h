@@ -93,7 +93,13 @@ static inline auto recv(zmq::socket_t &sock, zmq::message_t &msg)
 
 static inline bool has_more(zmq::socket_t &sock)
 {
-#if CPPZMQ_VERSION >= 40700
+    // The version check here should really be 40700
+    // but it causes a compilation error on Ubuntu due to a packaging error.
+    // Ref https://bugs.launchpad.net/ubuntu/+source/zeromq3/+bug/1933741
+    // Hopefully 4.7.1 should be safe since it should at least contain all the features
+    // in the 4.7.0 final release...
+    // Also see below.
+#if CPPZMQ_VERSION >= 40701
     return sock.get(zmq::sockopt::rcvmore_t());
 #else
     int more = 0;
@@ -114,7 +120,8 @@ static inline bool recv_more(zmq::socket_t &sock, zmq::message_t &msg)
 
 static inline void set_linger(zmq::socket_t &sock, int linger)
 {
-#if CPPZMQ_VERSION >= 40700
+    // Should be 4.7.0, see above...
+#if CPPZMQ_VERSION >= 40701
     sock.set(zmq::sockopt::linger_t(), 0);
 #else
     sock.setsockopt(ZMQ_LINGER, int(0));
