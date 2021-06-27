@@ -1,0 +1,47 @@
+name: CMake
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+    branches: [ master ]
+
+env:
+  TERM: xterm-256color
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        BUILD_TYPE: [ Release, Debug ]
+        compiler: [ gcc, clang ]
+        LLVM_VER: [ '', 10, 11 ]
+    env:
+      CC: ${{matrix.compiler}}
+      CXX: ${{matrix.compiler == 'gcc' && 'g++' || 'clang++'}}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: sudo apt-get install libopenlibm-dev libsleef-dev libzmq3-dev libyaml-cpp-dev libtbb-dev
+
+    - name: Install LLVM
+      if: ${{matrix.LLVM_VER != ''}}
+      run: sudo apt-get install llvm-${{matrix.LLVM_VER}}-dev
+
+    - name: Configure CMake (Without LLVM)
+      if: ${{matrix.LLVM_VER == ''}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On
+
+    - name: Configure CMake (With LLVM)
+      if: ${{matrix.LLVM_VER != ''}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=On
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{matrix.BUILD_TYPE}} -j $(nproc)
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      run: ctest -C ${{matrix.BUILD_TYPE}} -E /excluded --output-on-failure -j $(nproc)
