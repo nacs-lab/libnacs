@@ -10,13 +10,6 @@ namespace NaCs::Seq::AWG::Dummy {
 
 //static Device::Register<Backend> register_backend("awg");
 
-enum class DummyClient::ChnType : uint8_t
-{
-    Freq,
-    Amp,
-    Phase
-};
-
 struct DummyClient::ChannelInfo {
     uint8_t m_phys_chn;
     uint32_t m_chn_num;
