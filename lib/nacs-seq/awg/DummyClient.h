@@ -51,7 +51,11 @@ std::map <std::string, GlobalInfo> info_map;
 
 class DummyClient {
 public:
-    enum class ChnType : uint8_t;
+    enum class ChnType : uint8_t {
+        Freq,
+        Amp,
+        Phase
+    };
     struct BasicSeq;
     struct ChannelInfo;
 
