@@ -16,7 +16,18 @@ jobs:
       matrix:
         BUILD_TYPE: [ Release, Debug ]
         compiler: [ gcc, clang ]
-        LLVM_VER: [ '', 10, 11 ]
+        LLVM_VER: [ '', 11 ]
+        exclude:
+          - BUILD_TYPE: Release
+            compiler: clang
+            LLVM_VER: ''
+          - BUILD_TYPE: Debug
+            compiler: clang
+            LLVM_VER: ''
+        include:
+          - BUILD_TYPE: Debug
+            compiler: gcc
+            LLVM_VER: 10
     env:
       CC: ${{matrix.compiler}}
       CXX: ${{matrix.compiler == 'gcc' && 'g++' || 'clang++'}}
