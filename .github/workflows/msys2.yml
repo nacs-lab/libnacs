@@ -1,0 +1,56 @@
+name: MSYS2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CC: /mingw64/bin/gcc.exe
+  CXX: /mingw64/bin/g++.exe
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        BUILD_TYPE: [ Release, Debug ]
+        with_llvm: [ true, false ]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        install: >-
+          cmake
+          patch
+          make
+          llvm
+          mingw-w64-x86_64-toolchain
+          mingw-w64-x86_64-libwinpthread
+          mingw-w64-x86_64-llvm
+          mingw-w64-x86_64-polly
+          mingw-w64-x86_64-zeromq
+
+    - name: Configure CMake (Without LLVM)
+      if: ${{!matrix.with_llvm}}
+      shell: msys2 {0}
+      run: MSYSTEM=MSYS /usr/bin/cmake -B '${{github.workspace}}' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=Off -DCMAKE_INSTALL_PREFIX=/mingw64
+
+    - name: Configure CMake (With LLVM)
+      if: ${{matrix.with_llvm}}
+      shell: msys2 {0}
+      run: MSYSTEM=MSYS /usr/bin/cmake -B '${{github.workspace}}' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=Off -DENABLE_LLVM=On -DSTATIC_LLVM=On -DCMAKE_INSTALL_PREFIX=/mingw64
+
+    - name: Build
+      shell: msys2 {0}
+      run: /usr/bin/cmake --build '${{github.workspace}}' --config ${{matrix.BUILD_TYPE}} -j $(nproc)
+
+    - name: Test
+      shell: msys2 {0}
+      working-directory: ${{github.workspace}}/build
+      run: /usr/bin/ctest -C ${{matrix.BUILD_TYPE}} -E /excluded --output-on-failure -j $(nproc)
