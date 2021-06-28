@@ -101,12 +101,12 @@ TEST_CASE("DataPipe") {
 #else
     static constexpr size_t n = 4096ul * 4096ul * 10ul;
 #endif
-    Pipe pipe;
+    std::unique_ptr<Pipe> pipe(new Pipe);
     std::thread writer{[&] {
-            push_data(pipe, n);
+            push_data(*pipe, n);
         }};
     auto t1 = getTime();
-    check_data(pipe, n);
+    check_data(*pipe, n);
     auto t2 = getTime();
     writer.join();
     std::cout << "Time per data = " << double(t2 - t1) / n << " (ns)" << std::endl;
