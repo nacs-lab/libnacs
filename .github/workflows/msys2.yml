@@ -56,5 +56,6 @@ jobs:
 
     - name: Test
       shell: msys2 {0}
-      working-directory: ${{github.workspace}}/build
-      run: ctest -C ${{matrix.BUILD_TYPE}} -E /excluded --output-on-failure -j $(nproc)
+      run: |
+        cd '${{github.workspace}}/build'
+        ctest -C ${{matrix.BUILD_TYPE}} -E /excluded --output-on-failure -j $(nproc)
