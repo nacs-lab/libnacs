@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.7)
 
 project(libnacs C CXX ASM)
 
@@ -74,18 +74,7 @@ if(ENABLE_SIMD)
   find_package(Sleef REQUIRED)
 endif()
 find_package(OpenLibm)
-pkg_check_modules(PC_ZMQ REQUIRED libzmq>=4.0)
-add_library(zmq SHARED IMPORTED)
-set_target_properties(zmq PROPERTIES
-  INTERFACE_INCLUDE_DIRECTORIES "${PC_ZMQ_INCLUDE_DIRS}"
-  # CMake/FindPkgConfig (as of 3.16) does not seem to understand `-isystem`
-  # returned from `pkg-config` and puts it in `CFLAGS_OTHER` which was then transformed into
-  # -D-isystem causing compilation error.
-  # This happens on the zmq package from Ubuntu.
-  # Since we don't really need anything from it we'll just ignore this for now...
-  # INTERFACE_COMPILE_DEFINITIONS "${PC_ZMQ_CFLAGS_OTHER}"
-  INTERFACE_LINK_OPTIONS "${PC_ZMQ_LDFLAGS_OTHER}"
-  IMPORTED_LOCATION "${PC_ZMQ_LINK_LIBRARIES}")
+pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq>=4.0)
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden -Wconversion
   -fno-math-errno -Wno-sign-conversion -Wsign-compare

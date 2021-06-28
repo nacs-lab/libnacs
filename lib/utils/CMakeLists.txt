@@ -59,7 +59,7 @@ set(nacs_utils_SRCS
   utils.cpp
   wavemeter.cpp
   zmq_utils.cpp)
-set(nacs_utils_LINKS m pthread zmq)
+set(nacs_utils_LINKS m pthread PkgConfig::ZMQ)
 set_source_files_properties(number.cpp
   PROPERTIES COMPILE_FLAGS "-ffp-contract=fast")
 if(IS_UNIX)

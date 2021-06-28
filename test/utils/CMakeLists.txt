@@ -32,7 +32,7 @@ add_utils_test(fixedqueue)
 add_utils_test(interp)
 add_utils_test(ir)
 add_utils_test(zmq_multiclient)
-target_link_libraries(test-zmq_multiclient zmq)
+target_link_libraries(test-zmq_multiclient PkgConfig::ZMQ)
 
 foreach(TESTSET RANGE 8)
   add_utils_test(ir_cc-${TESTSET} test_ir_cc.cpp)
