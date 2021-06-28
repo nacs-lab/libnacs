@@ -16,6 +16,7 @@ jobs:
   build:
     runs-on: windows-latest
     strategy:
+      fail-fast: false
       matrix:
         BUILD_TYPE: [ Release, Debug ]
         with_llvm: [ true, false ]
