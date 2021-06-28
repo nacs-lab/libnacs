@@ -18,9 +18,9 @@
 
 #define CATCH_CONFIG_MAIN
 
-#include "../../lib/utils/ir.h"
-#include "../../lib/utils/number.h"
-#include "../../lib/utils/timer.h"
+#include "../../lib/nacs-utils/ir.h"
+#include "../../lib/nacs-utils/number.h"
+#include "../../lib/nacs-utils/timer.h"
 #include <iostream>
 #include <sstream>
 #include <math.h>

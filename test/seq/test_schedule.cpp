@@ -16,9 +16,9 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../../lib/utils/timer.h"
-#include "../../lib/seq/bytecode.h"
-#include "../../lib/seq/seq.h"
+#include "../../lib/nacs-utils/timer.h"
+#include "../../lib/nacs-seq/bytecode.h"
+#include "../../lib/nacs-seq/seq.h"
 
 #include <iostream>
 #include <fstream>

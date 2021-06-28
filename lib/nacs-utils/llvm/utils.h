@@ -47,7 +47,7 @@ NACS_EXPORT(utils) void dump(const llvm::DebugLoc *dbg);
 // The following functions are provided so that the user does not need to link to LLVM.
 // This is useful/needed when we statically linking LLVM and cannot
 // link to the same version of LLVM as the user.
-// See also comments in `lib/utils/CMakeLists.txt`
+// See also comments in `lib/nacs-utils/CMakeLists.txt`
 NACS_EXPORT(utils) void delete_module(llvm::Module*);
 struct module_deleter {
     void operator()(llvm::Module *mod) const

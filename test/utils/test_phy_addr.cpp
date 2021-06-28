@@ -1,6 +1,6 @@
-#include "../../lib/utils/fd_utils.h"
-#include "../../lib/utils/mem.h"
-#include "../../lib/utils/timer.h"
+#include "../../lib/nacs-utils/fd_utils.h"
+#include "../../lib/nacs-utils/mem.h"
+#include "../../lib/nacs-utils/timer.h"
 
 #include <unistd.h>
 #include <sys/mman.h>

@@ -18,7 +18,7 @@
 
 #define CATCH_CONFIG_MAIN
 
-#include "../../lib/utils/processor.h"
+#include "../../lib/nacs-utils/processor.h"
 
 #include <catch2/catch.hpp>
 

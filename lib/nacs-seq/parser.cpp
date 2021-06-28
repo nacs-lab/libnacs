@@ -19,7 +19,7 @@
 #include "parser_p.h"
 #include "pulse_time.h"
 
-#include "../utils/errors.h"
+#include "../nacs-utils/errors.h"
 
 #include <assert.h>
 

@@ -21,7 +21,7 @@
 #include "exehelper_p.h"
 #include "parser_p.h"
 
-#include "../utils/streams.h"
+#include "../nacs-utils/streams.h"
 
 #include <cctype>
 #include <iomanip>

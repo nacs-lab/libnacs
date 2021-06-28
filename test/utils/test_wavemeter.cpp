@@ -18,9 +18,9 @@
 
 #define CATCH_CONFIG_MAIN
 
-#include "../../lib/utils/streams.h"
-#include "../../lib/utils/timer.h"
-#include "../../lib/utils/wavemeter.h"
+#include "../../lib/nacs-utils/streams.h"
+#include "../../lib/nacs-utils/timer.h"
+#include "../../lib/nacs-utils/wavemeter.h"
 
 #include <algorithm>
 #include <ctime>

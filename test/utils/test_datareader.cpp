@@ -20,8 +20,8 @@
 
 #include "../error_helper.h"
 
-#include <../../lib/utils/mem.h>
-#include <../../lib/utils/streams.h>
+#include <../../lib/nacs-utils/mem.h>
+#include <../../lib/nacs-utils/streams.h>
 
 #include <iostream>
 

@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../../lib/utils/term.h"
+#include "../../lib/nacs-utils/term.h"
 
 #include <iostream>
 

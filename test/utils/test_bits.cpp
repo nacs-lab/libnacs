@@ -18,8 +18,8 @@
 
 #define CATCH_CONFIG_MAIN
 
-#include "../../lib/utils/number.h"
-#include "../../lib/utils/timer.h"
+#include "../../lib/nacs-utils/number.h"
+#include "../../lib/nacs-utils/timer.h"
 
 #include <catch2/catch.hpp>
 

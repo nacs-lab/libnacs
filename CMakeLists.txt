@@ -87,10 +87,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_definitions(-Wno-unknown-warning-option)
 endif()
 
-cmake_c_fix_include_path(lib/utils nacs-utils)
-cmake_c_fix_include_path(lib/kernel nacs-kernel)
-cmake_c_fix_include_path(lib/seq nacs-seq)
-
 set(LINKER_FLAGS -Wl,--as-needed -Wl,--no-undefined -Wl,--gc-sections -pthread -fno-math-errno)
 
 if(IS_WINDOWS)
@@ -131,9 +127,8 @@ cmake_c_add_flags(CMAKE_CXX_FLAGS_RELEASE -O3)
 cmake_c_add_flags(CMAKE_C_FLAGS_RELWITHDEBINFO -O3)
 cmake_c_add_flags(CMAKE_CXX_FLAGS_RELWITHDEBINFO -O3)
 
-cmake_c_include_fix_path()
-
-include_directories("${CMAKE_CURRENT_BINARY_DIR}/lib/utils") # config.h
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib")
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/lib/nacs-utils") # config.h
 
 if(IS_WINDOWS)
   # Used by test

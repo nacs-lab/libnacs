@@ -26,10 +26,10 @@
 // weak linkage that links to symbol in libLLVM.
 #define LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING 1
 
-#include "../../lib/utils/llvm/codegen.h"
-#include "../../lib/utils/llvm/compile.h"
-#include "../../lib/utils/llvm/execute.h"
-#include "../../lib/utils/llvm/utils.h"
+#include "../../lib/nacs-utils/llvm/codegen.h"
+#include "../../lib/nacs-utils/llvm/compile.h"
+#include "../../lib/nacs-utils/llvm/execute.h"
+#include "../../lib/nacs-utils/llvm/utils.h"
 
 #include <vector>
 #include <fstream>

@@ -21,9 +21,9 @@
 
 #include "winpath_helper.h"
 
-#include "../../lib/utils/ir.h"
-#include "../../lib/utils/number.h"
-#include "../../lib/utils/streams.h"
+#include "../../lib/nacs-utils/ir.h"
+#include "../../lib/nacs-utils/number.h"
+#include "../../lib/nacs-utils/streams.h"
 
 #include <vector>
 #include <sstream>

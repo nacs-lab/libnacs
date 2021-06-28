@@ -16,8 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../../lib/utils/timer.h"
-#include "../../lib/utils/wavemeter.h"
+#include "../../lib/nacs-utils/timer.h"
+#include "../../lib/nacs-utils/wavemeter.h"
 
 #include <iostream>
 #include <fstream>

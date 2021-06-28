@@ -16,8 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../../lib/kernel/devctl.h"
-#include "../../lib/kernel/device.h"
+#include "../../lib/nacs-kernel/devctl.h"
+#include "../../lib/nacs-kernel/device.h"
 
 #include <stdio.h>
 

@@ -19,7 +19,7 @@
 #ifndef __NACS_SEQ_PARSER_P_H__
 #define __NACS_SEQ_PARSER_P_H__
 
-#include "../utils/utils.h"
+#include "../nacs-utils/utils.h"
 
 #include <cmath>
 #include <istream>

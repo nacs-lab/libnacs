@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../../lib/kernel/dma_buffer.h"
+#include "../../lib/nacs-kernel/dma_buffer.h"
 
 #include <stdio.h>
 #include <stdint.h>

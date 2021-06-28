@@ -16,51 +16,57 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "device.h"
-#include "device_p.h"
+#include "dma_buffer.h"
+#include "devctl_p.h"
 
-#include "../utils/utils.h"
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include "../nacs-utils/utils.h"
+#include "../nacs-utils/mem.h"
+#include "../nacs-utils/number.h"
 
 namespace NaCs::Kernel {
 
-static int knacs_fd = -1;
-
-NACS_EXPORT() void
-init()
+NACS_EXPORT_
+DMABufferBase::DMABufferBase(size_t size)
+    : m_buff(nullptr),
+      m_size(0)
 {
-    init("/dev/knacs");
+    resize(size);
 }
 
 NACS_EXPORT() void
-init(const char *name)
+DMABufferBase::resize_slow(size_t size)
 {
-    init(open(name, O_RDWR | O_SYNC));
+    size = alignTo((off_t)size, page_size);
+    if (!m_buff) {
+        m_buff = allocDmaBuffer(size);
+    } else {
+        m_buff = reallocDmaBuffer(m_buff, m_size, size);
+    }
+    m_size = size;
+}
+
+NACS_EXPORT()
+DMABufferBase::~DMABufferBase()
+{
+    release();
 }
 
 NACS_EXPORT() void
-init(int fd)
+DMABufferBase::release()
 {
-    knacs_fd = fd;
+    if (m_buff) {
+        freeDmaBuffer(m_buff, m_size);
+        m_buff = nullptr;
+        m_size = 0;
+    }
 }
 
-NACS_EXPORT() bool
-initialized()
+NACS_EXPORT() void
+DMABufferBase::send(size_t len)
 {
-    return knacs_fd >= 0;
-}
-
-int
-getFD()
-{
-    static int fd = knacs_fd >= 0 ? knacs_fd : ([] {
-            init();
-            return knacs_fd;
-        })();
-    return fd;
+    sendDmaBuffer(m_buff, len);
+    m_buff = nullptr;
+    m_size = 0;
 }
 
 }

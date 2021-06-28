@@ -16,10 +16,10 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../lib/seq/cmdlist.h"
-#include "../lib/utils/log.h"
-#include "../lib/utils/errors.h"
-#include "../lib/utils/streams.h"
+#include "../lib/nacs-seq/cmdlist.h"
+#include "../lib/nacs-utils/log.h"
+#include "../lib/nacs-utils/errors.h"
+#include "../lib/nacs-utils/streams.h"
 
 #include <iostream>
 #include <fstream>

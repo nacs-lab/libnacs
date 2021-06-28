@@ -18,9 +18,9 @@
 
 #define CATCH_CONFIG_MAIN
 
-#include <../../lib/utils/thread.h>
-#include <../../lib/utils/timer.h>
-#include <../../lib/utils/utils.h>
+#include <../../lib/nacs-utils/thread.h>
+#include <../../lib/nacs-utils/timer.h>
+#include <../../lib/nacs-utils/utils.h>
 
 #include <thread>
 #include <iostream>

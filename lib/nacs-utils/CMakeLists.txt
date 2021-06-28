@@ -144,7 +144,7 @@ if(ENABLE_LLVM)
   # in any other libraries. Additional linking is dangerous for statically linked LLVM
   # since the two libraries/programs will be linking to different copies of LLVM
   # that cannot interact with each other safely.
-  # See also comments in `lib/utils/llvm/utils.h`
+  # See also comments in `lib/nacs-utils/llvm/utils.h`
   target_link_libraries(nacs-utils PRIVATE ${llvm_libs})
   if(MINGW AND STATIC_LLVM)
     target_link_libraries(nacs-utils PRIVATE ole32 uuid z)

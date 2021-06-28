@@ -19,7 +19,7 @@
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 #define CATCH_CONFIG_MAIN
 
-#include "../../lib/utils/number.h"
+#include "../../lib/nacs-utils/number.h"
 #include <math.h>
 
 #include <catch2/catch.hpp>

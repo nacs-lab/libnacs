@@ -20,8 +20,8 @@
 
 #include "winpath_helper.h"
 
-#include "../../lib/utils/dlload.h"
-#include "../../lib/utils/number.h"
+#include "../../lib/nacs-utils/dlload.h"
+#include "../../lib/nacs-utils/number.h"
 
 #include <math.h>
 

@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../lib/seq/seq.h"
+#include "../lib/nacs-seq/seq.h"
 
 #include <iostream>
 #include <fstream>

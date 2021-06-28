@@ -18,7 +18,7 @@
 
 #define CATCH_CONFIG_MAIN
 
-#include "../../lib/utils/zmq_utils.h"
+#include "../../lib/nacs-utils/zmq_utils.h"
 
 #include <atomic>
 #include <chrono>

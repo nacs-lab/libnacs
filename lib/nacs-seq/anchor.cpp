@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../utils/utils.h"
+#include "../nacs-utils/utils.h"
 
 // Make sure that we are linked to `nacs-utils` when compiling as a dummy library.
 

@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "../lib/utils/processor.h"
+#include "../lib/nacs-utils/processor.h"
 
 #include <iostream>
 #include <fstream>

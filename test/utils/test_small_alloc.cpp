@@ -20,8 +20,8 @@
 
 #include "test_helpers.h"
 
-#include "../../lib/utils/mem.h"
-#include "../../lib/utils/timer.h"
+#include "../../lib/nacs-utils/mem.h"
+#include "../../lib/nacs-utils/timer.h"
 
 #include <catch2/catch.hpp>
 

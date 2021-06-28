@@ -19,9 +19,9 @@
 #include "seq.h"
 #include "bytecode.h"
 
-#include "../utils/number.h"
-#include "../utils/streams.h"
-#include "../utils/utils.h"
+#include "../nacs-utils/number.h"
+#include "../nacs-utils/streams.h"
+#include "../nacs-utils/utils.h"
 
 #include <type_traits>
 #include <iomanip>

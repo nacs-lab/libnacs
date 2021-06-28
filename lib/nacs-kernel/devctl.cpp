@@ -16,57 +16,60 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "dma_buffer.h"
 #include "devctl_p.h"
+#include "device_p.h"
 
-#include "../utils/utils.h"
-#include "../utils/mem.h"
-#include "../utils/number.h"
+#include "../nacs-utils/utils.h"
+#include "../nacs-utils/mem.h"
+#include "../nacs-utils/fd_utils.h"
+
+#include <sys/ioctl.h>
+#include <sys/mman.h>
 
 namespace NaCs::Kernel {
 
-NACS_EXPORT_
-DMABufferBase::DMABufferBase(size_t size)
-    : m_buff(nullptr),
-      m_size(0)
+NACS_EXPORT() knacs_version_t
+getDriverVersion()
 {
-    resize(size);
+    knacs_version_t ver;
+    checkErrno(ioctl(getFD(), KNACS_GET_VERSION, &ver));
+    return ver;
 }
 
-NACS_EXPORT() void
-DMABufferBase::resize_slow(size_t size)
+NACS_EXPORT() void*
+mapPulseCtrl()
 {
-    size = alignTo((off_t)size, page_size);
-    if (!m_buff) {
-        m_buff = allocDmaBuffer(size);
-    } else {
-        m_buff = reallocDmaBuffer(m_buff, m_size, size);
-    }
-    m_size = size;
+    return mapFile(getFD(), 0, 32 * 4);
 }
 
-NACS_EXPORT()
-DMABufferBase::~DMABufferBase()
+#if 0
+void*
+allocDmaBuffer(size_t len)
 {
-    release();
+    return mapFile(getFD(), page_size, len);
 }
 
-NACS_EXPORT() void
-DMABufferBase::release()
+void*
+reallocDmaBuffer(void *buff, size_t old_size, size_t new_size)
 {
-    if (m_buff) {
-        freeDmaBuffer(m_buff, m_size);
-        m_buff = nullptr;
-        m_size = 0;
-    }
+    return mremap(buff, old_size, new_size, MREMAP_MAYMOVE);
 }
 
-NACS_EXPORT() void
-DMABufferBase::send(size_t len)
+void
+freeDmaBuffer(void *buff, size_t old_size)
 {
-    sendDmaBuffer(m_buff, len);
-    m_buff = nullptr;
-    m_size = 0;
+    munmap(buff, old_size);
 }
+
+void
+sendDmaBuffer(void *buff, size_t len)
+{
+    knacs_dma_buffer_t kernel_buff = {
+        (unsigned long)len,
+        buff
+    };
+    checkErrno(ioctl(getFD(), KNACS_SEND_DMA_BUFFER, &kernel_buff));
+}
+#endif
 
 }

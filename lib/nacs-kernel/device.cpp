@@ -16,60 +16,51 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "devctl_p.h"
+#include "device.h"
 #include "device_p.h"
 
-#include "../utils/utils.h"
-#include "../utils/mem.h"
-#include "../utils/fd_utils.h"
+#include "../nacs-utils/utils.h"
 
-#include <sys/ioctl.h>
-#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 namespace NaCs::Kernel {
 
-NACS_EXPORT() knacs_version_t
-getDriverVersion()
+static int knacs_fd = -1;
+
+NACS_EXPORT() void
+init()
 {
-    knacs_version_t ver;
-    checkErrno(ioctl(getFD(), KNACS_GET_VERSION, &ver));
-    return ver;
+    init("/dev/knacs");
 }
 
-NACS_EXPORT() void*
-mapPulseCtrl()
+NACS_EXPORT() void
+init(const char *name)
 {
-    return mapFile(getFD(), 0, 32 * 4);
+    init(open(name, O_RDWR | O_SYNC));
 }
 
-#if 0
-void*
-allocDmaBuffer(size_t len)
+NACS_EXPORT() void
+init(int fd)
 {
-    return mapFile(getFD(), page_size, len);
+    knacs_fd = fd;
 }
 
-void*
-reallocDmaBuffer(void *buff, size_t old_size, size_t new_size)
+NACS_EXPORT() bool
+initialized()
 {
-    return mremap(buff, old_size, new_size, MREMAP_MAYMOVE);
+    return knacs_fd >= 0;
 }
 
-void
-freeDmaBuffer(void *buff, size_t old_size)
+int
+getFD()
 {
-    munmap(buff, old_size);
+    static int fd = knacs_fd >= 0 ? knacs_fd : ([] {
+            init();
+            return knacs_fd;
+        })();
+    return fd;
 }
-
-void
-sendDmaBuffer(void *buff, size_t len)
-{
-    knacs_dma_buffer_t kernel_buff = {
-        (unsigned long)len,
-        buff
-    };
-    checkErrno(ioctl(getFD(), KNACS_SEND_DMA_BUFFER, &kernel_buff));
-}
-#endif
 
 }
