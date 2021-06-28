@@ -175,6 +175,9 @@ static inline zmq::message_t str_msg(const char *str)
 NACS_EXPORT(utils) zmq::context_t &global_context();
 NACS_EXPORT(utils) std::pair<zmq::socket_t,zmq::socket_t>
 inproc_socketpair(zmq::context_t &ctx);
+// Needed on windows for proper shutdown.
+// Ref https://github.com/zeromq/libzmq/issues/1708
+NACS_EXPORT(utils) void shutdown();
 
 class MultiClient {
     using finish_cb_t = std::function<void(std::exception_ptr,std::vector<zmq::message_t>)>;

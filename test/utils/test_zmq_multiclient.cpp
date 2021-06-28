@@ -253,4 +253,5 @@ ANON_TEST_CASE() {
     exit_server(sock2);
     server.thread.join();
     server2.thread.join();
+    ZMQ::shutdown();
 }

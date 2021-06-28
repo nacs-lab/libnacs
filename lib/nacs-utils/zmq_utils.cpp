@@ -21,12 +21,40 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#include <atomic>
+#include <memory>
+#include <mutex>
+
 namespace NaCs::ZMQ {
+
+namespace {
+
+// Implement the local static variable manually so that shutdown can be reversible
+// and also for it to be a no-op if no one have used the global variable.
+static std::atomic_bool context_created{false};
+static std::mutex context_lock;
+static std::unique_ptr<zmq::context_t> context;
+static void shutdown_context()
+{
+    // This must be synchronized to access of this by the caller.
+    if (context_created.load(std::memory_order_relaxed)) {
+        context_created.store(false, std::memory_order_relaxed);
+        context.reset(nullptr);
+    }
+}
+
+}
 
 NACS_EXPORT() zmq::context_t &global_context()
 {
-    static zmq::context_t context;
-    return context;
+    if (unlikely(!context_created.load(std::memory_order_acquire))) {
+        std::lock_guard<std::mutex> locker(context_lock);
+        if (!context_created.load(std::memory_order_acquire)) {
+            context.reset(new zmq::context_t);
+            context_created.store(true, std::memory_order_release);
+        }
+    }
+    return *context;
 }
 
 NACS_EXPORT() std::pair<zmq::socket_t,zmq::socket_t> inproc_socketpair(zmq::context_t &ctx)
@@ -44,10 +72,38 @@ NACS_EXPORT() std::pair<zmq::socket_t,zmq::socket_t> inproc_socketpair(zmq::cont
     return sockets;
 }
 
+namespace {
+
+static std::atomic_bool client_created{false};
+static std::mutex client_lock;
+static std::unique_ptr<MultiClient> client;
+static void shutdown_client()
+{
+    // This must be synchronized to access of this by the caller.
+    if (client_created.load(std::memory_order_relaxed)) {
+        client_created.store(false, std::memory_order_relaxed);
+        client.reset(nullptr);
+    }
+}
+
+}
+
 NACS_EXPORT() MultiClient &MultiClient::global()
 {
-    static MultiClient multi_client(global_context());
-    return multi_client;
+    if (unlikely(!client_created.load(std::memory_order_acquire))) {
+        std::lock_guard<std::mutex> locker(client_lock);
+        if (!client_created.load(std::memory_order_acquire)) {
+            client.reset(new MultiClient(global_context()));
+            client_created.store(true, std::memory_order_release);
+        }
+    }
+    return *client;
+}
+
+NACS_EXPORT() void shutdown()
+{
+    shutdown_client();
+    shutdown_context();
 }
 
 NACS_EXPORT_ MultiClient::MultiClient(zmq::context_t &context)
