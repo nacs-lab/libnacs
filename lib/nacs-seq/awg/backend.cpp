@@ -149,6 +149,7 @@ uint32_t write(std::vector<uint8_t> &vec, const void *src, size_t sz)
     return len;
 }
 
+
 Backend::Backend(Manager &mgr, std::string name)
     : Device(mgr, std::move(name))
 {
@@ -526,7 +527,7 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
         write(be_bseq.obj_file_bc, be_bseq.val_array_name.data(), be_bseq.val_array_name.size() + 1);
         // types_bc
         // [[types:1B] x nvalues]
-        write(be_bseq.types_bc, be_bseq.types.data(), be_bseq.types.size());
+        write(be_bseq.types_bc, (uint8_t*) be_bseq.types.data(), be_bseq.types.size());
         // pulses_bc
         // [n_pulses: 4B][[start_time: 4B][len: 4B][endvalue: 4B][pulse_type: 1B][phys_chn_id: 1B][channel_id: 4B][funcname: NUL-term-string] x n_pulses]; Use m_linear_chns to get phys chn and chn num.
         std::vector<uint8_t> pulse_info;
@@ -550,6 +551,8 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
             for (uint32_t i = 0; i < pulses.size(); i++)
             {
                 npulses++;
+                write(pulse_info, pulses[i].cond_id);
+                write(pulse_info, pulses[i].id);
                 write(pulse_info, pulses[i].time_id);
                 write(pulse_info, pulses[i].len_id);
                 write(pulse_info, pulses[i].endvalue_id);
@@ -612,7 +615,7 @@ void Backend::init_run(HostSeq &host_seq)
         info_map.try_emplace(m_url, m_client_id, m_server_id, m_triple_str, m_cpu_str, m_feature_str);
         // fill in id_bc
         id_bc.resize(25); // 8 bytes server_id, 8 bytes_client_id, 8 bytes, 8 bytes seq_id, 1 byte is_first_seq, Fill in first 16 bytes
-        write(id_bc, 0, m_server_id);
+        write(id_bc, uint32_t(0), m_server_id);
         write(id_bc, 8, m_client_id);
     }
 }
@@ -672,15 +675,17 @@ void Backend::pre_run(HostSeq &host_seq)
             // [nconsts: 4B][nvalues:4B]([data:8B] x nvalues)
             write(next_msg, bseq.n_const_map);
             write(next_msg, bseq.n_const_map + bseq.n_nonconst_map);
-            write(next_msg, bseq.vals.data(), vector_sizeof(bseq.vals));
+            write(next_msg, (uint8_t*) bseq.vals.data(), vector_sizeof(bseq.vals));
             // types
             write(next_msg, bseq.types_bc.data(), bseq.types_bc.size());
             // pulses
             write(next_msg, bseq.pulses_bc.data(), bseq.pulses_bc.size());
         }
         else {
+            uint8_t is_seq_sent = 0;
+            write(next_msg, is_seq_sent);
             write(next_msg, bseq.n_nonconst_map);
-            write(next_msg, bseq.vals.data() + bseq.n_const_map, bseq.n_nonconst_map * sizeof(bseq.vals[0]));
+            write(next_msg, ((uint8_t*) bseq.vals.data()) + bseq.n_const_map * sizeof(bseq.vals[0]), bseq.n_nonconst_map * sizeof(bseq.vals[0]));
         }
         auto reply = m_sock->send_msg([&] (auto &sock) {
             ZMQ::send_more(sock, ZMQ::str_msg("run_seq"));
@@ -732,7 +737,7 @@ void Backend::wait(HostSeq &host_seq)
 {
     m_sock->send_msg([&] (auto &sock) {
             ZMQ::send_more(sock, ZMQ::str_msg("wait_seq"));
-            ZMQ::send_more(sock, ZMQ::bits_msg(m_cur_wait_id));
+            ZMQ::send(sock, ZMQ::bits_msg(m_cur_wait_id));
     }).wait();
 }
 void Backend::post_run(HostSeq &host_seq)
@@ -761,7 +766,7 @@ uint8_t Backend::get_pulse_type(Backend::ChnType type, bool is_fn, bool is_vecto
         if (is_fn) {
             throw std::runtime_error("Cannot program a pulse on a phase");
         }
-        return 6;
+        return 8;
     }
     uint8_t base = 0;
     if (type == Backend::ChnType::Freq) {
