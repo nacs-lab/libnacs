@@ -72,5 +72,7 @@ if(ENABLE_LLVM)
   add_llvm_test(zynq_backend)
 
   add_llvm_test(awg_client)
+  add_llvm_test(awg_client_seq)
+  target_link_libraries(test-awg_client_seq LLVM)
 
 endif()

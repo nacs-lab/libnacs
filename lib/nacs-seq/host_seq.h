@@ -31,7 +31,7 @@ namespace NaCs::Seq {
  */
 class HostSeq {
 public:
-    enum class Type {
+    enum class Type : uint8_t {
         Bool = 1,
         Int32 = 2,
         Float64 = 3,
