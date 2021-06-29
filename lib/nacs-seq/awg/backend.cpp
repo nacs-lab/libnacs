@@ -729,12 +729,12 @@ uint8_t Backend::get_pulse_type(Backend::ChnType type, bool is_fn, bool is_vecto
     // CmdType is a enumerated class that holds all possible commands.
     // They are represented by a uint8_t
     // Meta, // Meta command types are in CmdMeta
-    // AmpSet,
-    // AmpFn,
-    // AmpVecFn,
-    // FreqSet,
-    // FreqFn,
-    // FreqVecFn,
+    // AmpSet, 1
+    // AmpFn, 2
+    // AmpVecFn, 3
+    // FreqSet, 4
+    // FreqFn, 5
+    // FreqVecFn, 6
     // ModChn, // add or delete channels
     // Phase,
     // _MAX = Phase // keeps track of how many CmdType options there are
