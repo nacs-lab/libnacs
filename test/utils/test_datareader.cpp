@@ -28,6 +28,7 @@
 #include <stdint.h>
 
 using namespace NaCs;
+using namespace std::literals::string_literals;
 
 struct ostream : uvector_ostream {
     using uvector_ostream::write;
@@ -73,11 +74,11 @@ TEST_CASE("DataReader") {
     REQUIRE(reader.read<uint8_t>() == 2);
     REQUIRE(reader.read<uint64_t>() == 0x24dbcdb209424a80ull);
     auto [str1, len1] = reader.read_string();
-    REQUIRE(strcmp(str1, "hello") == 0);
+    REQUIRE(str1 == "hello"s);
     REQUIRE(len1 == strlen("hello"));
     REQUIRE(reader.read<uint16_t>() == 56898);
     auto [str2, len2] = reader.read_string();
-    REQUIRE(strcmp(str2, "test") == 0);
+    REQUIRE(str2 == "test"s);
     REQUIRE(len2 == strlen("test"));
     auto p16 = reader.read_array<int16_t>(5);
     REQUIRE(p16[0] == -98);
@@ -90,15 +91,15 @@ TEST_CASE("DataReader") {
     auto err = expect_error<std::overflow_error>([&] {
         reader.read<int32_t>();
     });
-    REQUIRE(strcmp(err.what(), "Data terminates unexpectedly") == 0);
+    REQUIRE(err.what() == "Data terminates unexpectedly"s);
     err = expect_error<std::overflow_error>([&] {
         reader.read_string();
     });
-    REQUIRE(strcmp(err.what(), "Data terminates unexpectedly") == 0);
+    REQUIRE(err.what() == "Data terminates unexpectedly"s);
     err = expect_error<std::overflow_error>([&] {
         reader.read_array<int8_t>(4);
     });
-    REQUIRE(strcmp(err.what(), "Data terminates unexpectedly") == 0);
+    REQUIRE(err.what() == "Data terminates unexpectedly"s);
     auto p8 = reader.read_array<int8_t>(3);
     REQUIRE(p8[0] == 1);
     REQUIRE(p8[1] == 2);
