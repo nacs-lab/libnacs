@@ -615,8 +615,8 @@ void Backend::init_run(HostSeq &host_seq)
         info_map.try_emplace(m_url, m_client_id, m_server_id, m_triple_str, m_cpu_str, m_feature_str);
         // fill in id_bc
         id_bc.resize(25); // 8 bytes server_id, 8 bytes_client_id, 8 bytes, 8 bytes seq_id, 1 byte is_first_seq, Fill in first 16 bytes
-        write(id_bc, uint32_t(0), m_server_id);
-        write(id_bc, 8, m_client_id);
+        write(id_bc, (uint32_t) 0, m_server_id);
+        write(id_bc, (uint32_t) 8, m_client_id);
     }
 }
 void Backend::populate_values(HostSeq &host_seq, BasicSeq &bseq)
@@ -666,7 +666,7 @@ void Backend::pre_run(HostSeq &host_seq)
                     {
                         auto data_pair = mgr().get_data(id);
                         write(next_msg, (uint32_t) data_pair.second);
-                        write(next_msg, data_pair.first, data_pair.second);
+                        write(next_msg, (uint8_t*) data_pair.first, data_pair.second);
                     }
                 }
             }
