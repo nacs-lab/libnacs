@@ -73,6 +73,8 @@ if(ENABLE_LLVM)
 
   add_llvm_test(awg_client)
   add_llvm_test(awg_client_seq)
+  add_llvm_test(awg_client_seq_real)
   target_link_libraries(test-awg_client_seq LLVM)
+  target_link_libraries(test-awg_client_seq_real LLVM)
 
 endif()
