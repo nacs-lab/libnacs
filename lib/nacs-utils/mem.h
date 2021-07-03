@@ -73,24 +73,17 @@ struct Reader {
     T read()
     {
         static_assert(std::is_trivial_v<T>);
-        auto sz = sizeof(T);
-        if (cursor + sz > size) {
-            overflow(cursor + sz);
+        auto p = &data[cursor];
+        if (!forward_cursor(sizeof(T)))
             return T{};
-        }
-        auto res = load_unalign<T>(&data[cursor]);
-        cursor += sz;
-        return res;
+        return load_unalign<T>(p);
     }
     std::pair<const char*,size_t> read_string()
     {
         auto p = (const char*)data + cursor;
         size_t len = strnlen(p, size - cursor);
-        if (cursor + len >= size) {
-            overflow(cursor + len);
+        if (!forward_cursor(len + 1))
             return {nullptr, 0};
-        }
-        cursor += len + 1;
         return {p, len};
     }
     template<typename T>
@@ -98,13 +91,18 @@ struct Reader {
     {
         auto p = (const T*)(data + cursor);
         static_assert(std::is_trivial_v<T>);
-        auto sz = sizeof(T) * n;
+        if (!forward_cursor(sizeof(T) * n))
+            return nullptr;
+        return p;
+    }
+    bool forward_cursor(size_t sz)
+    {
         if (cursor + sz > size) {
             overflow(cursor + sz);
-            return nullptr;
+            return false;
         }
         cursor += sz;
-        return p;
+        return true;
     }
     virtual void overflow(size_t)
     {
