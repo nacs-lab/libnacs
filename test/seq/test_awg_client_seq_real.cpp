@@ -114,17 +114,21 @@ int main ()
     client.pre_run();
     client.wait();
 
-    /* // second time around. change some values */
-    /* v4.f64 = 8.8; */
-    /* v5.b = true; */
-    /* v6.i64 = 51201 * 4; */
-    /* client.setVals(0, 0, v4); */
-    /* client.setVals(0, 1, v5); */
-    /* client.setVals(0, 2, v6); */
-    /* client.pre_run(); */
-    /* client.wait(); */
+    // second time around. change some values
+    v4.f64 = 83e6;
+    v5.b = true;
+    v6.f64 = 0.1;
+    v7.i64 = 4e12; // 4 seconds
+    v8.f64 = 81e6;
+    client.setVals(0, 0, v4);
+    client.setVals(0, 1, v5);
+    client.setVals(0, 2, v6);
+    client.setVals(0, 3, v7);
+    client.setVals(0, 4, v8);
+    client.pre_run();
+    client.wait();
 
-    /* client.set_cur_seq_id(1); */
-    /* client.pre_run(); */
-    /* client.wait(); */
+    // client.set_cur_seq_id(1);
+    // client.pre_run();
+    // client.wait();
 }
