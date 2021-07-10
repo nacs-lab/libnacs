@@ -138,6 +138,13 @@ Device *Manager::ExpSeq::_get_device(Str &&name, bool create)
         return it->second.get();
     if (!create)
         return nullptr;
+    if (m_mgr.m_use_dummy_device) {
+        auto dev = Device::create(m_mgr, "dummy", name);
+        assert(dev);
+        auto res = dev.get();
+        m_devices.emplace(std::forward<Str>(name), std::move(dev));
+        return res;
+    }
     auto it2 = m_mgr.m_device_info.find(name);
     if (it2 == m_mgr.m_device_info.end())
         return nullptr;
@@ -409,7 +416,12 @@ void Manager::update_config(const YAML::Node &config)
     }
     m_device_info.clear();
     m_device_order.clear();
-    if (auto devices_node = config["devices"]) {
+    m_use_dummy_device = false;
+    if (auto dummy_devices_node = config["use_dummy_device"];
+        dummy_devices_node && dummy_devices_node.as<bool>()) {
+        m_use_dummy_device = true;
+    }
+    else if (auto devices_node = config["devices"]) {
         if (!devices_node.IsMap())
             throw std::runtime_error("Invalid value for devices.");
         for (auto node: devices_node) {

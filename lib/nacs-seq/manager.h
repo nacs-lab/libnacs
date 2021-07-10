@@ -242,6 +242,7 @@ private:
     dataset_t m_dataset;
     int64_t m_tick_per_sec = 0;
     uint64_t m_max_seq_length = 0;
+    bool m_use_dummy_device = false;
     std::map<std::string,DeviceInfo> m_device_info;
     std::vector<std::string> m_device_order;
     std::map<uint64_t,DataInfo> m_datainfo;
