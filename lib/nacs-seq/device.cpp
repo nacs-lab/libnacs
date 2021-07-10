@@ -92,4 +92,33 @@ void Device::parse_data(const uint8_t*, size_t)
     throw std::runtime_error("Unknown backend data");
 }
 
+namespace {
+
+// A dummy backend to help testing the frontend.
+class Dummy : public Device {
+public:
+    using Device::Device;
+
+private:
+    void add_channel(uint32_t chn_id, const std::string &chn_name) override {}
+    // bool check_noramp(uint32_t chn_id, const std::string &chn_name) override;
+    // void prepare(Manager::ExpSeq &expseq, Compiler &compiler) override;
+    void generate(Manager::ExpSeq &expseq, Compiler &compiler) override {}
+
+    // void init_run(HostSeq &host_seq) override;
+    // void prepare_run(HostSeq &host_seq) override;
+    void pre_run(HostSeq &host_seq) override {}
+    void start(HostSeq &host_seq) override {}
+    void cancel(HostSeq &host_seq) override {}
+    void wait(HostSeq &host_seq) override {}
+    // void finish_run(HostSeq &host_seq) override;
+
+    void config(const YAML::Node&) override {}
+    // void parse_data(const uint8_t *data, size_t len) override;
+};
+
+static Device::Register<Dummy> register_backend("dummy");
+
+}
+
 }
