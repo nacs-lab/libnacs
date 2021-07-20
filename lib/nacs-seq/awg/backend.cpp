@@ -4,13 +4,13 @@
 
 #include "../zynq/backend.h"
 
-#include "../../utils/llvm/utils.h"
-#include "../../utils/llvm/codegen.h"
-#include "../../utils/llvm/compile.h"
-#include "../../utils/llvm/execute.h"
-#include "../../utils/llvm/global_rename.h"
-#include "../../utils/processor.h"
-#include "../../utils/streams.h"
+#include "../../nacs-utils/llvm/utils.h"
+#include "../../nacs-utils/llvm/codegen.h"
+#include "../../nacs-utils/llvm/compile.h"
+#include "../../nacs-utils/llvm/execute.h"
+#include "../../nacs-utils/llvm/global_rename.h"
+#include "../../nacs-utils/processor.h"
+#include "../../nacs-utils/streams.h"
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/IR/LegacyPassManager.h>
