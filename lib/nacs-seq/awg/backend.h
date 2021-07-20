@@ -52,6 +52,10 @@ public:
     ~Backend() override;
     const uint8_t *get_channel_info(uint32_t *sz);
 
+    // testing
+    static Backend *cast(Device *dev);
+    static const Backend *cast(const Device *dev);
+    //llvm::ArrayRef<uint8_t> get_bytecode(uint32_t bseq_id);
 private:
     void add_channel(uint32_t chn_id, const std::string &chn_name) override;
     void prepare (Manager::ExpSeq &expseq, Compiler &compiler) override;
