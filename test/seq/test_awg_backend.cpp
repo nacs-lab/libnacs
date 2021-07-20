@@ -4,10 +4,10 @@
 
 //#include "zynq_helper.h" // For Checker
 
-#include "../../lib/seq/builder.h"
-#include "../../lib/seq/manager.h"
-#include "../../lib/seq/awg/backend.h"
-#include "../../lib/utils/streams.h"
+#include "../../lib/nacs-seq/builder.h"
+#include "../../lib/nacs-seq/manager.h"
+#include "../../lib/nacs-seq/awg/backend.h"
+#include "../../lib/nacs-utils/streams.h"
 using namespace NaCs;
 using namespace NaCs::Seq;
 using namespace std::literals::string_literals;
