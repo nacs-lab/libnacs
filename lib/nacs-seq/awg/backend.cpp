@@ -799,4 +799,14 @@ void Backend::config(const YAML::Node &config)
     }
 }
 
+NACS_EXPORT() Backend *Backend::cast(Device *dev)
+{
+    return dynamic_cast<Backend*>(dev);
+}
+
+NACS_EXPORT() const Backend *Backend::cast(const Device *dev)
+{
+    return dynamic_cast<const Backend*>(dev);
+}
+
 }
