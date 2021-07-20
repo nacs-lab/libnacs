@@ -8,7 +8,7 @@
 
 //#include "DummyClient.h"
 #include <llvm/IR/LLVMContext.h>
-#include "../../lib/seq/awg/DummyClient.h"
+#include "../../lib/nacs-seq/awg/DummyClient.h"
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/IR/LegacyPassManager.h>
