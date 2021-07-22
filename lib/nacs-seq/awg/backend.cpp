@@ -224,21 +224,22 @@ const uint8_t *Backend::get_channel_info(uint32_t *sz)
 
 void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
 {
+    reqServerInfo();
     sort_channels();
-    m_zynq_dev = dynamic_cast<Zynq::Backend*>(expseq.get_device(m_clock_dev, true));
-    if (!m_zynq_dev)
-        throw std::runtime_error("Cannot find clock generator device");
-    m_zynq_dev->enable_clock();
+    //m_zynq_dev = dynamic_cast<Zynq::Backend*>(expseq.get_device(m_clock_dev, true));
+    //if (!m_zynq_dev)
+    //    throw std::runtime_error("Cannot find clock generator device");
+    //m_zynq_dev->enable_clock();
     const auto bseqs = compiler.basic_seqs();
     auto &host_seq = expseq.host_seq;
     auto nbseqs = bseqs.size();
     m_seqs.resize(nbseqs);
-
     uint32_t nconst_map = 0;
     uint32_t n_nonconst_map_max = 0;
 
     // First pass: map IDs from global sequences to ones specific for the backend, in particular for each basic sequence. The constants are mapped first.
-
+    
+    //throw std::runtime_error("made it to first pass");
     for (uint32_t idx = 0; idx < nbseqs; idx++) {
         auto &bseq = bseqs[idx];
         auto &chn_infos = bseq->get_channel_infos();
@@ -345,6 +346,7 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
             return be_bseq.val_map[slot] + nconst_map;
         };
         // get types
+        be_bseq.types.resize(nconst_map + be_bseq.n_nonconst_map);
         auto nconsts = host_seq.nconsts;
         for (uint32_t slot = 0; slot < be_bseq.val_map.size(); slot++) {
             if (be_bseq.val_map[slot] == uint32_t(-1))
@@ -355,7 +357,7 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
                 be_bseq.types[be_bseq.val_map[slot] + nconst_map] = host_seq.get_type(slot, idx);
             }
         }
-
+        be_bseq.m_pulses.resize(m_chn_map.size());
         for (auto &[chn_id, be_chn_info]: m_chn_map) {
             auto it = chn_infos.find(chn_id);
             assert(it != chn_infos.end());
@@ -493,6 +495,7 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
 
         llvm::SmallVector<char,0> vec;
         // Use my triplestr
+        //printf("%s\n", m_triple_str.c_str());
         auto tgtMachine = LLVM::Compile::create_target(m_triple_str, m_cpu_str, m_feature_str);
         auto res = LLVM::Compile::emit_objfile(vec, tgtMachine.get(), &mod, true);
         if (!res)
@@ -563,52 +566,7 @@ void Backend::generate (Manager::ExpSeq &expseq, Compiler &compiler)
 }
 void Backend::init_run(HostSeq &host_seq)
 {
-    // TO DO:
-    // Ask server for client_id, if don't have one
-    // Ask server for triple if not stored
-    if (!m_sock)
-        throw std::runtime_error("Backend socket not configured");
-    auto it = info_map.find(m_url);
-    if (it != info_map.end()) {
-        auto global_info = it->second;
-        m_client_id = global_info.client_id;
-        m_server_id = global_info.server_id;
-        m_triple_str = global_info.triple_str;
-        m_cpu_str = global_info.cpu_str;
-        m_feature_str = global_info.feature_str;
-    }
-    else {
-        auto reply = m_sock->send_msg([&] (auto &sock) {
-            ZMQ::send(sock, ZMQ::str_msg("req_client_id"));
-        }).get();
-        if (reply.empty())
-            throw std::runtime_error("client id not obtained");
-        auto rep_data = (const uint8_t*)reply[0].data();
-        memcpy(&m_client_id, rep_data, sizeof(m_client_id));
-        reply = m_sock->send_msg([&] (auto &sock) {
-            ZMQ::send(sock, ZMQ::str_msg("req_server_id"));
-        }).get();
-        if (reply.empty())
-            throw std::runtime_error("server id not obtained");
-        rep_data = (const uint8_t*)reply[0].data();
-        memcpy(&m_server_id, rep_data, sizeof(m_server_id));
-        reply = m_sock->send_msg([&] (auto &sock) {
-            ZMQ::send(sock, ZMQ::str_msg("req_triple"));
-        }).get();
-        if (reply.empty())
-            throw std::runtime_error("triple not obtained");
-        std::string triple_str((char*) reply[0].data());
-        std::string cpu_str((char*) reply[1].data());
-        std::string feature_str((char*) reply[2].data());
-        m_triple_str = triple_str;
-        m_cpu_str = cpu_str;
-        m_feature_str = feature_str;
-        info_map.try_emplace(m_url, m_client_id, m_server_id, m_triple_str, m_cpu_str, m_feature_str);
-        // fill in id_bc
-        id_bc.resize(25); // 8 bytes server_id, 8 bytes_client_id, 8 bytes, 8 bytes seq_id, 1 byte is_first_seq, Fill in first 16 bytes
-        write(id_bc, (uint32_t) 0, m_server_id);
-        write(id_bc, (uint32_t) 8, m_client_id);
-    }
+    reqServerInfo();
 }
 void Backend::populate_values(HostSeq &host_seq, BasicSeq &bseq)
 {
@@ -689,16 +647,16 @@ void Backend::pre_run(HostSeq &host_seq)
         // handle response
         if (reply.empty())
             throw std::runtime_error("did not get reply from server");
-        std::string reply_str((char*) reply[0].data());
-        if (reply_str.compare("need_seq"))
+        std::string reply_str((char*) reply[0].data(), reply[0].size());
+        if (reply_str.compare("need_seq") == 0)
         {
             bseq.obj_file_sent = false;
         }
-        else if (reply_str.compare("need_data"))
+        else if (reply_str.compare("need_data") == 0)
         {
             bseq.iData_sent = false;
         }
-        else if (reply_str.compare("ok"))
+        else if (reply_str.compare("ok") == 0)
         {
             if (reply.size() < 2) {
                 throw std::runtime_error("expecting id after ok");
@@ -807,6 +765,56 @@ NACS_EXPORT() Backend *Backend::cast(Device *dev)
 NACS_EXPORT() const Backend *Backend::cast(const Device *dev)
 {
     return dynamic_cast<const Backend*>(dev);
+}
+
+NACS_EXPORT() void Backend::reqServerInfo()
+{
+    // TO DO:
+    // Ask server for client_id, if don't have one
+    // Ask server for triple if not stored
+    if (!m_sock)
+        throw std::runtime_error("Backend socket not configured");
+    auto it = info_map.find(m_url);
+    if (it != info_map.end()) {
+        auto global_info = it->second;
+        m_client_id = global_info.client_id;
+        m_server_id = global_info.server_id;
+        m_triple_str = global_info.triple_str;
+        m_cpu_str = global_info.cpu_str;
+        m_feature_str = global_info.feature_str;
+    }
+    else {
+        auto reply = m_sock->send_msg([&] (auto &sock) {
+            ZMQ::send(sock, ZMQ::str_msg("req_client_id"));
+        }).get();
+        if (reply.empty())
+            throw std::runtime_error("client id not obtained");
+        auto rep_data = (const uint8_t*)reply[0].data();
+        memcpy(&m_client_id, rep_data, sizeof(m_client_id));
+        reply = m_sock->send_msg([&] (auto &sock) {
+            ZMQ::send(sock, ZMQ::str_msg("req_server_id"));
+        }).get();
+        if (reply.empty())
+            throw std::runtime_error("server id not obtained");
+        rep_data = (const uint8_t*)reply[0].data();
+        memcpy(&m_server_id, rep_data, sizeof(m_server_id));
+        reply = m_sock->send_msg([&] (auto &sock) {
+            ZMQ::send(sock, ZMQ::str_msg("req_triple"));
+        }).get();
+        if (reply.empty())
+            throw std::runtime_error("triple not obtained");
+        std::string triple_str((char*) reply[0].data(), reply[0].size());
+        std::string cpu_str((char*) reply[1].data(), reply[1].size());
+        std::string feature_str((char*) reply[2].data(), reply[2].size());
+        m_triple_str = triple_str;
+        m_cpu_str = cpu_str;
+        m_feature_str = feature_str;
+        info_map.try_emplace(m_url, m_client_id, m_server_id, m_triple_str, m_cpu_str, m_feature_str);
+        // fill in id_bc
+        id_bc.resize(25); // 8 bytes server_id, 8 bytes_client_id, 8 bytes, 8 bytes seq_id, 1 byte is_first_seq, Fill in first 16 bytes
+        write(id_bc, (uint32_t) 0, m_server_id);
+        write(id_bc, (uint32_t) 8, m_client_id);
+    }
 }
 
 }
