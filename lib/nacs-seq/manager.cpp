@@ -277,10 +277,17 @@ NACS_EXPORT() Manager::ExpSeq *Manager::create_sequence(const uint8_t *data, siz
     Seq seq{std::unique_ptr<CGContext>(cgctx)};
     auto expseq = std::make_unique<ExpSeq>(this, cgctx);
     expseq->max_seq_length = m_max_seq_length;
+    auto dump_sequences = m_dump_sequences;
     {
         Builder builder(seq);
         add_debug("Deserializig sequence.\n");
         builder.deserialize(data, size);
+        if (unlikely(dump_sequences)) {
+            expseq->dump.reset(new ExpSeq::Dump);
+            basic_vector_ostream<std::vector<uint8_t>> stm;
+            builder.print(stm);
+            expseq->dump->builder = stm.get_buf();
+        }
         m_backend_datas = std::move(builder.backend_datas);
         auto nchn = builder.chnnames.size();
         for (uint32_t i = 0; i < nchn; i++) {
@@ -301,12 +308,24 @@ NACS_EXPORT() Manager::ExpSeq *Manager::create_sequence(const uint8_t *data, siz
         }
         add_debug("Building sequence\n");
         builder.buildseq();
+        if (unlikely(dump_sequences)) {
+            basic_vector_ostream<std::vector<uint8_t>> stm;
+            seq.print(stm);
+            assert(expseq->dump);
+            expseq->dump->seq = stm.get_buf();
+        }
     }
     add_debug("Preparing sequence\n");
     seq.prepare();
     add_debug("Optimizing sequence\n");
     seq.optimize();
     cgctx->remove_unused_data(seq.env().llvm_module());
+    if (unlikely(dump_sequences)) {
+        basic_vector_ostream<std::vector<uint8_t>> stm;
+        seq.print(stm);
+        assert(expseq->dump);
+        expseq->dump->seq_opt = stm.get_buf();
+    }
     Compiler compiler(expseq->host_seq, seq, m_engine, cgctx->get_extern_resolver());
     add_debug("Compiling sequence\n");
     expseq->obj_id = compiler.compile();
