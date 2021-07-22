@@ -107,6 +107,34 @@ public:
         bool wait(uint64_t timeout_ms);
         uint32_t post_run();
 
+        const uint8_t *get_builder_dump(size_t *sz) const
+        {
+            if (!dump)
+                return nullptr;
+            *sz = dump->builder.size();
+            return dump->builder.data();
+        }
+        const uint8_t *get_seq_dump(size_t *sz) const
+        {
+            if (!dump)
+                return nullptr;
+            *sz = dump->seq.size();
+            return dump->seq.data();
+        }
+        const uint8_t *get_seq_opt_dump(size_t *sz) const
+        {
+            if (!dump)
+                return nullptr;
+            *sz = dump->seq_opt.size();
+            return dump->seq_opt.data();
+        }
+        struct Dump {
+            std::vector<uint8_t> builder;
+            std::vector<uint8_t> seq;
+            std::vector<uint8_t> seq_opt;
+        };
+        std::unique_ptr<Dump> dump;
+
     private:
         template<typename Str>
         Device *_get_device(Str &&name, bool create);
@@ -224,6 +252,15 @@ public:
         return def;
     }
 
+    void enable_dump(bool enable)
+    {
+        m_dump_sequences = enable;
+    }
+    bool dump_enabled()
+    {
+        return m_dump_sequences;
+    }
+
     // Not affecting the manager itself very much
     // but let the backend know that it should not send any data for real execution
     bool dummy_mode = false;
@@ -252,6 +289,8 @@ private:
     std::mutex m_message_lock;
     // Whether debug messages should be logged.
     bool m_debug_messages = false;
+    // Whether we should save a dump of intermediate results for debugging
+    bool m_dump_sequences = false;
 };
 
 inline Manager::LoggerRegister::LoggerRegister(Manager *mgr)
