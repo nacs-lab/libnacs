@@ -546,6 +546,7 @@ using TestVec = MkTest<VecCodegenTest, FT, approx>;
 TEST_CASE("CodeGen (vector)") {
     TestCtx ctx;
 
+#if IR_TESTSET == 0
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
         builder.createRet(0);
@@ -578,7 +579,7 @@ TEST_CASE("CodeGen (vector)") {
                     "}");
         TestVec<bool()>([] { return false; }, ctx, builder.get());
     }
-
+#elif IR_TESTSET == 1
     {
         IR::Builder builder(IR::Type::Int32, {});
         builder.createRet(builder.getConstInt(42));
@@ -625,7 +626,7 @@ TEST_CASE("CodeGen (vector)") {
                                             {-1.71, 2.3, 1.3}, ctx, builder.get());
         test->test_vec_allarg();
     }
-
+#elif IR_TESTSET == 2
     {
         IR::Builder builder(IR::Type::Float64,
                             {IR::Type::Float64, IR::Type::Float64});
@@ -687,7 +688,7 @@ TEST_CASE("CodeGen (vector)") {
         TestVec<double(int, double)>([] (int i, double v) { return i > v ? v : i; },
                                      {20, -10}, {1.3, 5.6}, ctx, builder.get());
     }
-
+#elif IR_TESTSET == 3
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Int32});
         auto v2 = builder.createMul(0, builder.getConstInt(2));
@@ -748,7 +749,7 @@ TEST_CASE("CodeGen (vector)") {
             }, {2.3, 1.3}, {1.3, 10, 1.0}, ctx, builder.get());
         test->test_vec_allarg();
     }
-
+#elif IR_TESTSET == 4
     {
         IR::Builder builder(IR::Type::Float64,
                             {IR::Type::Bool, IR::Type::Int32, IR::Type::Float64});
@@ -796,7 +797,7 @@ TEST_CASE("CodeGen (vector)") {
             }, {true, false}, {1, 2}, {2.3, 3.8}, ctx, builder.get());
         test->test_vec_allarg();
     }
-
+#elif IR_TESTSET == 5
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Float64, IR::Type::Float64});
         auto v2 = builder.createCall(IR::Builtins::erf, {0});
@@ -818,4 +819,5 @@ TEST_CASE("CodeGen (vector)") {
             }, {-1.4, 0.1, 0.5}, {-0.4, -0.5, 0.9, 1.4}, ctx, builder.get());
         test->test_vec_allarg();
     }
+#endif
 }

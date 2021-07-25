@@ -30,6 +30,7 @@
 TEST_CASE("CodeGen") {
     TestCtx ctx;
 
+#if IR_TESTSET == 0
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Float64});
         builder.createRet(0);
@@ -61,7 +62,7 @@ TEST_CASE("CodeGen") {
                     "}");
         TestCodegen<double()>([] { return 1.1; }, ctx, builder.get());
     }
-
+#elif IR_TESTSET == 1
     {
         IR::Builder builder(IR::Type::Int32, {});
         builder.createRet(builder.getConstInt(42));
@@ -115,7 +116,7 @@ TEST_CASE("CodeGen") {
                 return v2 - v2 * v1;
             }, {-1.71, 2.3, 1.3}, {-1.71, 2.3, 1.3}, ctx, builder.get());
     }
-
+#elif IR_TESTSET == 2
     {
         IR::Builder builder(IR::Type::Float64,
                             {IR::Type::Int32, IR::Type::Int32});
@@ -204,7 +205,7 @@ TEST_CASE("CodeGen") {
             return f2(2, 1000);
         };
     }
-
+#elif IR_TESTSET == 3
     {
         IR::Builder builder(IR::Type::Float64, {IR::Type::Int32});
         auto v2 = builder.createMul(0, builder.getConstInt(2));
@@ -269,7 +270,7 @@ TEST_CASE("CodeGen") {
             [&] (double x) { return linearInterpolate(x, 2, 3, 4, data); },
             {0.7, 2.3, 3.5, 4.4, 5.5}, ctx, builder.get());
     }
-
+#elif IR_TESTSET == 4
     {
         const int32_t data[] = {
             3, 2, 4, 50529027, 1, 3, 0, 1072693248, 1, 13, 10, 3, 0, -3, -3, 0, 4, 3, 2, 3, 1,
@@ -314,7 +315,7 @@ TEST_CASE("CodeGen") {
         TestCodegen<int(double)>([] (double v) { return (int)v; },
                                  {2.3, 2.9, 10}, ctx, builder.get());
     }
-
+#elif IR_TESTSET == 5
     {
         IR::Builder builder(IR::Type::Float64,
                             {IR::Type::Bool, IR::Type::Int32, IR::Type::Float64});
@@ -333,4 +334,5 @@ TEST_CASE("CodeGen") {
                 return b ? cos(i) : sin(v);
             }, {true, false}, {1, 2}, {2.3, 3.8}, ctx, builder.get());
     }
+#endif
 }

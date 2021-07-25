@@ -20,9 +20,6 @@ jobs:
       matrix:
         BUILD_TYPE: [ Release, Debug ]
         with_llvm: [ true, false ]
-        # exclude: # Linker errors with `test-vec_codegen` in debug build.
-        #   - BUILD_TYPE: Debug
-        #     with_llvm: true
 
     steps:
     - uses: actions/checkout@v2
