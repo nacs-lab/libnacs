@@ -71,6 +71,10 @@ endif()
 # Ref https://sysprogs.com/w/fixing-rpath-link-issues-with-cross-compilers/
 set(nacs_utils_LINKS_FLAGS)
 foreach(link IN LISTS nacs_utils_LINKS)
+  # Ignore imported target for now since the user of the pc file won't have it
+  if(TARGET ${link})
+    continue()
+  endif()
   set(nacs_utils_LINKS_FLAGS "${nacs_utils_LINKS_FLAGS} -l${link}")
 endforeach()
 set(nacs_utils_llvm_HDRS
