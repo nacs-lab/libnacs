@@ -432,6 +432,7 @@ segment_started:
         it->tend = it2->tend;
         it->times.insert(it->times.end(), it2->times.begin(), it2->times.end());
         it->datas.insert(it->datas.end(), it2->datas.begin(), it2->datas.end());
+        it->heights.insert(it->heights.end(), it2->heights.begin(), it2->heights.end());
         auto tmp = it2;
         ++it2;
         m_segments.erase(tmp);
@@ -592,6 +593,8 @@ Wavemeter::parse(std::istream &stm, size_t *sz, double tstart, double tend)
     auto seg = get_segment(stm, tstart, tend);
     if (seg == m_segments.end())
         return {nullptr, nullptr, nullptr};
+    assert(seg->times.size() == seg->datas.size());
+    assert(seg->times.size() == seg->heights.size());
     auto it1 = std::lower_bound(seg->times.begin(), seg->times.end(), tstart);
     if (it1 == seg->times.end())
         return {nullptr, nullptr, nullptr};
