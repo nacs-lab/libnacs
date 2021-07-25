@@ -97,7 +97,7 @@ basic_vector_streambuf<T>::basic_vector_streambuf(T &&buf, size_t offset)
     : buff_streambuf(offset),
       m_buf(std::move(buf))
 {
-    setp((char*)&m_buf[0], (char*)&m_buf[m_buf.size()]);
+    setp((char*)m_buf.data(), ((char*)m_buf.data()) + m_buf.size());
     pbump((int)offset);
 }
 
@@ -111,7 +111,7 @@ T basic_vector_streambuf<T>::get_buf()
 {
     m_buf.resize(m_end);
     auto res = std::move(m_buf);
-    setp((char*)&m_buf[0], (char*)&m_buf[m_buf.size()]);
+    setp((char*)m_buf.data(), ((char*)m_buf.data()) + m_buf.size());
     m_end = m_buf.size();
     return res;
 }
@@ -127,9 +127,9 @@ char *basic_vector_streambuf<T>::extend(size_t sz)
         return oldptr;
     // overallocate.
     m_buf.resize(newsz);
-    setp((char*)&m_buf[0], (char*)&m_buf[m_buf.size()]);
+    setp((char*)m_buf.data(), ((char*)m_buf.data()) + m_buf.size());
     pbump((int)oldsz);
-    return (char*)&m_buf[oldsz];
+    return ((char*)m_buf.data()) + oldsz;
 }
 
 #if !NACS_OS_WINDOWS
@@ -257,11 +257,11 @@ class NACS_EXPORT() const_istream : public std::istream {
 public:
     const_istream(const void *begin, const void *end);
     const_istream(const std::string &str)
-        : const_istream(&str[0], &str[0] + str.size())
+        : const_istream(str.data(), str.data() + str.size())
     {}
     template<typename T>
     const_istream(const std::vector<T> &vec)
-        : const_istream(&vec[0], &vec[0] + vec.size())
+        : const_istream(vec.data(), vec.data() + vec.size())
     {}
     ~const_istream() override;
 
