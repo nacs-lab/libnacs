@@ -14,3 +14,16 @@ target_link_libraries(nacs-cpudump nacs-utils)
 
 install(TARGETS nacs-zynq-bc nacs-zynq-cmdlist nacs-cpudump
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+if(ENABLE_LLVM)
+  set(nacs_seq_tool_SOURCES nacs_seq.cpp)
+  add_executable(nacs-seq-tool ${nacs_seq_tool_SOURCES})
+  target_link_libraries(nacs-seq-tool nacs-seq)
+  set_target_properties(nacs-seq-tool PROPERTIES OUTPUT_NAME nacs-seq)
+  set_property(TARGET nacs-seq-tool APPEND
+    PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+  set_property(TARGET nacs-seq-tool APPEND_STRING
+    PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
+  install(TARGETS nacs-seq-tool
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+endif()
