@@ -878,11 +878,14 @@ NACS_EXPORT() std::vector<uint32_t> Function::serialize(void) const
     // <optional>[nfloat][double_data x nfloat]
     std::vector<uint32_t> res{uint32_t(ret), uint32_t(nargs)};
     auto copy_vector = [&res] (auto vec) {
-        res.push_back(uint32_t(vec.size()));
+        auto vecsz = vec.size();
+        res.push_back(uint32_t(vecsz));
+        if (!vecsz)
+            return;
         uint32_t idx = (uint32_t)res.size();
         size_t elsz = sizeof(typename decltype(vec)::value_type);
-        res.resize(idx + (vec.size() * elsz + 3) / 4);
-        memcpy(&res[idx], vec.data(), vec.size() * elsz);
+        res.resize(idx + (vecsz * elsz + 3) / 4);
+        memcpy(&res[idx], vec.data(), vecsz * elsz);
     };
     copy_vector(vals);
     {
