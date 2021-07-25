@@ -209,7 +209,9 @@ public:
         SockRef(const SockRef &other)
             : SockRef(other.m_info)
         {
+            m_info.ref_count.fetch_add(1, std::memory_order_relaxed);
         }
+        SockRef(SockRef&&) = delete;
         ~SockRef()
         {
             assert(m_info.ref_count.load(std::memory_order_relaxed) >= 1);
