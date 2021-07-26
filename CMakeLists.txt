@@ -192,7 +192,10 @@ if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS
       "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libsleef${SLEEF_SOVER}")
   endif()
-  get_soname(ZMQ_SOVER libzmq ZMQ_LIBRARIES)
+  # FIXME: The ZMQ version detection doesn't seem to work reliably on ubuntu
+  # so let's just hard code it for now...
+  # get_soname(ZMQ_SOVER libzmq ZMQ_LIBRARIES)
+  set(ZMQ_SOVER 5)
   set(CPACK_DEBIAN_PACKAGE_DEPENDS
     "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libzmq${ZMQ_SOVER}")
 
