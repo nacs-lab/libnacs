@@ -192,7 +192,9 @@ void MultiClient::worker_func()
             break;
         // `zmq::poll(poll_items)` causes deprecation warning.
         // Ref https://github.com/zeromq/cppzmq/issues/494
-        zmq::poll(poll_items.data(), poll_items.size());
+        // `zmq::poll(poll_items.data(), poll_items.size())`
+        // causes an error on ubuntu 18.04 due to ambiguity caused by a zmq bug.
+        zmq_poll(poll_items.data(), (int)poll_items.size(), -1);
         if (poll_items[0].revents) {
             assert(poll_items[0].revents == ZMQ_POLLIN);
             recv(m_cmd_sockets.first, msg);
