@@ -144,6 +144,20 @@ if(ENABLE_TESTING)
   add_subdirectory(test)
 endif()
 
+function(get_soname out prefix libs_var)
+  set(${out} "" PARENT_SCOPE)
+  if(CMAKE_OBJDUMP)
+    execute_process(COMMAND "${CMAKE_OBJDUMP}" -p "${${libs_var}}"
+      RESULT_VARIABLE objdump_res
+      OUTPUT_VARIABLE objdump_out
+      ERROR_QUIET)
+    if(objdump_res EQUAL 0)
+      string(REGEX MATCH "SONAME[^\n]*${prefix}\\.so\\.([0-9]*)" match "${objdump_out}")
+      set(${out} "${CMAKE_MATCH_1}" PARENT_SCOPE)
+    endif()
+  endif()
+endfunction()
+
 if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
   include(InstallRequiredSystemLibraries)
 
@@ -164,17 +178,9 @@ if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
     "${CMAKE_PROJECT_NAME}_${MAJOR_VERSION}.${MINOR_VERSION}.${CPACK_PACKAGE_VERSION_PATCH}")
 
   set(CPACK_DEBIAN_PACKAGE_DEPENDS "libstdc++6 (>= 4.2.1)")
-  if(CMAKE_OBJDUMP)
-    execute_process(COMMAND "${CMAKE_OBJDUMP}" -p "${OPENLIBM_LIBRARIES}"
-      RESULT_VARIABLE objdump_res
-      OUTPUT_VARIABLE objdump_out
-      ERROR_QUIET)
-    if(objdump_res EQUAL 0)
-      string(REGEX MATCH "SONAME[^\n]*\\.so\\.([0-9]*)" match "${objdump_out}")
-      set(CPACK_DEBIAN_PACKAGE_DEPENDS
-        "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libopenlibm${CMAKE_MATCH_1}")
-    endif()
-  endif()
+  get_soname(OPENLIBM_SOVER libopenlibm OPENLIBM_LIBRARIES)
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS
+    "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libopenlibm${OPENLIBM_SOVER}")
   if(ENABLE_LLVM AND NOT STATIC_LLVM)
     string(REPLACE "." ";" LLVM_PACKAGE_VERSION_LIST ${LLVM_PACKAGE_VERSION})
     list(GET LLVM_PACKAGE_VERSION_LIST 0 LLVM_PACKAGE_VERSION_MAJOR)
@@ -182,8 +188,13 @@ if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
       "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libllvm${LLVM_PACKAGE_VERSION_MAJOR}")
   endif()
   if(ENABLE_SIMD)
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libsleef3")
+    get_soname(SLEEF_SOVER libsleef SLEEF_LIBRARIES)
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS
+      "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libsleef${SLEEF_SOVER}")
   endif()
+  get_soname(ZMQ_SOVER libzmq ZMQ_LIBRARIES)
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS
+    "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libzmq${ZMQ_SOVER}")
 
   set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
   set(CPACK_DEBIAN_PACKAGE_SECTION "")
