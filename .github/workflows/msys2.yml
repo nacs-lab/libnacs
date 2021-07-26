@@ -7,7 +7,6 @@ on:
   pull_request:
     branches: [ master ]
 
-# TODO: Sleef
 env:
   CC: /mingw64/bin/gcc
   CXX: /mingw64/bin/g++
@@ -24,6 +23,32 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Download MSYS2 packages
+      uses: actions/github-script@v4
+      with:
+        script: |
+          const fs = require('fs');
+          const release = (await github.repos.getLatestRelease({
+              owner: 'nacs-lab',
+              repo: 'nacs-pkgs'
+          })).data;
+          for (let asset of release.assets) {
+              if (asset.name == 'msys2-packages.zip') {
+                  const file = fs.createWriteStream('msys2-packages.zip');
+                  core.info(`Downloading msys2-packages.zip from release ${release.name}`);
+                  const buffer = (await github.repos.getReleaseAsset({
+                      headers: { Accept: 'application/octet-stream' },
+                      owner: 'nacs-lab',
+                      repo: 'nacs-pkgs',
+                      asset_id: asset.id,
+                  })).data;
+                  file.write(Buffer.from(buffer));
+                  file.end();
+                  return;
+              }
+          }
+          core.setFailed('Cannot find msys2-packages.zip from nacs-lab/nacs-pkgs');
+
     - uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
@@ -36,16 +61,23 @@ jobs:
           mingw-w64-x86_64-openlibm
           mingw-w64-x86_64-polly
           mingw-w64-x86_64-zeromq
+          unzip
+
+    - name: Install sleef
+      shell: msys2 {0}
+      run: |
+        unzip msys2-packages.zip
+        pacman -U --noconfirm msys2-packages/mingw-w64-x86_64-sleef-git-*.pkg.tar.*
 
     - name: Configure CMake (Without LLVM)
       if: ${{!matrix.with_llvm}}
       shell: msys2 {0}
-      run: cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=Off -DCMAKE_INSTALL_PREFIX=/mingw64 -G 'MSYS Makefiles'
+      run: cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DCMAKE_INSTALL_PREFIX=/mingw64 -G 'MSYS Makefiles'
 
     - name: Configure CMake (With LLVM)
       if: ${{matrix.with_llvm}}
       shell: msys2 {0}
-      run: cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=Off -DENABLE_LLVM=On -DSTATIC_LLVM=On -DCMAKE_INSTALL_PREFIX=/mingw64 -G 'MSYS Makefiles'
+      run: cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=On -DSTATIC_LLVM=On -DCMAKE_INSTALL_PREFIX=/mingw64 -G 'MSYS Makefiles'
 
     - name: Build
       shell: msys2 {0}
