@@ -69,15 +69,9 @@ jobs:
         unzip msys2-packages.zip
         pacman -U --noconfirm msys2-packages/mingw-w64-x86_64-sleef-git-*.pkg.tar.*
 
-    - name: Configure CMake (Without LLVM)
-      if: ${{!matrix.with_llvm}}
+    - name: Configure CMake
       shell: msys2 {0}
-      run: cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DCMAKE_INSTALL_PREFIX=/mingw64 -G 'MSYS Makefiles'
-
-    - name: Configure CMake (With LLVM)
-      if: ${{matrix.with_llvm}}
-      shell: msys2 {0}
-      run: cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=On -DSTATIC_LLVM=On -DCMAKE_INSTALL_PREFIX=/mingw64 -G 'MSYS Makefiles'
+      run: cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=${{matrix.with_llvm && 'On' || 'Off'}} -DSTATIC_LLVM=On -DCMAKE_INSTALL_PREFIX=/mingw64 -G 'MSYS Makefiles'
 
     - name: Build
       shell: msys2 {0}

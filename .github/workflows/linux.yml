@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [ master ]
 
-env:
-  TERM: xterm-256color
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -43,13 +40,8 @@ jobs:
       if: ${{matrix.LLVM_VER != ''}}
       run: sudo apt-get install llvm-${{matrix.LLVM_VER}}-dev
 
-    - name: Configure CMake (Without LLVM)
-      if: ${{matrix.LLVM_VER == ''}}
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On
-
-    - name: Configure CMake (With LLVM)
-      if: ${{matrix.LLVM_VER != ''}}
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=On
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=${{matrix.LLVM_VER != '' && 'On' || 'Off'}}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{matrix.BUILD_TYPE}} -j $(nproc)
