@@ -79,11 +79,12 @@ void test_set_pulse() {
     // 3
     stm.write(Builder::OpCode::Identity);
     stm.write(Builder::ArgType::ConstFloat64);
-    stm.write<double>(120e6);
+    stm.write<double>(50e6);
     // 4
     stm.write(Builder::OpCode::Identity);
     stm.write(Builder::ArgType::ConstFloat64);
-    stm.write<double>(12000000000); // 12 ms if used as time
+    //stm.write<double>(12000000000); // 12 ms if used as time
+    stm.write<double>(1000000000);
     // 5
     stm.write(Builder::OpCode::Identity);
     stm.write(Builder::ArgType::ConstFloat64);
@@ -95,7 +96,7 @@ void test_set_pulse() {
     // 7
     stm.write(Builder::OpCode::Identity);
     stm.write(Builder::ArgType::ConstFloat64);
-    stm.write<double>(100e6);
+    stm.write<double>(52e6);
     // 8
     stm.write(Builder::OpCode::Identity);
     stm.write(Builder::ArgType::ConstFloat64);
@@ -146,7 +147,7 @@ void test_set_pulse() {
         stm.write<uint32_t>(0);
         // [noutputs: 4B][[id: 4B][time_id: 4B][len: 4B][val: 4B][cond: 4B][chn: 4B] x noutputs]
         stm.write<uint32_t>(5);
-        // 1 at 12 ms after start, set chn1 freq to 120 MHz
+        // 1 at 12 ms after start, set chn1 freq to 50 MHz
         stm.write<uint32_t>(8); // id
         stm.write<uint32_t>(1); // time_id
         stm.write<uint32_t>(0); // len
@@ -160,7 +161,7 @@ void test_set_pulse() {
         stm.write<uint32_t>(1); // val
         stm.write<uint32_t>(0); // cond
         stm.write<uint32_t>(2); // chn
-        // 3 at 17 ms after start set chn2 freq to 100 MHz
+        // 3 at 17 ms after start set chn2 freq to 52 MHz
         stm.write<uint32_t>(32); // id
         stm.write<uint32_t>(2); // time_id
         stm.write<uint32_t>(0); // len
@@ -218,7 +219,7 @@ void test_ramp_pulse() {
     // 1
     stm.write(Builder::OpCode::Mul);
     stm.write(Builder::ArgType::ConstFloat64);
-    stm.write<double>(0.001); // let's do 1 MHz in 1 ms. This slope is in units Hz / ps. 1e6 / 1e9 = 1e-3
+    stm.write<double>(0.001 * 1e-4); // let's do 1 MHz in 1 ms. This slope is in units Hz / ps. 1e6 / 1e9 = 1e-3
     stm.write(Builder::ArgType::Arg);
     stm.write<uint32_t>(0); // arg 0 should be time
     // 2
@@ -232,23 +233,23 @@ void test_ramp_pulse() {
     stm.write(Builder::ArgType::Node);
     stm.write<uint32_t>(1);
     stm.write(Builder::ArgType::Arg);
-    stm.write<uint32_t>(2); // old_val + (node 1) = old_val + 0.001 * t
+    stm.write<uint32_t>(1); // old_val + (node 1) = old_val + 0.001 * t
     // 4
     stm.write(Builder::OpCode::Add);
     stm.write(Builder::ArgType::Node);
     stm.write<uint32_t>(2);
     stm.write(Builder::ArgType::Arg);
-    stm.write<uint32_t>(2); // old_val + (node 2) = old_val + 1e-11 * t
+    stm.write<uint32_t>(1); // old_val + (node 2) = old_val + 1e-11 * t
     // 5
     stm.write(Builder::OpCode::Sub);
     stm.write(Builder::ArgType::Arg);
-    stm.write<uint32_t>(2); // old_val - (node 1) = old_val - 0.001 * t
+    stm.write<uint32_t>(1); // old_val - (node 1) = old_val - 0.001 * t
     stm.write(Builder::ArgType::Node);
     stm.write<uint32_t>(1);
     // 6
     stm.write(Builder::OpCode::Sub);
     stm.write(Builder::ArgType::Arg);
-    stm.write<uint32_t>(2); // old_val - (node 2) = old_val - 1e-11 * t
+    stm.write<uint32_t>(1); // old_val - (node 2) = old_val - 1e-11 * t
     stm.write(Builder::ArgType::Node);
     stm.write<uint32_t>(2);
     // 7
@@ -274,11 +275,11 @@ void test_ramp_pulse() {
     // 12
     stm.write(Builder::OpCode::Identity);
     stm.write(Builder::ArgType::ConstFloat64);
-    stm.write<double>(40e6);
+    stm.write<double>(4e3);
     // 13
     stm.write(Builder::OpCode::Identity);
     stm.write(Builder::ArgType::ConstFloat64);
-    stm.write<double>(30e6);
+    stm.write<double>(3e3);
     // 14
     stm.write(Builder::OpCode::Identity);
     stm.write(Builder::ArgType::ConstFloat64);
@@ -796,5 +797,5 @@ void test_ramp_pulse_global() {
 
 
 int main() {
-    test_set_pulse();
+    test_ramp_pulse();
 }
