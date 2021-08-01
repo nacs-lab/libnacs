@@ -17,3 +17,4 @@
  *************************************************************************/
 
 #define NACS_OPENLIBM_NAME "libopenlibm.dll"
+#define NACS_SLEEF_NAME "libsleef.dll"
