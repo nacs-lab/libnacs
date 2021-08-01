@@ -233,25 +233,27 @@ ANON_TEST_CASE() {
     int port2 = server2.start();
     std::string addr2("tcp://127.0.0.1:" + std::to_string(port2));
 
-    auto &client = ZMQ::MultiClient::global();
-    auto sock = client.get_socket(addr.c_str());
-    auto sock2 = client.get_socket(addr2.c_str());
+    {
+        auto &client = ZMQ::MultiClient::global();
+        auto sock = client.get_socket(addr.c_str());
+        auto sock2 = client.get_socket(addr2.c_str());
 
-    // Single thread ping.
-    ping_server(sock);
-    // Multi thread ping.
-    for (int i = 0; i < 100; i++) {
-        test_multi_ping(client, addr.c_str(), 2);
-        test_multi_ping(client, addr.c_str(), 4);
-        test_multi_ping(client, addr.c_str(), 8);
+        // Single thread ping.
+        ping_server(sock);
+        // Multi thread ping.
+        for (int i = 0; i < 100; i++) {
+            test_multi_ping(client, addr.c_str(), 2);
+            test_multi_ping(client, addr.c_str(), 4);
+            test_multi_ping(client, addr.c_str(), 8);
+        }
+        // Make sure we can recieve things out-of-order
+        test_interleave(sock);
+        test_interleave2(sock, sock2);
+
+        exit_server(sock);
+        exit_server(sock2);
+        server.thread.join();
+        server2.thread.join();
     }
-    // Make sure we can recieve things out-of-order
-    test_interleave(sock);
-    test_interleave2(sock, sock2);
-
-    exit_server(sock);
-    exit_server(sock2);
-    server.thread.join();
-    server2.thread.join();
     ZMQ::shutdown();
 }
