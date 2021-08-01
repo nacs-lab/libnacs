@@ -29,6 +29,7 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Verifier.h>
 #include <llvm/MC/MCContext.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/TargetSelect.h>
@@ -51,13 +52,22 @@ namespace NaCs::LLVM::Compile {
 
 void addOptimization(legacy::PassManagerBase &pm)
 {
+#ifndef NDEBUG
+    pm.add(createVerifierPass());
+#endif
     pm.add(createCFGSimplificationPass());
     pm.add(createDeadCodeEliminationPass());
     pm.add(createEarlyCSEPass());
     pm.add(createDeadCodeEliminationPass());
     pm.add(createInstructionCombiningPass());
 
+#ifndef NDEBUG
+    pm.add(createVerifierPass());
+#endif
     pm.add(createVectorABIPass());            // Fix vector ABI
+#ifndef NDEBUG
+    pm.add(createVerifierPass());
+#endif
     pm.add(createAlwaysInlinerLegacyPass());  // Respect always_inline
     pm.add(createInstructionCombiningPass()); // Cleanup for scalarrepl.
     pm.add(createSROAPass());                 // Break up aggregate allocas
@@ -82,7 +92,13 @@ void addOptimization(legacy::PassManagerBase &pm)
     pm.add(createSCCPPass());                 // Constant prop with SCCP
 
     pm.add(createSinkingPass()); ////////////// ****
+#ifndef NDEBUG
+    pm.add(createVerifierPass());
+#endif
     pm.add(createNaCsInstSimplifyPass()); // TODO support external symbol
+#ifndef NDEBUG
+    pm.add(createVerifierPass());
+#endif
     pm.add(createInstructionCombiningPass());
     pm.add(createJumpThreadingPass());         // Thread jumps
     pm.add(createDeadStoreEliminationPass());  // Delete dead stores
@@ -96,13 +112,22 @@ void addOptimization(legacy::PassManagerBase &pm)
     pm.add(createJumpThreadingPass());         // Thread jumps
     pm.add(createInstructionCombiningPass());   // Clean up after SLP loop vectorizer
 
+#ifndef NDEBUG
+    pm.add(createVerifierPass());
+#endif
     pm.add(createLowerVectorPass());
+#ifndef NDEBUG
+    pm.add(createVerifierPass());
+#endif
     pm.add(createAlwaysInlinerLegacyPass());  // Inlining for lower vector pass
 
     pm.add(createAggressiveDCEPass());         // Delete dead instructions
     pm.add(createGlobalDCEPass());
     pm.add(createConstantMergePass());
     pm.add(createMergeFunctionsPass());
+#ifndef NDEBUG
+    pm.add(createVerifierPass());
+#endif
 }
 
 NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M, bool opt)
