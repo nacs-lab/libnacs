@@ -30,7 +30,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    std::ifstream istm(argv[1]);
+    std::ifstream istm(argv[1], std::ios::binary);
     istm.seekg(0, std::ios::end);
     auto filesize = (size_t)istm.tellg();
     istm.seekg(0, std::ios::beg);

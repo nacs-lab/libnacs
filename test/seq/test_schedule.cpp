@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 {
     assert(argc >= 2);
 
-    std::ifstream istm(argv[1]);
+    std::ifstream istm(argv[1], std::ios::binary);
     istm.seekg(0, std::ios::end);
     auto filesize = (size_t)istm.tellg();
     istm.seekg(0, std::ios::beg);
@@ -45,7 +45,7 @@ int main(int argc, char **argv)
         .toByteCode(&code_len, nullptr);
 
     if (argc >= 3) {
-        std::ofstream ostm(argv[2]);
+        std::ofstream ostm(argv[2], std::ios::binary);
         ostm.write((const char*)&code[0], code.size());
     }
 

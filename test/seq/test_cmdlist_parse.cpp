@@ -70,7 +70,7 @@ static void test(const std::string &dir, const std::string &name)
     try {
         uint32_t ttl_mask = Seq::CmdList::parse(vstm, istm);
         auto vec = vstm.get_buf();
-        std::ifstream bstm(path + ".cmdbin");
+        std::ifstream bstm(path + ".cmdbin", std::ios::binary);
         REQUIRE(bstm.good());
         std::string binstr(std::istreambuf_iterator<char>(bstm), {});
         uint64_t len_ns = test_cmdlist_eq(vec, ttl_mask, binstr);

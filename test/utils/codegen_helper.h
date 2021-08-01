@@ -95,7 +95,7 @@ struct LLVMTest : LLVM::Codegen::Context {
                                                get_module());
         REQUIRE(res);
         if (name && *name) {
-            std::fstream stm(name, std::ios_base::out);
+            std::ofstream stm(name, std::ios::binary);
             if (stm) {
                 stm.write(&vec[0], vec.size());
             }

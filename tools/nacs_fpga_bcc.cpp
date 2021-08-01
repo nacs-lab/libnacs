@@ -31,7 +31,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    std::ifstream istm(argv[1]);
+    std::ifstream istm(argv[1], std::ios::binary);
     istm.seekg(0, std::ios::end);
     auto filesize = (size_t)istm.tellg();
     istm.seekg(0, std::ios::beg);
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
     auto code = Seq::Sequence::fromBinary(data.data(), data.size())
         .toByteCode(nullptr);
 
-    std::ofstream ostm(argv[2]);
+    std::ofstream ostm(argv[2], std::ios::binary);
     ostm.write((const char*)&code[0], code.size());
 
     return 0;

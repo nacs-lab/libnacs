@@ -54,7 +54,7 @@ int parse(int argc, char **argv)
         std::cerr << err;
         return 1;
     }
-    std::ofstream ostm(argv[1]);
+    std::ofstream ostm(argv[1], std::ios::binary);
     if (!ostm) {
         Log::error("Cannot open output file.\n");
         return 1;
@@ -92,7 +92,7 @@ int print(int argc, char **argv)
         Log::error("Wrong number of arguments.\n");
         return 1;
     }
-    std::ifstream istm(argv[0]);
+    std::ifstream istm(argv[0], std::ios::binary);
     if (!istm) {
         Log::error("Cannot open input file.\n");
         return 1;

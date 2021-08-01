@@ -30,7 +30,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    std::ifstream istm(argv[1]);
+    std::ifstream istm(argv[1], std::ios::binary);
     std::string code(std::istreambuf_iterator<char>(istm), {});
     Seq::ByteCode::print(std::cout, (uint8_t*)&code[0], code.size());
 
