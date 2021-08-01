@@ -20,12 +20,36 @@
 #include "cpu_p.h"
 
 #include <llvm/ADT/Triple.h>
+#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Host.h>
+#include <llvm/Support/Process.h>
+#include <llvm/Support/StringSaver.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
 namespace NaCs::LLVM {
 
 using namespace llvm;
+
+static Call init_llvm_args([] {
+#if LLVM_VERSION_MAJOR >= 12
+    // https://reviews.llvm.org/rGc068e9c8c123e7f8c8f3feb57245a012ccd09ccf
+    Optional<std::string> envValue = sys::Process::GetEnv("NACS_LLVM_ARGS");
+    if (envValue) {
+        SmallVector<const char *, 20> newArgv;
+        BumpPtrAllocator A;
+        StringSaver Saver(A);
+        newArgv.push_back(Saver.save("NaCs").data());
+
+        // Parse the value of the environment variable into a "command line"
+        // and hand it off to ParseCommandLineOptions().
+        cl::TokenizeGNUCommandLine(*envValue, Saver, newArgv);
+        int newArgc = static_cast<int>(newArgv.size());
+        cl::ParseCommandLineOptions(newArgc, &newArgv[0]);
+    }
+#else
+    cl::ParseEnvironmentOptions("NaCs", "NACS_LLVM_ARGS");
+#endif
+});
 
 NACS_EXPORT() void dump(const Value *v)
 {
