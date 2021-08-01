@@ -143,9 +143,12 @@ NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Modu
     // This may not be very reliable but should be safe to do so even if it break
     // in the future this should only be a performance (memory consumption) issue
     // rather than a correctness issue.
+#if 0
+    // Disable for now since the verifier doesn't like this.
     auto init_tramp = M->getFunction("llvm.init.trampoline");
     if (!init_tramp || init_tramp->use_empty())
         appendToCompilerUsed(*M, {Intrinsic::getDeclaration(M, Intrinsic::init_trampoline)});
+#endif
     legacy::PassManager pm;
     pm.add(new TargetLibraryInfoWrapperPass(Triple(tgt->getTargetTriple())));
     pm.add(createTargetTransformInfoWrapperPass(tgt->getTargetIRAnalysis()));
