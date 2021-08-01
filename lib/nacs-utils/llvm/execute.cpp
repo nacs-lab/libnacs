@@ -30,9 +30,9 @@ namespace NaCs::LLVM::Exe {
 
 #define __asm_sym_real(var_suffix, name, suffix, type)                  \
     ([] {                                                               \
-         extern auto asm_sym ## var_suffix type asm(name) suffix;       \
-         return (void(*)())asm_sym ## var_suffix;                       \
-     }())
+        extern auto asm_sym ## var_suffix type asm(name) suffix;        \
+        return (void(*)())asm_sym ## var_suffix;                        \
+    }())
 #define asm_sym_real(var_suffix, name, suffix, type...)                 \
     NACS_SWITCH(type, __asm_sym_real(var_suffix, name, suffix, type),   \
                 __asm_sym_real(var_suffix, name, suffix, () -> void))
@@ -103,30 +103,30 @@ namespace NaCs::LLVM::Exe {
 #  endif
 #  define sleef_sym_u(prefix, suffix)                                   \
     ([] {                                                               \
-         if (auto addr = asm_sym_w("Sleef_" prefix "_u35" suffix))      \
-             return (uintptr_t)addr;                                    \
-         return (uintptr_t)asm_sym("Sleef_" prefix "_u10" suffix);      \
-     } ())
+        if (auto addr = asm_sym_w("Sleef_" prefix "_u35" suffix))       \
+            return (uintptr_t)addr;                                     \
+        return (uintptr_t)asm_sym("Sleef_" prefix "_u10" suffix);       \
+    } ())
 #  define sleef_sym_u15(prefix, suffix)                                 \
     ([] {                                                               \
-         if (auto addr = asm_sym_w("Sleef_" prefix "_u35" suffix))      \
-             return (uintptr_t)addr;                                    \
-         return (uintptr_t)asm_sym("Sleef_" prefix "_u15" suffix);      \
-     } ())
+        if (auto addr = asm_sym_w("Sleef_" prefix "_u35" suffix))       \
+            return (uintptr_t)addr;                                     \
+        return (uintptr_t)asm_sym("Sleef_" prefix "_u15" suffix);       \
+    } ())
 #  define sleef_sym_u05(prefix, suffix)                                 \
     ([] {                                                               \
-         if (auto addr = asm_sym_w("Sleef_" prefix "_u35" suffix))      \
-             return (uintptr_t)addr;                                    \
-         return (uintptr_t)asm_sym("Sleef_" prefix "_u05" suffix);      \
-     } ())
+        if (auto addr = asm_sym_w("Sleef_" prefix "_u35" suffix))       \
+            return (uintptr_t)addr;                                     \
+        return (uintptr_t)asm_sym("Sleef_" prefix "_u05" suffix);       \
+    } ())
 #  define sleef_sym(prefix, suffix)                                     \
     ([] {                                                               \
-         if (auto addr = asm_sym_w("Sleef_" prefix "_u35" suffix))      \
-             return (uintptr_t)addr;                                    \
-         if (auto addr = asm_sym_w("Sleef_" prefix "_u05" suffix))      \
-             return (uintptr_t)addr;                                    \
-         return (uintptr_t)asm_sym("Sleef_" prefix "_" suffix);         \
-     } ())
+        if (auto addr = asm_sym_w("Sleef_" prefix "_u35" suffix))       \
+            return (uintptr_t)addr;                                     \
+        if (auto addr = asm_sym_w("Sleef_" prefix "_u05" suffix))       \
+            return (uintptr_t)addr;                                     \
+        return (uintptr_t)asm_sym("Sleef_" prefix "_" suffix);          \
+    } ())
 #  define check_sleef_u_d(host_info, var, sym)          \
     _check_sleef_d(host_info, sleef_sym_u, var, sym)
 #  define check_sleef_u15_d(host_info, var, sym)        \
