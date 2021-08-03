@@ -184,6 +184,15 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
         throw std::runtime_error("Unknown name for channel. Use FREQ, AMP, PHASE");
     }
     m_chn_map.try_emplace(chn_id, phys_chn_num, chn_num, chn_type);
+    auto it = out_chns.begin();
+    for (; it != out_chns.end(); ++it) {
+        if (*it == phys_chn_num) {
+            break;
+        }
+    }
+    if (it == out_chns.end()) {
+        out_chns.push_back(phys_chn_num);
+    }
 }
 
 static unsigned get_vector_size()
@@ -211,6 +220,7 @@ void Backend::sort_channels()
         }
         return info1.m_phys_chn < info2.m_phys_chn;
     });
+    std::sort(out_chns.begin(), out_chns.end());
     for (uint32_t i = 0; i < nchn; i++) {
         m_linear_chns[i]->second.linear_idx = i;
     }
@@ -580,6 +590,22 @@ void Backend::prepare_run(HostSeq &host_seq)
 }
 void Backend::pre_run(HostSeq &host_seq)
 {
+    // send config if first bseq
+    if (host_seq.first_bseq) {
+        std::vector<uint8_t> config_msg;
+        write(config_msg, (uint32_t) out_chns.size());
+        write(config_msg, out_chns.data(), out_chns.size());
+        auto conf_reply = m_sock->send_msg([&] (auto &sock) {
+            ZMQ::send_more(sock, ZMQ::str_msg("set_out_config"));
+            ZMQ::send(sock, zmq::message_t(config_msg.data(), config_msg.size()));
+        }).get();
+        if (conf_reply.empty())
+            throw std::runtime_error("did not get reply from server");
+        std::string conf_reply_str((char*) conf_reply[0].data(), conf_reply[0].size());
+        if (!(conf_reply_str.compare("ok") == 0)) {
+            throw std::runtime_error("config of AWG failed");
+        }
+    }
     // prepare code protocol, value array
     auto idx = host_seq.cur_seq_idx();
     m_cur_seq_id = idx;
@@ -631,6 +657,7 @@ void Backend::pre_run(HostSeq &host_seq)
             write(next_msg, bseq.pulses_bc.data(), bseq.pulses_bc.size());
         }
         else {
+            printf("Not sending object code\n");
             uint8_t is_seq_sent = 0;
             write(next_msg, is_seq_sent);
             write(next_msg, bseq.n_nonconst_map);
