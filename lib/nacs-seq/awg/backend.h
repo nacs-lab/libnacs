@@ -104,6 +104,8 @@ private:
     std::string m_cpu_str;
     std::string m_feature_str;
     std::vector<uint8_t> id_bc;
+
+    std::vector<uint8_t> out_chns;
 };
 
 }
