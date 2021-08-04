@@ -672,11 +672,11 @@ void Backend::pre_run(HostSeq &host_seq)
             write(next_msg, bseq.n_nonconst_map);
             write(next_msg, ((uint8_t*) bseq.vals.data()) + bseq.n_const_map * sizeof(bseq.vals[0]), bseq.n_nonconst_map * sizeof(bseq.vals[0]));
         }
+        write(id_bc, 16, m_seq_cnt_offset + m_cur_seq_id);
+        write(id_bc, 24, (uint8_t) host_seq.first_bseq);
         auto reply = m_sock->send_msg([&] (auto &sock) {
             ZMQ::send_more(sock, ZMQ::str_msg("run_seq"));
             ZMQ::send_more(sock, ZMQ::bits_msg(version));
-            write(id_bc, 16, m_seq_cnt_offset + m_cur_seq_id);
-            write(id_bc, 24, (uint8_t) host_seq.first_bseq);
             ZMQ::send_more(sock, zmq::message_t(id_bc.data(), id_bc.size()));
             ZMQ::send(sock, zmq::message_t(next_msg.data(), next_msg.size()));
         }).get();
@@ -818,6 +818,9 @@ NACS_EXPORT() void Backend::reqServerInfo()
         m_triple_str = global_info.triple_str;
         m_cpu_str = global_info.cpu_str;
         m_feature_str = global_info.feature_str;
+        id_bc.resize(25); // 8 bytes server_id, 8 bytes_client_id, 8 bytes, 8 bytes seq_id, 1 byte is_first_seq, Fill in first 16 bytes
+        write(id_bc, (uint32_t) 0, m_server_id);
+        write(id_bc, (uint32_t) 8, m_client_id);
     }
     else {
         auto reply = m_sock->send_msg([&] (auto &sock) {
