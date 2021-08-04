@@ -29,6 +29,7 @@ struct GlobalInfo {
     std::string triple_str;
     std::string cpu_str;
     std::string feature_str;
+    
     GlobalInfo(uint64_t client, uint64_t server, std::string triple,
                std::string cpu, std::string feature):
         client_id(client),
