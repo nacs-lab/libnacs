@@ -805,7 +805,7 @@ void test_ramp_pulse_global() {
     // TODO
 }
 
-void test_set_pulse_global_mult() {
+void test_set_pulse_global_mult(uint8_t out1, uint8_t out2) {
     // test multiple channel output
     ostream stm;
     // [version <0>: 1B]
@@ -848,10 +848,15 @@ void test_set_pulse_global_mult() {
     stm.write<double>(15000000000);
     // [nchns: 4B][[chnname: non-empty NUL-terminated string] x nchns]
     stm.write<uint32_t>(4);
-    stm.write_string("AWG1/OUT0/CHN1/FREQ");
-    stm.write_string("AWG1/OUT0/CHN1/AMP");
-    stm.write_string("AWG1/OUT1/CHN1/FREQ");
-    stm.write_string("AWG1/OUT1/CHN1/AMP");
+    char buffer [50];
+    sprintf(buffer, "AWG1/OUT%d/CHN1/FREQ", out1);
+    stm.write_string(buffer);
+    sprintf(buffer, "AWG1/OUT%d/CHN1/AMP", out1);
+    stm.write_string(buffer);
+    sprintf(buffer, "AWG1/OUT%d/CHN1/FREQ", out2);
+    stm.write_string(buffer);
+    sprintf(buffer, "AWG1/OUT%d/CHN1/AMP", out2);
+    stm.write_string(buffer);
     // [ndefvals: 4B][[chnid: 4B][Type: 1B][value: 1-8B] x ndefvals]
     stm.write<uint32_t>(0);
     // [nslots: 4B][[Type: 1B] x nslots]
@@ -969,7 +974,14 @@ void test_set_pulse_global_mult() {
 
 
 int main() {
+    //test_set_pulse();
     //test_ramp_pulse();
     //test_set_pulse_global();
-    test_set_pulse_global_mult();
+    test_set_pulse_global_mult(0,2);
+    //test_set_pulse();
+    printf("Press any key to continue");
+    int flag = std::cin.get();
+    //test_set_pulse();
+    test_set_pulse_global_mult(0,1);
+
 }
