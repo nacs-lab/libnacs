@@ -54,6 +54,9 @@ jobs:
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{matrix.BUILD_TYPE}} -j $(nproc)
 
+    - name: Builder info
+      run: ${{github.workspace}}/build/tools/nacs-cpudump
+
     - name: Test
       working-directory: ${{github.workspace}}/build
       run: ctest -C ${{matrix.BUILD_TYPE}} -E /excluded --output-on-failure -j $(nproc)
