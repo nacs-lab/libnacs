@@ -26,6 +26,7 @@ using namespace NaCs;
 
 TEST_CASE("Host") {
     auto &host_info = CPUInfo::get_host();
+    host_info.dump_llvm();
     REQUIRE(&host_info == &CPUInfo::get_host());
     auto dup_host = CPUInfo::create(host_info.get_arch().c_str(),
                                     std::string(host_info).c_str());

@@ -543,6 +543,11 @@ private:
 template<typename FT, bool approx=false>
 using TestVec = MkTest<VecCodegenTest, FT, approx>;
 
+static Call print_cpu([] {
+    // Not using `host_info` since it is not guaranteed to be initialized yet
+    CPUInfo::get_host().dump_llvm();
+});
+
 TEST_CASE("CodeGen (vector)") {
     TestCtx ctx;
 
