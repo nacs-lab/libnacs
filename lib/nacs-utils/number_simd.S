@@ -285,7 +285,7 @@ _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48:
 //         ret
 //         .seh_endproc
 
-        .def     _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64
+        .def    _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64
         .scl    2
         .type   32
         .endef
@@ -303,7 +303,7 @@ _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64:
         jmp     _ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32
         .seh_endproc
 
-        .def     _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64
+        .def    _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64
         .scl    2
         .type   32
         .endef
@@ -321,7 +321,7 @@ _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64:
         jmp     _ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32
         .seh_endproc
 
-        .def     _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112
+        .def    _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112
         .scl    2
         .type   32
         .endef
@@ -339,7 +339,7 @@ _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112:
         jmp     _ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48
         .seh_endproc
 
-        .def     _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112
+        .def    _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112
         .scl    2
         .type   32
         .endef
@@ -357,7 +357,7 @@ _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112:
         jmp     _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48
         .seh_endproc
 
-        .def     _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd
+        .def    _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd
         .scl    2
         .type   32
         .endef
@@ -379,7 +379,7 @@ _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd:
         ret
         .seh_endproc
 
-        .def     _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd
+        .def    _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd
         .scl    2
         .type   32
         .endef
@@ -405,7 +405,7 @@ _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd:
         ret
         .seh_endproc
 
-        .def     _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd
+        .def    _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd
         .scl    2
         .type   32
         .endef
@@ -427,7 +427,7 @@ _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd:
         ret
         .seh_endproc
 
-        .def     _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd
+        .def    _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd
         .scl    2
         .type   32
         .endef
@@ -453,7 +453,7 @@ _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd:
         ret
         .seh_endproc
 
-        .def     _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd
+        .def    _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd
         .scl    2
         .type   32
         .endef
@@ -477,7 +477,7 @@ _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd:
         ret
         .seh_endproc
 
-        .def     _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd
+        .def    _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd
         .scl    2
         .type   32
         .endef
@@ -505,7 +505,7 @@ _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd:
         ret
         .seh_endproc
 
-        .def     _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd
+        .def    _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd
         .scl    2
         .type   32
         .endef
@@ -528,7 +528,7 @@ _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd:
         ret
         .seh_endproc
 
-        .def     _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd
+        .def    _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd
         .scl    2
         .type   32
         .endef
