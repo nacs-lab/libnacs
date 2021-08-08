@@ -249,41 +249,38 @@ _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48:
         ret
         .seh_endproc
 
-// Do not enable for avx512 for now since the calling convention is currently the same as
-// non-vectorcall as of Feb. 2019. The computer on which we need the asm implementation
-// also doesn't support avx512 anyway so it doesn't really matter for now...
-//         .def    _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80
-//         .scl    2
-//         .type   32
-//         .endef
-//         .globl  _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80
-//         .p2align    4, 0x90
-//         // NaCs::linearInterpolate8_avx512f(double __vector(8), unsigned int, double const*)
-//         .seh_proc _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80
-// _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80:
-//         .seh_endprologue
-//         vxorpd        %xmm1, %xmm1, %xmm1
-//         leal          -1(%rdx), %eax
-//         vbroadcastsd  .Ldouble1_v4(%rip), %zmm2
-//         vbroadcastsd  (%r8,%rax,8), %zmm5
-//         vcmpltpd      %zmm2, %zmm0, %k1
-//         vmaxpd        %zmm1, %zmm0, %zmm0
-//         vxorpd        %xmm1, %xmm1, %xmm1
-//         vcvtsi2sdq    %rax, %xmm1, %xmm1
-//         kmovb         %k1, %k2
-//         vbroadcastsd  %xmm1, %zmm1
-//         vmulpd        %zmm0, %zmm1, %zmm1
-//         vcvttpd2dq    %zmm1, %ymm4
-//         vcvtdq2pd     %ymm4, %zmm3
-//         vsubpd        %zmm3, %zmm1, %zmm3
-//         vmovapd       %zmm5, %zmm1
-//         vgatherdpd    (%r8,%ymm4,8), %zmm5{%k2}
-//         vgatherdpd    8(%r8,%ymm4,8), %zmm1{%k1}
-//         vsubpd        %zmm3, %zmm2, %zmm0
-//         vmulpd        %zmm5, %zmm0, %zmm0
-//         vfmadd231pd   %zmm1, %zmm3, %zmm0
-//         ret
-//         .seh_endproc
+        .def    _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80
+        .p2align    4, 0x90
+        // NaCs::linearInterpolate8_avx512f(double __vector(8), unsigned int, double const*)
+        .seh_proc _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80
+_ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80:
+        .seh_endprologue
+        vxorpd        %xmm1, %xmm1, %xmm1
+        leal          -1(%rdx), %eax
+        vbroadcastsd  .Ldouble1_v4(%rip), %zmm2
+        vbroadcastsd  (%r8,%rax,8), %zmm5
+        vcmpltpd      %zmm2, %zmm0, %k1
+        vmaxpd        %zmm1, %zmm0, %zmm0
+        vxorpd        %xmm1, %xmm1, %xmm1
+        vcvtsi2sdq    %rax, %xmm1, %xmm1
+        kmovb         %k1, %k2
+        vbroadcastsd  %xmm1, %zmm1
+        vmulpd        %zmm0, %zmm1, %zmm1
+        vcvttpd2dq    %zmm1, %ymm4
+        vcvtdq2pd     %ymm4, %zmm3
+        vsubpd        %zmm3, %zmm1, %zmm3
+        vmovapd       %zmm5, %zmm1
+        vgatherdpd    (%r8,%ymm4,8), %zmm5{%k2}
+        vgatherdpd    8(%r8,%ymm4,8), %zmm1{%k1}
+        vsubpd        %zmm3, %zmm2, %zmm0
+        vmulpd        %zmm5, %zmm0, %zmm0
+        vfmadd231pd   %zmm1, %zmm3, %zmm0
+        ret
+        .seh_endproc
 
         .def    _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64
         .scl    2
@@ -359,6 +356,25 @@ _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112:
         vdivpd  %ymm2, %ymm0, %ymm0
         movl    %r9d, %edx
         jmp     _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48
+        .seh_endproc
+
+        .def    _ZN4NaCs26linearInterpolate8_avx512fEDv8_dS0_S0_jPKd@@208
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs26linearInterpolate8_avx512fEDv8_dS0_S0_jPKd@@208
+        .p2align        4, 0x90
+        // NaCs::linearInterpolate8_avx512f(double __vector(8), double __vector(8), double __vector(8), unsigned int, double const*)
+        .seh_proc _ZN4NaCs26linearInterpolate8_avx512fEDv8_dS0_S0_jPKd@@208
+_ZN4NaCs26linearInterpolate8_avx512fEDv8_dS0_S0_jPKd@@208:
+        // The wrapper function below `_ZN4NaCs26linearInterpolate8_avx512fERDv8_dRKS0_S3_S3_jPKd`
+        // assumes that this function does not touch `%rcx`.
+        .seh_endprologue
+        movq    40(%rsp), %r8
+        vsubpd  %zmm1, %zmm0, %zmm0
+        vdivpd  %zmm2, %zmm0, %zmm0
+        movl    %r9d, %edx
+        jmp     _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80
         .seh_endproc
 
         .def    _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd
@@ -564,16 +580,66 @@ _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd:
         ret
         .seh_endproc
 
+        .def    _ZN8NaCs26linearInterpolate8_avx512fERDv8_dRKS0_jPKd
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs26linearInterpolate8_avx512fERDv8_dRKS0_jPKd
+        .p2align        4, 0x90
+        // NaCs::linearInterpolate8_avx512f(double __vector(8)&, double __vector(8) const&, unsigned int, double const*)
+        .seh_proc _ZN4NaCs26linearInterpolate8_avx512fERDv8_dRKS0_jPKd
+_ZN4NaCs26linearInterpolate8_avx512fERDv8_dRKS0_jPKd:
+        // Assumes that `_ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80`
+        // does not touch `%rcx`.
+        // Also assumes that the caller knows about avx512 so we don't need `vzeroupper`
+        subq    $40, %rsp
+        .seh_stackalloc 40
+        .seh_endprologue
+        vmovaps (%rdx), %zmm0
+        movl    %r8d, %edx
+        movq    %r9, %r8
+        callq   _ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80
+        vmovaps %zmm0, (%rcx)
+        addq    $40, %rsp
+        ret
+        .seh_endproc
+
+        .def    _ZN4NaCs26linearInterpolate8_avx512fERDv8_dRKS0_S3_S3_jPKd
+        .scl    2
+        .type   32
+        .endef
+        .globl  _ZN4NaCs26linearInterpolate8_avx512fERDv8_dRKS0_S3_S3_jPKd
+        .p2align        4, 0x90
+        // NaCs::linearInterpolate8_avx512f(double __vector(8)&, double __vector(8) const&, double __vector(8) const&, double __vector(8) const&, unsigned int, double const*)
+        .seh_proc _ZN4NaCs26linearInterpolate8_avx512fERDv8_dRKS0_S3_S3_jPKd
+_ZN4NaCs26linearInterpolate8_avx512fERDv8_dRKS0_S3_S3_jPKd:
+        subq    $56, %rsp
+        .seh_stackalloc 56
+        .seh_endprologue
+        movl    96(%rsp), %eax
+        movq    104(%rsp), %r11
+        vmovaps (%rdx), %zmm0
+        vmovaps (%r8), %zmm1
+        vmovaps (%r9), %zmm2
+        movq    %r11, 32(%rsp)
+        movl    %eax, %r9d
+        callq   _ZN4NaCs26linearInterpolate8_avx512fEDv8_dS0_S0_jPKd@@208
+        vmovaps %zmm0, (%rcx)
+        addq    $56, %rsp
+        ret
+        .seh_endproc
+
         .section    .drectve,"yn"
         .ascii  " -export:_ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32"
         .ascii  " -export:_ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32"
         .ascii  " -export:_ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48"
         .ascii  " -export:_ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48"
-        // .ascii  " -export:_ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80"
+        .ascii  " -export:_ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd@@80"
         .ascii  " -export:_ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64"
         .ascii  " -export:_ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64"
         .ascii  " -export:_ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112"
         .ascii  " -export:_ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112"
+        .ascii  " -export:_ZN4NaCs26linearInterpolate8_avx512fEDv8_dS0_S0_jPKd@@208"
         .ascii  " -export:_ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd"
         .ascii  " -export:_ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd"
         .ascii  " -export:_ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd"
@@ -582,4 +648,6 @@ _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd:
         .ascii  " -export:_ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd"
         .ascii  " -export:_ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd"
         .ascii  " -export:_ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd"
+        .ascii  " -export:_ZN4NaCs26linearInterpolate8_avx512fERDv8_dRKS0_jPKd"
+        .ascii  " -export:_ZN4NaCs26linearInterpolate8_avx512fERDv8_dRKS0_S3_S3_jPKd"
 #endif

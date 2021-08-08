@@ -188,7 +188,6 @@ void linearInterpolate4_avx2(__m256d &res, const __m256d &x, const __m256d &x0,
 {
     res = _linearInterpolate4_avx2((x - x0) / dx, npoints, points);
 }
-#    endif
 
 __attribute__((target("avx512f,avx512dq"))) NACS_EXPORT()
 void linearInterpolate8_avx512f(__m512d &res, const __m512d &x, uint32_t npoints,
@@ -203,6 +202,7 @@ void linearInterpolate8_avx512f(__m512d &res, const __m512d &x, const __m512d &x
 {
     res = linearInterpolate8(x, x0, dx, npoints, points);
 }
+#    endif
 #  endif
 
 #  if !NACS_SIMD_USE_REF
@@ -257,23 +257,21 @@ NACS_EXPORT() __m256d linearInterpolate4_avx2(__m256d x, __m256d x0, __m256d dx,
 {
     return _linearInterpolate4_avx2((x - x0) / dx, npoints, points);
 }
-#  endif
-#  if !NACS_OS_WINDOWS
-__attribute__((target("avx512f,avx512dq")))
+
+NACS_VECTORCALL __attribute__((target("avx512f,avx512dq")))
 NACS_EXPORT() __m512d linearInterpolate8_avx512f(__m512d x, uint32_t npoints,
                                                  const double *points)
 {
     return linearInterpolate8(x, npoints, points);
 }
 
-__attribute__((target("avx512f,avx512dq")))
+NACS_VECTORCALL __attribute__((target("avx512f,avx512dq")))
 NACS_EXPORT() __m512d linearInterpolate8_avx512f(__m512d x, __m512d x0, __m512d dx,
                                                  uint32_t npoints, const double *points)
 {
     return linearInterpolate8(x, x0, dx, npoints, points);
 }
 #  endif
-
 #elif NACS_CPU_AARCH64
 
 static NACS_INLINE float64x2_t linearInterpolate2(float64x2_t x, uint32_t npoints,

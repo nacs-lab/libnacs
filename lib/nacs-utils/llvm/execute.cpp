@@ -252,13 +252,11 @@ NACS_EXPORT() uintptr_t Resolver::resolve_ir_sym(const std::string &orig_name)
                            (__m256d, uint32_t, const double*) -> __m256d);
         return (uintptr_t)addr;
     }
-#    if !NACS_OS_WINDOWS
     else if (name == "interp.8") {
-        __m512d(*addr)(__m512d, uint32_t, const double*);
-        addr = linearInterpolate8_avx512f;
+        auto addr = asm_sym("_ZN4NaCs26linearInterpolate8_avx512fEDv8_djPKd" VEC_SUFFIX(80),
+                            (__m512d, uint32_t, const double*) -> __m512d);
         return (uintptr_t)addr;
     }
-#    endif
 #  elif NACS_CPU_AARCH64
     (void)host_info;
     if (name == "interp.2") {
