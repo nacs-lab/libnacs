@@ -291,6 +291,7 @@ _ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48:
         .endef
         .globl  _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64
         .p2align        4, 0x90
+        // NaCs::linearInterpolate2_sse2(double __vector(2), double __vector(2), double __vector(2), unsigned int, double const*)
         .seh_proc _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64
 _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64:
         // The wrapper function below `_ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd`
@@ -309,6 +310,7 @@ _ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64:
         .endef
         .globl  _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64
         .p2align        4, 0x90
+        // NaCs::linearInterpolate2_avx2(double __vector(2), double __vector(2), double __vector(2), unsigned int, double const*)
         .seh_proc _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64
 _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64:
         // The wrapper function below `_ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd`
@@ -327,6 +329,7 @@ _ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64:
         .endef
         .globl  _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112
         .p2align        4, 0x90
+        // NaCs::linearInterpolate4_avx(double __vector(4), double __vector(4), double __vector(4), unsigned int, double const*)
         .seh_proc _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112
 _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112:
         // The wrapper function below `_ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd`
@@ -345,6 +348,7 @@ _ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112:
         .endef
         .globl  _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112
         .p2align        4, 0x90
+        // NaCs::linearInterpolate4_avx2(double __vector(4), double __vector(4), double __vector(4), unsigned int, double const*)
         .seh_proc _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112
 _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112:
         // The wrapper function below `_ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd`
@@ -363,6 +367,7 @@ _ZN4NaCs23linearInterpolate4_avx2EDv4_dS0_S0_jPKd@@112:
         .endef
         .globl  _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd
         .p2align        4, 0x90
+        // NaCs::linearInterpolate2_sse2(double __vector(2)&, double __vector(2) const&, unsigned int, double const*)
         .seh_proc _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd
 _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd:
         // Assumes that `_ZN4NaCs23linearInterpolate2_sse2EDv2_djPKd@@32`
@@ -385,6 +390,7 @@ _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_jPKd:
         .endef
         .globl  _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd
         .p2align        4, 0x90
+        // NaCs::linearInterpolate2_sse2(double __vector(2)&, double __vector(2) const&, double __vector(2) const&, double __vector(2) const&, unsigned int, double const*)
         .seh_proc _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd
 _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd:
         // Assumes that `_ZN4NaCs23linearInterpolate2_sse2EDv2_dS0_S0_jPKd@@64`
@@ -411,6 +417,7 @@ _ZN4NaCs23linearInterpolate2_sse2ERDv2_dRKS0_S3_S3_jPKd:
         .endef
         .globl  _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd
         .p2align        4, 0x90
+        // NaCs::linearInterpolate2_avx2(double __vector(2)&, double __vector(2) const&, unsigned int, double const*)
         .seh_proc _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd
 _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd:
         // Assumes that `_ZN4NaCs23linearInterpolate2_avx2EDv2_djPKd@@32`
@@ -433,6 +440,7 @@ _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_jPKd:
         .endef
         .globl  _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd
         .p2align        4, 0x90
+        // NaCs::linearInterpolate2_avx2(double __vector(2)&, double __vector(2) const&, double __vector(2) const&, double __vector(2) const&, unsigned int, double const*)
         .seh_proc _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd
 _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd:
         // Assumes that `_ZN4NaCs23linearInterpolate2_avx2EDv2_dS0_S0_jPKd@@64`
@@ -459,6 +467,7 @@ _ZN4NaCs23linearInterpolate2_avx2ERDv2_dRKS0_S3_S3_jPKd:
         .endef
         .globl  _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd
         .p2align        4, 0x90
+        // NaCs::linearInterpolate4_avx(double __vector(4)&, double __vector(4) const&, unsigned int, double const*)
         .seh_proc _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd
 _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd:
         // Assumes that `_ZN4NaCs22linearInterpolate4_avxEDv4_djPKd@@48`
@@ -483,6 +492,7 @@ _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_jPKd:
         .endef
         .globl  _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd
         .p2align        4, 0x90
+        // NaCs::linearInterpolate4_avx(double __vector(4)&, double __vector(4) const&, double __vector(4) const&, double __vector(4) const&, unsigned int, double const*)
         .seh_proc _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd
 _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd:
         // Assumes that `_ZN4NaCs22linearInterpolate4_avxEDv4_dS0_S0_jPKd@@112`
@@ -511,6 +521,7 @@ _ZN4NaCs22linearInterpolate4_avxERDv4_dRKS0_S3_S3_jPKd:
         .endef
         .globl  _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd
         .p2align        4, 0x90
+        // NaCs::linearInterpolate4_avx2(double __vector(4)&, double __vector(4) const&, unsigned int, double const*)
         .seh_proc _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd
 _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd:
         // Assumes that `_ZN4NaCs23linearInterpolate4_avx2EDv4_djPKd@@48`
@@ -534,6 +545,7 @@ _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_jPKd:
         .endef
         .globl  _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd
         .p2align        4, 0x90
+        // NaCs::linearInterpolate4_avx2(double __vector(4)&, double __vector(4) const&, double __vector(4) const&, double __vector(4) const&, unsigned int, double const*)
         .seh_proc _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd
 _ZN4NaCs23linearInterpolate4_avx2ERDv4_dRKS0_S3_S3_jPKd:
         subq    $56, %rsp
