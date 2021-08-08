@@ -23,6 +23,7 @@
 #include "../../nacs-utils/llvm/compile.h"
 #include "../../nacs-utils/llvm/execute.h"
 #include "../../nacs-utils/llvm/global_rename.h"
+#include "../../nacs-utils/log.h"
 #include "../../nacs-utils/processor.h"
 
 #include <llvm/ADT/StringRef.h>
@@ -913,6 +914,55 @@ NACS_EXPORT() llvm::ArrayRef<BCGen::Clock> Backend::get_clock(uint32_t bseq_idx)
     if (it == m_clocks.end())
         return llvm::ArrayRef<BCGen::Clock>();
     return it->second;
+}
+
+}
+
+extern "C" {
+
+using namespace NaCs;
+using namespace NaCs::Seq;
+using namespace NaCs::Seq::Zynq;
+
+NACS_EXPORT() const uint8_t *nacs_seq_manager_expseq_get_zynq_bytecode(
+    Manager::ExpSeq *expseq, const char *name, size_t *sz)
+{
+    return expseq->mgr().call_guarded([&] () -> const uint8_t* {
+        auto dev = expseq->get_device(name, false);
+        if (!dev) {
+            Log::error("Device %s cannot be found.", name);
+            return nullptr;
+        }
+        auto zynq_dev = dynamic_cast<Backend*>(dev);
+        if (!zynq_dev) {
+            Log::error("Device %s is not a Zynq FPGA.", name);
+            return nullptr;
+        }
+        auto bytecode = zynq_dev->get_bytecode(expseq->host_seq.cur_seq_idx(),
+                                               expseq->host_seq.first_bseq);
+        *sz = bytecode.size();
+        return bytecode.data();
+    }, nullptr);
+}
+
+NACS_EXPORT() const BCGen::Clock *nacs_seq_manager_expseq_get_zynq_clock(
+    Manager::ExpSeq *expseq, const char *name, size_t *sz)
+{
+    return expseq->mgr().call_guarded([&] () -> const BCGen::Clock* {
+        auto dev = expseq->get_device(name, false);
+        if (!dev) {
+            Log::error("Device %s cannot be found.", name);
+            return nullptr;
+        }
+        auto zynq_dev = dynamic_cast<Backend*>(dev);
+        if (!zynq_dev) {
+            Log::error("Device %s is not a Zynq FPGA.", name);
+            return nullptr;
+        }
+        auto clock = zynq_dev->get_clock(expseq->host_seq.cur_seq_idx());
+        *sz = clock.size();
+        return clock.data();
+    }, nullptr);
 }
 
 }

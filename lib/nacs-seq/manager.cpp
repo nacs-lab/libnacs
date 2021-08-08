@@ -610,3 +610,166 @@ NACS_EXPORT() void Manager::unregister_logger()
 }
 
 }
+
+extern "C" {
+
+using namespace NaCs::Seq;
+
+NACS_EXPORT() Manager *nacs_seq_new_manager()
+{
+    return new Manager;
+}
+
+NACS_EXPORT() void nacs_seq_free_manager(Manager *mgr)
+{
+    delete mgr;
+}
+
+NACS_EXPORT() Manager::ExpSeq *nacs_seq_manager_create_sequence(
+    Manager *mgr, const uint8_t *data, size_t size)
+{
+    return mgr->call_guarded([&] {
+        return mgr->create_sequence(data, size);
+    }, nullptr);
+}
+
+NACS_EXPORT() void nacs_seq_manager_free_sequence(Manager *mgr, Manager::ExpSeq *seq)
+{
+    mgr->call_guarded([&] {
+        mgr->free_sequence(seq);
+    });
+}
+
+NACS_EXPORT() void nacs_seq_manager_load_config_file(Manager *mgr, const char *fname)
+{
+    mgr->call_guarded([&] {
+        mgr->load_config_file(fname);
+    });
+}
+
+NACS_EXPORT() void nacs_seq_manager_load_config_string(Manager *mgr, const char *str)
+{
+    mgr->call_guarded([&] {
+        mgr->load_config_string(str);
+    });
+}
+
+NACS_EXPORT() int64_t nacs_seq_manager_tick_per_sec(Manager *mgr)
+{
+    return mgr->call_guarded([&] {
+        return mgr->tick_per_sec();
+    }, 0);
+}
+
+NACS_EXPORT() uint8_t *nacs_seq_manager_take_messages(Manager *mgr, size_t *sz)
+{
+    return mgr->take_messages(sz);
+}
+
+NACS_EXPORT() void nacs_seq_manager_enable_debug(Manager *mgr, bool enable)
+{
+    mgr->enable_debug(enable);
+}
+
+NACS_EXPORT() bool nacs_seq_manager_debug_enabled(Manager *mgr)
+{
+    return mgr->debug_enabled();
+}
+
+NACS_EXPORT() void nacs_seq_manager_enable_dump(Manager *mgr, bool enable)
+{
+    mgr->enable_dump(enable);
+}
+
+NACS_EXPORT() bool nacs_seq_manager_dump_enabled(Manager *mgr)
+{
+    return mgr->dump_enabled();
+}
+
+NACS_EXPORT() void nacs_seq_manager_expseq_init_run(Manager::ExpSeq *expseq)
+{
+    expseq->mgr().call_guarded([&] {
+        expseq->init_run();
+    });
+}
+
+NACS_EXPORT() void nacs_seq_manager_expseq_pre_run(Manager::ExpSeq *expseq)
+{
+    expseq->mgr().call_guarded([&] {
+        expseq->pre_run();
+    });
+}
+
+NACS_EXPORT() void nacs_seq_manager_expseq_start(Manager::ExpSeq *expseq)
+{
+    expseq->mgr().call_guarded([&] {
+        expseq->start();
+    });
+}
+
+NACS_EXPORT() void nacs_seq_manager_expseq_cancel(Manager::ExpSeq *expseq)
+{
+    expseq->mgr().call_guarded([&] {
+        expseq->cancel();
+    });
+}
+
+NACS_EXPORT() bool nacs_seq_manager_expseq_wait(Manager::ExpSeq *expseq, uint64_t timeout_ms)
+{
+    return expseq->mgr().call_guarded([&] {
+        return expseq->wait(timeout_ms);
+    }, false);
+}
+
+NACS_EXPORT() uint32_t nacs_seq_manager_expseq_post_run(Manager::ExpSeq *expseq)
+{
+    return expseq->mgr().call_guarded([&] {
+        return expseq->post_run();
+    }, 0);
+}
+
+NACS_EXPORT() double nacs_seq_manager_expseq_get_global(Manager::ExpSeq *expseq, uint32_t i)
+{
+    return expseq->mgr().call_guarded([&] {
+        return expseq->host_seq.get_global(i);
+    }, 0);
+}
+
+NACS_EXPORT() void nacs_seq_manager_expseq_set_global(Manager::ExpSeq *expseq,
+                                                      uint32_t i, double val)
+{
+    expseq->mgr().call_guarded([&] {
+        expseq->host_seq.set_global(i, val);
+    });
+}
+
+NACS_EXPORT() uint64_t nacs_seq_manager_expseq_cur_bseq_length(Manager::ExpSeq *expseq)
+{
+    auto &host_seq = expseq->host_seq;
+    auto seq_idx = host_seq.cur_seq_idx();
+    if (seq_idx == uint32_t(-1)) {
+        expseq->mgr().add_error("Sequence not running.\n");
+        return 0;
+    }
+    return host_seq.seqs[seq_idx].length;
+}
+
+NACS_EXPORT() const uint8_t *nacs_seq_manager_expseq_get_builder_dump(Manager::ExpSeq *expseq,
+                                                                      size_t *sz)
+{
+    return expseq->get_builder_dump(sz);
+}
+
+NACS_EXPORT() const uint8_t *nacs_seq_manager_expseq_get_seq_dump(Manager::ExpSeq *expseq,
+                                                                  size_t *sz)
+{
+    return expseq->get_seq_dump(sz);
+}
+
+NACS_EXPORT() const uint8_t *nacs_seq_manager_expseq_get_seq_opt_dump(Manager::ExpSeq *expseq,
+                                                                      size_t *sz)
+{
+    return expseq->get_seq_opt_dump(sz);
+}
+
+}
