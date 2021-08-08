@@ -27,6 +27,7 @@
 #include "../../nacs-utils/llvm/compile.h"
 #include "../../nacs-utils/llvm/execute.h"
 #include "../../nacs-utils/llvm/global_rename.h"
+#include "../../nacs-utils/log.h"
 #include "../../nacs-utils/processor.h"
 #include "../../nacs-utils/streams.h"
 
@@ -819,6 +820,58 @@ NACS_EXPORT() Backend::GenerateStatus Backend::get_generate_status(uint32_t cur_
     for (auto [linear_chn, nele]: bseq.fill_init)
         res.fill_init[linear_chn] = nele;
     return res;
+}
+
+}
+
+extern "C" {
+
+using namespace NaCs;
+using namespace NaCs::Seq;
+using namespace NaCs::Seq::NiDAQ;
+
+NACS_EXPORT() const double *nacs_seq_manager_expseq_get_nidaq_data(
+    Manager::ExpSeq *expseq, const char *name, size_t *sz)
+{
+    return expseq->mgr().call_guarded([&] () -> const double* {
+        auto dev = expseq->get_device(name, false);
+        if (!dev) {
+            Log::error("Device %s cannot be found.", name);
+            return nullptr;
+        }
+        auto nidaq_dev = dynamic_cast<Backend*>(dev);
+        if (!nidaq_dev) {
+            Log::error("Device %s is not a Ni DAQ.", name);
+            return nullptr;
+        }
+        auto idx = expseq->host_seq.cur_seq_idx();
+        if (idx == uint32_t(-1)) {
+            Log::error("Sequence must be started before getting data.");
+            return nullptr;
+        }
+        return nidaq_dev->get_data(idx, sz);
+    }, nullptr);
+}
+
+NACS_EXPORT() const std::pair<uint32_t,const char*>*
+nacs_seq_manager_expseq_get_nidaq_channel_info(
+    Manager::ExpSeq *expseq, const char *name, uint32_t *sz)
+{
+    static const std::pair<uint32_t,const char*> empty[1] = {};
+    return expseq->mgr().call_guarded([&] () -> const std::pair<uint32_t,const char*>* {
+            auto dev = expseq->get_device(name, false);
+            if (!dev) {
+                // Return empty array when the backend is not used.
+                *sz = 0;
+                return empty;
+            }
+            auto nidaq_dev = dynamic_cast<Backend*>(dev);
+            if (!nidaq_dev) {
+                Log::error("Device %s is not a Ni DAQ.", name);
+                return nullptr;
+            }
+            return nidaq_dev->get_channel_info(sz);
+        }, nullptr);
 }
 
 }

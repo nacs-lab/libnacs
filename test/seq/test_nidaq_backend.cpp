@@ -90,6 +90,43 @@ static void check_data_range(NiDAQ::Backend *backend, uint32_t cur_seq_id, uint3
     }
 }
 
+extern "C" {
+
+const std::pair<uint32_t,const char*> *nacs_seq_manager_expseq_get_nidaq_channel_info(
+    Manager::ExpSeq *expseq, const char *name, uint32_t *sz);
+const double *nacs_seq_manager_expseq_get_nidaq_data(
+    Manager::ExpSeq *expseq, const char *name, size_t *sz);
+
+}
+
+static void check_c_api(NiDAQ::Backend *backend, Manager::ExpSeq *expseq)
+{
+    uint32_t nchns;
+    auto chns = backend->get_channel_info(&nchns);
+    uint32_t nchns_c;
+    auto chns_c = nacs_seq_manager_expseq_get_nidaq_channel_info(expseq, backend->name().data(),
+                                                                 &nchns_c);
+    REQUIRE(chns);
+    REQUIRE(chns_c);
+    REQUIRE(nchns == nchns_c);
+    for (uint32_t i = 0; i < nchns; i++) {
+        INFO(i);
+        REQUIRE(chns[i] == chns_c[i]);
+    }
+
+    auto cur_seq_id = expseq->host_seq.cur_seq_idx();
+    size_t data_sz;
+    auto data = backend->get_data(cur_seq_id, &data_sz);
+    size_t data_sz_c;
+    auto data_c = nacs_seq_manager_expseq_get_nidaq_data(expseq, backend->name().data(),
+                                                         &data_sz_c);
+    REQUIRE(data_sz == data_sz_c);
+    for (size_t i = 0; i < data_sz; i++) {
+        INFO(i);
+        REQUIRE(data[i] == data_c[i]);
+    }
+}
+
 static const char *const config_str =
     "tick_per_sec: 1000000000000\n"
     "devices:\n"
@@ -284,12 +321,14 @@ TEST_CASE("empty") {
     expseq->pre_run();
     expseq->start();
     check_nsamples(nidaq_backend, 0, 1);
+    check_c_api(nidaq_backend, expseq.get());
     check_data_range(nidaq_backend, 0, 0, 0, 1, 0.0);
     check_data_range(nidaq_backend, 0, 1, 0, 1, 3.4);
     REQUIRE(expseq->wait(20000)); // 20s timeout
     REQUIRE(expseq->post_run() == 2);
     expseq->pre_run();
     check_nsamples(nidaq_backend, 1, 0);
+    check_c_api(nidaq_backend, expseq.get());
     expseq->start();
     REQUIRE(expseq->wait(20000)); // 20s timeout
     REQUIRE(expseq->post_run() == 0);
@@ -431,6 +470,7 @@ TEST_CASE("Short sequence") {
     expseq->pre_run();
     expseq->start();
     check_nsamples(nidaq_backend, 0, 302);
+    check_c_api(nidaq_backend, expseq.get());
     check_data_range(nidaq_backend, 0, 0, 0, 200, 1.2);
     check_data_range(nidaq_backend, 0, 0, 201, 302, 1.9);
     check_data_range(nidaq_backend, 0, 1, 0, 301, 2.6);
@@ -586,6 +626,7 @@ TEST_CASE("Short sequence with ramp") {
     expseq->pre_run();
     expseq->start();
     check_nsamples(nidaq_backend, 0, 403);
+    check_c_api(nidaq_backend, expseq.get());
     check_data_range(nidaq_backend, 0, 0, 0, 200, 1.2);
     check_data_range(nidaq_backend, 0, 0, 201, 403, 1.9);
     check_data_range(nidaq_backend, 0, 1, 0, 301, 2.6);
@@ -750,6 +791,7 @@ TEST_CASE("Ramp with clip") {
     expseq->pre_run();
     expseq->start();
     check_nsamples(nidaq_backend, 0, 403);
+    check_c_api(nidaq_backend, expseq.get());
     check_data_range(nidaq_backend, 0, 0, 0, 200, 1.2);
     check_data_range(nidaq_backend, 0, 0, 201, 403, 1.9);
     check_data_range(nidaq_backend, 0, 1, 0, 301, 2.6);
@@ -919,6 +961,7 @@ TEST_CASE("Unknown time") {
     }
     expseq->start();
     check_nsamples(nidaq_backend, 0, 403);
+    check_c_api(nidaq_backend, expseq.get());
     check_data_range(nidaq_backend, 0, 0, 0, 200, 1.2);
     check_data_range(nidaq_backend, 0, 0, 201, 403, 1.9);
     check_data_range(nidaq_backend, 0, 1, 0, 301, 2.6);
@@ -1089,6 +1132,7 @@ TEST_CASE("Unknown value") {
     expseq->pre_run();
     expseq->start();
     check_nsamples(nidaq_backend, 0, 403);
+    check_c_api(nidaq_backend, expseq.get());
     check_data_range(nidaq_backend, 0, 0, 0, 200, 1.2);
     check_data_range(nidaq_backend, 0, 0, 201, 403, 1.9);
     check_data_range(nidaq_backend, 0, 1, 0, 301, 2.6);
@@ -1312,6 +1356,7 @@ TEST_CASE("Unknown init") {
     expseq->pre_run();
     expseq->start();
     check_nsamples(nidaq_backend, 0, 1);
+    check_c_api(nidaq_backend, expseq.get());
     check_data_range(nidaq_backend, 0, 0, 0, 1, 1.2);
     check_data_range(nidaq_backend, 0, 1, 0, 1, 2.6);
     REQUIRE(expseq->wait(20000)); // 20s timeout
@@ -1319,6 +1364,7 @@ TEST_CASE("Unknown init") {
     expseq->pre_run();
     expseq->start();
     check_nsamples(nidaq_backend, 1, 403);
+    check_c_api(nidaq_backend, expseq.get());
     check_data_range(nidaq_backend, 1, 0, 0, 200, 1.2);
     check_data_range(nidaq_backend, 1, 0, 201, 403, 1.9);
     check_data_range(nidaq_backend, 1, 1, 0, 301, 2.6);
@@ -1336,6 +1382,7 @@ TEST_CASE("Unknown init") {
     expseq->pre_run();
     expseq->start();
     check_nsamples(nidaq_backend, 1, 403);
+    check_c_api(nidaq_backend, expseq.get());
     check_data_range(nidaq_backend, 1, 0, 0, 403, 1.9);
     check_data_range(nidaq_backend, 1, 1, 0, 301, 10.0);
     check_data_range(nidaq_backend, 1, 1, 301, 402, [&] (auto t) {
