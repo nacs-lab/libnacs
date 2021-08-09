@@ -37,6 +37,7 @@ jobs:
     env:
       CC: ${{matrix.compiler}}
       CXX: ${{matrix.compiler == 'gcc' && 'g++' || 'clang++'}}
+      CXXFLAGS_COV: -fprofile-arcs -ftest-coverage
 
     steps:
     - uses: actions/checkout@v2
@@ -49,7 +50,7 @@ jobs:
       run: sudo apt-get install llvm-${{matrix.LLVM_VER}}-dev
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=${{matrix.ENABLE_SIMD}} -DENABLE_LLVM=${{matrix.LLVM_VER != '' && 'On' || 'Off'}}
+      run: CXXFLAGS+=" ${CXXFLAGS_COV}" cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=${{matrix.ENABLE_SIMD}} -DENABLE_LLVM=${{matrix.LLVM_VER != '' && 'On' || 'Off'}}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{matrix.BUILD_TYPE}} -j $(nproc)
@@ -60,3 +61,16 @@ jobs:
     - name: Test
       working-directory: ${{github.workspace}}/build
       run: ctest -C ${{matrix.BUILD_TYPE}} -E /excluded --output-on-failure -j $(nproc)
+
+    - name: Generate coverage report (GCC)
+      if: ${{matrix.compiler == 'gcc'}}
+      run: |
+        find ${{github.workspace}}/build/{lib,tools} -iname '*.o' -exec gcov -abcfupr {} -s ${{github.workspace}} \;
+
+    - name: Generate coverage report (Clang)
+      if: ${{matrix.compiler == 'clang'}}
+      run: |
+        find ${{github.workspace}}/build/{lib,tools} -iname '*.o' -exec llvm-cov gcov -abcfupr {} -s ${{github.workspace}} \;
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v2
