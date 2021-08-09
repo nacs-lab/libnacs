@@ -11,6 +11,7 @@ env:
   CC: /mingw64/bin/gcc
   CXX: /mingw64/bin/g++
   MSYS2_ARG_CONV_EXCL: -DCMAKE_INSTALL_PREFIX=
+  CXXFLAGS_COV: -fprofile-arcs -ftest-coverage
 
 jobs:
   build:
@@ -72,7 +73,7 @@ jobs:
 
     - name: Configure CMake
       shell: msys2 {0}
-      run: cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=${{matrix.with_llvm && 'On' || 'Off'}} -DSTATIC_LLVM=On -DCMAKE_INSTALL_PREFIX=/mingw64 -G 'MSYS Makefiles'
+      run: CXXFLAGS+=" ${CXXFLAGS_COV}" cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=${{matrix.with_llvm && 'On' || 'Off'}} -DSTATIC_LLVM=On -DCMAKE_INSTALL_PREFIX=/mingw64 -G 'MSYS Makefiles'
 
     - name: Build
       shell: msys2 {0}
@@ -87,3 +88,11 @@ jobs:
       shell: msys2 {0}
       working-directory: ${{github.workspace}}/build
       run: ctest -C ${{matrix.BUILD_TYPE}} -E /excluded --output-on-failure -j $(nproc)
+
+    - name: Generate coverage report
+      shell: msys2 {0}
+      run: |
+        find build/{lib,tools} -iname '*.obj' -exec /mingw64/bin/gcov -abcfupr {} -s $(cygpath -u '${{github.workspace}}') \;
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v2
