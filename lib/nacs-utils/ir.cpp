@@ -1102,6 +1102,9 @@ int32_t Builder::createPromoteOP(Opcode op, int32_t val1, int32_t val2)
             break;
         }
     }
+    else if (val1 == val2 && op == Opcode::Sub) {
+        return getConst(TagVal(false).convert(resty));
+    }
     int32_t *ptr = addInst(op, 3);
     auto res = newSSA(resty);
     ptr[0] = res;
@@ -1142,6 +1145,20 @@ NACS_EXPORT() int32_t Builder::createCmp(CmpType cmptyp, int32_t val1, int32_t v
     if (val1 < 0 && val2 < 0)
         return getConst(evalCmp(cmptyp, m_f.evalConst(val1),
                                 m_f.evalConst(val2)));
+    if (val1 == val2) {
+        switch (cmptyp) {
+        case CmpType::eq:
+        case CmpType::ge:
+        case CmpType::le:
+            return true;
+        case CmpType::gt:
+        case CmpType::lt:
+        case CmpType::ne:
+            return false;
+        default:
+            return false;
+        }
+    }
     int32_t *ptr = addInst(Opcode::Cmp, 4);
     auto res = newSSA(Type::Bool);
     ptr[0] = res;
@@ -1165,6 +1182,8 @@ Builder::createPhi(Type typ, int ninputs)
 
 NACS_EXPORT() int32_t Builder::createCall(Builtins id, int32_t nargs, const int32_t *args)
 {
+    if ((id == Builtins::min || id == Builtins::max) && args[0] == args[1])
+        return args[0];
     switch (getBuiltinType(id)) {
     case BuiltinType::F64_F64:
         if (nargs != 1)
@@ -1247,6 +1266,8 @@ NACS_EXPORT() int32_t Builder::createSelect(int32_t cond, int32_t val1, int32_t 
     auto resty = std::max(std::max(ty1, ty2), Type::Int32);
     if (cond < 0)
         return createConvert(resty, m_f.evalConst(cond).get<bool>() ? val1 : val2);
+    if (val1 == val2)
+        return val1;
     auto *ptr = addInst(Opcode::Select, 4);
     auto res = newSSA(resty);
     ptr[0] = res;
