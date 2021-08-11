@@ -484,8 +484,8 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
     BasicBlock *b0 = BasicBlock::Create(m_ctx, "top", f);
     IRBuilder<> builder(b0);
     FastMathFlags fmf;
+    // Do not set noinf since we may use divide by 0
     fmf.setNoNaNs();
-    fmf.setNoInfs();
     fmf.setNoSignedZeros();
     fmf.setAllowReciprocal();
 #if LLVM_VERSION_MAJOR >= 7
