@@ -177,27 +177,39 @@ bool VectorABIPass::is_vector_func(Function &F, bool export_only)
     return false;
 }
 
+static bool fix_call_cc(Function &f)
+{
+    bool changed = false;
+    for (const auto &use: f.uses()) {
+        // We can replace this with CallBase on later version of LLVM.
+        // We don't use any other kind of call instructions though so it doesn't
+        // really matter...
+        if (auto inst = dyn_cast<CallInst>(use.getUser())) {
+            if (inst->getCalledFunction() == &f &&
+                inst->getCallingConv() != CallingConv::X86_VectorCall) {
+                inst->setCallingConv(CallingConv::X86_VectorCall);
+                changed = true;
+            }
+        }
+    }
+    return changed;
+}
+
 bool VectorABIPass::handle_x86_func(const DataLayout &DL, FixedVectorType *T_v128,
                                     Function &f, bool is_win32)
 {
+    // On win32 we need to fix the caller, which may be created
+    // after the function itself has been fixed.
+    // Therefore we need to apply this fix again even if we see a processed function.
+    if (is_win32 && f.getCallingConv() == CallingConv::X86_VectorCall)
+        return fix_call_cc(f);
     if (!is_vector_func(f, !is_win32))
         return false;
     if (is_win32) {
-        if (f.getCallingConv() == CallingConv::X86_VectorCall)
-            return false;
         // Mark function processed.
         f.addFnAttr("nacs.vector_abi", "");
         f.setCallingConv(CallingConv::X86_VectorCall);
-        for (const auto &use: f.uses()) {
-            // We can replace this with CallBase on later version of LLVM.
-            // We don't use any other kind of call instructions though so it doesn't
-            // really matter...
-            if (auto inst = dyn_cast<CallInst>(use.getUser())) {
-                if (inst->getCalledFunction() == &f) {
-                    inst->setCallingConv(CallingConv::X86_VectorCall);
-                }
-            }
-        }
+        fix_call_cc(f);
         auto link = f.getLinkage();
         if (link == GlobalValue::PrivateLinkage ||
             link == GlobalValue::InternalLinkage) {
