@@ -38,6 +38,7 @@ foreach(TESTSET RANGE 5)
   set_target_properties("test-ir-${TESTSET}" PROPERTIES
     COMPILE_DEFINITIONS "IR_TESTSET=${TESTSET}")
 endforeach()
+add_utils_test(ir_call)
 add_utils_test(ir_cmp)
 add_utils_test(ir_logical)
 
