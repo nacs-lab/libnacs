@@ -100,6 +100,7 @@ Function *VectorABIPass::clone_to_api(Function &F, FunctionType *new_fty)
     newf->setVisibility(vis);
     newf->setDLLStorageClass(dll);
     newf->setAttributes(attr);
+    newf->setCallingConv(F.getCallingConv());
     return newf;
 }
 
