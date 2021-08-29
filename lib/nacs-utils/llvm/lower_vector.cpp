@@ -24,6 +24,7 @@
 #include "vector_abi.h"
 
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/ADT/SmallSet.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/IRBuilder.h>
@@ -50,10 +51,12 @@ struct LowerVectorPass : public ModulePass {
 
 private:
     bool runOnModule(Module &M) override;
-    static void replace_frem(BinaryOperator *binop);
-    static bool process_function(Function &F);
+    void replace_frem(BinaryOperator *binop);
+    bool process_function(Function &F);
     static void replace_function(Function &F, StringRef new_name);
     static bool process_intrinsic(Function &F, const std::string &name);
+
+    SmallSet<Function*, 4> m_tofix{};
 };
 
 void LowerVectorPass::replace_function(Function &F, StringRef new_name)
@@ -104,10 +107,13 @@ void LowerVectorPass::replace_frem(BinaryOperator *binop)
     }
     auto fty = FunctionType::get(ty, {ty, ty}, false);
     auto f = Codegen::ensurePureExtern(binop->getModule(), fty, name);
+    // The vector ABI fix looks at the caller of vector functions on windows
+    // in order to set the calling convension on the call instruction.
+    // We should do it after all the instructions have be fixed.
 #if LLVM_VERSION_MAJOR >= 11
-    fixVectorABI(*cast<Function>(f.getCallee()));
+    m_tofix.insert(cast<Function>(f.getCallee()));
 #else
-    fixVectorABI(*cast<Function>(f));
+    m_tofix.insert(cast<Function>(f));
 #endif
     IRBuilder<> builder(binop);
     auto call = builder.CreateCall(f, {binop->getOperand(0), binop->getOperand(1)});
@@ -159,6 +165,8 @@ bool LowerVectorPass::runOnModule(Module &M)
     bool changed = false;
     for (auto &f: M)
         changed |= process_function(f);
+    for (auto f: m_tofix)
+        fixVectorABI(*f);
     return changed;
 }
 
