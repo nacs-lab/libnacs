@@ -74,6 +74,18 @@ endif()
 
 if(ENABLE_SIMD)
   find_package(Sleef REQUIRED)
+  set(CMAKE_REQUIRED_INCLUDES ${SLEEF_INCLUDE_DIR})
+  set(CMAKE_REQUIRED_LIBRARIES ${SLEEF_LIBRARIES})
+  check_cxx_source_compiles("
+      #include <sleef.h>
+      int main()
+      {
+          ::Sleef_remainder;
+      }" SLEEF_HAS_REMAINDER)
+  if(SLEEF_HAS_REMAINDER)
+    # For old Sleef version
+    add_definitions(-DNACS_SLEEF_HAS_REMAINDER)
+  endif()
 endif()
 find_package(OpenLibm)
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq>=4.0)

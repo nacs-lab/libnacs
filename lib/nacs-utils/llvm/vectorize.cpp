@@ -105,7 +105,14 @@ static bool isTriviallyVectorizable(const Function &F, const SmallVectorImpl<uns
 static constexpr const char *const libm_names[] = {
     "acos", "acosh", "asin", "asinh", "atan", "atanh", "cbrt", "cosh",
     "erf", "erfc", "exp10", "expm1", "tgamma", "lgamma", "log1p", "sinh",
-    "tan", "tanh", "atan2", "fdim", "hypot", "ldexp"
+    "tan", "tanh", "atan2", "fdim", "hypot", "ldexp",
+#ifdef NACS_SLEEF_HAS_REMAINDER
+    // Note that in principle we should decide whether remainder is vectorizable based
+    // on the target (in case we are cross compiling) and we'll need a better/generic format
+    // to pass this kind of information around.
+    // We shouldn't be cross compiling this function so it should be good enough for now.
+    "remainder",
+#endif
 };
 
 struct Vectorizer {

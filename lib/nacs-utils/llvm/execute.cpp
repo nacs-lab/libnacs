@@ -312,6 +312,9 @@ NACS_EXPORT() uintptr_t Resolver::resolve_ir_sym(const std::string &orig_name)
     check_sleef_dd(host_info, name, fmod);
     check_sleef_u05_dd(host_info, name, hypot);
     check_sleef_u_dd(host_info, name, pow);
+#ifdef NACS_SLEEF_HAS_REMAINDER
+    check_sleef_dd(host_info, name, remainder);
+#endif
 
     check_sleef_ddd(host_info, name, fma);
     check_sleef_di(host_info, name, ldexp);
