@@ -188,26 +188,27 @@ if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
   else()
     set(DEB_SUFFIX "-${CPACK_DEBIAN_PACKAGE_RELEASE}")
   endif()
-  if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR
-      "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86-64" OR
-      "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd64")
+  string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" system_processor)
+  if("${system_processor}" STREQUAL "x86_64" OR
+      "${system_processor}" STREQUAL "x86-64" OR
+      "${system_processor}" STREQUAL "amd64")
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
-  elseif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86" OR
-      "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i386" OR
-      "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i486" OR
-      "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i586" OR
-      "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i686")
+  elseif("${system_processor}" STREQUAL "x86" OR
+      "${system_processor}" STREQUAL "i386" OR
+      "${system_processor}" STREQUAL "i486" OR
+      "${system_processor}" STREQUAL "i586" OR
+      "${system_processor}" STREQUAL "i686")
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "i386")
-  elseif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "arm" OR
-      "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv7l" OR
-      "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armhf")
+  elseif("${system_processor}" STREQUAL "arm" OR
+      "${system_processor}" STREQUAL "armv7l" OR
+      "${system_processor}" STREQUAL "armhf")
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
-  elseif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64" OR
-      "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "arm64")
+  elseif("${system_processor}" STREQUAL "aarch64" OR
+      "${system_processor}" STREQUAL "arm64")
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
   else()
-    message(WARNING "Unrecognized architecture ${CMAKE_SYSTEM_PROCESSOR}")
-    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${CMAKE_SYSTEM_PROCESSOR}")
+    message(WARNING "Unrecognized architecture ${system_processor}")
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${system_processor}")
   endif()
   set(CPACK_PACKAGE_FILE_NAME
     "${CPACK_PACKAGE_NAME}_${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}${DEB_SUFFIX}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
