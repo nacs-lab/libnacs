@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    name: "${{matrix.compiler}} ${{matrix.BUILD_TYPE}}${{matrix.LLVM_VER && format(' LLVM{0}', matrix.LLVM_VER) || ''}}${{matrix.ENABLE_SIMD == 'On' && ' SIMD' || ''}}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

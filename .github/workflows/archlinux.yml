@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    name: Build libnacs
+    name: "${{matrix.BUILD_TYPE}} build"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
