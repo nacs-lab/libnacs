@@ -157,11 +157,14 @@ Value *Context::emit_convert(IRBuilder<> &builder, IR::Type ty, Value *val) cons
     switch (ty) {
     case IR::Type::Bool:
     case IR::Type::Int32:
-        if (lty->isIntegerTy())
+        if (lty->isIntegerTy()) {
+            if (ty == IR::Type::Bool)
+                return builder.CreateICmpNE(val, ConstantInt::get(lty, 0));
             return builder.CreateZExtOrTrunc(val, llvm_ty(ty));
+        }
         assert(lty->isFloatingPointTy());
         if (ty == IR::Type::Bool)
-            return builder.CreateFCmpOEQ(val, ConstantFP::get(lty, 0));
+            return builder.CreateFCmpONE(val, ConstantFP::get(lty, 0));
         return builder.CreateFPToSI(val, T_i32);
     case IR::Type::Float64:
         if (lty == T_bool)
