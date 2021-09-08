@@ -217,7 +217,7 @@ void test_ramp_pulse() {
     // [nnodes: 4B]
     // [[[OpCode: 1B][[ArgType: 1B][NodeArg: 1-8B] x narg] /
     //   [OpCode <Interp> : 1B][[ArgType: 1B][NodeArg: 1-8B] x 3][data_id: 4B]] x nnodes]
-    stm.write<uint32_t>(15);
+    stm.write<uint32_t>(16);
     // 1
     stm.write(Builder::OpCode::Mul);
     stm.write(Builder::ArgType::ConstFloat64);
@@ -290,6 +290,10 @@ void test_ramp_pulse() {
     stm.write(Builder::OpCode::Identity);
     stm.write(Builder::ArgType::ConstFloat64);
     stm.write<double>(10000000000);
+    // 16
+    stm.write(Builder::OpCode::Identity);
+    stm.write(Builder::ArgType::ConstFloat64);
+    stm.write<double>(1000000);
     // [nchns: 4B][[chnname: non-empty NUL-terminated string] x nchns]
     stm.write<uint32_t>(4);
     stm.write_string("AWG1/OUT0/CHN1/FREQ");
@@ -307,7 +311,7 @@ void test_ramp_pulse() {
     {
         //Basic Seq 1
         // [ntimes: 4B][[sign: 1B][id: 4B][delta_node: 4B][prev_id: 4B] x ntimes]
-        stm.write<uint32_t>(4);
+        stm.write<uint32_t>(5);
         // t1 12 ms after start
         stm.write<uint8_t>((uint8_t)Sign::Pos);
         stm.write<uint32_t>(105);
@@ -328,6 +332,11 @@ void test_ramp_pulse() {
         stm.write<uint32_t>(209);
         stm.write<uint32_t>(9);
         stm.write<uint32_t>(1);
+        // t5 at start
+        stm.write<uint8_t>((uint8_t)Sign::NonNeg);
+        stm.write<uint32_t>(212);
+        stm.write<uint32_t>(16);
+        stm.write<uint32_t>(0);
         // [nendtimes: 4B][[time_id: 4B] x nendtimes]
         stm.write<uint32_t>(2);
         stm.write<uint32_t>(3);
@@ -338,14 +347,14 @@ void test_ramp_pulse() {
         stm.write<uint32_t>(4);
         // 1 12 ms after start, set chn1 freq to 40 MHz
         stm.write<uint32_t>(8); // id
-        stm.write<uint32_t>(1); // time_id
+        stm.write<uint32_t>(5); // time_id
         stm.write<uint32_t>(0); // len
         stm.write<uint32_t>(12); // val
         stm.write<uint32_t>(0); // cond
         stm.write<uint32_t>(1); // chn
         // 2 12 ms after start set chn1 amplitude to 0.301
         stm.write<uint32_t>(65); // id
-        stm.write<uint32_t>(1); // time_id
+        stm.write<uint32_t>(5); // time_id
         stm.write<uint32_t>(0); // len
         stm.write<uint32_t>(10); // val
         stm.write<uint32_t>(0); // cond
@@ -975,13 +984,13 @@ void test_set_pulse_global_mult(uint8_t out1, uint8_t out2) {
 
 int main() {
     //test_set_pulse();
-    //test_ramp_pulse();
+    test_ramp_pulse();
     //test_set_pulse_global();
-    test_set_pulse_global_mult(0,2);
+    //test_set_pulse_global_mult(0,2);
     //test_set_pulse();
-    printf("Press any key to continue");
-    int flag = std::cin.get();
+    //printf("Press any key to continue");
+    //int flag = std::cin.get();
     //test_set_pulse();
-    test_set_pulse_global_mult(0,1);
+    //test_set_pulse_global_mult(0,1);
 
 }
