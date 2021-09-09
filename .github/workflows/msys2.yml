@@ -15,13 +15,18 @@ env:
 
 jobs:
   build:
-    name: "${{matrix.BUILD_TYPE}} build${{matrix.with_llvm && ' (with LLVM)' || ' (no LLVM)'}}"
+    name: "${{matrix.BUILD_TYPE}} build${{matrix.with_llvm && (matrix.static_llvm && ' (static LLVM)' || ' (shared LLVM)') || ' (no LLVM)'}}"
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         BUILD_TYPE: [ Release, Debug ]
         with_llvm: [ true, false ]
+        static_llvm: [ true ]
+        include:
+          - BUILD_TYPE: Release
+            with_llvm: true
+            static_llvm: false
 
     steps:
     - uses: actions/checkout@v2
@@ -74,7 +79,7 @@ jobs:
 
     - name: Configure CMake
       shell: msys2 {0}
-      run: CXXFLAGS+=" ${CXXFLAGS_COV}" cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=${{matrix.with_llvm && 'On' || 'Off'}} -DSTATIC_LLVM=On -DCMAKE_INSTALL_PREFIX=/mingw64 -G 'MSYS Makefiles'
+      run: CXXFLAGS+=" ${CXXFLAGS_COV}" cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=${{matrix.with_llvm && 'On' || 'Off'}} -DSTATIC_LLVM=${{matrix.static_llvm && 'On' || 'Off'}} -DCMAKE_INSTALL_PREFIX=/mingw64 -G 'MSYS Makefiles'
 
     - name: Build
       shell: msys2 {0}
