@@ -236,9 +236,9 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
 {
     reqServerInfo();
     sort_channels();
-    //m_zynq_dev = dynamic_cast<Zynq::Backend*>(expseq.get_device(m_clock_dev, true));
-    //if (!m_zynq_dev)
-    //    throw std::runtime_error("Cannot find clock generator device");
+    m_zynq_dev = dynamic_cast<Zynq::Backend*>(expseq.get_device(m_trig_dev, true));
+    if (!m_zynq_dev)
+        throw std::runtime_error("Cannot find trigger device");
     //m_zynq_dev->enable_clock();
     const auto bseqs = compiler.basic_seqs();
     auto &host_seq = expseq.host_seq;
@@ -781,6 +781,12 @@ void Backend::config(const YAML::Node &config)
     }
     else {
         throw std::runtime_error("Missing url in config");
+    }
+    if (auto trig_node = config["trig_device"]) {
+        m_trig_dev = trig_node.as<std::string>();
+    }
+    else {
+        throw std::runtime_error("Missing trig device in config");
     }
 }
 
