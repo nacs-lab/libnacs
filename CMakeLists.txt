@@ -107,9 +107,16 @@ if(IS_WINDOWS)
   cmake_c_add_flags(CMAKE_C_FLAGS -Wno-format -Wno-format-extra-args)
   cmake_c_add_flags(CMAKE_CXX_FLAGS -Wno-format -Wno-format-extra-args)
   set(LINKER_FLAGS ${LINKER_FLAGS} -static-libstdc++)
+  # The "runtime" part of all the libraries and executables
+  # needs to be in the same directory on windows for them to be runnable
+  # in the build directory due to the lack of rpath.
+  # We don't need to set this for library and archive output since
+  # those are only used during compile time and aren't subjected to
+  # the windows runtime loader limitations.
+  # Additionally, targets with different name prefix and suffix
+  # (e.g. libxxx.dll and xxx.exe) may generate library output of the same name (libxxx.dll.a)
+  # and setting a global library output directory may cause confilcts between them.
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-bin")
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output-lib")
   # Workaround CMake bug for Clang
   set(CMAKE_ASM_COMPILE_OPTIONS_PIC)
   set(CMAKE_ASM_COMPILE_OPTIONS_PIE)
