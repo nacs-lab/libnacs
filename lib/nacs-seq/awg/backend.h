@@ -95,7 +95,6 @@ private:
     // Serialized channel info to make passing it to python/MATLAB easier
     std::vector<uint8_t> m_channel_info;
     std::string m_clock_dev;
-    Zynq::Backend *m_zynq_dev = nullptr;
     // network related variables...
     std::string m_url;
     std::unique_ptr<ZMQ::MultiClient::SockRef> m_sock;
@@ -107,6 +106,9 @@ private:
     std::vector<uint8_t> id_bc;
 
     std::vector<uint8_t> out_chns;
+
+    std::string m_trig_dev;
+    Zynq::Backend *m_zynq_dev = nullptr;
 };
 
 }
