@@ -308,7 +308,7 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
         }
         be_bseq.all_time_known = all_time_known;
         be_bseq.all_val_known = all_val_known;
-        be_bseq.n_const_map = nconst_map;
+        //be_bseq.n_const_map = nconst_map;
         be_bseq.n_nonconst_map = nspecific_map;
         n_nonconst_map_max = max(n_nonconst_map_max, nspecific_map);
     }
@@ -340,6 +340,7 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
         auto &bseq = bseqs[idx];
         auto &chn_infos = bseq->get_channel_infos();
         auto &be_bseq = m_seqs[idx];
+        be_bseq.n_const_map = nconst_map; // set this in second round loop, since this is only known after all bseqs are iterated through
         auto values_ty = llvm::ArrayType::get(cgctx.T_i8,
                                               (nconst_map + be_bseq.n_nonconst_map)
                                               * sizeof(double));
