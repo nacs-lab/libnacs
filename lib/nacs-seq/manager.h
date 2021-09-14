@@ -29,6 +29,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <algorithm>
+#include <any>
 #include <atomic>
 #include <condition_variable>
 #include <map>
@@ -151,6 +152,17 @@ public:
         std::condition_variable m_run_cond;
     };
 
+    template<typename T>
+    struct Storage {
+        Storage() = default;
+        Storage(const Storage&) = delete;
+        Storage(Storage&&) = delete;
+        T &get(Manager &mgr) const
+        {
+            return mgr.get_storage(this);
+        }
+    };
+
     Manager();
     ~Manager();
 
@@ -271,6 +283,14 @@ private:
     void update_config(const YAML::Node &config);
     void _add_debug(const char *msg);
     void _add_debug_printf(const char *fmt, ...);
+    template<typename T>
+    T &get_storage(const Storage<T> *key)
+    {
+        auto &val = m_storage[key];
+        if (!val.has_value())
+            val = T();
+        return *std::any_cast<T>(&val);
+    }
 
     llvm::LLVMContext m_llvm_ctx;
     LLVM::Exe::Engine m_engine;
@@ -284,6 +304,7 @@ private:
     std::vector<std::string> m_device_order;
     std::map<uint64_t,DataInfo> m_datainfo;
     std::map<std::string,std::vector<uint8_t>> m_backend_datas;
+    std::map<const void*,std::any> m_storage;
 
     malloc_ostream m_messages;
     std::mutex m_message_lock;
