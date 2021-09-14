@@ -609,6 +609,13 @@ NACS_EXPORT() void Manager::unregister_logger()
     Log::popLogger();
 }
 
+NACS_EXPORT() Signal<Manager*> &Manager::new_run()
+{
+    // Use local global to avoid global initialization order issues.
+    static Signal<Manager*> sig;
+    return sig;
+}
+
 }
 
 extern "C" {
@@ -684,6 +691,11 @@ NACS_EXPORT() void nacs_seq_manager_enable_dump(Manager *mgr, bool enable)
 NACS_EXPORT() bool nacs_seq_manager_dump_enabled(Manager *mgr)
 {
     return mgr->dump_enabled();
+}
+
+NACS_EXPORT() void nacs_seq_manager_new_run(Manager *mgr)
+{
+    Manager::new_run().emit(mgr);
 }
 
 NACS_EXPORT() void nacs_seq_manager_expseq_init_run(Manager::ExpSeq *expseq)
