@@ -45,6 +45,16 @@ struct Status {
 
 static const Manager::Storage<std::map<std::string,Status>> server_status;
 
+static Call register_sigal([] {
+    Manager::new_run().connect([] (Manager *mgr) {
+        auto &all_status = server_status.get(*mgr);
+        for (auto &[url, status]: all_status) {
+            status.ttl_ovr_warned = 0;
+            status.dds_ovr_warned.reset();
+        }
+    });
+});
+
 struct Backend::BasicSeq {
     std::unique_ptr<BCGen> bc_gen;
     std::vector<uint8_t> bytecode;
