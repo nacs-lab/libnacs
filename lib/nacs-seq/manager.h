@@ -24,6 +24,7 @@
 #include "error.h"
 
 #include <nacs-utils/llvm/execute.h>
+#include <nacs-utils/signals.h>
 #include <nacs-utils/streams.h>
 
 #include <yaml-cpp/yaml.h>
@@ -276,6 +277,8 @@ public:
     // Not affecting the manager itself very much
     // but let the backend know that it should not send any data for real execution
     bool dummy_mode = false;
+
+    static Signal<Manager*> &new_run();
 
 private:
     uint64_t add_data(const void *data, size_t size);
