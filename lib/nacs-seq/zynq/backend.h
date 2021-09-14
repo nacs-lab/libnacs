@@ -25,6 +25,7 @@
 
 #include <nacs-utils/zmq_utils.h>
 
+#include <bitset>
 #include <map>
 #include <memory>
 
@@ -92,7 +93,8 @@ private:
     std::map<uint32_t,TTLManager> m_ttl_managers;
 
     uint32_t m_ttl_ovr_ignore = 0;
-    std::set<uint8_t> m_dds_ovr_ignore;
+    std::bitset<256> m_dds_ovr_ignore;
+    std::bitset<256> m_dds_used;
 };
 
 }
