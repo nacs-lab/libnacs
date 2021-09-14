@@ -31,6 +31,7 @@ set(nacs_utils_HDRS
   mem.h
   number.h
   processor.h
+  signals.h
   streams.h
   term.h
   thread.h
