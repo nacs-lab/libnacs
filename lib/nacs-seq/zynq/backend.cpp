@@ -36,6 +36,15 @@ namespace NaCs::Seq::Zynq {
 
 static Device::Register<Backend> register_backend("zynq");
 
+namespace {
+struct Status {
+    uint32_t ttl_ovr_warned;
+    std::bitset<256> dds_ovr_warned;
+};
+}
+
+static const Manager::Storage<std::map<std::string,Status>> server_status;
+
 struct Backend::BasicSeq {
     std::unique_ptr<BCGen> bc_gen;
     std::vector<uint8_t> bytecode;
@@ -148,9 +157,11 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
             throw std::runtime_error(name() + ": Invalid DDS channel " + _chn_name);
         if (subname == "/FREQ") {
             m_chn_map.emplace(chn_id, std::make_pair(BCGen::ChnType::Freq, chn_num));
+            m_dds_used.set(chn_num);
         }
         else if (subname == "/AMP") {
             m_chn_map.emplace(chn_id, std::make_pair(BCGen::ChnType::Amp, chn_num));
+            m_dds_used.set(uint8_t((1 << 6) | chn_num));
         }
         else {
             throw std::runtime_error(name() + ": Invalid DDS parameter name " + subname.str());
@@ -726,7 +737,7 @@ void Backend::config(const YAML::Node &config)
         throw std::runtime_error(name() + ": Missing url in config");
     }
     m_ttl_ovr_ignore = 0;
-    m_dds_ovr_ignore.clear();
+    m_dds_ovr_ignore.reset();
     if (auto override_ignore_node = config["override_ignore"]) {
         if (!override_ignore_node.IsSequence())
             throw std::runtime_error(name() + ": override_ignore must be an array");
@@ -751,18 +762,18 @@ void Backend::config(const YAML::Node &config)
                     throw std::runtime_error(name() + ": Invalid DDS channel " +
                                              chn_string + " in override_ignore");
                 if (subname == "/FREQ") {
-                    m_dds_ovr_ignore.insert(chn_num);
+                    m_dds_ovr_ignore.set(chn_num);
                 }
                 else if (subname == "/AMP") {
-                    m_dds_ovr_ignore.insert(uint8_t((1 << 6) | chn_num));
+                    m_dds_ovr_ignore.set(uint8_t((1 << 6) | chn_num));
                 }
                 else if (subname == "/PHASE") {
-                    m_dds_ovr_ignore.insert(uint8_t((2 << 6) | chn_num));
+                    m_dds_ovr_ignore.set(uint8_t((2 << 6) | chn_num));
                 }
                 else if (subname == "") {
-                    m_dds_ovr_ignore.insert(chn_num);
-                    m_dds_ovr_ignore.insert(uint8_t((1 << 6) | chn_num));
-                    m_dds_ovr_ignore.insert(uint8_t((2 << 6) | chn_num));
+                    m_dds_ovr_ignore.set(chn_num);
+                    m_dds_ovr_ignore.set(uint8_t((1 << 6) | chn_num));
+                    m_dds_ovr_ignore.set(uint8_t((2 << 6) | chn_num));
                 }
                 else {
                     throw std::runtime_error(name() + ": Invalid DDS parameter name " +
@@ -796,6 +807,7 @@ inline void Backend::run_bytecode(const std::vector<uint8_t> &bc)
     memcpy(m_seq_id, rep_data, sizeof(m_seq_id));
     if (reply0.size() < 24)
         return;
+    auto &status = server_status.get(mgr())[m_url];
     std::string msg;
     auto get_msg = [&] () -> std::string& {
         if (msg.empty()) {
@@ -807,21 +819,33 @@ inline void Backend::run_bytecode(const std::vector<uint8_t> &bc)
         return msg;
     };
     uint32_t ttl_ovr = (Mem::load_unalign<uint32_t>(rep_data + 16) |
-                        Mem::load_unalign<uint32_t>(rep_data + 20)) & ~m_ttl_ovr_ignore;
+                        Mem::load_unalign<uint32_t>(rep_data + 20));
+    // Clear non-override channels from the `ttl_ovr_warned` flags
+    // so that we'll warn again about them if they are overriden again.
+    status.ttl_ovr_warned &= ttl_ovr;
+    ttl_ovr &= ~m_ttl_ovr_ignore;
     auto dds_ovr_start = rep_data + 24;
     auto dds_ovr_end = rep_data + reply0.size();
     if (ttl_ovr) {
         for (int i = 0; i < 32; i++) {
-            if (ttl_ovr & (uint32_t(1) << i)) {
+            uint32_t bitmask = uint32_t(1) << i;
+            // Only warn if the channel was used and we haven't warned about it yet.
+            if ((ttl_ovr & bitmask) && (m_ttl_mask & bitmask) &&
+                !(status.ttl_ovr_warned & bitmask)) {
+                status.ttl_ovr_warned |= bitmask;
                 get_msg() += "TTL" + std::to_string(i);
             }
         }
     }
+    std::bitset<256> dds_ovr_set;
     // The format is 1 byte of channel identifier followed by 4 bytes of overriden values.
     for (auto p = dds_ovr_start; p < dds_ovr_end; p += 5) {
         auto chn = *p;
-        if (m_dds_ovr_ignore.find(chn) != m_dds_ovr_ignore.end())
+        dds_ovr_set.set(chn);
+        // ignored || unused || warned
+        if (m_dds_ovr_ignore[chn] || !m_dds_used[chn] || status.dds_ovr_warned[chn])
             continue;
+        status.dds_ovr_warned.set(chn);
         auto type = chn >> 6;
         int chn_num = chn & 0x3f;
         if (type == 0) {
@@ -837,6 +861,8 @@ inline void Backend::run_bytecode(const std::vector<uint8_t> &bc)
             get_msg() += "unknown(" + std::to_string(int(chn)) + ")";
         }
     }
+    // Clear non-override channels from the `dds_ovr_warned` set
+    status.dds_ovr_warned &= dds_ovr_set;
     if (!msg.empty()) {
         mgr().add_warning(msg + "\n");
     }
