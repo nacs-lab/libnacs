@@ -22,6 +22,7 @@
 using namespace NaCs;
 int main ()
 {
+    //std::string fname = "C:/msys64/etc/client_config.yml"; for windows
     std::string fname = "/etc/client_config.yml";
     Seq::AWG::Dummy::DummyClient client = Seq::AWG::Dummy::DummyClient();
     client.loadConfig(fname.data());
