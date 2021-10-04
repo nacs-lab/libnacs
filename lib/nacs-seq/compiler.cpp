@@ -570,24 +570,22 @@ void Compiler::prescan_times()
     // The lexicographical order guarantees that the parent is sorted before the child
     // so if we iterate the map normally it is guaranteed that the parent is already optimized
     // before we reach the child.
-    for (auto it = intermediates.begin(), end = intermediates.end(); it != end;) {
-        auto &intermediate = it->second;
+    for (auto &[_term, intermediate]: intermediates) {
         auto parent = intermediate.parent;
-        if (!parent) {
-            ++it;
+        if (intermediate.refcount == 0 || !parent)
             continue;
-        }
         if (parent->extrefcount)
             assert(parent->refcount > 1);
-        if (parent->refcount > 1) {
-            ++it;
+        if (parent->refcount > 1)
             continue;
-        }
         // Take the memory of parent terms which is likely larger.
         parent->terms.append(intermediate.terms.begin(), intermediate.terms.end());
         intermediate.terms = std::move(parent->terms);
         intermediate.parent = parent->parent;
-        it = intermediates.erase(it);
+        // Now I want to delete `parent` but I don't have the iterator to do that.
+        // Instead of looking it up here, let's just mark it for deletion and
+        // it'll be deleted below when we iterate through it next time.
+        parent->refcount = 0;
     }
 
     // Now we've finalized all the variable terms, we can now assign the constant offset.
@@ -648,7 +646,14 @@ void Compiler::prescan_times()
     }
     std::map<IntermediateResult*,uint32_t> intermediate_slots;
     // Now assign the intermediates
-    for (auto &[_terms, intermediate]: intermediates) {
+    for (auto _it = intermediates.begin(), _end = intermediates.end(); _it != _end;) {
+        auto &intermediate = _it->second;
+        if (intermediate.refcount == 0) {
+            // Marked for deletion from above. Do it now.
+            _it = intermediates.erase(_it);
+            continue;
+        }
+        ++_it;
         if (intermediate.terms.size() == 1 && !intermediate.parent) {
             auto term_key = intermediate.terms[0];
             auto term_it = terms.find(*term_key);
