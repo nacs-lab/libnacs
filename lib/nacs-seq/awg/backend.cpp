@@ -621,7 +621,7 @@ void Backend::pre_run(HostSeq &host_seq)
         std::vector<uint8_t> next_msg;
         uint32_t start_trigger = 1;
         write(next_msg, start_trigger);
-        if (!bseq.obj_file_sent || !bseq.iData_sent)
+        if (true || !bseq.obj_file_sent || !bseq.iData_sent)
         {
             uint8_t is_seq_sent = 1;
             write(next_msg, is_seq_sent);
@@ -664,7 +664,9 @@ void Backend::pre_run(HostSeq &host_seq)
             write(next_msg, bseq.n_nonconst_map);
             write(next_msg, ((uint8_t*) bseq.vals.data()) + bseq.n_const_map * sizeof(bseq.vals[0]), bseq.n_nonconst_map * sizeof(bseq.vals[0]));
         }
-        write(id_bc, 16, m_seq_cnt_offset + m_cur_seq_id);
+        //write(id_bc, 16, m_seq_cnt_offset + m_cur_seq_id);
+        write(id_bc, 16, m_seq_counter);
+        m_seq_counter++;
         write(id_bc, 24, (uint8_t) host_seq.first_bseq);
         auto reply = m_sock->send_msg([&] (auto &sock) {
             ZMQ::send_more(sock, ZMQ::str_msg("run_seq"));
