@@ -105,6 +105,8 @@ private:
     std::string m_feature_str;
     std::vector<uint8_t> id_bc;
 
+    uint64_t m_seq_counter = 0;
+
     std::vector<uint8_t> out_chns;
 
     std::string m_trig_dev;
