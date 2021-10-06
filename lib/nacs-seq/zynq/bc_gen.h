@@ -74,7 +74,7 @@ public:
 
     BCGen();
     ~BCGen();
-    void generate(HostSeq &host_seq);
+    void generate(const HostSeq &host_seq) const;
     static uint32_t convert_value(ChnType type, double value);
     void add_ttl_manager(uint8_t chn, uint32_t off_delay, uint32_t on_delay,
                          uint32_t skip_time, uint32_t min_time, bool off_val);
@@ -99,7 +99,7 @@ public:
     int64_t len_ns;
 
     // Output
-    std::vector<uint8_t> bytecode;
+    mutable std::vector<uint8_t> bytecode;
 
 private:
     template<typename T>
@@ -124,27 +124,40 @@ private:
             idx -= 22;
             return {BCGen::ChnType::DAC, idx};
         }
-        T &operator[](std::pair<BCGen::ChnType,uint8_t> chn)
+        static int to_index(std::pair<BCGen::ChnType,uint8_t> chn)
         {
             if (chn.first == BCGen::ChnType::Freq) {
                 assert(chn.second < 22);
-                return channels[chn.second];
+                return chn.second;
             }
             else if (chn.first == BCGen::ChnType::Amp) {
                 assert(chn.second < 22);
-                return channels[chn.second + 22];
+                return chn.second + 22;
             }
             else if (chn.first == BCGen::ChnType::DAC) {
                 assert(chn.second < 4);
-                return channels[chn.second + 22 * 2];
+                return chn.second + 22 * 2;
             }
             assert(false && "Invalid channel type.");
             abort();
+        }
+        const T &operator[](int idx) const
+        {
+            assert(idx < chn_num);
+            return channels[idx];
         }
         T &operator[](int idx)
         {
             assert(idx < chn_num);
             return channels[idx];
+        }
+        const T &operator[](std::pair<BCGen::ChnType,uint8_t> chn) const
+        {
+            return this->operator[](to_index(chn));
+        }
+        T &operator[](std::pair<BCGen::ChnType,uint8_t> chn)
+        {
+            return this->operator[](to_index(chn));
         }
         T *begin()
         {
@@ -173,17 +186,20 @@ private:
     {
         return round<int64_t>(seq_time / fpga_clock_div);
     }
-    void populate_pulses(HostSeq &host_seq);
-    bool preprocess_ttl_pulse(const TTLPulse &ttl_pulse);
-    void preprocess_ttl_managers();
-    void merge_pulses();
-    void merge_ttl_pulses();
+    void populate_pulses(const HostSeq &host_seq) const;
+    bool preprocess_ttl_pulse(const TTLPulse &ttl_pulse) const;
+    void preprocess_ttl_managers() const;
+    void merge_pulses() const;
+    void merge_ttl_pulses() const;
 
-    void emit_bytecode(void *data);
+    void emit_bytecode(const void *data) const;
 
     std::vector<TTLManager> m_ttl_managers;
-    ChnMap<std::vector<Pulse>> m_pulses;
-    std::vector<TTLPulse> m_ttlpulses;
+    mutable ChnMap<std::vector<Pulse>> m_pulses;
+    mutable std::vector<TTLPulse> m_ttlpulses;
+    // This is basically a copy of `start_vals` which we will mutate during generation.
+    // We need to keep all the inputs untouched in order to be able to do multiple generations.
+    mutable std::map<std::pair<ChnType,uint8_t>,uint32_t> m_real_start_vals;
 };
 
 }
