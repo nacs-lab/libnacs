@@ -109,6 +109,19 @@ TEST_CASE("static") {
     REQUIRE(Zynq::BCGen::convert_value(Zynq::BCGen::ChnType::DAC, 10) == 65535);
 }
 
+static void check_generate(Zynq::BCGen &bc_gen, HostSeq &host_seq)
+{
+    bc_gen.generate(host_seq);
+    auto bc = bc_gen.bytecode;
+    REQUIRE(&bc != &bc_gen.bytecode);
+    INFO(dump_bytecode(bc));
+    for (int i = 0; i < 10; i++) {
+        bc_gen.generate(host_seq);
+        INFO(dump_bytecode(bc_gen.bytecode));
+        REQUIRE(bc == bc_gen.bytecode);
+    }
+}
+
 TEST_CASE("empty") {
     DummyHostSeq host_seq;
     Zynq::BCGen bc_gen;
@@ -119,7 +132,7 @@ TEST_CASE("empty") {
     bc_gen.ttl_mask = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 0;
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(0)); // len_ns
@@ -144,7 +157,7 @@ TEST_CASE("offset") {
     bc_gen.ttl_mask = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 0;
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(0)); // len_ns
@@ -173,7 +186,7 @@ TEST_CASE("clock") {
         bc_gen.len_ns = 300;
         bc_gen.clocks.push_back({-100 * 10000, 100});
         bc_gen.clocks.push_back({1000 * 10000, 0});
-        bc_gen.generate(host_seq);
+        check_generate(bc_gen, host_seq);
         Checker checker(bc_gen.bytecode);
         INFO(dump_bytecode(bc_gen.bytecode));
         REQUIRE(checker.cmp<int64_t>(300)); // len_ns
@@ -205,7 +218,7 @@ TEST_CASE("clock+offset") {
     bc_gen.len_ns = 300;
     bc_gen.clocks.push_back({-100 * 10000, 100});
     bc_gen.clocks.push_back({1000 * 10000, 0});
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(300)); // len_ns
@@ -278,7 +291,7 @@ TEST_CASE("ttl_set") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -350,7 +363,7 @@ TEST_CASE("ttl_set_off") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -394,7 +407,7 @@ TEST_CASE("ttl0") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -436,7 +449,7 @@ TEST_CASE("ttl0_first_bseq") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -477,7 +490,7 @@ TEST_CASE("ttl0_first_bseq_off") {
             .cond_id = 2,
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -519,7 +532,7 @@ TEST_CASE("ttl0+_first_bseq") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -589,7 +602,7 @@ TEST_CASE("ttl_set+offset") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -666,7 +679,7 @@ TEST_CASE("ttl_set+clock") {
                 .cond_id = uint32_t(-1),
                 .ramp_func = nullptr
             });
-        bc_gen.generate(host_seq);
+        check_generate(bc_gen, host_seq);
         Checker checker(bc_gen.bytecode);
         INFO(dump_bytecode(bc_gen.bytecode));
         REQUIRE(checker.cmp<int64_t>(987)); // len_ns
@@ -744,7 +757,7 @@ TEST_CASE("dds_set") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -820,7 +833,7 @@ TEST_CASE("dds_set_skip") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -869,7 +882,7 @@ TEST_CASE("dds_set_skip+offset") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -939,7 +952,7 @@ TEST_CASE("dds_set+offset") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -1012,7 +1025,7 @@ TEST_CASE("dds_ramp") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -1106,7 +1119,7 @@ TEST_CASE("dds_ramp_vector") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -1197,7 +1210,7 @@ TEST_CASE("dds_ramp_interrupt") {
             .cond_id = 3,
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -1274,7 +1287,7 @@ TEST_CASE("dds_ramp_interrupt_off") {
             .cond_id = 3,
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -1366,7 +1379,7 @@ TEST_CASE("dds_ramp+offset") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -1463,7 +1476,7 @@ TEST_CASE("dds_ramp+clock") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -1565,7 +1578,7 @@ TEST_CASE("dds_multiramp") {
                 return 1.0 - in * 2.9304029304029303e-8;
             }
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -1678,7 +1691,7 @@ TEST_CASE("dds_multiramp+clock") {
                 return 1.0 - in * 2.9304029304029303e-8;
             }
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -1787,7 +1800,7 @@ TEST_CASE("dds_slowramp") {
                 return in * 1.9536019536019536e-10;
             }
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -1928,7 +1941,7 @@ TEST_CASE("dds0") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -2001,7 +2014,7 @@ TEST_CASE("dds0_start") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -2077,7 +2090,7 @@ TEST_CASE("dds_ramp0") {
                 return 1.0 - in * 2.9304029304029303e-8;
             }
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -2166,7 +2179,7 @@ TEST_CASE("dds_ramp0_start") {
                 return 1.0 - in * 2.9304029304029303e-8;
             }
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(1230)); // len_ns
@@ -2216,7 +2229,7 @@ TEST_CASE("start_vals") {
     bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 9}] = 1;
     bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0x94ab4e3;
     bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0x348;
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(0)); // len_ns
@@ -2246,7 +2259,7 @@ TEST_CASE("start_vals_start") {
     bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 9}] = 1;
     bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0x94ab4e3;
     bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0x348;
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(0)); // len_ns
@@ -2455,7 +2468,7 @@ TEST_CASE("ttl_mgr") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -2672,7 +2685,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -2889,7 +2902,7 @@ TEST_CASE("ttl_mgr_start") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -3105,7 +3118,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .cond_id = uint32_t(-1),
             .ramp_func = nullptr
         });
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
@@ -3158,7 +3171,7 @@ TEST_CASE("ttl_rate_limit") {
             });
     }
     bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 1}] = 0;
-    bc_gen.generate(host_seq);
+    check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen.bytecode));
     REQUIRE(checker.cmp<int64_t>(123)); // len_ns
