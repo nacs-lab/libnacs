@@ -331,12 +331,12 @@ struct BCGen::TTLManager {
         return off_delay || on_delay || skip_time || min_time;
     }
 
-    void clear()
+    void clear() const
     {
         pulses.clear();
     }
 
-    void process(BCGen &seq, uint8_t chn)
+    void process(const BCGen &seq, uint8_t chn) const
     {
         // Note that start time is in sequence unit and not FPGA unit at this point.
         std::sort(pulses.begin(), pulses.end(), [&] (auto &p1, auto &p2) {
@@ -346,7 +346,7 @@ struct BCGen::TTLManager {
                 return false;
             return p1.id < p2.id;
         });
-        auto start_it = seq.start_vals.find({ChnType::TTL, chn});
+        auto start_it = seq.m_real_start_vals.find({ChnType::TTL, chn});
 
         // The current pulse.
         // If `cur.val == output.val`, this pulse has already been outputted,
@@ -362,7 +362,7 @@ struct BCGen::TTLManager {
         // and will also be assumed to have happend sufficiently long before
         // that we don't need to worry about skip time/min time
         TTLPulse cur;
-        if (start_it == seq.start_vals.end()) {
+        if (start_it == seq.m_real_start_vals.end()) {
             cur.val = false;
         }
         else {
@@ -404,7 +404,7 @@ struct BCGen::TTLManager {
                 if (t <= 0 && seq.first_bseq) {
                     assert(cur.time < 0);
                     assert(output.time < 0);
-                    seq.start_vals.insert_or_assign({ChnType::TTL, chn}, !off_val);
+                    seq.m_real_start_vals.insert_or_assign({ChnType::TTL, chn}, !off_val);
                     output = pulse;
                     output.time = -1;
                     cur = output;
@@ -423,10 +423,10 @@ struct BCGen::TTLManager {
         }
     }
 
-    std::vector<TTLPulse> pulses{};
+    mutable std::vector<TTLPulse> pulses{};
 };
 
-bool BCGen::preprocess_ttl_pulse(const TTLPulse &ttl_pulse)
+bool BCGen::preprocess_ttl_pulse(const TTLPulse &ttl_pulse) const
 {
     // Note that start time is in sequence unit and not FPGA unit at this point.
     if (ttl_pulse.chn >= m_ttl_managers.size())
@@ -438,7 +438,7 @@ bool BCGen::preprocess_ttl_pulse(const TTLPulse &ttl_pulse)
     return true;
 }
 
-void BCGen::preprocess_ttl_managers()
+void BCGen::preprocess_ttl_managers() const
 {
     // Note that start time is in sequence unit and not FPGA unit at this point.
     auto nmgrs = m_ttl_managers.size();
@@ -512,7 +512,7 @@ NACS_EXPORT() uint32_t BCGen::version()
     return 2;
 }
 
-void BCGen::populate_pulses(HostSeq &host_seq)
+void BCGen::populate_pulses(const HostSeq &host_seq) const
 {
     for (auto &pulses: m_pulses)
         pulses.clear();
@@ -536,7 +536,7 @@ void BCGen::populate_pulses(HostSeq &host_seq)
         if (chn_type == ChnType::TTL) {
             // Merge t=0 pulse into start value
             if (time == 0 && first_bseq) {
-                start_vals.insert_or_assign({ChnType::TTL, seq_pulse.chn}, endvalue);
+                m_real_start_vals.insert_or_assign({ChnType::TTL, seq_pulse.chn}, endvalue);
                 continue;
             }
             // Keep TTL pulses in a separate array since we know we don't have any ramps
@@ -557,13 +557,13 @@ void BCGen::populate_pulses(HostSeq &host_seq)
         // Merge t=0 pulse into start value
         if (time == 0 && first_bseq) {
             if (!ramp_func) {
-                start_vals.insert_or_assign({chn_type, seq_pulse.chn}, endvalue);
+                m_real_start_vals.insert_or_assign({chn_type, seq_pulse.chn}, endvalue);
                 continue;
             }
             auto start_val = DataStream::compute_start_val(seq_pulse.pulse_type, ramp_func,
                                                            host_seq.values.data());
-            start_vals.insert_or_assign({chn_type, seq_pulse.chn},
-                                        convert_value(chn_type, start_val));
+            m_real_start_vals.insert_or_assign({chn_type, seq_pulse.chn},
+                                               convert_value(chn_type, start_val));
         }
         m_pulses[{chn_type, seq_pulse.chn}].push_back({
                 .pulse_type = seq_pulse.pulse_type,
@@ -601,7 +601,7 @@ void BCGen::populate_pulses(HostSeq &host_seq)
     }
 }
 
-void BCGen::merge_pulses()
+void BCGen::merge_pulses() const
 {
     for (auto &pulses: m_pulses) {
         int64_t prev_time = -1;
@@ -674,10 +674,10 @@ private:
 
 }
 
-void BCGen::merge_ttl_pulses()
+void BCGen::merge_ttl_pulses() const
 {
     uint32_t ttl_val = 0;
-    for (auto it = start_vals.begin(), end = start_vals.end(); it != end;) {
+    for (auto it = m_real_start_vals.begin(), end = m_real_start_vals.end(); it != end;) {
         auto [chn, val] = *it;
         if (chn.first != ChnType::TTL) {
             ++it;
@@ -685,14 +685,14 @@ void BCGen::merge_ttl_pulses()
         }
         if (chn.second < 32)
             ttl_val = setBit(ttl_val, chn.second, val != 0);
-        it = start_vals.erase(it);
+        it = m_real_start_vals.erase(it);
     }
     // Note that unlike for DDS channels,
     // the initial TTL value computed here is always going to be used
     // when we set the startup trigger signal.
     // This also means that we can ignore ttl pulses that doesn't change the value
     // even if it's the first pulse in the sequence.
-    start_vals.emplace(std::make_pair(ChnType::TTL, 0), ttl_val);
+    m_real_start_vals.emplace(std::make_pair(ChnType::TTL, 0), ttl_val);
 
     TimeKeeper time_keeper;
     int64_t prev_ttl_t = -1;
@@ -724,8 +724,9 @@ void BCGen::merge_ttl_pulses()
     m_ttlpulses.resize(to);
 }
 
-NACS_EXPORT() void BCGen::generate(HostSeq &host_seq)
+NACS_EXPORT() void BCGen::generate(const HostSeq &host_seq) const
 {
+    m_real_start_vals = start_vals;
     populate_pulses(host_seq);
     merge_pulses();
     merge_ttl_pulses();
@@ -1088,18 +1089,18 @@ struct BCGen::Writer {
     }
 };
 
-void BCGen::emit_bytecode(void *data)
+void BCGen::emit_bytecode(const void *data) const
 {
     bytecode.clear();
     Writer writer(bytecode, start_ttl_chn);
     writer.write_header(len_ns, ttl_mask);
 
-    auto ttl_start_it = start_vals.find({ChnType::TTL, 0});
-    if (ttl_start_it != start_vals.end())
+    auto ttl_start_it = m_real_start_vals.find({ChnType::TTL, 0});
+    if (ttl_start_it != m_real_start_vals.end())
         writer.cur_ttl = ttl_start_it->second;
     // Initialize channels
     if (first_bseq) {
-        for (auto [chn, val]: start_vals) {
+        for (auto [chn, val]: m_real_start_vals) {
             // TTL will be set during `start()`
             if (chn.first == ChnType::TTL)
                 continue;
@@ -1118,20 +1119,21 @@ void BCGen::emit_bytecode(void *data)
         next_clock_time = convert_time(clocks.front().time);
     }
     int64_t time_offset = 0;
+    auto real_seq_delay = seq_delay;
     // writer.cur_t == time_offset -> sequence time 0.
     if (next_clock_time < 0) {
         // If we want to start the clock right away (which we most likely will)
         // the time for the first clock command will be negative since
         // we want the first lowering edge to happen at the correct time.
-        if (seq_delay <= uint32_t(-next_clock_time)) {
-            seq_delay = 0;
+        if (real_seq_delay <= uint32_t(-next_clock_time)) {
+            real_seq_delay = 0;
         }
         else {
-            seq_delay -= uint32_t(-next_clock_time);
+            real_seq_delay -= uint32_t(-next_clock_time);
         }
         writer.start();
         auto period = clocks.front().period;
-        writer.add_clock(seq_delay, period);
+        writer.add_clock(real_seq_delay, period);
         clock_idx = 1;
         if (clock_idx < nclocks) {
             assume(clocks[clock_idx].time >= 0);
@@ -1151,7 +1153,7 @@ void BCGen::emit_bytecode(void *data)
     else {
         // Start the sequence and restart timer.
         writer.start();
-        time_offset = seq_delay;
+        time_offset = real_seq_delay;
     }
 
     // Now we have three kinds of pulses to deal with
