@@ -370,7 +370,7 @@ NACS_EXPORT() std::vector<DataGen::Pulse> &DataGen::get_pulses(uint32_t chn)
     return m_pulses[chn];
 }
 
-NACS_EXPORT() void DataGen::compute_times()
+NACS_EXPORT() void DataGen::compute_times() const
 {
     active_times.clear();
     int64_t max_step = 0;
@@ -468,7 +468,7 @@ NACS_EXPORT() void DataGen::compute_times()
     }
 }
 
-NACS_EXPORT() void DataGen::generate_data()
+NACS_EXPORT() void DataGen::generate_data() const
 {
     data.resize(nchns * nsamples);
     const StreamBuffer streambuffer(step_size);
