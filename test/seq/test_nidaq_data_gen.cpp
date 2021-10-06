@@ -83,6 +83,20 @@ static void check_data_range(NiDAQ::DataGen &data_gen, uint32_t chn,
     }
 }
 
+static void check_stable(NiDAQ::DataGen &data_gen)
+{
+    auto nsamples = data_gen.nsamples;
+    auto data = data_gen.data;
+    REQUIRE(&data != &data_gen.data);
+
+    for (int i = 0; i < 10; i++) {
+        data_gen.compute_times();
+        REQUIRE(nsamples == data_gen.nsamples);
+        data_gen.generate_data();
+        REQUIRE(data == data_gen.data);
+    }
+}
+
 TEST_CASE("Empty sequence") {
     NiDAQ::DataGen data_gen;
     data_gen.start_values.push_back(1.0);
@@ -97,6 +111,7 @@ TEST_CASE("Empty sequence") {
     REQUIRE(data_gen.nsamples == 1);
     data_gen.generate_data();
     REQUIRE(data_gen.data == (std::vector<double>{1.0, 2.0}));
+    check_stable(data_gen);
 }
 
 TEST_CASE("Short sequence") {
@@ -124,6 +139,7 @@ TEST_CASE("Short sequence") {
     check_data_range(data_gen, 0, 201, 302, 1.9);
     check_data_range(data_gen, 1, 0, 301, 2.6);
     check_data_range(data_gen, 1, 301, 302, -2.3);
+    check_stable(data_gen);
 }
 
 TEST_CASE("Short sequence with ramp") {
@@ -157,6 +173,7 @@ TEST_CASE("Short sequence with ramp") {
         return (double(t) * 1000 - 300400) / 1000;
     });
     check_data_range(data_gen, 1, 402, 403, -2.3);
+    check_stable(data_gen);
 }
 
 TEST_CASE("Short sequence with ramp (vector)") {
@@ -196,6 +213,7 @@ TEST_CASE("Short sequence with ramp (vector)") {
         return (double(t) * 1000 - 300400) / 1000;
     });
     check_data_range(data_gen, 1, 402, 403, -2.3);
+    check_stable(data_gen);
 }
 
 TEST_CASE("Start time") {
@@ -223,6 +241,7 @@ TEST_CASE("Start time") {
     check_data_range(data_gen, 0, 201, 1002, 1.9);
     check_data_range(data_gen, 1, 0, 1001, 2.6);
     check_data_range(data_gen, 1, 1001, 1002, -2.3);
+    check_stable(data_gen);
 }
 
 TEST_CASE("Extend start time") {
@@ -250,6 +269,7 @@ TEST_CASE("Extend start time") {
     check_data_range(data_gen, 0, 201, 1012, 1.9);
     check_data_range(data_gen, 1, 0, 1011, 2.6);
     check_data_range(data_gen, 1, 1011, 1012, -2.3);
+    check_stable(data_gen);
 }
 
 TEST_CASE("Extend start time with ramp") {
@@ -283,6 +303,7 @@ TEST_CASE("Extend start time with ramp") {
         return (double(t) * 1000 - 990500) / 1000;
     });
     check_data_range(data_gen, 1, 1011, 1012, -2.3);
+    check_stable(data_gen);
 }
 
 TEST_CASE("Extend start time with ramp (vector)") {
@@ -322,6 +343,7 @@ TEST_CASE("Extend start time with ramp (vector)") {
         return (double(t) * 1000 - 990500) / 1000;
     });
     check_data_range(data_gen, 1, 1011, 1012, -2.3);
+    check_stable(data_gen);
 }
 
 TEST_CASE("Ramp") {
@@ -360,6 +382,7 @@ TEST_CASE("Ramp") {
         return (double(t - 1000) * 1000 - 100) / 1000;
     });
     check_data_range(data_gen, 1, 1102, 1103, -3.9);
+    check_stable(data_gen);
 }
 
 TEST_CASE("Ramp (vector)") {
@@ -404,6 +427,7 @@ TEST_CASE("Ramp (vector)") {
         return (double(t - 1000) * 1000 - 100) / 1000;
     });
     check_data_range(data_gen, 1, 1102, 1103, -3.9);
+    check_stable(data_gen);
 }
 
 TEST_CASE("Condition interrupt ramp") {
@@ -455,6 +479,7 @@ TEST_CASE("Condition interrupt ramp") {
         return (double(t - 1000) * 1000 - 100) / 1000;
     });
     check_data_range(data_gen, 1, 1102, 1103, -3.9);
+    check_stable(data_gen);
 }
 
 TEST_CASE("Condition interrupt ramp (vector)") {
@@ -512,6 +537,7 @@ TEST_CASE("Condition interrupt ramp (vector)") {
         return (double(t - 1000) * 1000 - 100) / 1000;
     });
     check_data_range(data_gen, 1, 1102, 1103, -3.9);
+    check_stable(data_gen);
 }
 
 TEST_CASE("Conditional ramp") {
@@ -560,6 +586,7 @@ TEST_CASE("Conditional ramp") {
     check_data_range(data_gen, 0, 201, 1002, 1.9);
     check_data_range(data_gen, 1, 0, 1001, 2.6);
     check_data_range(data_gen, 1, 1001, 1002, 2.0);
+    check_stable(data_gen);
 }
 
 TEST_CASE("Conditional ramp (vector)") {
@@ -614,4 +641,5 @@ TEST_CASE("Conditional ramp (vector)") {
     check_data_range(data_gen, 0, 201, 1002, 1.9);
     check_data_range(data_gen, 1, 0, 1001, 2.6);
     check_data_range(data_gen, 1, 1001, 1002, 2.0);
+    check_stable(data_gen);
 }

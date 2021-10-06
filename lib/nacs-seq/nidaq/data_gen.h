@@ -72,9 +72,9 @@ public:
 
     std::vector<Pulse> &get_pulses(uint32_t chn);
     // Sort pulses and generate active_times
-    void compute_times();
+    void compute_times() const;
     // Compute times must be called before generate data
-    void generate_data();
+    void generate_data() const;
 
     int64_t get_time(uint32_t idx) const;
     double get_value(uint32_t idx) const;
@@ -87,12 +87,12 @@ public:
     HostSeq::Value *values;
 
     // Outputs
-    std::vector<std::pair<int64_t,int64_t>> active_times;
-    size_t nsamples;
-    std::vector<double> data;
+    mutable std::vector<std::pair<int64_t,int64_t>> active_times;
+    mutable size_t nsamples;
+    mutable std::vector<double> data;
 private:
 
-    std::vector<std::vector<Pulse>> m_pulses;
+    mutable std::vector<std::vector<Pulse>> m_pulses;
 };
 
 }
