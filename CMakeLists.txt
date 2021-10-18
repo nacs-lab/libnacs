@@ -14,9 +14,15 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}"
 if(WIN32 OR CYGWIN OR MINGW OR MSYS)
   set(IS_WINDOWS True)
   set(IS_UNIX False)
+  set(IS_MAC False)
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(IS_WINDOWS False)
+  set(IS_UNIX False)
+  set(IS_MAC True)
 else()
   set(IS_WINDOWS False)
   set(IS_UNIX True)
+  set(IS_MAC False)
 endif()
 
 # Options
@@ -100,7 +106,11 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_definitions(-Wno-unknown-warning-option)
 endif()
 
-set(LINKER_FLAGS -Wl,--as-needed -Wl,--no-undefined -Wl,--gc-sections -pthread -fno-math-errno)
+if(IS_WINDOWS OR IS_UNIX)
+  set(LINKER_FLAGS -Wl,--as-needed -Wl,--no-undefined -Wl,--gc-sections -pthread -fno-math-errno)
+else()
+  set(LINKER_FLAGS -Wl, -pthread -fno-math-errno)
+endif()
 
 if(IS_WINDOWS)
   # GCC is somehow not happy about the `<inttypes.h>` we find even though it appears to work
@@ -120,7 +130,7 @@ if(IS_WINDOWS)
   # Workaround CMake bug for Clang
   set(CMAKE_ASM_COMPILE_OPTIONS_PIC)
   set(CMAKE_ASM_COMPILE_OPTIONS_PIE)
-else()
+elseif(IS_UNIX)
   # Do no use `-Bsymbolic`.
   # The difference between that and `-Bsymbolic-functions` is that `-Bsymbolic`
   # also cause all the global variables to refer to the local version.

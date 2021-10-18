@@ -1,6 +1,6 @@
 #
 
-if(IS_UNIX)
+if(IS_UNIX OR IS_MAC)
   add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/nacs_lib_names.h"
     COMMAND "${CMAKE_COMMAND}"
     "-DOUTPUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/nacs_lib_names.h"
@@ -17,49 +17,87 @@ add_custom_target(nacs-lib-names ALL
   DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/nacs_lib_names.h")
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
-set(nacs_utils_HDRS
-  container.h
-  dlload.h
-  errors.h
-  fd_utils.h
-  features_aarch32.h
-  features_aarch64.h
-  features_x86.h
-  ir.h
-  log.h
-  macros.h
-  mem.h
-  number.h
-  processor.h
-  signals.h
-  streams.h
-  term.h
-  thread.h
-  timer.h
-  tweezer.h
-  utils.h
-  wavemeter.h
-  zmq_utils.h)
-set(nacs_utils_SRCS
-  dlload.cpp
-  errors.cpp
-  fd_utils.cpp
-  interp.cpp
-  ir.cpp
-  ir-interp-shim.S
-  log.cpp
-  mem.cpp
-  number.cpp
-  number_simd.S
-  processor.cpp
-  streams.cpp
-  term.cpp
-  thread.cpp
-  timer.cpp
-  tweezer.cpp
-  utils.cpp
-  wavemeter.cpp
-  zmq_utils.cpp)
+if (IS_UNIX OR IS_WINDOWS)
+  set(nacs_utils_HDRS
+    container.h
+    dlload.h
+    errors.h
+    fd_utils.h
+    features_aarch32.h
+    features_aarch64.h
+    features_x86.h
+    ir.h
+    log.h
+    macros.h
+    mem.h
+    number.h
+    processor.h
+    signals.h
+    streams.h
+    term.h
+    thread.h
+    timer.h
+    tweezer.h
+    utils.h
+    wavemeter.h
+    zmq_utils.h)
+  set(nacs_utils_SRCS
+    dlload.cpp
+    errors.cpp
+    fd_utils.cpp
+    interp.cpp
+    ir.cpp
+    ir-interp-shim.S
+    log.cpp
+    mem.cpp
+    number.cpp
+    number_simd.S
+    processor.cpp
+    streams.cpp
+    term.cpp
+    thread.cpp
+    timer.cpp
+    tweezer.cpp
+    utils.cpp
+    wavemeter.cpp
+    zmq_utils.cpp)
+elseif(IS_MAC)
+  set(nacs_utils_HDRS
+    container.h
+    dlload.h
+    fd_utils.h
+    features_aarch32.h
+    features_aarch64.h
+    features_x86.h
+    log.h
+    macros.h
+    mem.h
+    number.h
+    processor.h
+    signals.h
+    streams.h
+    thread.h
+    timer.h
+    utils.h
+    wavemeter.h
+    zmq_utils.h)
+  set(nacs_utils_SRCS
+    dlload.cpp
+    fd_utils.cpp
+    log.cpp
+    mem.cpp
+    number.cpp
+    number_simd.S
+    processor.cpp
+    streams.cpp
+    thread.cpp
+    timer.cpp
+    utils.cpp
+    wavemeter.cpp
+    zmq_utils.cpp)
+else()
+  message(FATAL_ERROR "Operating system unknown!")
+endif()
 set(nacs_utils_LINKS m pthread PkgConfig::ZMQ)
 set_source_files_properties(number.cpp
   PROPERTIES COMPILE_FLAGS "-ffp-contract=fast")
@@ -158,7 +196,7 @@ if(ENABLE_LLVM)
     target_link_libraries(nacs-utils PRIVATE ${SLEEF_LIBRARIES})
   endif()
 endif()
-if(IS_UNIX)
+if(IS_UNIX OR IS_MAC)
   target_link_libraries(nacs-utils PRIVATE dl)
 endif()
 target_link_libraries(nacs-utils PUBLIC ${nacs_utils_LINKS})
