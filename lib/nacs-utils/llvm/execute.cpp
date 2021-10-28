@@ -373,8 +373,11 @@ NACS_EXPORT() uint64_t Engine::load(const char *p, size_t len, const Resolver::c
 {
     MemoryBufferRef buff(StringRef(p, len), "");
     auto obj = object::ObjectFile::createObjectFile(buff);
-    if (!obj)
+    if (!obj) {
+        m_errstr.clear();
+        raw_string_ostream(m_errstr) << obj.takeError();
         return 0;
+    }
     return load(*(*obj), cb);
 }
 
