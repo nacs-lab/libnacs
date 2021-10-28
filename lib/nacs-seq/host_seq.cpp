@@ -81,9 +81,15 @@ NACS_EXPORT() void HostSeq::pre_run()
     if (m_running)
         throw std::runtime_error("Sequence already running.");
     m_running = true;
-    assert(m_cur_seq_idx < seqs.size());
-    auto &bseq = seqs[m_cur_seq_idx];
-    update_values(bseq);
+    try {
+        assert(m_cur_seq_idx < seqs.size());
+        auto &bseq = seqs[m_cur_seq_idx];
+        update_values(bseq);
+    }
+    catch (...) {
+        m_running = false;
+        throw;
+    }
     first_bseq = m_first_bseq;
     m_first_bseq = false;
 }
