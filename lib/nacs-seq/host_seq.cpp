@@ -262,7 +262,7 @@ bool HostSeq::propagate_measure(const BasicSeq &bseq, uint32_t i)
         bseq.evals[bseq.ndirect + idx](values.data());
         auto assume_idx = bseq.assumptions_idx[idx];
         if (assume_idx != uint32_t(-1)) {
-            check_assumption(bseq, bseq.assumptions[bseq.ndirect_assumes + assume_idx]);
+            check_assumption(bseq, bseq.assumptions[assume_idx]);
         }
     }
     bseq.m_measure_filled[i] = true;
