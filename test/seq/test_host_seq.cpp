@@ -2497,3 +2497,108 @@ TEST_CASE("cond") {
     REQUIRE(host_seq.post_run() == 0);
     REQUIRE(host_seq.cur_seq_idx() == uint32_t(-1));
 }
+
+TEST_CASE("measure0") {
+    //
+
+    // Const:
+    //   C0[V0]: time (0)
+    // Global Value:
+    // Channel:
+    //   CV1[V1]: Channel 1 value
+    // BS1:
+    //   Values:
+    //     MV0[V2]: measure value of M1
+    //   Pulse:
+    //     M1: @C0 measure=MV0
+    //     P1: @C0 val=MV0
+    //   Branch:
+    //     Default: end
+    Seq::HostSeq host_seq;
+    host_seq.nconsts = 1;
+    host_seq.nglobals = 0;
+    host_seq.nglobal_vals = 0;
+    host_seq.nchannels = 1;
+    host_seq.nshared = (host_seq.nconsts + host_seq.nglobals +
+                        host_seq.nglobal_vals + host_seq.nchannels);
+    host_seq.npublic_globals = 0;
+
+    host_seq.values.resize(3);
+    host_seq.values[0].i64 = 0;
+    host_seq.default_values.resize(1);
+    host_seq.default_values[0].f64 = 0.2;
+    host_seq.types.resize(1); // nconst + nglobals + nglobal_vals
+    // Const
+    host_seq.types[0] = Seq::HostSeq::Type::Int64;
+
+    host_seq.depends.resize(0); // nglobal_vals
+    host_seq.global_evals.resize(0); // nglobal_vals
+
+    host_seq.seqs.resize(1);
+
+    {
+        auto &host_bseq = host_seq.seqs[0];
+        host_bseq.id = 1;
+
+        host_bseq.nmeasure = 1;
+        host_bseq.ndirect = 0;
+        host_bseq.nneed_order = 0;
+
+        host_bseq.types.resize(0); // ndirect + nneed_order
+        host_bseq.evals.resize(0); // ndirect + nneed_order
+
+        host_bseq.global_refs.resize(0);
+        host_bseq.reverse_depends.resize(1); // nmeasure
+        host_bseq.deps_count.resize(0); // nneed_order
+
+        host_bseq.pulses.resize(2);
+        host_bseq.pulses[0] = Seq::HostSeq::Pulse{
+            .id = 1, .time = 0, .measure = 0, .len = uint32_t(-2),
+            .value = uint32_t(-1), .chn = 1, .ramp_func = nullptr,
+            .endvalue = uint32_t(-1), .cond = uint32_t(-1)
+        };
+        host_bseq.pulses[1] = Seq::HostSeq::Pulse{
+            .id = 2, .time = 0, .measure = uint32_t(-1), .len = uint32_t(-1),
+            .value = 2, .chn = 1, .ramp_func = nullptr, .endvalue = 2, .cond = uint32_t(-1)
+        };
+        host_bseq.assignments.resize(0);
+        host_bseq.assumptions.resize(0);
+        host_bseq.branches.resize(0);
+        host_bseq.default_branch = -1;
+        host_bseq.endtimes.resize(1);
+        host_bseq.endtimes[0] = 0;
+
+        host_bseq.ndirect_assumes = 0;
+        host_bseq.assumptions_idx.resize(0); // nneed_order
+
+        host_bseq.cond_global_refs.resize(0);
+    }
+
+    host_seq.init();
+    auto &ages = host_seq.global_ages();
+    REQUIRE(ages.size() == 0);
+
+    REQUIRE(host_seq.cur_seq_idx() == uint32_t(-1));
+    host_seq.init_run();
+    REQUIRE(host_seq.cur_seq_idx() == uint32_t(0));
+
+    host_seq.pre_run();
+    auto host_bseq = &host_seq.seqs[0];
+    REQUIRE(host_bseq->length == 0);
+    REQUIRE(host_seq.start_values[0].f64 == 0.2);
+
+    REQUIRE(host_seq.values[0].i64 == 0);
+    REQUIRE(host_seq.values[1].f64 == 0.2);
+    REQUIRE(host_seq.values[2].f64 == 0.2);
+
+    REQUIRE(host_bseq->pulses.size() == 2);
+    REQUIRE(host_bseq->pulses[0].id == 1); // measure
+    REQUIRE(host_bseq->pulses[0].chn == 1);
+    REQUIRE(host_bseq->pulses[0].len == uint32_t(-2));
+    REQUIRE(host_bseq->pulses[1].id == 2);
+    REQUIRE(host_bseq->pulses[1].chn == 1);
+    REQUIRE(host_seq.values[host_bseq->pulses[1].endvalue].f64 == 0.2);
+
+    REQUIRE(host_seq.post_run() == 0);
+    REQUIRE(host_seq.cur_seq_idx() == uint32_t(-1));
+}

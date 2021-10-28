@@ -464,6 +464,9 @@ void HostSeq::update_values(const BasicSeq &bseq)
 
     for (auto &pulse: bseq.pulses) {
         assert(value_computed(bseq, pulse.time));
+        // measure pulse, not output pulse
+        if (pulse.len == uint32_t(-2))
+            continue;
         auto t = get_time(pulse.time);
         if (t != 0)
             break;
