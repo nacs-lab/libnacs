@@ -179,11 +179,11 @@ public:
     {
         auto cache = m_writer_cache;
         auto read_p = m_writer_cache.read;
-        if (((cache.write_p - read_p) & cache.buff_sz_mask) <= sz)
+        if (((cache.write - read_p) & cache.buff_sz_mask) <= sz)
             return true;
         sync_writer();
         read_p = m_writer_cache.read;
-        return ((cache.write_p - read_p) & cache.buff_sz_mask) <= sz;
+        return ((cache.write - read_p) & cache.buff_sz_mask) <= sz;
     }
 
     // The reader/writer should call these functions
