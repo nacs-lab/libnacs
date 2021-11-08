@@ -56,6 +56,8 @@ class Manager {
     struct DeviceInfo {
         std::string backend;
         YAML::Node config;
+        uint32_t n_restarts = 0;
+        bool marked; // flag for mark-and-sweep when updating config
     };
     struct LoggerRegister {
         LoggerRegister(Manager*);
@@ -177,6 +179,11 @@ public:
     {
         return m_engine;
     }
+
+    // Log device restart API
+    bool add_device_restart(const std::string &name, uint32_t n = 1);
+    uint32_t get_device_restart(const char *dname);
+    bool set_device_restart(const std::string &name, uint32_t n = 0);
 
     // Error+warning API for python/matlab
     uint8_t *take_messages(size_t *sz);
