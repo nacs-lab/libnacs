@@ -391,6 +391,26 @@ void Manager::unref_data(uint64_t id)
     m_datainfo.erase(it);
 }
 
+NACS_EXPORT() uint32_t Manager::get_device_restart(const char *dname)
+{
+    // This function should not throw. Returns uint32_t(-1) if device not found.
+    auto it = m_device_info.find(dname);
+    if (it != m_device_info.end())
+        return it->second.n_restarts;
+    return uint32_t(-1);
+}
+
+NACS_EXPORT() bool Manager::add_device_restart(const std::string &name, uint32_t n)
+{
+    auto it = m_device_info.find(name);
+    if (it != m_device_info.end()) {
+        it->second.n_restarts = it->second.n_restarts + n;
+        return true;
+    }
+    return false;
+}
+
+
 NACS_EXPORT() void Manager::load_config_file(const char *fname)
 {
     add_debug_printf("Loading config file %s\n", fname);
@@ -433,7 +453,6 @@ void Manager::update_config(const YAML::Node &config)
     else {
         m_max_seq_length = 0;
     }
-    m_device_info.clear();
     m_device_order.clear();
     m_use_dummy_device = false;
     if (auto dummy_devices_node = config["use_dummy_device"];
@@ -452,11 +471,24 @@ void Manager::update_config(const YAML::Node &config)
             auto backend_node = dev_info["backend"];
             if (!backend_node)
                 throw std::runtime_error("Invalid device info: missing `backend`.");
-            m_device_info.emplace(dev_name,
-                                  DeviceInfo{backend_node.as<std::string>(),
-                                      dev_info["config"]});
+            auto &info = m_device_info[dev_name];
+            info.backend = backend_node.as<std::string>();
+            info.config = dev_info["config"];
+            info.marked = true;
             m_device_order.push_back(std::move(dev_name));
         }
+    }
+    for (auto it = m_device_info.begin(), end = m_device_info.end(); it != end;) {
+        auto &this_info = it->second;
+        if (!this_info.marked) {
+            // not marked, so delete
+            it = m_device_info.erase(it);
+            continue;
+        }
+        else {
+            this_info.marked = false; // remove the mark
+        }
+        ++it;
     }
 }
 
@@ -645,6 +677,11 @@ NACS_EXPORT() void nacs_seq_manager_free_sequence(Manager *mgr, Manager::ExpSeq 
     mgr->call_guarded([&] {
         mgr->free_sequence(seq);
     });
+}
+
+NACS_EXPORT() uint32_t nacs_seq_manager_get_device_restart(Manager *mgr, const char *dname)
+{
+    return mgr->get_device_restart(dname);
 }
 
 NACS_EXPORT() void nacs_seq_manager_load_config_file(Manager *mgr, const char *fname)
