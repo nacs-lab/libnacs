@@ -139,6 +139,8 @@ public:
         };
         std::unique_ptr<Dump> dump;
 
+        uint32_t refresh_device_restart(const char *dname);
+
     private:
         template<typename Str>
         Device *_get_device(Str &&name, bool create);
