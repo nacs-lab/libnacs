@@ -57,6 +57,7 @@ public:
     static Backend *cast(Device *dev);
     static const Backend *cast(const Device *dev);
     //llvm::ArrayRef<uint8_t> get_bytecode(uint32_t bseq_id);
+
 private:
     void add_channel(uint32_t chn_id, const std::string &chn_name) override;
     void prepare (Manager::ExpSeq &expseq, Compiler &compiler) override;
@@ -70,7 +71,7 @@ private:
     void wait(HostSeq &host_seq) override;
     void finish_run(HostSeq &host_seq) override;
     // void config(const YAML::Node&) override;
-
+    uint32_t refresh_restart() override;
     void sort_channels();
     // Return whether pregeneration competed
     bool pregenerate(Manager::ExpSeq &expseq, Compiler &compiler, uint32_t seq_idx);
