@@ -257,7 +257,7 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
         auto &be_bseq = m_seqs[idx]; //backend basic seq
         bool all_time_known = true;
         bool all_val_known = true;
-        bool has_pulse = false;
+        //bool has_pulse = false;
 
         be_bseq.val_map.resize(host_seq.nshared + host_bseq.nmeasure + host_bseq.ndirect + host_bseq.nneed_order, uint32_t(-1));
         uint32_t nspecific_map = 0;
@@ -281,7 +281,7 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
             for (auto &pulse: chn_info.pulses) {
                 if (pulse.is_measure())
                     continue;
-                has_pulse = true;
+                //has_pulse = true;
                 auto len = pulse.len();
                 if (len)
                     all_time_known &= map_slot(compiler.var_slot(len));
@@ -335,7 +335,6 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
         // A new cgctx that emits code in the new module
         LLVM::Codegen::Context cgctx(&mod);
 
-        
         std::vector<RampInfo> ramp_funcs;
         auto &bseq = bseqs[idx];
         auto &chn_infos = bseq->get_channel_infos();
@@ -577,6 +576,7 @@ void Backend::generate (Manager::ExpSeq &expseq, Compiler &compiler)
 }
 void Backend::init_run(HostSeq &host_seq)
 {
+    refresh_restart();
     reqServerInfo();
 }
 void Backend::populate_values(HostSeq &host_seq, BasicSeq &bseq)
@@ -588,6 +588,7 @@ void Backend::populate_values(HostSeq &host_seq, BasicSeq &bseq)
 }
 void Backend::prepare_run(HostSeq &host_seq)
 {
+    refresh_restart();
 }
 void Backend::pre_run(HostSeq &host_seq)
 {
@@ -719,6 +720,7 @@ void Backend::wait(HostSeq &host_seq)
 }
 void Backend::finish_run(HostSeq &host_seq)
 {
+    refresh_restart();
 }
 uint8_t Backend::get_pulse_type(Backend::ChnType type, bool is_fn, bool is_vector){
     // map from chn_info and whether it's a vector to a uint8_t describing the pulse type
@@ -852,6 +854,22 @@ NACS_EXPORT() void Backend::reqServerInfo()
         write(id_bc, (uint32_t) 0, m_server_id);
         write(id_bc, (uint32_t) 8, m_client_id);
     }
+}
+
+NACS_EXPORT() uint32_t Backend::refresh_restart()
+{
+    if (!m_sock)
+        throw std::runtime_error("Backend socket not configured");
+    auto reply = m_sock->send_msg([&] (auto &sock) {
+        ZMQ::send(sock, ZMQ::str_msg("req_restarts"));
+    }).get();
+    if (reply.empty())
+        throw std::runtime_error("restart number not obtained");
+    auto rep_data = (const uint8_t*)reply[0].data();
+    uint32_t n_restarts;
+    memcpy(&n_restarts, rep_data, sizeof(n_restarts));
+    mgr().set_device_restart(name(), n_restarts);
+    return n_restarts;
 }
 
 }
