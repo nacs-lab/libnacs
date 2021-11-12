@@ -263,6 +263,16 @@ NACS_EXPORT() uint32_t Manager::ExpSeq::post_run()
     return id;
 }
 
+NACS_EXPORT() uint32_t Manager::ExpSeq::refresh_device_restart(const char *dname)
+{
+    auto it = m_devices.find(dname);
+    if (it != m_devices.end()) {
+        Device* dev = it->second.get();
+        return dev->refresh_restart();
+    }
+    return uint32_t(-1);
+}
+
 NACS_EXPORT_ Manager::Manager()
 {
 }
@@ -828,6 +838,13 @@ NACS_EXPORT() const uint8_t *nacs_seq_manager_expseq_get_seq_opt_dump(Manager::E
                                                                       size_t *sz)
 {
     return expseq->get_seq_opt_dump(sz);
+}
+
+NACS_EXPORT() uint32_t nacs_seq_manager_expseq_refresh_device_restart(Manager::ExpSeq *expseq, const char *dname)
+{
+    return expseq->mgr().call_guarded([&] {
+        return expseq->refresh_device_restart(dname);
+    }, uint32_t(-1));
 }
 
 }

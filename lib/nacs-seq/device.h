@@ -78,7 +78,10 @@ public:
     {
         return m_mgr;
     }
-
+    virtual uint32_t refresh_restart()
+    {
+        return 0;
+    }
 private:
 
     Manager &m_mgr;
