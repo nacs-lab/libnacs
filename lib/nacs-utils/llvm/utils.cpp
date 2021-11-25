@@ -206,7 +206,13 @@ NACS_INTERNAL void FunctionMover::clone_body(Function *F)
     }
 
     SmallVector<ReturnInst*, 8> Returns;
-    CloneFunctionInto(newf, F, m_vmap, true, Returns, "", nullptr, nullptr, this);
+    CloneFunctionInto(newf, F, m_vmap,
+#if LLVM_VERSION_MAJOR >= 13
+                      CloneFunctionChangeType::DifferentModule,
+#else
+                      true,
+#endif
+                      Returns, "", nullptr, nullptr, this);
 }
 
 NACS_EXPORT() Function *FunctionMover::clone_function(Function *F)
