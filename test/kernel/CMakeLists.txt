@@ -12,4 +12,4 @@ endfunction()
 
 add_kernel_test(getver)
 add_kernel_test(pulse_ctl)
-# add_kernel_test(dma_buff)
+add_kernel_test(dma_buff)

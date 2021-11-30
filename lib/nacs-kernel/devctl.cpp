@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2015 - 2015 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2015 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -16,7 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "devctl_p.h"
+#include "devctl.h"
+
 #include "device_p.h"
 
 #include "../nacs-utils/utils.h"
@@ -42,34 +43,24 @@ mapPulseCtrl()
     return mapFile(getFD(), 0, 32 * 4);
 }
 
-#if 0
-void*
-allocDmaBuffer(size_t len)
+NACS_EXPORT() void *allocOCMBuffer(size_t len)
 {
     return mapFile(getFD(), page_size, len);
 }
 
-void*
-reallocDmaBuffer(void *buff, size_t old_size, size_t new_size)
-{
-    return mremap(buff, old_size, new_size, MREMAP_MAYMOVE);
-}
-
-void
-freeDmaBuffer(void *buff, size_t old_size)
+NACS_EXPORT() void freeOCMBuffer(void *buff, size_t old_size)
 {
     munmap(buff, old_size);
 }
 
-void
-sendDmaBuffer(void *buff, size_t len)
+NACS_EXPORT() void *allocDMABuffer(size_t len)
 {
-    knacs_dma_buffer_t kernel_buff = {
-        (unsigned long)len,
-        buff
-    };
-    checkErrno(ioctl(getFD(), KNACS_SEND_DMA_BUFFER, &kernel_buff));
+    return mapFile(getFD(), page_size * 2, len);
 }
-#endif
+
+NACS_EXPORT() void freeDMABuffer(void *buff, size_t old_size)
+{
+    munmap(buff, old_size);
+}
 
 }

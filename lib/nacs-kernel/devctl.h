@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2015 - 2015 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2015 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -18,6 +18,8 @@
 
 #include <knacs/knacs.h>
 
+#include <stdlib.h>
+
 #ifndef __NACS_KERNEL_DEVCTL_H__
 #define __NACS_KERNEL_DEVCTL_H__
 
@@ -25,6 +27,12 @@ namespace NaCs::Kernel {
 
 knacs_version_t getDriverVersion();
 void *mapPulseCtrl();
+
+void *allocOCMBuffer(size_t);
+void freeOCMBuffer(void*, size_t);
+
+void *allocDMABuffer(size_t);
+void freeDMABuffer(void*, size_t);
 
 }
 
