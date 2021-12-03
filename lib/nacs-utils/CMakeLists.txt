@@ -63,7 +63,7 @@ set(nacs_utils_SRCS
 set(nacs_utils_LINKS m pthread PkgConfig::ZMQ)
 set_source_files_properties(number.cpp
   PROPERTIES COMPILE_FLAGS "-ffp-contract=fast")
-if(IS_UNIX)
+if(IS_UNIX AND NOT APPLE)
   # For shm_*
   set(nacs_utils_LINKS ${nacs_utils_LINKS} rt)
 endif()
