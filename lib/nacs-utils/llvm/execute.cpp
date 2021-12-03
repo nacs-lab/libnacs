@@ -322,8 +322,21 @@ NACS_EXPORT() uintptr_t Resolver::resolve_ir_sym(const std::string &orig_name)
     return (uintptr_t)DL::sym(nullptr, orig_name.c_str());
 }
 
-uintptr_t Resolver::find_extern(const std::string &name)
+uintptr_t Resolver::find_extern(const std::string &orig_name)
 {
+#if NACS_OS_DARWIN
+    std::string name;
+    // On macOS, the symbols comes with a `_` prefix in the assembly code
+    // but dlsym wants the symbol without the prefix so we'll remove it here...
+    if (orig_name.size() >= 1 && orig_name[0] == '_') {
+        name = orig_name.substr(1);
+    }
+    else {
+        name = orig_name;
+    }
+#else
+    const std::string &name = orig_name;
+#endif
     if (m_cb) {
         if (auto ptr = (*m_cb)(name)) {
             return ptr;

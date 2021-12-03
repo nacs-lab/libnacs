@@ -82,6 +82,7 @@ set(nacs_utils_llvm_HDRS
   llvm/analysis.h
   llvm/codegen.h
   llvm/compile.h
+  llvm/elim_macho_prefix.h
   llvm/execute.h
   llvm/global_rename.h
   llvm/inst_simplify.h
@@ -94,6 +95,7 @@ set(nacs_utils_llvm_SRCS
   llvm/analysis.cpp
   llvm/codegen.cpp
   llvm/compile.cpp
+  llvm/elim_macho_prefix.cpp
   llvm/execute.cpp
   llvm/global_rename.cpp
   llvm/inst_simplify.cpp

@@ -17,10 +17,12 @@
  *************************************************************************/
 
 #include "compile.h"
-#include "vector_abi.h"
+
+#include "elim_macho_prefix.h"
 #include "inst_simplify.h"
 #include "lower_vector.h"
 #include "utils.h"
+#include "vector_abi.h"
 
 #include "../utils.h"
 
@@ -132,7 +134,8 @@ void addOptimization(legacy::PassManagerBase &pm)
 
 NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M, bool opt)
 {
-    M->setTargetTriple(tgt->getTargetTriple().getTriple());
+    auto &triple = tgt->getTargetTriple();
+    M->setTargetTriple(triple.getTriple());
     M->setDataLayout(tgt->createDataLayout());
     // By default, if we didn't need executable stack, LLVM emits
     // `.note.GNU-stack` section to disable executable stack.
@@ -152,6 +155,8 @@ NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Modu
     legacy::PassManager pm;
     pm.add(new TargetLibraryInfoWrapperPass(Triple(tgt->getTargetTriple())));
     pm.add(createTargetTransformInfoWrapperPass(tgt->getTargetIRAnalysis()));
+    if (triple.getObjectFormat() == Triple::ObjectFormatType::MachO)
+        pm.add(createElimMachOPrefixPass());
     if (opt)
         addOptimization(pm);
     MCContext *ctx;
