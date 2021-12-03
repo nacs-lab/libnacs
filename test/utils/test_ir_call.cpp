@@ -82,104 +82,157 @@ struct CallTester {
 };
 
 TEST_CASE("Call") {
-    CallTester<double>::test(IR::Builtins::acos, "acos", ::acos, {-1, -0.5, 0, 0.5, 1});
-    CallTester<double>::test(IR::Builtins::acosh, "acosh", ::acosh, {2.5, 2, 1.5, 1});
-    CallTester<double>::test(IR::Builtins::asin, "asin", ::asin, {-1, -0.5, 0, 0.5, 1});
-    CallTester<double>::test(IR::Builtins::asinh, "asinh", ::asinh, {-1, -1.5, 0, 1.5, 1});
-    CallTester<double>::test(IR::Builtins::atan, "atan", ::atan, {-1, -1.5, 0, 1.5, 1});
-    CallTester<double>::test(IR::Builtins::atanh, "atanh", ::atanh, {-0.9, -0.5, 0, 0.5, 0.9});
-    CallTester<double>::test(IR::Builtins::cbrt, "cbrt", ::cbrt, {-10, -5, 0, 5, 10});
-    CallTester<double>::test(IR::Builtins::ceil, "ceil", ::ceil,
+    CallTester<double>::test(IR::Builtins::acos, "acos",
+                             static_cast<double(*)(double)>(::acos), {-1, -0.5, 0, 0.5, 1});
+    CallTester<double>::test(IR::Builtins::acosh, "acosh",
+                             static_cast<double(*)(double)>(::acosh), {2.5, 2, 1.5, 1});
+    CallTester<double>::test(IR::Builtins::asin, "asin",
+                             static_cast<double(*)(double)>(::asin), {-1, -0.5, 0, 0.5, 1});
+    CallTester<double>::test(IR::Builtins::asinh, "asinh",
+                             static_cast<double(*)(double)>(::asinh), {-1, -1.5, 0, 1.5, 1});
+    CallTester<double>::test(IR::Builtins::atan, "atan",
+                             static_cast<double(*)(double)>(::atan), {-1, -1.5, 0, 1.5, 1});
+    CallTester<double>::test(IR::Builtins::atanh, "atanh",
+                             static_cast<double(*)(double)>(::atanh),
+                             {-0.9, -0.5, 0, 0.5, 0.9});
+    CallTester<double>::test(IR::Builtins::cbrt, "cbrt",
+                             static_cast<double(*)(double)>(::cbrt), {-10, -5, 0, 5, 10});
+    CallTester<double>::test(IR::Builtins::ceil, "ceil",
+                             static_cast<double(*)(double)>(::ceil),
                              {-1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1});
-    CallTester<double>::test(IR::Builtins::cos, "cos", ::cos,
+    CallTester<double>::test(IR::Builtins::cos, "cos",
+                             static_cast<double(*)(double)>(::cos),
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::cosh, "cosh", ::cosh,
+    CallTester<double>::test(IR::Builtins::cosh, "cosh",
+                             static_cast<double(*)(double)>(::cosh),
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::erf, "erf", ::erf,
+    CallTester<double>::test(IR::Builtins::erf, "erf",
+                             static_cast<double(*)(double)>(::erf),
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::erfc, "erfc", ::erfc,
+    CallTester<double>::test(IR::Builtins::erfc, "erfc",
+                             static_cast<double(*)(double)>(::erfc),
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::exp, "exp", ::exp,
+    CallTester<double>::test(IR::Builtins::exp, "exp",
+                             static_cast<double(*)(double)>(::exp),
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::exp10, "exp10", [] (double x) { return pow(10, x); },
+    CallTester<double>::test(IR::Builtins::exp10, "exp10",
+                             [] (double x) { return pow(10, x); },
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::exp2, "exp2", [] (double x) { return pow(2, x); },
+    CallTester<double>::test(IR::Builtins::exp2, "exp2",
+                             [] (double x) { return pow(2, x); },
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::expm1, "expm1", ::expm1,
+    CallTester<double>::test(IR::Builtins::expm1, "expm1",
+                             static_cast<double(*)(double)>(::expm1),
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
     CallTester<double>::test(IR::Builtins::abs, "abs", [] (double x) { return abs(x); },
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::floor, "floor", ::floor,
+    CallTester<double>::test(IR::Builtins::floor, "floor",
+                             static_cast<double(*)(double)>(::floor),
                              {-1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1});
-    CallTester<double>::test(IR::Builtins::gamma, "gamma", ::tgamma,
+    CallTester<double>::test(IR::Builtins::gamma, "gamma",
+                             static_cast<double(*)(double)>(::tgamma),
                              {-10.3, -5.2, -1.1, -0.9, -0.1, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::j0, "j0", ::j0,
+    CallTester<double>::test(IR::Builtins::j0, "j0",
+                             static_cast<double(*)(double)>(::j0),
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::j1, "j1", ::j1,
+    CallTester<double>::test(IR::Builtins::j1, "j1",
+                             static_cast<double(*)(double)>(::j1),
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::lgamma, "lgamma", ::lgamma,
+    CallTester<double>::test(IR::Builtins::lgamma, "lgamma",
+                             static_cast<double(*)(double)>(::lgamma),
                              {-10.3, -5.2, -1.1, -0.9, -0.1, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::log, "log", ::log, {0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::log10, "log10", ::log10, {0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::log1p, "log1p", ::log1p, {-0.9, -0.1, 0.1, 4, 9});
-    CallTester<double>::test(IR::Builtins::log2, "log2", ::log2, {0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::rint, "rint", ::rint,
+    CallTester<double>::test(IR::Builtins::log, "log",
+                             static_cast<double(*)(double)>(::log),
+                             {0.1, 0.9, 1.1, 5, 10});
+    CallTester<double>::test(IR::Builtins::log10, "log10",
+                             static_cast<double(*)(double)>(::log10),
+                             {0.1, 0.9, 1.1, 5, 10});
+    CallTester<double>::test(IR::Builtins::log1p, "log1p",
+                             static_cast<double(*)(double)>(::log1p),
+                             {-0.9, -0.1, 0.1, 4, 9});
+    CallTester<double>::test(IR::Builtins::log2, "log2",
+                             static_cast<double(*)(double)>(::log2),
+                             {0.1, 0.9, 1.1, 5, 10});
+    CallTester<double>::test(IR::Builtins::rint, "rint",
+                             static_cast<double(*)(double)>(::rint),
                              {-1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1});
-    CallTester<double>::test(IR::Builtins::round, "round", ::round,
+    CallTester<double>::test(IR::Builtins::round, "round",
+                             static_cast<double(*)(double)>(::round),
                              {-1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1});
-    CallTester<double>::test(IR::Builtins::sin, "sin", ::sin,
+    CallTester<double>::test(IR::Builtins::sin, "sin",
+                             static_cast<double(*)(double)>(::sin),
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::sinh, "sinh", ::sinh,
+    CallTester<double>::test(IR::Builtins::sinh, "sinh",
+                             static_cast<double(*)(double)>(::sinh),
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::sqrt, "sqrt", ::sqrt, {0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::tan, "tan", ::tan,
+    CallTester<double>::test(IR::Builtins::sqrt, "sqrt",
+                             static_cast<double(*)(double)>(::sqrt),
+                             {0, 0.1, 0.9, 1.1, 5, 10});
+    CallTester<double>::test(IR::Builtins::tan, "tan",
+                             static_cast<double(*)(double)>(::tan),
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::tanh, "tanh", ::tanh,
+    CallTester<double>::test(IR::Builtins::tanh, "tanh",
+                             static_cast<double(*)(double)>(::tanh),
                              {-10, -5, -1.1, -0.9, -0.1, 0, 0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::y0, "y0", ::y0, {0.1, 0.9, 1.1, 5, 10});
-    CallTester<double>::test(IR::Builtins::y1, "y1", ::y1, {0.1, 0.9, 1.1, 5, 10});
+    CallTester<double>::test(IR::Builtins::y0, "y0",
+                             static_cast<double(*)(double)>(::y0), {0.1, 0.9, 1.1, 5, 10});
+    CallTester<double>::test(IR::Builtins::y1, "y1",
+                             static_cast<double(*)(double)>(::y1), {0.1, 0.9, 1.1, 5, 10});
 
-    CallTester<double,double>::test(IR::Builtins::atan2, "atan2", ::atan2,
+    CallTester<double,double>::test(IR::Builtins::atan2, "atan2",
+                                    static_cast<double(*)(double,double)>(::atan2),
                                     {-10, -5, -1, 0, 1, 5, 10},
                                     {-10, -5, -1, 0, 1, 5, 10});
-    CallTester<double,double>::test(IR::Builtins::copysign, "copysign", ::copysign,
+    CallTester<double,double>::test(IR::Builtins::copysign, "copysign",
+                                    static_cast<double(*)(double,double)>(::copysign),
                                     {-10, -5, -1, 0, 1, 5, 10},
                                     {-10, -5, -1, 0, 1, 5, 10});
-    CallTester<double,double>::test(IR::Builtins::fdim, "fdim", ::fdim,
+    CallTester<double,double>::test(IR::Builtins::fdim, "fdim",
+                                    static_cast<double(*)(double,double)>(::fdim),
                                     {-10, -5, -1, 0, 1, 5, 10},
                                     {-10, -5, -1, 0, 1, 5, 10});
-    CallTester<double,double>::test(IR::Builtins::max, "max", ::fmax,
+    CallTester<double,double>::test(IR::Builtins::max, "max",
+                                    static_cast<double(*)(double,double)>(::fmax),
                                     {-10, -5, -1, 0, 1, 5, 10},
                                     {-10, -5, -1, 0, 1, 5, 10});
-    CallTester<double,double>::test(IR::Builtins::min, "min", ::fmin,
+    CallTester<double,double>::test(IR::Builtins::min, "min",
+                                    static_cast<double(*)(double,double)>(::fmin),
                                     {-10, -5, -1, 0, 1, 5, 10},
                                     {-10, -5, -1, 0, 1, 5, 10});
-    CallTester<double,double>::test(IR::Builtins::mod, "mod", ::fmod,
+    CallTester<double,double>::test(IR::Builtins::mod, "mod",
+                                    static_cast<double(*)(double,double)>(::fmod),
                                     {-10, -5, -1, 0, 1, 5, 10},
                                     {-10, -5, -1, 1, 5, 10});
-    CallTester<double,double>::test(IR::Builtins::hypot, "hypot", ::hypot,
+    CallTester<double,double>::test(IR::Builtins::hypot, "hypot",
+                                    static_cast<double(*)(double,double)>(::hypot),
                                     {-10, -5, -1, 0, 1, 5, 10},
                                     {-10, -5, -1, 0, 1, 5, 10});
-    CallTester<double,double>::test(IR::Builtins::pow, "pow", ::pow,
+    CallTester<double,double>::test(IR::Builtins::pow, "pow",
+                                    static_cast<double(*)(double,double)>(::pow),
                                     {-10, -5, -1, 1, 5, 10},
                                     {-10, -5, -1, 0, 1, 5, 10});
-    CallTester<double,double>::test(IR::Builtins::remainder, "remainder", ::remainder,
+    CallTester<double,double>::test(IR::Builtins::remainder, "remainder",
+                                    static_cast<double(*)(double,double)>(::remainder),
                                     {-10, -5, -1, 0, 1, 5, 10},
                                     {-10, -5, -1, 1, 5, 10});
 
-    CallTester<double,double,double>::test(IR::Builtins::fma, "fma", ::fma,
+    CallTester<double,double,double>::test(IR::Builtins::fma, "fma",
+                                           static_cast<double(*)(double,double,double)>(::fma),
                                            {-10, -5, -1, 0, 1, 5, 10},
                                            {-10, -5, -1, 0, 1, 5, 10},
                                            {-10, -5, -1, 0, 1, 5, 10});
 
-    CallTester<double,int>::test(IR::Builtins::ldexp, "ldexp", ::ldexp,
+    CallTester<double,int>::test(IR::Builtins::ldexp, "ldexp",
+                                 static_cast<double(*)(double,int)>(::ldexp),
                                  {-10, -5, -1, 0, 1, 5, 10},
                                  {-10, -5, -1, 0, 1, 5, 10});
 
-    CallTester<int,double>::test(IR::Builtins::jn, "jn", ::jn,
+    CallTester<int,double>::test(IR::Builtins::jn, "jn",
+                                 static_cast<double(*)(int,double)>(::jn),
                                  {-10, -5, -1, 0, 1, 5, 10},
                                  {-10, -5, -1, 0, 1, 5, 10});
-    CallTester<int,double>::test(IR::Builtins::yn, "yn", ::yn,
+    CallTester<int,double>::test(IR::Builtins::yn, "yn",
+                                 static_cast<double(*)(int,double)>(::yn),
                                  {-10, -5, -1, 0, 1, 5, 10},
                                  {1, 5, 10});
 }
