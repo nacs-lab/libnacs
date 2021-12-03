@@ -23,6 +23,8 @@
 #include "../../lib/nacs-utils/dlload.h"
 #include "../../lib/nacs-utils/number.h"
 
+#include "nacs_lib_names.h"
+
 #include <math.h>
 
 #include <catch2/catch.hpp>
@@ -32,7 +34,7 @@ using namespace NaCs;
 NACS_EXPORT() int global_symbol = 1;
 
 TEST_CASE("dl") {
-    auto hdl = DL::open("libopenlibm", DL::GLOBAL | DL::NOW);
+    auto hdl = DL::open(NACS_OPENLIBM_NAME, DL::GLOBAL | DL::NOW);
     REQUIRE(hdl);
     auto psin = (double(*)(double))DL::sym(hdl, "sin");
     REQUIRE(psin);

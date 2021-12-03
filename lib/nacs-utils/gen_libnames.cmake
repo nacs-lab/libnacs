@@ -12,6 +12,12 @@ function(write_barename name file)
 endfunction()
 
 function(write_file name file)
+  if(APPLE)
+    # As a hack, we include the full path on macOS since I haven't yet found
+    # a better solution to make finding homebrew libraries easier...
+    file(APPEND "${OUTPUT_FILE}.tmp" "#define NACS_${name}_NAME \"${file}\"\n")
+    return()
+  endif()
   if(NOT CMAKE_OBJDUMP)
     write_barename("${name}" "${file}")
     return()
