@@ -983,11 +983,13 @@ std::pair<std::string,std::vector<std::string>> Info::get_llvm_target(uint32_t l
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
-#if NACS_CPU_AARCH64 || __GLIBC_PREREQ(2, 16)
-#  include <sys/auxv.h>
-#else
-#  define DYN_GETAUXVAL
-#  include "dlload.h"
+#if !NACS_OS_DARWIN
+#  if NACS_CPU_AARCH64 || __GLIBC_PREREQ(2, 16)
+#    include <sys/auxv.h>
+#  else
+#    define DYN_GETAUXVAL
+#    include "dlload.h"
+#  endif
 #endif
 
 #include <algorithm>
@@ -1009,6 +1011,16 @@ using namespace AArch32;
 #endif
 }
 
+#if NACS_OS_DARWIN
+static AArch::Info create_host_info()
+{
+    // Hard code for now.
+    std::string name = "apple-m1";
+    auto feature = AArch::Feature::apple_m1;
+    return AArch::Info(std::move(name), "", feature,
+                       AArch::Feature::mask & ~feature);
+}
+#else
 // auxval reader
 
 #ifndef AT_HWCAP
@@ -1626,6 +1638,7 @@ static AArch::Info create_host_info()
     return AArch::Info(std::move(name), "", host.second,
                        AArch::Feature::mask & ~host.second);
 }
+#endif
 
 } // (anonymous)
 
