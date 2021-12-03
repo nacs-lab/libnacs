@@ -366,7 +366,9 @@ struct InterpExeContext : public ExeContext {
 #elif defined(__aarch64__)
         uint32_t nintarg = 0;
         uint32_t nfloatarg = 0;
-        uint32_t nstack = 0;
+        uint32_t stack_offset = 0;
+        // AAPCS64 requires 8 bytes alignment for all stack slots for arguments.
+        // However, Apple deviates from this and do not require extra alignment.
         for (uint32_t i = 0; i < nargs; i++) {
             auto ty = f.vals[i];
             if (ty == Type::Float64) {
@@ -375,6 +377,14 @@ struct InterpExeContext : public ExeContext {
                     nfloatarg += 1;
                     continue;
                 }
+#  if NACS_OS_DARWIN
+                else {
+                    stack_offset = alignTo(stack_offset, 8);
+                    ptr[2 + i] = 16 + stack_offset;
+                    stack_offset += 8;
+                }
+                continue;
+#  endif
             }
             else {
                 if (nintarg < 7) {
@@ -382,9 +392,23 @@ struct InterpExeContext : public ExeContext {
                     nintarg += 1;
                     continue;
                 }
+#  if NACS_OS_DARWIN
+                else if (ty == Type::Int32) {
+                    stack_offset = alignTo(stack_offset, 4);
+                    ptr[2 + i] = 16 + stack_offset;
+                    stack_offset += 4;
+                }
+                else {
+                    ptr[2 + i] = 16 + stack_offset;
+                    stack_offset += 1;
+                }
+                continue;
+#  endif
             }
-            ptr[2 + i] = 16 + nstack * 8;
-            nstack += 1;
+#  if !NACS_OS_DARWIN
+            ptr[2 + i] = 16 + stack_offset;
+            stack_offset += 8;
+#  endif
         }
 #elif defined(__arm__)
         uint32_t nintarg = 0;

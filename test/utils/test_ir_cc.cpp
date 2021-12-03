@@ -156,7 +156,7 @@ template<int nargs, typename... Arg>
 struct Tester {
     static inline void test(IR::ExeContext *exectx)
     {
-        // Tester<nargs - 1, Arg..., bool>::test(exectx);
+        Tester<nargs - 1, Arg..., bool>::test(exectx);
         Tester<nargs - 1, Arg..., int32_t>::test(exectx);
         Tester<nargs - 1, Arg..., double>::test(exectx);
     }
