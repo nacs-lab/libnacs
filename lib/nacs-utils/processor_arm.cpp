@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2017 - 2019 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2017 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -156,6 +156,9 @@ enum class CPU : uint32_t {
     apple_a11,
     apple_a12,
     apple_a13,
+    apple_a14,
+    apple_m1,
+    apple_a15,
     apple_s4,
     apple_s5,
 
@@ -633,6 +636,7 @@ constexpr auto armv8_3a_crypto = armv8_3a | FeatureList::get(aes, sha2);
 constexpr auto armv8_4a = armv8_3a | FeatureList::get(v8_4a, dit, rcpc_immo, fmi);
 constexpr auto armv8_4a_crypto = armv8_4a | FeatureList::get(aes, sha2);
 constexpr auto armv8_5a = armv8_4a | FeatureList::get(v8_5a, sb, ccdp, altnzcv, fptoint);
+constexpr auto armv8_5a_crypto = armv8_5a | FeatureList::get(aes, sha2);
 constexpr auto armv8_6a = armv8_5a | FeatureList::get(v8_6a, i8mm, bf16);
 
 // For ARM cores, the features required can be found in the technical reference manual
@@ -730,7 +734,10 @@ constexpr auto apple_a7 = armv8a_crc_crypto;
 constexpr auto apple_a10 = armv8a_crc_crypto | FeatureList::get(rdm);
 constexpr auto apple_a11 = armv8_2a_crypto | FeatureList::get(fullfp16);
 constexpr auto apple_a12 = armv8_3a_crypto | FeatureList::get(fullfp16);
-constexpr auto apple_a13 = armv8_4a_crypto | FeatureList::get(fullfp16, sha3);
+constexpr auto apple_a13 = armv8_4a_crypto | FeatureList::get(fp16fml, fullfp16, sha3);
+constexpr auto apple_a14 = armv8_5a_crypto | FeatureList::get(dotprod, fp16fml, fullfp16, sha3);
+constexpr auto apple_m1 = armv8_5a_crypto | FeatureList::get(dotprod, fp16fml, fullfp16, sha3);
+constexpr auto apple_a15 = armv8_5a_crypto | FeatureList::get(dotprod, fp16fml, fullfp16, sha3); // TODO
 constexpr auto apple_s4 = apple_a12;
 constexpr auto apple_s5 = apple_a12;
 
@@ -858,6 +865,9 @@ static constexpr CPUSpec cpus[] = {
     {"apple-a11", CPU::apple_a11, CPU::generic, 100000, Feature::apple_a11},
     {"apple-a12", CPU::apple_a12, CPU::generic, 100000, Feature::apple_a12},
     {"apple-a13", CPU::apple_a13, CPU::generic, 100000, Feature::apple_a13},
+    {"apple-a14", CPU::apple_a14, CPU::apple_a13, 120000, Feature::apple_a14},
+    {"apple-m1", CPU::apple_m1, CPU::apple_a14, UINT32_MAX, Feature::apple_m1},
+    {"apple-a15", CPU::apple_a15, CPU::apple_a14, UINT32_MAX, Feature::apple_a15},
     {"apple-s4", CPU::apple_s4, CPU::generic, 100000, Feature::apple_s4},
     {"apple-s5", CPU::apple_s5, CPU::generic, 100000, Feature::apple_s5},
     {"thunderx3t110", CPU::marvell_thunderx3t110, CPU::cavium_thunderx2t99, 110000,
@@ -1332,6 +1342,14 @@ static CPU get_cpu_name(CPUID cpuid)
         case 0x12: // Lightning
         case 0x13: // Thunder
             return CPU::apple_a13;
+        case 0x26: // Thunder M10
+            return CPU::apple_s5;
+        case 0x20: // Icestorm
+        case 0x21: // Firestorm
+            return CPU::apple_a14;
+        case 0x22: // M1, Icestorm
+        case 0x23: // M1, Firestorm
+            return CPU::apple_m1;
         default: return CPU::generic;
         }
     case 0x68: // Huaxintong Semiconductor
