@@ -89,6 +89,10 @@ if(ENABLE_SIMD)
 endif()
 find_package(OpenLibm)
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq>=4.0)
+if(APPLE)
+  find_package(cppzmq)
+  target_link_libraries(PkgConfig::ZMQ INTERFACE cppzmq)
+endif()
 
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden -Wconversion
   -fno-math-errno -Wno-sign-conversion -Wsign-compare
