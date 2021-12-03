@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2016 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2016 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -18,13 +18,24 @@
 
 #include "macros.h"
 
+#if NACS_OS_DARWIN
+# define CFUNC(name) _##name
+#else
+# define CFUNC(name) name
+#endif
+
 #if defined(__x86_64__) || defined(__x86_64)
 #  if !NACS_OS_WINDOWS
         .text
-        .hidden nacs_exefunc_cb
-        .globl  nacs_exefunc_cb
-        .type   nacs_exefunc_cb, @function
-nacs_exefunc_cb:
+#    if NACS_OS_DARWIN
+        .private_extern CFUNC(nacs_exefunc_cb)
+        .globl  CFUNC(nacs_exefunc_cb)
+#    else
+        .hidden CFUNC(nacs_exefunc_cb)
+        .globl  CFUNC(nacs_exefunc_cb)
+        .type   CFUNC(nacs_exefunc_cb), @function
+#    endif
+CFUNC(nacs_exefunc_cb):
         .cfi_startproc
         pushq   %rbp
         .cfi_def_cfa_offset 16
@@ -97,7 +108,7 @@ nacs_exefunc_cb:
         jne     .Lloop
 .Lskip:
         movq    %rsp, %rsi
-        call    nacs_exefunc_real
+        call    CFUNC(nacs_exefunc_real)
         // No need to be conditional here...
         movq    %rdx, %xmm0
         movq    %rdx, %rax
@@ -107,12 +118,17 @@ nacs_exefunc_cb:
         retq
         .cfi_endproc
 
-        .size   nacs_exefunc_cb, . - nacs_exefunc_cb
+#    if !NACS_OS_DARWIN
+        .size   CFUNC(nacs_exefunc_cb), . - CFUNC(nacs_exefunc_cb)
 
         .section        .data.rel.ro.local,"aw",@progbits
         .align  32
         .type   labels_cases, @object
         .size   labels_cases, 104
+#    else
+        .section __DATA,__const
+        .p2align 3
+#    endif
 .labels_cases:
         .quad   .Lcase0
         .quad   .Lcase1
@@ -130,16 +146,16 @@ nacs_exefunc_cb:
 #  else
         .text
         .p2align        4,0x90
-        .globl          nacs_exefunc_cb
+        .globl          CFUNC(nacs_exefunc_cb)
         .section        .drectve
         .ascii  " -export:"
         .ascii  "nacs_exefunc_cb"
         .section        .text
-        .def    nacs_exefunc_cb
+        .def    CFUNC(nacs_exefunc_cb)
         .scl    2
         .type   32
         .endef
-nacs_exefunc_cb:
+CFUNC(nacs_exefunc_cb):
         .cfi_startproc
         pushq   %rbp
         .cfi_def_cfa_offset 16
@@ -190,7 +206,7 @@ nacs_exefunc_cb:
         subq    $16, %rsp
         movq    %rsp, %rcx
         subq    $32, %rsp
-        call    nacs_exefunc_real
+        call    CFUNC(nacs_exefunc_real)
         // No need to be conditional here...
         movq    40(%rsp), %xmm0
         movq    40(%rsp), %rax
@@ -205,10 +221,10 @@ nacs_exefunc_cb:
 #elif defined(__i386) || defined(__i386__)
         // Linux only for now
         .text
-        .hidden nacs_exefunc_cb
-        .globl  nacs_exefunc_cb
-        .type   nacs_exefunc_cb, @function
-nacs_exefunc_cb: // sp: 12/16
+        .hidden CFUNC(nacs_exefunc_cb)
+        .globl  CFUNC(nacs_exefunc_cb)
+        .type   CFUNC(nacs_exefunc_cb), @function
+CFUNC(nacs_exefunc_cb): // sp: 12/16
         .cfi_startproc
         pushl   %ebp // sp: 8/16
         .cfi_def_cfa_offset 8
@@ -246,7 +262,7 @@ nacs_exefunc_cb: // sp: 12/16
         pushl   %ecx // sp: 8/16
         pushl   %eax // sp: 4/16
         pushl   %edx
-        call    nacs_exefunc_real
+        call    CFUNC(nacs_exefunc_real)
         // No need to be conditional here...
         movl    12(%esp), %eax
         fldl    12(%esp)
@@ -256,13 +272,19 @@ nacs_exefunc_cb: // sp: 12/16
         retl
         .cfi_endproc
 
-        .size   nacs_exefunc_cb, . - nacs_exefunc_cb
+        .size   CFUNC(nacs_exefunc_cb), . - CFUNC(nacs_exefunc_cb)
 #elif defined(__aarch64__)
         .text
-        .hidden nacs_exefunc_cb
-        .globl  nacs_exefunc_cb
-        .type   nacs_exefunc_cb, #function
-nacs_exefunc_cb:
+#  if NACS_OS_DARWIN
+        .private_extern CFUNC(nacs_exefunc_cb)
+        .globl  CFUNC(nacs_exefunc_cb)
+        .p2align 3
+#  else
+        .hidden CFUNC(nacs_exefunc_cb)
+        .globl  CFUNC(nacs_exefunc_cb)
+        .type   CFUNC(nacs_exefunc_cb), #function
+#  endif
+CFUNC(nacs_exefunc_cb):
         .cfi_startproc
         stp     x29, x30, [sp, #-16]!
         .cfi_def_cfa_offset 16
@@ -339,7 +361,7 @@ nacs_exefunc_cb:
         b.ne    .Lloop
 .Lskip:
         mov     x1, sp
-        bl      nacs_exefunc_real
+        bl      CFUNC(nacs_exefunc_real)
         // No need to be conditional here...
         mov     x0, x1
         fmov    d0, x1
@@ -349,15 +371,17 @@ nacs_exefunc_cb:
         ret
         .cfi_endproc
 
-        .size   nacs_exefunc_cb, . - nacs_exefunc_cb
+#  if !NACS_OS_DARWIN
+        .size   CFUNC(nacs_exefunc_cb), . - CFUNC(nacs_exefunc_cb)
+#  endif
 #elif defined(__arm__)
         .text
-        .hidden nacs_exefunc_cb
-        .globl  nacs_exefunc_cb
-        .type   nacs_exefunc_cb, #function
+        .hidden CFUNC(nacs_exefunc_cb)
+        .globl  CFUNC(nacs_exefunc_cb)
+        .type   CFUNC(nacs_exefunc_cb), #function
         .arm
         .fpu vfp
-nacs_exefunc_cb:
+CFUNC(nacs_exefunc_cb):
         .fnstart
         push    {r8, r10, fp, lr}
         .save   {r8, r10, fp, lr}
@@ -429,7 +453,7 @@ nacs_exefunc_cb:
         mov     r1, r0
         sub     sp, sp, #24 // Make sure the stack is aligned
         mov     r0, sp
-        bl      nacs_exefunc_real
+        bl      CFUNC(nacs_exefunc_real)
         // No need to be conditional here...
         ldr     r0, [sp, #8]
         vldr.64 d0, [sp, #8]
@@ -438,7 +462,7 @@ nacs_exefunc_cb:
         pop     {r8, r10, fp, pc}
         .fnend
 
-        .size   nacs_exefunc_cb, . - nacs_exefunc_cb
+        .size   CFUNC(nacs_exefunc_cb), . - CFUNC(nacs_exefunc_cb)
 #else
 #  error "Unsupported architecture"
 #endif
