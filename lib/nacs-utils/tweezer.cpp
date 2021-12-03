@@ -20,6 +20,8 @@
 
 #include <cmath>
 
+#if defined(__STDCPP_MATH_SPEC_FUNCS__) && __STDCPP_MATH_SPEC_FUNCS__ >= 201003L
+
 namespace NaCs::Tweezer {
 
 NACS_EXPORT() double sideband(double eta, int n1, int n2)
@@ -84,3 +86,5 @@ extern "C" NACS_EXPORT() void nacs_tweezer_max_sideband_ratios(
 {
     return NaCs::Tweezer::max_sideband_ratios(eta, orders, ratios);
 }
+
+#endif
