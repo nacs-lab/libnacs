@@ -33,6 +33,10 @@
 
 #include <iostream>
 
+#if NACS_OS_DARWIN
+extern char **environ;
+#endif
+
 namespace NaCs::Term {
 
 static bool has_color()
