@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2020 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -24,6 +24,7 @@
 
 #include "config.h"
 
+#include <llvm/Object/MachO.h>
 #include <llvm/Support/MemoryBuffer.h>
 
 #if NACS_OS_WINDOWS
@@ -167,15 +168,17 @@ static void *libsleef_handle(void)
 
 class Resolver::SetCB {
 public:
-    SetCB(Resolver &resolver, const cb_t *cb)
+    SetCB(Resolver &resolver, const cb_t *cb, bool is_macho)
         : m_resolver(resolver)
     {
         m_resolver.m_cb = cb;
+        m_resolver.m_is_macho = is_macho;
     }
 
     ~SetCB()
     {
         m_resolver.m_cb = nullptr;
+        m_resolver.m_is_macho = false;
     }
 private:
     Resolver &m_resolver;
@@ -324,25 +327,21 @@ NACS_EXPORT() uintptr_t Resolver::resolve_ir_sym(const std::string &orig_name)
 
 uintptr_t Resolver::find_extern(const std::string &orig_name)
 {
-#if NACS_OS_DARWIN
-    std::string name;
+    auto resolve_real = [&] (auto &&name) -> uintptr_t {
+        if (m_cb) {
+            if (auto ptr = (*m_cb)(name)) {
+                return ptr;
+            }
+        }
+        return resolve_ir_sym(name);
+    };
+    if (!m_is_macho)
+        return resolve_real(orig_name);
     // On macOS, the symbols comes with a `_` prefix in the assembly code
     // but dlsym wants the symbol without the prefix so we'll remove it here...
-    if (orig_name.size() >= 1 && orig_name[0] == '_') {
-        name = orig_name.substr(1);
-    }
-    else {
-        name = orig_name;
-    }
-#else
-    const std::string &name = orig_name;
-#endif
-    if (m_cb) {
-        if (auto ptr = (*m_cb)(name)) {
-            return ptr;
-        }
-    }
-    return resolve_ir_sym(name);
+    if (orig_name.size() >= 1 && orig_name[0] == '_')
+        return resolve_real(orig_name.substr(1));
+    return resolve_real(orig_name);
 }
 
 NACS_EXPORT() Engine::Engine()
@@ -365,7 +364,8 @@ NACS_EXPORT() uint64_t Engine::load(const object::ObjectFile &obj, const Resolve
         reset_dyld();
     m_errstr.clear();
     auto id = m_memmgr.new_group();
-    Resolver::SetCB setter(m_resolver, cb ? &cb : nullptr);
+    Resolver::SetCB setter(m_resolver, cb ? &cb : nullptr,
+                           isa<object::MachOObjectFile>(obj));
     // If the loading errors, we should reset the loader so that it does not remember
     // any wrong state. Calling the `free(id)` function accomplishes this.
     if (!m_dyld->loadObject(obj) || m_dyld->hasError()) {

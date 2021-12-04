@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2020 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2021 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -53,6 +53,7 @@ private:
     uintptr_t find_extern(const std::string &name);
 
     const cb_t *m_cb = nullptr;
+    bool m_is_macho = false;
 
     friend class Engine;
 };
