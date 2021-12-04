@@ -162,6 +162,7 @@ NACS_EXPORT() int64_t PerfCounter::finish(bool stop)
 #else
 NACS_EXPORT() PerfCounter::PerfCounter(Type)
 {
+    (void)m_fd;
 }
 
 NACS_EXPORT() void PerfCounter::start(bool reset)
