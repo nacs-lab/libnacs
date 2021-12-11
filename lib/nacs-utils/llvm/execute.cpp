@@ -388,7 +388,8 @@ NACS_EXPORT() uint64_t Engine::load(const char *p, size_t len, const Resolver::c
     auto obj = object::ObjectFile::createObjectFile(buff);
     if (!obj) {
         m_errstr.clear();
-        raw_string_ostream(m_errstr) << obj.takeError();
+        raw_string_ostream stream(m_errstr);
+        stream << obj.takeError();
         return 0;
     }
     return load(*(*obj), cb);
