@@ -15,7 +15,7 @@ jobs:
       matrix:
         BUILD_TYPE: [ Release, Debug ]
         compiler: [ gcc, clang ]
-        LLVM_VER: [ '', 11 ]
+        LLVM_VER: [ '', 12 ]
         ENABLE_SIMD: [ On ]
         exclude:
           - BUILD_TYPE: Release
@@ -30,6 +30,10 @@ jobs:
           - BUILD_TYPE: Debug
             compiler: gcc
             LLVM_VER: 10
+            ENABLE_SIMD: On
+          - BUILD_TYPE: Debug
+            compiler: gcc
+            LLVM_VER: 11
             ENABLE_SIMD: On
           - BUILD_TYPE: Debug
             compiler: gcc
@@ -51,7 +55,7 @@ jobs:
       run: sudo apt-get install llvm-${{matrix.LLVM_VER}}-dev
 
     - name: Configure CMake
-      run: CXXFLAGS+=" ${CXXFLAGS_COV}" cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=${{matrix.ENABLE_SIMD}} -DENABLE_LLVM=${{matrix.LLVM_VER != '' && 'On' || 'Off'}}
+      run: CXXFLAGS+=" ${CXXFLAGS_COV}" cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=${{matrix.ENABLE_SIMD}} -DENABLE_LLVM=${{matrix.LLVM_VER != '' && 'On' || 'Off'}} -DLLVM_DIR=/usr/lib/llvm-${{matrix.LLVM_VER}}/cmake
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{matrix.BUILD_TYPE}} -j $(nproc)
