@@ -32,11 +32,7 @@ namespace NaCs::LLVM::Exe {
 
 using namespace llvm;
 
-#if LLVM_VERSION_MAJOR >= 7
 using ResolverBase = LegacyJITSymbolResolver;
-#else
-using ResolverBase = JITSymbolResolver;
-#endif
 
 class Engine;
 

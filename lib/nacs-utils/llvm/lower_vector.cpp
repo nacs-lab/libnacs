@@ -63,11 +63,7 @@ void LowerVectorPass::replace_function(Function &F, StringRef new_name)
 {
     auto _new_f = F.getParent()->getOrInsertFunction(new_name, F.getFunctionType(),
                                                      F.getAttributes());
-#if LLVM_VERSION_MAJOR >= 9
     auto new_f = _new_f.getCallee();
-#else
-    auto new_f = _new_f;
-#endif
     F.replaceAllUsesWith(new_f);
     fixVectorABI(*cast<Function>(new_f));
 }

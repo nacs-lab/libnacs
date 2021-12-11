@@ -27,9 +27,7 @@
 #include <llvm/Analysis/InstructionSimplify.h>
 #include <llvm/Analysis/OptimizationRemarkEmitter.h>
 #include <llvm/Analysis/TargetLibraryInfo.h>
-#if LLVM_VERSION_MAJOR >= 10
-#  include <llvm/InitializePasses.h>
-#endif
+#include <llvm/InitializePasses.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
@@ -248,13 +246,8 @@ struct NaCsInstSimplify : public FunctionPass {
 
         const DominatorTree *DT =
             &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-#if LLVM_VERSION_MAJOR >= 10
         const TargetLibraryInfo *TLI =
             &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-#else
-        const TargetLibraryInfo *TLI =
-            &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-#endif
         AssumptionCache *AC =
             &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
         OptimizationRemarkEmitter *ORE =

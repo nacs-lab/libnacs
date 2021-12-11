@@ -35,17 +35,13 @@
 #include <llvm/MC/MCContext.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/TargetSelect.h>
-#if LLVM_VERSION_MAJOR >= 7
-#  include <llvm/Transforms/InstCombine/InstCombine.h>
-#endif
+#include <llvm/Transforms/InstCombine/InstCombine.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/AlwaysInliner.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
-#if LLVM_VERSION_MAJOR >= 7
-#  include <llvm/Transforms/Utils.h>
-#endif
+#include <llvm/Transforms/Utils.h>
 #include <llvm/Transforms/Vectorize.h>
 
 #include <mutex>

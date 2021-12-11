@@ -205,14 +205,12 @@ static constexpr CPUSpec cpus[] = {
     {"knm", CPU::intel_knights_mill, CPU::generic, 0, Feature::knm},
     {"skylake-avx512", CPU::intel_corei7_skylake_avx512, CPU::generic, 0, Feature::skx},
     {"cascadelake", CPU::intel_corei7_cascadelake, CPU::generic, 0, Feature::cascadelake},
-    {"cooperlake", CPU::intel_corei7_cooperlake, CPU::intel_corei7_cascadelake,
-     90000, Feature::cooperlake},
+    {"cooperlake", CPU::intel_corei7_cooperlake, CPU::generic, 0, Feature::cooperlake},
     {"cannonlake", CPU::intel_corei7_cannonlake, CPU::generic, 0, Feature::cannonlake},
     {"icelake-client", CPU::intel_corei7_icelake_client, CPU::generic, 0, Feature::icelake},
     {"icelake-server", CPU::intel_corei7_icelake_server, CPU::generic, 0,
      Feature::icelake_server},
-    {"tigerlake", CPU::intel_corei7_tigerlake, CPU::intel_corei7_icelake_client, 100000,
-     Feature::tigerlake},
+    {"tigerlake", CPU::intel_corei7_tigerlake, CPU::generic, 0, Feature::tigerlake},
 
     {"athlon64", CPU::amd_athlon_64, CPU::generic, 0, Feature::generic},
     {"athlon-fx", CPU::amd_athlon_fx, CPU::generic, 0, Feature::generic},
@@ -235,7 +233,7 @@ static constexpr CPUSpec cpus[] = {
     {"bdver4", CPU::amd_bdver4, CPU::generic, 0, Feature::bdver4},
 
     {"znver1", CPU::amd_znver1, CPU::generic, 0, Feature::znver1},
-    {"znver2", CPU::amd_znver2, CPU::amd_znver1, 90000, Feature::znver2},
+    {"znver2", CPU::amd_znver2, CPU::generic, 0, Feature::znver2},
 };
 
 struct Info : CPUInfo {
@@ -361,8 +359,7 @@ std::pair<std::string,std::vector<std::string>> Info::get_llvm_target(uint32_t l
     // This can happen with virtualization.
     if (m_is_x64)
         features.push_back("+64bit");
-    if (llvmver >= 90000)
-        features.push_back("+cx8");
+    features.push_back("+cx8");
     append_features(features, ext_features);
     return std::make_pair(std::move(llvm_name), std::move(features));
 }

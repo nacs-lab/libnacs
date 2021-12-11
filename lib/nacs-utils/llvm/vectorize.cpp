@@ -192,7 +192,6 @@ struct Vectorizer {
                     new_binop->copyIRFlags(binop);
                 add_vec_inst(v);
             }
-#if LLVM_VERSION_MAJOR >= 8
             // Can't use `dyn_cast<UnaryOperator>`
             // since `UnaryOperator` does not implement classof as of LLVM 8.0.
             else if (inst.isUnaryOp()) {
@@ -204,7 +203,6 @@ struct Vectorizer {
                 v->copyIRFlags(uop);
                 add_vec_inst(v);
             }
-#endif
             else if (auto *cmp = dyn_cast<CmpInst>(&inst)) {
                 Value *a = map_val(cmp->getOperand(0), true);
                 Value *b = map_val(cmp->getOperand(1), true);
@@ -363,13 +361,11 @@ private:
             if (isa<BinaryOperator>(inst) || isa<ICmpInst>(inst) || isa<FCmpInst>(inst) ||
                 isa<GetElementPtrInst>(inst) || isa<SelectInst>(inst) || isa<CastInst>(inst))
                 continue;
-#if LLVM_VERSION_MAJOR >= 8
             // LLVM 8 have got its first unary operator
             // Can't use `isa<UnaryOperator>`
             // since `UnaryOperator` does not implement classof as of LLVM 8.0.
             if (inst->isUnaryOp())
                 continue;
-#endif
             if (isa<CallInst>(inst) && vectorizeableCall(cast<CallInst>(inst)))
                 continue;
             return false;
@@ -378,12 +374,7 @@ private:
     }
 
     const Function &F;
-#if LLVM_VERSION_MAJOR >= 7
-    // SmallSet is not iteratable on LLVM 6.0
     SmallSet<unsigned, 8> vec_args{};
-#else
-    std::set<unsigned> vec_args{};
-#endif
     SmallPtrSet<const Instruction*, 16> vec_insts{};
 };
 

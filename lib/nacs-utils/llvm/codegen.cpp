@@ -389,10 +389,8 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             auto load = builder.CreateLoad(argt, ptr);
 #if LLVM_VERSION_MAJOR >= 11
             load->setAlignment(Align(alignof(double)));
-#elif LLVM_VERSION_MAJOR >= 10
-            load->setAlignment(MaybeAlign(alignof(double)));
 #else
-            load->setAlignment(alignof(double));
+            load->setAlignment(MaybeAlign(alignof(double)));
 #endif
             load->setMetadata(LLVMContext::MD_tbaa, tbaa_const);
             call_args[i] = load;
@@ -407,10 +405,8 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             if (auto align = arg_spec->second.idx) {
 #if LLVM_VERSION_MAJOR >= 11
                 load->setAlignment(Align(align));
-#elif LLVM_VERSION_MAJOR >= 10
-                load->setAlignment(MaybeAlign(align));
 #else
-                load->setAlignment(align);
+                load->setAlignment(MaybeAlign(align));
 #endif
             }
         }
@@ -432,10 +428,8 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
         if (ret_ref_align) {
 #if LLVM_VERSION_MAJOR >= 11
             store->setAlignment(Align(ret_ref_align));
-#elif LLVM_VERSION_MAJOR >= 10
-            store->setAlignment(MaybeAlign(ret_ref_align));
 #else
-            store->setAlignment(ret_ref_align);
+            store->setAlignment(MaybeAlign(ret_ref_align));
 #endif
         }
         builder.CreateRetVoid();
@@ -448,10 +442,8 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
         auto store = builder.CreateStore(res, ptr);
 #if LLVM_VERSION_MAJOR >= 11
         store->setAlignment(Align(alignof(double)));
-#elif LLVM_VERSION_MAJOR >= 10
-        store->setAlignment(MaybeAlign(alignof(double)));
 #else
-        store->setAlignment(alignof(double));
+        store->setAlignment(MaybeAlign(alignof(double)));
 #endif
         builder.CreateRetVoid();
     }
@@ -491,9 +483,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
     fmf.setNoNaNs();
     fmf.setNoSignedZeros();
     fmf.setAllowReciprocal();
-#if LLVM_VERSION_MAJOR >= 7
     fmf.setAllowContract();
-#endif
     builder.setFastMathFlags(fmf);
 
     // 3. Create variable slots
