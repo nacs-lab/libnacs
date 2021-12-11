@@ -156,7 +156,12 @@ template<int nargs, typename... Arg>
 struct Tester {
     static inline void test(IR::ExeContext *exectx)
     {
+#if !NACS_OS_WINDOWS
+        // On windows enabling this takes too much memory....
+        // Also, bool is treated the same as int32 on windows for our purpose
+        // so it's OK to skip this test there...
         Tester<nargs - 1, Arg..., bool>::test(exectx);
+#endif
         Tester<nargs - 1, Arg..., int32_t>::test(exectx);
         Tester<nargs - 1, Arg..., double>::test(exectx);
     }
