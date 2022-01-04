@@ -1122,18 +1122,22 @@ void BCGen::emit_bytecode(const void *data) const
     auto real_seq_delay = seq_delay;
     // writer.cur_t == time_offset -> sequence time 0.
     if (next_clock_time < 0) {
+        auto clock_offset = uint32_t(-next_clock_time);
+
         // If we want to start the clock right away (which we most likely will)
         // the time for the first clock command will be negative since
         // we want the first lowering edge to happen at the correct time.
-        if (real_seq_delay <= uint32_t(-next_clock_time)) {
+        if (real_seq_delay <= clock_offset) {
             real_seq_delay = 0;
         }
         else {
-            real_seq_delay -= uint32_t(-next_clock_time);
+            real_seq_delay -= clock_offset;
         }
-        writer.start();
+        writer.start(); // cur_t == 0
         auto period = clocks.front().period;
         writer.add_clock(real_seq_delay, period);
+        // cur_t == real_seq_delay + PulseTime::Clock
+        // the clock output was added at `real_seq_delay` or `cur_t - PulseTime::Clock`
         clock_idx = 1;
         if (clock_idx < nclocks) {
             assume(clocks[clock_idx].time >= 0);
@@ -1143,8 +1147,14 @@ void BCGen::emit_bytecode(const void *data) const
             next_clock_time = INT64_MAX;
         }
         // Now align the start of the sequence time to get the correct t=0.
-        if (PulseTime::Clock < period) {
-            time_offset = writer.cur_t + period - PulseTime::Clock;
+        // we should have `<input time for 1st clock> + time_offset == <cur_t for 1st clock>`
+        // or `-clock_offset + time_offset == cur_t - PulseTime::Clock`
+        // or `time_offset == cur_t - PulseTime::Clock + clock_offset`
+        // Moreover, since we might have a pulse at t=0,
+        // which would have a `cur_t` of `0 + time_offset`
+        // we want to make sure `time_offset >= cur_t` so that we don't go back in time.
+        if (PulseTime::Clock < clock_offset) {
+            time_offset = writer.cur_t + clock_offset - PulseTime::Clock;
         }
         else {
             time_offset = writer.cur_t;

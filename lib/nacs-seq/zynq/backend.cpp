@@ -112,8 +112,9 @@ NACS_EXPORT() void Backend::set_clock_active_time(
     auto clock_div = uint8_t(half_period / fpga_clock_div);
     std::vector<BCGen::Clock> clocks;
     for (auto [first, last]: active_times) {
-        // Start the clock half cycle earlier so that the falling edge is on time.
-        first = (first * 2 - 1) * half_period;
+        // Start the clock one cycle earlier so that the falling edge is on time.
+        // The clock output starts low when enabled and only flips to high after half a cycle.
+        first = (first * 2 - 2) * half_period;
         // Stop at the expected time of the falling edge to make sure we turn it off
         // before any raising edges.
         last = last * 2 * half_period;
