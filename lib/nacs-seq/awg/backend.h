@@ -79,7 +79,7 @@ private:
     void reqServerInfo();
 
     uint8_t get_pulse_type(Backend::ChnType type, bool is_fn, bool is_vector);
-    void get_chn_from_lin(uint32_t lin_idx, Backend::ChnType &type, uint8_t &phys_chn_id, uint32_t &chn_id);
+    void get_chn_from_lin(uint32_t lin_idx, Backend::ChnType &type, uint8_t &phys_chn_id, uint32_t &chn_id, std::string &fname);
     void config (const YAML::Node&) override;
     std::vector<BasicSeq> m_seqs;
     // Map from sequence channel ID to physical device and channel name/ids etc.

@@ -26,8 +26,9 @@ static Device::Register<Backend> register_backend("awg");
 enum class Backend::ChnType : uint8_t
 {
     Freq,
-    Amp,
-    Phase
+        Amp,
+        Phase,
+        File
 };
 
 struct Backend::ChannelInfo {
@@ -35,10 +36,12 @@ struct Backend::ChannelInfo {
     uint32_t m_chn_num;
     uint32_t linear_idx = 0; // Linear channel number for BasicSeq's list of pulses
     Backend::ChnType m_chn_type;
-    ChannelInfo(uint8_t phys_chn, uint32_t chn_num, Backend::ChnType chn_type)
+    std::string m_fname;
+    ChannelInfo(uint8_t phys_chn, uint32_t chn_num, Backend::ChnType chn_type, std::string fname = "")
         : m_phys_chn(phys_chn),
           m_chn_num(chn_num),
-          m_chn_type(chn_type)
+          m_chn_type(chn_type),
+          m_fname(fname)
     {
     }
 };
@@ -146,10 +149,12 @@ Backend::~Backend()
 void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
 {
     // OUT1/CHN1/AMP
+    bool fchn = false;
     llvm::StringRef chn_name(_chn_name);
     llvm::SmallVector<llvm::StringRef, 3> chn_strs;
-    chn_name.split(chn_strs, "/");
+    chn_name.split(chn_strs, "/", 2);
     if (chn_strs.size() > 3) {
+        // Should never reach here, but more / are permitted when it's a file name
         throw std::runtime_error("Only 2 / allowed in AWG channel name");
     }
     auto phys_chn_str = chn_strs[0];
@@ -160,16 +165,25 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
     if (phys_chn_str.empty())
         throw std::runtime_error("No physical output number in AWG channel name.");
     if (type_str.empty())
-        throw std::runtime_error("No type for channel specified in AWG channel name");
+        throw std::runtime_error("No type for channel specified in AWG channel name, or filename");
     uint8_t phys_chn_num;
     uint32_t chn_num;
     Backend::ChnType chn_type;
     if (!phys_chn_str.startswith("OUT"))
         throw std::runtime_error("Physical channel should be specified with OUT");
-    if (!chn_num_str.startswith("CHN"))
-        throw std::runtime_error("Virtual channel should be specified with CHN");
     phys_chn_str = phys_chn_str.substr(3);
-    chn_num_str = chn_num_str.substr(3);
+    if (chn_num_str.startswith("CHN"))
+    {
+        chn_num_str = chn_num_str.substr(3);
+    }
+    else if (chn_num_str.startswith("FCHN"))
+    {
+        fchn = true;
+        chn_num_str = chn_num_str.substr(4);
+    }
+    else {
+        throw std::runtime_error("Virtual channel should be specified with CHN");
+    }
     if (phys_chn_str.getAsInteger(10, phys_chn_num))
         throw std::runtime_error("Physical output for AWG must be a number.");
     if (chn_num_str.getAsInteger(10, chn_num))
@@ -181,9 +195,16 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
     else if (type_str == "PHASE")
         chn_type = Backend::ChnType::Phase;
     else {
-        throw std::runtime_error("Unknown name for channel. Use FREQ, AMP, PHASE");
+        if (!fchn)
+            throw std::runtime_error("Unknown name for channel. Use FREQ, AMP, PHASE");
+        chn_type = Backend::ChnType::File;
     }
-    m_chn_map.try_emplace(chn_id, phys_chn_num, chn_num, chn_type);
+    if (fchn) {
+        m_chn_map.try_emplace(chn_id, phys_chn_num, chn_num, chn_type, type_str.str());
+    }
+    else {
+        m_chn_map.try_emplace(chn_id, phys_chn_num, chn_num, chn_type);
+    }
     auto it = out_chns.begin();
     for (; it != out_chns.end(); ++it) {
         if (*it == phys_chn_num) {
@@ -543,8 +564,14 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
                 continue;
             uint32_t chn_num;
             uint8_t phys_chn_num;
+            uint8_t is_fchn = 0;
             Backend::ChnType chn_type;
-            get_chn_from_lin(be_chn_linear, chn_type, phys_chn_num, chn_num);
+            std::string fname;
+            get_chn_from_lin(be_chn_linear, chn_type, phys_chn_num, chn_num, fname);
+            if (chn_type == Backend::ChnType::File) {
+                is_fchn = 1;
+            }
+
             // uint8_t pulse_type;
             //uint32_t id;
             //uint32_t time_id;
@@ -564,6 +591,10 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
                 write(pulse_info, phys_chn_num);
                 write(pulse_info, chn_num);
                 write(pulse_info, pulses[i].ramp_func_name.data(), pulses[i].ramp_func_name.size() + 1);
+                write(pulse_info, is_fchn);
+                if (is_fchn > 0) {
+                    write(pulse_info, fname.data(), fname.size() + 1);
+                }
             }
         }
         write(be_bseq.pulses_bc, npulses);
@@ -617,7 +648,7 @@ void Backend::pre_run(HostSeq &host_seq)
     bool success = false;
     while (!success)
     {
-        uint32_t version = 0;
+        uint32_t version = 1;
         // decide whether to send over object file and iDatas
         std::vector<uint8_t> next_msg;
         uint32_t start_trigger = 1;
@@ -751,7 +782,7 @@ uint8_t Backend::get_pulse_type(Backend::ChnType type, bool is_fn, bool is_vecto
     if (type == Backend::ChnType::Freq) {
         base = 4;
     }
-    else if (type == Backend::ChnType::Amp) {
+    else if ((type == Backend::ChnType::Amp) || (type == Backend::ChnType::File)) {
         base = 1;
     }
     if (is_fn) {
@@ -764,12 +795,13 @@ uint8_t Backend::get_pulse_type(Backend::ChnType type, bool is_fn, bool is_vecto
         return base;
     }
 }
-void Backend::get_chn_from_lin(uint32_t lin_idx, Backend::ChnType &type, uint8_t &phys_chn_id, uint32_t &chn_id)
+void Backend::get_chn_from_lin(uint32_t lin_idx, Backend::ChnType &type, uint8_t &phys_chn_id, uint32_t &chn_id, std::string &fname)
 {
     auto chn_info = m_linear_chns[lin_idx]->second;
     type = chn_info.m_chn_type;
     phys_chn_id = chn_info.m_phys_chn;
     chn_id = chn_info.m_chn_num;
+    fname = chn_info.m_fname;
 }
 
 void Backend::config(const YAML::Node &config)
