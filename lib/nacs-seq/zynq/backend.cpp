@@ -65,10 +65,10 @@ struct Backend::BasicSeq {
 
 struct Backend::TTLManager {
     // All time in sequence time units
-    uint32_t off_delay;
-    uint32_t on_delay;
-    uint32_t skip_time;
-    uint32_t min_time;
+    int64_t off_delay;
+    int64_t on_delay;
+    int64_t skip_time;
+    int64_t min_time;
 
     bool off_val;
 };
@@ -897,18 +897,24 @@ void Backend::parse_data(const uint8_t *data, size_t len)
         throw std::runtime_error(name() + ": Incorrect backend data target.");
     // [version <0>: 1B]
     int ver = reader.read<int8_t>();
-    if (ver != 0)
+    if (ver == 0){
+        throw std::runtime_error(name() + " ver: " + std::to_string(ver) + "- Incompatible FPGA backend data version. TTLMgr args should be int64 ");
+    }
+    else if (ver != 1) {
         throw std::runtime_error(name() + ": Unknown FPGA backend data version " +
                                  std::to_string(ver));
-    // [nttl_mgrs: 1B][[chn_id: 4B][off_delay: 4B][on_delay: 4B]
+    }
+    // Ver 0: [nttl_mgrs: 1B][[chn_id: 4B][off_delay: 4B][on_delay: 4B]
     //                 [skip_time: 4B][min_time: 4B][off_val: 1B] x nttl_mgrs]
+    // Ver 1: [nttl_mgrs: 1B][[chn_id: 4B][off_delay: 8B][on_delay: 8B]
+    //                 [skip_time: 8B][min_time: 8B][off_val: 1B] x nttl_mgrs]
     auto nttl_mgrs = reader.read<uint8_t>();
     for (auto i = 0; i < nttl_mgrs; i++) {
         auto chn_id = reader.read<uint32_t>();
-        auto off_delay = reader.read<uint32_t>();
-        auto on_delay = reader.read<uint32_t>();
-        auto skip_time = reader.read<uint32_t>();
-        auto min_time = reader.read<uint32_t>();
+        auto off_delay = reader.read<int64_t>();
+        auto on_delay = reader.read<int64_t>();
+        auto skip_time = reader.read<int64_t>();
+        auto min_time = reader.read<int64_t>();
         auto off_val = reader.read<uint8_t>() != 0;
         m_ttl_managers.emplace(chn_id, TTLManager{off_delay, on_delay,
                 skip_time, min_time, off_val});

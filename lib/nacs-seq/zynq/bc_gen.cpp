@@ -314,15 +314,15 @@ struct BCGen::TTLManager {
 
     // The time it takes to react to channel turning off (`~off_val` -> `off_val`)
     // This is the time the channel needs to be turned off before when it needed to be off.
-    uint32_t off_delay = 0;
+    int64_t off_delay = 0;
     // The time it takes to react to channel turning on (0 -> 1)
     // This is the time the channel needs to be turned on before when it needed to be on.
-    uint32_t on_delay = 0;
+    int64_t on_delay = 0;
     // Minimum off time. Off interval shorter than this will be skipped.
-    uint32_t skip_time = 0;
+    int64_t skip_time = 0;
     // Minimum on time. On time shorter than this will be extended
     // (the off pulse will be delayed so that it's at least this time after the on one).
-    uint32_t min_time = 0;
+    int64_t min_time = 0;
 
     bool off_val = false;
 
@@ -496,8 +496,8 @@ NACS_EXPORT() uint32_t BCGen::convert_value(ChnType type, double value)
     }
 }
 
-NACS_EXPORT() void BCGen::add_ttl_manager(uint8_t chn, uint32_t off_delay, uint32_t on_delay,
-                                          uint32_t skip_time, uint32_t min_time, bool off_val)
+NACS_EXPORT() void BCGen::add_ttl_manager(uint8_t chn, int64_t off_delay, int64_t on_delay,
+                                          int64_t skip_time, int64_t min_time, bool off_val)
 {
     if (chn >= 32)
         throw std::runtime_error("TTL Manager on invalid channel.");
