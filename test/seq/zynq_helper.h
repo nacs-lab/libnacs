@@ -34,7 +34,7 @@ using namespace NaCs::Seq;
 
 namespace {
 
-static unsigned vector_size = [] {
+NACS_UNUSED static unsigned vector_size = [] {
 #if NACS_CPU_X86 || NACS_CPU_X86_64
     auto &host = CPUInfo::get_host();
     if (host.test_feature(X86::Feature::avx512f) &&
