@@ -312,42 +312,55 @@ bool VectorABIPass::handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32
 {
     if (!is_vector_func(f, true))
         return false;
-    // * Return value
-    //   Pass as is.
-    // * Arguments
-    //   For size <= 4, ext and bitcast to i32
-    //   For longer vector (size <= 16), round size up to 8/16.
+    // For size <= 4, ext and bitcast to i32
+    // For longer vector (size <= 16), round size up to 8/16.
+    // This is different from the calling convention used by gcc
+    // since it uses the GP registers to pass small vector types
+    // (at least for <32bit).
+    // However, clang passes these in the vector registers
+    // so using them directly in C declaration causes a mismatch between
+    // gcc and clang code.
+    // AAPCS64 does not seem to cover this explicitly
+    // (the vector types mentioned in it has a minimum size of 8 bytes)
+    // so I'm not sure which one is more correct.
+    // Since GCC can be convinced to pass things through the vector registers
+    // by extending it to a larger type, but it's harder to convince clang
+    // to pass vector in GP registers, let's just use the vector registers
+    // to pass everything.
     auto ft = f.getFunctionType();
-    Type *ret = ft->getReturnType();
     SmallVector<Type*, 8> argts;
     SmallVector<unsigned, 8> tofix;
-    for (auto t: ft->params()) {
-        if (!t->isVectorTy()) {
-            argts.push_back(t);
-            continue;
-        }
+    auto to_vector_abi = [&] (Type *t) -> Type* {
+        if (!t->isVectorTy())
+            return t;
         auto argsz = DL.getTypeSizeInBits(t);
-        if (argsz < 32) {
-            tofix.push_back(argts.size());
-            argts.push_back(T_i32);
-        }
-        else if ((argsz & (argsz - 1)) != 0) {
-            // Check if power of two
-            tofix.push_back(argts.size());
+        // Check if big enough & power of two
+        if (argsz < 64 || (argsz & (argsz - 1)) != 0) {
             // Now find the next power of 2
             auto sz = 1 << (32 - __builtin_clz(argsz));
+            if (sz < 64)
+                sz = 64;
             auto ele = cast<FixedVectorType>(t)->getElementType();
-            auto elesz = DL.getTypeSizeInBits(t);
+            auto elesz = DL.getTypeSizeInBits(ele);
             if (sz % elesz == 0) {
-                argts.push_back(FixedVectorType::get(ele, sz / elesz));
+                return FixedVectorType::get(ele, sz / elesz);
             }
             else {
-                argts.push_back(FixedVectorType::get(Type::getInt8Ty(ele->getContext()),
-                                                     sz / 8));
+                return FixedVectorType::get(Type::getInt8Ty(ele->getContext()),
+                                            sz / 8);
             }
         }
+        return t;
+    };
+    Type *orig_ret = ft->getReturnType();
+    Type *ret = to_vector_abi(orig_ret);
+    for (auto t: ft->params()) {
+        auto newt = to_vector_abi(t);
+        if (newt != t)
+            tofix.push_back(argts.size());
+        argts.push_back(newt);
     }
-    if (tofix.empty())
+    if (tofix.empty() && ret == ft->getReturnType())
         return false;
     // Mark function processed.
     f.addFnAttr("nacs.vector_abi", "");
@@ -369,11 +382,16 @@ bool VectorABIPass::handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32
             fix_i++;
         }
         Value *res = builder.CreateCall(newf, args);
-        if (res->getType()->isVoidTy()) {
+        auto res_ty = res->getType();
+        if (res_ty->isVoidTy()) {
             builder.CreateRetVoid();
         }
-        else {
+        else if (res_ty == orig_ret) {
             builder.CreateRet(res);
+        }
+        else {
+            builder.CreateRet(cast_vector(builder, cast<FixedVectorType>(orig_ret),
+                                          res, DL));
         }
         return true;
     }
@@ -392,11 +410,15 @@ bool VectorABIPass::handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32
         fix_i++;
     }
     Value *res = builder.CreateCall(&f, args);
+    auto res_ty = res->getType();
     if (res->getType()->isVoidTy()) {
         builder.CreateRetVoid();
     }
-    else {
+    else if (res_ty == ret) {
         builder.CreateRet(res);
+    }
+    else {
+        builder.CreateRet(cast_vector(builder, cast<FixedVectorType>(ret), res, DL));
     }
     return true;
 }

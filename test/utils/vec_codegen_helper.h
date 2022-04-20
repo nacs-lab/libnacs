@@ -123,6 +123,11 @@ template<size_t N>
 struct api_type<std::enable_if_t<N < 16, bool>,N> {
     using type = vec_type_t<uint8_t, 16>;
 };
+#elif NACS_CPU_AARCH64
+template<size_t N>
+struct api_type<std::enable_if_t<N < 8, bool>,N> {
+    using type = vec_type_t<uint8_t, 8>;
+};
 #endif
 
 template<typename T, size_t N>
