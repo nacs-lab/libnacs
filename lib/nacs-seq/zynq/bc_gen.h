@@ -76,8 +76,8 @@ public:
     ~BCGen();
     void generate(const HostSeq &host_seq) const;
     static uint32_t convert_value(ChnType type, double value);
-    void add_ttl_manager(uint8_t chn, uint32_t off_delay, uint32_t on_delay,
-                         uint32_t skip_time, uint32_t min_time, bool off_val);
+    void add_ttl_manager(uint8_t chn, int64_t off_delay, int64_t on_delay,
+                         int64_t skip_time, int64_t min_time, bool off_val);
     static uint32_t version();
 
     // Inputs
