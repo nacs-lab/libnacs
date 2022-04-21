@@ -1352,9 +1352,15 @@ bool BasicSeq::optimize_endtimes()
         return t1->m_order_id > t2->m_order_id;
     });
     int32_t ordered_nonneg = -1;
+    int32_t prev_id = -1;
     std::set<const EventTime*> known_earlier;
     for (auto it = m_endtimes.begin(), end = m_endtimes.end(); it != end;) {
         auto time = &**it;
+        if (time->m_order_id == prev_id) {
+            changed = true;
+            it = m_endtimes.erase(it);
+            continue;
+        }
         if (time->m_order_id <= ordered_nonneg ||
             (time->terms.size() == 0 && time->tconst <= 0) ||
             known_earlier.find(time) != known_earlier.end()) {
@@ -1363,6 +1369,7 @@ bool BasicSeq::optimize_endtimes()
             continue;
         }
         ++it;
+        prev_id = time->m_order_id;
         auto info = m_time_sorted[time->m_order_id];
         ordered_nonneg = max(ordered_nonneg, info.ordered_nonneg);
         auto order_it = m_time_order.find(info.time);
