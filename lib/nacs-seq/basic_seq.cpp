@@ -167,6 +167,7 @@ NACS_EXPORT() void BasicSeq::add_time_order(const EventTime *front, const EventT
         map.try_emplace(front, true);
     }
     else {
+        assert(front != back);
         map.insert_or_assign(front, false);
     }
 }
@@ -787,20 +788,33 @@ void BasicSeq::sort_times()
                         continue;
                     best_time = t;
                 }
+                // There must be more than one time that are equal
+                // if we entered this branch.
+                assert(diff > 1);
                 // Merge all ordering to the normalized time
                 for (uint32_t i = stack_sz - diff; i < stack_sz; i++) {
-                    auto t = scc_stack[stack_sz - diff];
+                    auto t = scc_stack[i];
                     if (t == best_time)
                         continue;
                     auto it = bseq.m_time_order.find(t);
                     assert(it != bseq.m_time_order.end());
                     for (auto [earlier, may_equal]: it->second) {
-                        if (earlier == best_time)
+                        if (earlier == best_time) {
+                            assert(may_equal);
                             continue;
-                        bseq.add_time_order(best_time, earlier, may_equal);
+                        }
+                        bseq.add_time_order(earlier, best_time, may_equal);
                     }
                     bseq.m_time_order.erase(it);
                 }
+#ifndef NDEBUG
+                // Check that we've removed all duplicates
+                for (auto &[t, m]: bseq.m_time_order) {
+                    if (t == best_time)
+                        continue;
+                    assert(t->m_order_id != best_time->m_order_id);
+                }
+#endif
                 scc_stack.resize(stack_sz - diff);
                 bseq.m_time_sorted.push_back(TimeInfo{best_time});
             }
@@ -828,9 +842,16 @@ void BasicSeq::sort_times()
     // However, the values aren't necessarily so.
     // Normalize all the times in the values now.
     for (auto &[time, order_map]: m_time_order) {
+        assert(time == m_time_sorted[time->m_order_id].time);
         for (auto it = order_map.begin(), end = order_map.end(); it != end;) {
             auto id = it->first->m_order_id;
             auto norm_t = m_time_sorted[id].time;
+            if (time == norm_t) {
+                assert(it->second); // may_equal
+                it = order_map.erase(it);
+                continue;
+            }
+            assert(id != time->m_order_id);
             if (it->first == norm_t) {
                 ++it;
                 continue;
