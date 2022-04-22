@@ -119,6 +119,8 @@ public:
     // in a way that's consistent with `isless_terms`
     EventTime operator-(const EventTime &other) const;
 
+    int64_t min_const() const;
+
     int64_t tconst = 0;
     // I'd like to use `llvm::SmallVector` here
     // but I also don't want to expose any LLVM linkage directly
