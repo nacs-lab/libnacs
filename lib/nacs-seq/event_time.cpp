@@ -249,4 +249,14 @@ NACS_EXPORT() void EventTime::print(std::ostream &stm, bool newline) const
     }
 }
 
+NACS_EXPORT() int64_t EventTime::min_const() const
+{
+    for (auto &term: terms) {
+        if (term.sign == Sign::Unknown) {
+            return 0;
+        }
+    }
+    return max(tconst, 0);
+}
+
 }

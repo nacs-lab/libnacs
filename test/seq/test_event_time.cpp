@@ -48,13 +48,18 @@ TEST_CASE("EventTime") {
     REQUIRE(t.tconst == 1);
     REQUIRE(t.terms.size() == 1);
     REQUIRE(t.terms[0].var->is_extern());
+    REQUIRE(t.min_const() == 1);
     t.tconst += 5;
+    REQUIRE(t.min_const() == 6);
 
     auto tv = env.new_extern({IR::Type::Float64, 1111});
     Seq::EventTime t2;
     t2.tconst = 10;
+    REQUIRE(t2.min_const() == 10);
     t.add_term(Seq::Sign::Unknown, tv, 3);
+    REQUIRE(t.min_const() == 0);
     t2.add_term(Seq::Sign::Unknown, tv, 3);
+    REQUIRE(t2.min_const() == 0);
     t.normalize();
     t2.normalize();
     // We sort by varid, so `tv` should remain as the second term.
