@@ -32,8 +32,11 @@ namespace NaCs::Seq {
 
 struct BasicSeq::TimeInfo {
     EventTime *time;
-    int32_t ordered_pos = -1;
-    int32_t ordered_nonneg = -1;
+    int32_t chain_id = -1;
+    // Stores the largest index in each chain that we are larger than
+    std::vector<int32_t> chain_pos_idx{};
+    // Stores the largest index in each chain that we are no-smaller than
+    std::vector<int32_t> chain_nonneg_idx{};
 };
 
 struct BasicSeq::TimeOrderIterator : FieldIterator<EventTime*> {
@@ -178,7 +181,7 @@ NACS_EXPORT() EventTime &BasicSeq::track_time(const EventTime &t)
 }
 
 NACS_EXPORT() Sign BasicSeq::compare_time(const EventTime *t1,
-                                                     const EventTime *t2) const
+                                          const EventTime *t2) const
 {
     int32_t tid1 = t1->m_order_id;
     int32_t tid2 = t2->m_order_id;
@@ -186,22 +189,14 @@ NACS_EXPORT() Sign BasicSeq::compare_time(const EventTime *t1,
         return Sign::Unknown;
     if (tid1 == tid2)
         return Sign::NonNeg; // equal
+    auto tinfo1 = m_time_sorted[tid1];
     auto tinfo2 = m_time_sorted[tid2];
-    if (tid1 <= tinfo2.ordered_pos)
+    auto chain = tinfo1.chain_id;
+    if (tinfo1.chain_nonneg_idx[chain] <= tinfo2.chain_pos_idx[chain])
         return Sign::Pos;
-    auto res = Sign::Unknown;
-    if (tid1 <= tinfo2.ordered_nonneg)
-        res = Sign::NonNeg;
-    auto it = m_time_order.find(tinfo2.time);
-    if (it == m_time_order.end())
-        return res;
-    auto norm_t1 = m_time_sorted[tid1].time;
-    auto it2 = it->second.find(norm_t1);
-    if (it2 == it->second.end())
-        return res;
-    if (!it2->second)
-        return Sign::Pos;
-    return res == Sign::Pos ? res : Sign::NonNeg;
+    if (tinfo1.chain_nonneg_idx[chain] <= tinfo2.chain_nonneg_idx[chain])
+        return Sign::NonNeg;
+    return Sign::Unknown;
 }
 
 NACS_EXPORT() Sign BasicSeq::compare_time(const Pulse *p1, const Pulse *p2) const
@@ -866,78 +861,120 @@ void BasicSeq::sort_times()
             }
         }
     }
+    // Create a reverse time order map using the topological order ID
+    // The reverse time order allow us to find larger times from smaller times
+    // so that we can construct the chain in forward time order.
+    // This way, the ordering edges are sorted which should help us finding
+    // the all the elements in ordered chains.
+    std::map<uint32_t,std::map<uint32_t,bool>> reverse_timeid_order;
+    for (auto &[time, order_map]: m_time_order) {
+        for (auto &[time2, may_equal]: order_map) {
+            assert(time2->m_order_id < time->m_order_id);
+            auto &id_map = reverse_timeid_order[time2->m_order_id];
+            id_map.try_emplace(time->m_order_id, may_equal);
+        }
+    }
 
-    // Now `m_time_sorted` contains a topological sort of the times
-    // We can scan the tree to optimize the datastructure for future lookup.
-    uint32_t ntimes = m_time_sorted.size();
-    for (uint32_t scan_id = 0; scan_id < ntimes; scan_id++) {
-        auto &info = m_time_sorted[scan_id];
-        auto order_it = m_time_order.find(info.time);
-        if (order_it == m_time_order.end())
+    // Now to make the lookup easier later, we'll find a chain decomposition
+    // of the partial order. The ealier times has smaller index in the chain.
+    uint32_t nchains = 0;
+    const auto nunique_times = m_time_sorted.size();
+    for (uint32_t i = 0; i < nunique_times; i++) {
+        // Ideally, we'd like to find the minimum number of chains.
+        // I'm not sure how to do that yet but hopefully just finding the closest
+        // next element (closest in the topological order) is enough...
+        auto info = &m_time_sorted[i];
+        if (info->chain_id >= 0)
             continue;
-        auto &order_map = order_it->second;
-        auto update_ordered_idx = [&] {
-            for (uint32_t prev_idx = info.ordered_pos + 1; prev_idx < scan_id; prev_idx++) {
-                auto pt = m_time_sorted[prev_idx].time;
-                auto it = order_map.find(pt);
-                if (it == order_map.end())
-                    return;
-                if (!it->second)
-                    info.ordered_pos = prev_idx;
-                info.ordered_nonneg = max(int32_t(prev_idx), info.ordered_nonneg);
-                order_map.erase(it);
-            }
-        };
-        update_ordered_idx();
-        for (uint32_t diff = 1; diff <= scan_id; diff++) {
-            int32_t idx = scan_id - diff;
-            if (idx <= info.ordered_pos)
+        auto chain_id = nchains++;
+        info->chain_id = chain_id;
+        info->chain_pos_idx.resize(nchains, -1);
+        info->chain_nonneg_idx.resize(nchains, -1);
+        int32_t pos_idx = -1;
+        int32_t nonneg_idx = 0;
+        info->chain_pos_idx[chain_id] = -1;
+        info->chain_nonneg_idx[chain_id] = 0;
+        auto time_id = i;
+        while (true) {
+            auto order_it = reverse_timeid_order.find(time_id);
+            if (order_it == reverse_timeid_order.end())
                 break;
-            auto &prev_info = m_time_sorted[idx];
-            auto order = Sign::Unknown;
-            auto it = order_map.find(prev_info.time);
-            if (it != order_map.end()) {
-                order = it->second ? Sign::NonNeg : Sign::Pos;
+            bool found = false;
+            // Find the closest one by iterating in reverse.
+            for (auto it = order_it->second.begin(), end = order_it->second.end();
+                 it != end; it++) {
+                assert(time_id < it->first);
+                info = &m_time_sorted[it->first];
+                if (info->chain_id >= 0)
+                    continue;
+                found = true;
+                time_id = it->first;
+                info->chain_id = chain_id;
+                info->chain_pos_idx.resize(nchains, -1);
+                info->chain_nonneg_idx.resize(nchains, -1);
+                if (!it->second)
+                    pos_idx = nonneg_idx;
+                info->chain_pos_idx[chain_id] = pos_idx;
+                info->chain_nonneg_idx[chain_id] = ++nonneg_idx;
+                break;
             }
-            else if (idx <= info.ordered_nonneg) {
-                order = Sign::NonNeg;
+            if (!found) {
+                break;
             }
-            else {
-                continue;
-            }
-            auto may_equal = order == Sign::NonNeg;
-            info.ordered_nonneg = max(info.ordered_nonneg,
-                                      may_equal ? prev_info.ordered_nonneg :
-                                      prev_info.ordered_pos);
-            info.ordered_pos = max(info.ordered_pos, prev_info.ordered_pos);
-            assert(info.ordered_pos <= info.ordered_nonneg);
-            auto it2 = m_time_order.find(prev_info.time);
-            if (it2 != m_time_order.end()) {
-                for (auto [earlier, _may_equal]: it2->second) {
-                    _may_equal = _may_equal && may_equal;
-                    if (_may_equal) {
-                        if (earlier->m_order_id <= info.ordered_nonneg)
-                            continue;
-                        order_map.emplace(earlier, true);
-                    }
-                    else {
-                        if (earlier->m_order_id <= info.ordered_pos)
-                            continue;
-                        order_map.emplace(earlier, false);
-                    }
+        }
+    }
+    for (auto &info: m_time_sorted) {
+        assert(!info.chain_pos_idx.empty());
+        assert(!info.chain_nonneg_idx.empty());
+        info.chain_pos_idx.resize(nchains, -1);
+        info.chain_nonneg_idx.resize(nchains, -1);
+    }
+
+    // Now we've decomposed everything into chains, we can do a DFS
+    // to figure out how each element fits into each chain.
+    // At any given time, the chain_pos_idx and chain_nonneg_idx
+    // for each elements are always an index in the respected chain
+    // that we are known to be smaller/no-larger than.
+    struct ChainOrderVisitor : TimeOrderVisitor {
+        using TimeOrderVisitor::TimeOrderVisitor;
+
+        bool previsit(EventTime *time)
+        {
+            // use m_on_stack to mean "visited"
+            if (time->m_on_stack)
+                return false;
+            time->m_on_stack = true;
+            return true;
+        }
+
+        void postvisit(EventTime *time)
+        {
+            auto it = bseq.m_time_order.find(time);
+            if (it == bseq.m_time_order.end())
+                return;
+            auto &info = bseq.m_time_sorted[time->m_order_id];
+            auto nchains = info.chain_pos_idx.size();
+            assert(info.chain_nonneg_idx.size() == nchains);
+            for (auto [earlier, may_equal]: it->second) {
+                auto &info2 = bseq.m_time_sorted[earlier->m_order_id];
+                assert(info2.chain_pos_idx.size() == nchains);
+                assert(info2.chain_nonneg_idx.size() == nchains);
+                for (uint32_t i = 0; i < nchains; i++) {
+                    assert(info2.chain_pos_idx[i] <= info2.chain_nonneg_idx[i]);
+                    auto pos_idx2 = (may_equal ? info2.chain_pos_idx[i] :
+                                     info2.chain_nonneg_idx[i]);
+                    info.chain_pos_idx[i] = max(info.chain_pos_idx[i], pos_idx2);
+                    info.chain_nonneg_idx[i] = max(info.chain_nonneg_idx[i],
+                                                   info2.chain_nonneg_idx[i]);
                 }
             }
-            update_ordered_idx();
         }
-        // Remove unneeded entries from the map.
-        for (auto it = order_map.begin(), end = order_map.end(); it != end;) {
-            int32_t id = it->first->m_order_id;
-            if (id > info.ordered_nonneg || (id > info.ordered_pos && it->second)) {
-                ++it;
-                continue;
-            }
-            it = order_map.erase(it);
-        }
+    };
+    ChainOrderVisitor co_visitor(*this);
+    for (auto &info: m_time_sorted) {
+        if (!co_visitor.previsit(info.time))
+            continue;
+        visit_dfs(info.time, co_visitor);
     }
 }
 
@@ -1372,9 +1409,9 @@ bool BasicSeq::optimize_endtimes()
     m_endtimes.sort([] (const auto &t1, const auto &t2) {
         return t1->m_order_id > t2->m_order_id;
     });
-    int32_t ordered_nonneg = -1;
+    std::vector<int32_t> chain_idxs;
+    int64_t min_const = 0;
     int32_t prev_id = -1;
-    std::set<const EventTime*> known_earlier;
     for (auto it = m_endtimes.begin(), end = m_endtimes.end(); it != end;) {
         auto time = &**it;
         if (time->m_order_id == prev_id) {
@@ -1382,25 +1419,27 @@ bool BasicSeq::optimize_endtimes()
             it = m_endtimes.erase(it);
             continue;
         }
-        if (time->m_order_id <= ordered_nonneg ||
-            (time->terms.size() == 0 && time->tconst <= 0) ||
-            known_earlier.find(time) != known_earlier.end()) {
+        auto info = m_time_sorted[time->m_order_id];
+        auto nchains = info.chain_nonneg_idx.size();
+        assert(info.chain_pos_idx.size() == nchains);
+        bool raised_bound = false;
+        chain_idxs.resize(nchains, -1);
+        for (uint32_t i = 0; i < nchains; i++) {
+            if (chain_idxs[i] >= info.chain_nonneg_idx[i])
+                continue;
+            chain_idxs[i] = info.chain_nonneg_idx[i];
+            raised_bound = true;
+        }
+        auto new_min_const = time->min_const();
+        if (!raised_bound || (new_min_const <= min_const &&
+                              time->terms.size() == 0)) {
             changed = true;
             it = m_endtimes.erase(it);
-            continue;
         }
-        ++it;
-        prev_id = time->m_order_id;
-        auto info = m_time_sorted[time->m_order_id];
-        ordered_nonneg = max(ordered_nonneg, info.ordered_nonneg);
-        auto order_it = m_time_order.find(info.time);
-        if (order_it == m_time_order.end())
-            continue;
-        for (auto [earlier, may_equal]: order_it->second) {
-            if (earlier->m_order_id > ordered_nonneg) {
-                known_earlier.insert(earlier);
-            }
+        else {
+            ++it;
         }
+        min_const = max(min_const, new_min_const);
     }
     return changed;
 }
