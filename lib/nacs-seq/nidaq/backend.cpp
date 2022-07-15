@@ -191,9 +191,15 @@ static llvm::Function *clamp_ramp_range(LLVM::Codegen::Context &cgctx, llvm::Fun
     auto newf = llvm::Function::Create(fty,  llvm::GlobalValue::ExternalLinkage,
                                        f->getName() + ".c", f->getParent());
     newf->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+#if LLVM_VERSION_MAJOR >= 14
+    newf->setAttributes(llvm::AttributeList::get(
+                            f->getContext(), f->getAttributes().getFnAttrs(),
+                            {}, {}));
+#else
     newf->setAttributes(llvm::AttributeList::get(
                             f->getContext(), f->getAttributes().getFnAttributes(),
                             {}, {}));
+#endif
     auto *b0 = llvm::BasicBlock::Create(f->getContext(), "top", newf);
     auto nargs = f->arg_size();
     llvm::IRBuilder<> builder(b0);
