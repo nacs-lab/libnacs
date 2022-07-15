@@ -20,6 +20,7 @@
 #define CATCH_CONFIG_MAIN
 
 #include "../../lib/nacs-utils/number.h"
+#include "../../lib/nacs-utils/processor.h"
 #include <math.h>
 
 #include <catch2/catch.hpp>
@@ -28,11 +29,6 @@ using namespace NaCs;
 
 const double points[] = {0, 0.1, 0.2, 0.6};
 
-#if NACS_CPU_X86 || NACS_CPU_X86_64
-static bool has_avx = false;
-static bool has_avx2 = false;
-static bool has_avx512 = false;
-
 #if defined(__clang__) && __clang_major__ < 10
 // Clang < 10.0 has problem handling inline asm
 // with vector register enabled by target attribute.
@@ -40,6 +36,11 @@ static bool has_avx512 = false;
 #else
 #  define ENABLE_VECTOR_BENCH 1
 #endif
+
+#if NACS_CPU_X86 || NACS_CPU_X86_64
+static bool has_avx = false;
+static bool has_avx2 = false;
+static bool has_avx512 = false;
 
 static void init_cpu()
 {
@@ -252,6 +253,57 @@ static void test_asimd()
               float64x2_t{-0.1, 0.3 / 3}, float64x2_t{1.4 / 3, 1.1}}}, 4, points);
     };
 }
+#  ifdef NACS_UTILS_HAS_SVE
+__attribute__((target("+sve"))) static void test_sve()
+{
+    auto svelen = svcntd();
+    size_t nele = max(1024u, svelen * 2);
+    std::vector<double> x(nele);
+    std::vector<double> res(nele);
+
+    for (size_t i = 0; i < nele; i++) {
+        x[i] = double(i) / double(nele) * 2 - 0.5;
+    }
+
+    for (size_t i = 0; i < nele; i += svelen) {
+        auto pg = svwhilelt_b64(i, nele);
+        svst1(pg, &res[i], linearInterpolate_sve(svld1(pg, &x[i]), 4, points));
+    }
+
+    for (size_t i = 0; i < nele; i++) {
+        REQUIRE(res[i] == Approx(linearInterpolate(x[i], 4, points)));
+    }
+
+    std::vector<double> x0(nele);
+    std::vector<double> dx(nele);
+    for (size_t i = 0; i < nele; i++) {
+        x[i] = double(i) / double(nele);
+        x0[i] = 0.25;
+        dx[i] = 0.5;
+    }
+
+    for (size_t i = 0; i < nele; i += svelen) {
+        auto pg = svwhilelt_b64(i, nele);
+        auto vx = svld1(pg, &x[i]);
+        auto vx0 = svld1(pg, &x0[i]);
+        auto vdx = svld1(pg, &dx[i]);
+        svst1(pg, &res[i], linearInterpolate_sve(vx, vx0, vdx, 4, points));
+    }
+
+    for (size_t i = 0; i < nele; i++) {
+        REQUIRE(res[i] == Approx(linearInterpolate(x[i], x0[i], dx[i], 4, points)));
+    }
+
+#if ENABLE_VECTOR_BENCH
+    BENCHMARK("SVE") __attribute__((target("+sve"))) {
+        auto res = linearInterpolate_sve(svld1(svptrue_b64(), &x[0]), 4, points);
+        // Do not return the result since the caller may not have the correct ABI declared
+        // Instead, use an inline assembly to convince the compiler that the result is used.
+        asm volatile ("" :: "w"(res));
+    };
+#endif
+}
+#  endif
 #endif
 
 TEST_CASE("Scalar") {
@@ -290,5 +342,11 @@ TEST_CASE("Vector (x86)") {
 #elif NACS_CPU_AARCH64
 TEST_CASE("Vector (aarch64)") {
     test_asimd();
+#  ifdef NACS_UTILS_HAS_SVE
+    auto &host_info = CPUInfo::get_host();
+    if (host_info.test_feature(AArch64::Feature::sve)) {
+        test_sve();
+    }
+#  endif
 }
 #endif

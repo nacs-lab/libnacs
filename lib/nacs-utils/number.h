@@ -32,6 +32,10 @@
 #  include <immintrin.h>
 #elif NACS_CPU_AARCH64
 #  include <arm_neon.h>
+#  if __has_include(<arm_sve.h>)
+#    define NACS_UTILS_HAS_SVE 1
+#    include <arm_sve.h>
+#  endif
 #endif
 
 namespace NaCs {
@@ -521,6 +525,17 @@ NACS_EXPORT(utils) float64x2x4_t linearInterpolate8_asimd(float64x2x4_t x, float
                                                           const float64x2x4_t &dx,
                                                           uint32_t npoints,
                                                           const double *points);
+
+#  ifdef NACS_UTILS_HAS_SVE
+NACS_EXPORT() __attribute__((target("+sve")))
+svfloat64_t linearInterpolate_sve(svfloat64_t x, uint32_t npoints,
+                                  const double *points);
+
+NACS_EXPORT() __attribute__((target("+sve")))
+svfloat64_t linearInterpolate_sve(svfloat64_t x, svfloat64_t x0, svfloat64_t dx,
+                                  uint32_t npoints, const double *points);
+#  endif
+
 #endif
 
 }
