@@ -72,13 +72,8 @@ static Function *createFunction(const Function &F, StringRef name, unsigned vec_
                               const_cast<Module*>(F.getParent()));
     if (_export)
         f->setVisibility(GlobalValue::ProtectedVisibility);
-#if LLVM_VERSION_MAJOR >= 14
-    f->setAttributes(AttributeList::get(F.getContext(), F.getAttributes().getFnAttrs(),
+    f->setAttributes(AttributeList::get(F.getContext(), getFnAttrs(F),
                                         AttributeSet(), {}));
-#else
-    f->setAttributes(AttributeList::get(F.getContext(), F.getAttributes().getFnAttributes(),
-                                        AttributeSet(), {}));
-#endif
     f->addFnAttr(Attribute::AlwaysInline);
     return f;
 }

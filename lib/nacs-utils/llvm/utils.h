@@ -44,6 +44,15 @@ NACS_EXPORT(utils) void dump(const llvm::Module *m);
 NACS_EXPORT(utils) void dump(const llvm::Metadata *m);
 NACS_EXPORT(utils) void dump(const llvm::DebugLoc *dbg);
 
+static NACS_INLINE llvm::AttributeSet getFnAttrs(const llvm::Function &F)
+{
+#if LLVM_VERSION_MAJOR >= 14
+    return F.getAttributes().getFnAttrs();
+#else
+    return F.getAttributes().getFnAttributes();
+#endif
+}
+
 // The following functions are provided so that the user does not need to link to LLVM.
 // This is useful/needed when we statically linking LLVM and cannot
 // link to the same version of LLVM as the user.
