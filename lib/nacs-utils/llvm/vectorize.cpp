@@ -72,8 +72,13 @@ static Function *createFunction(const Function &F, StringRef name, unsigned vec_
                               const_cast<Module*>(F.getParent()));
     if (_export)
         f->setVisibility(GlobalValue::ProtectedVisibility);
+#if LLVM_VERSION_MAJOR >= 14
+    f->setAttributes(AttributeList::get(F.getContext(), F.getAttributes().getFnAttrs(),
+                                        AttributeSet(), {}));
+#else
     f->setAttributes(AttributeList::get(F.getContext(), F.getAttributes().getFnAttributes(),
                                         AttributeSet(), {}));
+#endif
     f->addFnAttr(Attribute::AlwaysInline);
     return f;
 }
@@ -248,7 +253,7 @@ struct Vectorizer {
                     auto intrin = Intrinsic::getDeclaration(const_cast<Module*>(F.getParent()),
                                                             id, {vty});
                     SmallVector<Value*, 4> args;
-                    for (const auto &op: call->arg_operands())
+                    for (const auto &op: call->args())
                         args.push_back(map_val(op.get(), true));
                     auto new_call = builder.CreateCall(intrin, args);
                     new_call->copyIRFlags(call);
@@ -274,7 +279,7 @@ struct Vectorizer {
                     argt = FixedVectorType::get(argt, vec_size);
                 auto vfty = FunctionType::get(vty, argts, false);
                 SmallVector<Value*, 4> args;
-                for (const auto &op: call->arg_operands())
+                for (const auto &op: call->args())
                     args.push_back(map_val(op.get(), true));
                 auto new_callee = Codegen::ensurePureExtern(new_f->getParent(),
                                                             vfty, new_name);
@@ -321,7 +326,7 @@ private:
             return false;
         }
         auto fname = callee->getName();
-        if (fname == "interp" && inst->getNumArgOperands() == 3 &&
+        if (fname == "interp" && inst->arg_size() == 3 &&
             !is_val_vector(inst->getArgOperand(1)) &&
             !is_val_vector(inst->getArgOperand(2))) {
             return true;

@@ -88,8 +88,13 @@ Function *VectorABIPass::clone_to_api(Function &F, FunctionType *new_fty)
     auto lt = F.getLinkage();
     auto vis = F.getVisibility();
     auto dll = F.getDLLStorageClass();
+#if LLVM_VERSION_MAJOR >= 14
+    auto attr = AttributeList::get(F.getContext(), F.getAttributes().getFnAttrs(),
+                                   AttributeSet(), {});
+#else
     auto attr = AttributeList::get(F.getContext(), F.getAttributes().getFnAttributes(),
                                    AttributeSet(), {});
+#endif
     F.setVisibility(GlobalValue::DefaultVisibility);
     F.setDLLStorageClass(GlobalValue::DefaultStorageClass);
     F.setLinkage(GlobalValue::PrivateLinkage);

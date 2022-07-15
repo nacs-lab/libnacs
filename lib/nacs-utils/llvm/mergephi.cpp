@@ -122,7 +122,6 @@ struct MergePhi {
     bool mergePhiPhi(BasicBlock &bb) const;
 
     Type *T_bool;
-    ConstantFolder m_folder;
 };
 
 bool MergePhi::doInitialization(Function &F)
@@ -238,12 +237,6 @@ bool MergePhi::processPhiCmp(PHINode *phi, Instruction *first_non_phi) const
             continue;
         if (cmp->getParent() != phi->getParent())
             continue;
-        const bool isfp = cmp->isFPPredicate();
-        auto create_cmp = [&] (CmpInst::Predicate pred, Constant *op1, Constant *op2) {
-            if (isfp)
-                return m_folder.CreateFCmp(pred, op1, op2);
-            return m_folder.CreateICmp(pred, op1, op2);
-        };
         auto opno = use.getOperandNo();
         assert(opno == 0 || opno == 1);
         auto otherop = dyn_cast<Constant>(cmp->getOperand(1 - opno));
@@ -254,10 +247,12 @@ bool MergePhi::processPhiCmp(PHINode *phi, Instruction *first_non_phi) const
         PHINode *newphi = PHINode::Create(T_bool, nincoming, "", first_non_phi);
         for (unsigned i = 0; i < nincoming; i++) {
             auto val = opno == 0 ?
-                create_cmp(cmp->getPredicate(),
-                           cast<Constant>(phi->getIncomingValue(i)), otherop) :
-                create_cmp(cmp->getPredicate(), otherop,
-                           cast<Constant>(phi->getIncomingValue(i)));
+                llvm::ConstantExpr::getCompare(
+                    cmp->getPredicate(),
+                    cast<Constant>(phi->getIncomingValue(i)), otherop) :
+                llvm::ConstantExpr::getCompare(
+                    cmp->getPredicate(), otherop,
+                    cast<Constant>(phi->getIncomingValue(i)));
             newphi->addIncoming(val, phi->getIncomingBlock(i));
         }
         replace.emplace_back(cmp, newphi);

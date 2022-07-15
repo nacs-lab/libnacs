@@ -86,7 +86,7 @@ static Value *simplify_inst(Instruction *I, const SimplifyQuery &SQ,
     };
     auto name = callee->getName();
     auto &llvm_ctx = callee->getContext();
-    if (name == "interp" && call->getNumArgOperands() == 3) {
+    if (name == "interp" && call->arg_size() == 3) {
         double x;
         uint32_t npoints;
         if (!get_f64(call->getArgOperand(0), &x) ||
@@ -131,13 +131,13 @@ static Value *simplify_inst(Instruction *I, const SimplifyQuery &SQ,
         }
         return v;
     };
-    if (call->getNumArgOperands() == 1) {
+    if (call->arg_size() == 1) {
         double x;
         if (!get_f64(call->getArgOperand(0), &x))
             return v;
         return call_sym(x);
     }
-    else if (call->getNumArgOperands() == 2) {
+    else if (call->arg_size() == 2) {
         double xf;
         if (!get_f64(call->getArgOperand(0), &xf)) {
             int xi;
