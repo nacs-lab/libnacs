@@ -183,15 +183,8 @@ NACS_EXPORT() llvm::Function *Compiler::get_ramp_func(Var *val, llvm::Function *
                                        f->getName() + ".r", f->getParent());
     if (_export)
         newf->setVisibility(llvm::GlobalValue::ProtectedVisibility);
-#if LLVM_VERSION_MAJOR >= 14
     newf->setAttributes(llvm::AttributeList::get(
-                            f->getContext(), f->getAttributes().getFnAttrs(),
-                            {}, {}));
-#else
-    newf->setAttributes(llvm::AttributeList::get(
-                            f->getContext(), f->getAttributes().getFnAttributes(),
-                            {}, {}));
-#endif
+                            f->getContext(), LLVM::getFnAttrs(*f), {}, {}));
     auto *b0 = llvm::BasicBlock::Create(f->getContext(), "top", newf);
     llvm::IRBuilder<> builder(b0);
     llvm::SmallVector<llvm::Value*,8> call_args(nargs);

@@ -435,15 +435,8 @@ NACS_INTERNAL bool Var::reduce_args()
     auto f = llvm::Function::Create(fty, llvm::GlobalValue::ExternalLinkage,
                                     oldf->getName() + ".l", llvm_mod);
     f->setVisibility(llvm::GlobalValue::ProtectedVisibility);
-#if LLVM_VERSION_MAJOR >= 14
     f->setAttributes(llvm::AttributeList::get(llvm_ctx,
-                                              oldf->getAttributes().getFnAttrs(),
-                                              {}, {}));
-#else
-    f->setAttributes(llvm::AttributeList::get(llvm_ctx,
-                                              oldf->getAttributes().getFnAttributes(),
-                                              {}, {}));
-#endif
+                                              LLVM::getFnAttrs(*oldf), {}, {}));
     auto *b0 = llvm::BasicBlock::Create(llvm_ctx, "top", f);
     llvm::IRBuilder<> builder(b0);
     llvm::SmallVector<llvm::Value*, 8> call_args(nargs);
