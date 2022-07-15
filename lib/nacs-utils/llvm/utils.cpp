@@ -255,7 +255,7 @@ NACS_INTERNAL Value *FunctionMover::materialize(Value *V)
         if (auto oldGV = m_dest->getGlobalVariable(GV->getName()))
             return oldGV;
         auto newGV = new GlobalVariable(*m_dest,
-                                        GV->getType()->getElementType(),
+                                        GV->getValueType(),
                                         GV->isConstant(),
                                         GV->getLinkage(),
                                         NULL,
