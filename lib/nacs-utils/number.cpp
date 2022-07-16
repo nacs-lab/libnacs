@@ -355,8 +355,11 @@ svfloat64_t linearInterpolate_sve(svbool_t pg, svfloat64_t x, uint32_t npoints,
     x = svsub_x(ptrue, x, svcvt_f64_x(ptrue, lo));
     auto vlo = svld1_gather_index(ovr_ok, points, lo);
     auto vhi = svld1_gather_index(ovr_ok, points + 1, lo);
-    return svmad_m(ovr_ok, svdup_f64_m(vlo, ovr_ok, points[npoints - 1]),
-                   svsubr_x(ptrue, x, 1), svmul_x(ptrue, x, vhi));
+    // Load the overflow value into vlo where needed
+    // The mask for svmad_m will make sure
+    // these are the values being used in the final result.
+    vlo = svdup_f64_m(vlo, svnot_z(ptrue, ovr_ok), points[npoints - 1]);
+    return svmad_m(ovr_ok, vlo, svsubr_x(ptrue, x, 1), svmul_x(ptrue, x, vhi));
 }
 
 NACS_EXPORT() __attribute__((target("+sve")))
