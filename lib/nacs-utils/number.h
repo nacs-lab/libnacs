@@ -32,7 +32,12 @@
 #  include <immintrin.h>
 #elif NACS_CPU_AARCH64
 #  include <arm_neon.h>
-#  if __has_include(<arm_sve.h>)
+#  if __has_include(<arm_sve.h>) && !NACS_OS_DARWIN
+// Disable SVE on macOS for now.
+// Not supported as of M2 and Apple clang seems to have some issue compiling SVE
+// as of Oct. 2021.
+// Ref https://bugs.llvm.org/show_bug.cgi?id=50407
+// Ref https://github.com/pytorch/pytorch/pull/58785
 #    define NACS_UTILS_HAS_SVE 1
 #    include <arm_sve.h>
 #  endif
