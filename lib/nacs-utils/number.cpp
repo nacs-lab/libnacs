@@ -344,11 +344,11 @@ NACS_EXPORT() float64x2x4_t linearInterpolate8_asimd(float64x2x4_t x, float64x2x
 
 #ifdef NACS_UTILS_HAS_SVE
 static NACS_INLINE __attribute__((target("+sve")))
-svfloat64_t linearInterpolate_sve(svbool_t pg, svfloat64_t x, uint32_t npoints,
-                                  const double *points)
+svfloat64_t _linearInterpolate_sve(svfloat64_t x, uint32_t npoints,
+                                   const double *points)
 {
     auto ptrue = svptrue_b64();
-    auto ovr_ok = svcmplt(pg, x, 1);
+    auto ovr_ok = svcmplt(ptrue, x, 1);
     x = svmaxnm_x(ptrue, x, 0);
     x = svmul_x(ptrue, x, npoints - 1);
     auto lo = svcvt_s64_x(ptrue, x);
@@ -365,7 +365,7 @@ svfloat64_t linearInterpolate_sve(svbool_t pg, svfloat64_t x, uint32_t npoints,
 NACS_EXPORT() __attribute__((target("+sve")))
 svfloat64_t linearInterpolate_sve(svfloat64_t x, uint32_t npoints, const double *points)
 {
-    return linearInterpolate_sve(svptrue_b64(), x, npoints, points);
+    return _linearInterpolate_sve(x, npoints, points);
 }
 
 NACS_EXPORT() __attribute__((target("+sve")))
@@ -374,7 +374,7 @@ svfloat64_t linearInterpolate_sve(svfloat64_t x, svfloat64_t x0, svfloat64_t dx,
 {
     auto ptrue = svptrue_b64();
     x = svdiv_x(ptrue, svsub_x(ptrue, x, x0), dx);
-    return linearInterpolate_sve(ptrue, x, npoints, points);
+    return _linearInterpolate_sve(x, npoints, points);
 }
 #endif
 
