@@ -114,9 +114,9 @@ NACS_INTERNAL bool Seq::optimize_chn(uint32_t chn)
     auto add_startval = [&] (BasicSeq *seq, double val) {
         if (!seq)
             return false;
-        if (!isfinite(val)) {
+        if (!std::isfinite(val)) {
             auto &v = startval[seq];
-            if (!isfinite(v))
+            if (!std::isfinite(v))
                 return false;
             // We previously believe this sequence has a unique start value.
             // Scan again to make sure we clear that assumption.
@@ -129,7 +129,7 @@ NACS_INTERNAL bool Seq::optimize_chn(uint32_t chn)
         // Same value, good
         if (it->second == val)
             return false;
-        if (!isfinite(it->second))
+        if (!std::isfinite(it->second))
             return false;
         it->second = nan;
         return true;
@@ -159,7 +159,7 @@ NACS_INTERNAL bool Seq::optimize_chn(uint32_t chn)
     };
     scan_seq(&m_seqs.front(), defval(chn));
     for (auto [bseq, val]: startval) {
-        if (!isfinite(val))
+        if (!std::isfinite(val))
             continue;
         auto &sv = bseq->m_channels[chn].startval;
         if (sv->is_const()) // Already has a value
