@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2021 - 2021 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2021 - 2022 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -115,6 +115,18 @@ NACS_EXPORT() Sign EventTime::isless_terms(const EventTime &vc2) const
         if (failed()) {
             return Sign::Unknown;
         }
+    }
+    assert(off1 == nt1);
+    // Scan the extra terms in vc2. Especially since there might be unknown signs in it.
+    while (off2 < nt2) {
+        auto &t2 = vc2.terms[off2];
+        // vc2 contains a term that we may not know about in `vc1`,
+        if (t2.sign == Sign::Unknown)
+            return Sign::Unknown;
+        if (t2.sign == Sign::Pos)
+            has_pos = true; // The difference so far is positive.
+        // if it is non-negetive, we can move to the next one.
+        off2++;
     }
     return has_pos ? Sign::Pos : Sign::NonNeg;
 }
