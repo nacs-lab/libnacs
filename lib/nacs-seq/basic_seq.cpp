@@ -773,6 +773,13 @@ void BasicSeq::sort_times()
         {
             set_scc_lowest(time);
             // Not a root of the SCC
+            // This check is sufficent since m_scc_index_lowest == m_scc_index
+            // happens after finishing a DFS of the node iff
+            // no lower scc_index is reachable from the node.
+            // Note that this does **NOT** mean the m_scc_index_lowest
+            // has been accurated computed either
+            // since we may not have finished scanning the element with
+            // m_scc_index == our m_scc_index_lowest yet.
             if (time->m_scc_index_lowest != time->m_scc_index)
                 return;
             time->m_order_id = time_order_id++;
@@ -793,7 +800,10 @@ void BasicSeq::sort_times()
                     t->m_on_stack = false;
                     if (t == time)
                         break;
-                    assert(t->m_scc_index_lowest == time->m_scc_index_lowest);
+                    // The m_scc_index_lowest we see may not be accurate
+                    // since we might have scanned `t` before we got the final value
+                    // of `m_scc_index_lowest` for `time`.
+                    assert(t->m_scc_index_lowest >= time->m_scc_index_lowest);
                     t->m_order_id = time->m_order_id;
                     if (t->tconst < best_time->tconst ||
                         (t->tconst == best_time->tconst &&
