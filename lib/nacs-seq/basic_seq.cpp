@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2021 - 2021 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2021 - 2022 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -161,6 +161,24 @@ NACS_EXPORT() void BasicSeq::add_endtime(EventTime &t)
 {
     m_endtimes.push_back(t.ref());
 }
+
+#ifndef NDEBUG
+// For debugger
+NACS_EXPORT() void print_time_order(
+    std::ostream &ostm,
+    const std::map<const EventTime*,std::map<const EventTime*,bool>> &time_order)
+{
+    for (auto &[t, m]: time_order) {
+        ostm << "(" << (void*)t << ") ";
+        t->print(ostm, 0);
+        ostm << ":" << std::endl;
+        for (auto &[t2, eq]: m) {
+            ostm << "  " << (eq ? ">= " : "> ") << "(" << (void*)t2 << ") ";
+            t2->print(ostm, 1);
+        }
+    }
+}
+#endif
 
 NACS_EXPORT() void BasicSeq::add_time_order(const EventTime *front, const EventTime *back,
                                             bool may_equal)
