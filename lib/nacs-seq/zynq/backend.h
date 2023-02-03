@@ -22,6 +22,8 @@
 #include "../device.h"
 
 #include "bc_gen.h"
+#include "bytecode.h"
+#include "exehelper_p.h"
 
 #include <nacs-utils/zmq_utils.h>
 
@@ -53,7 +55,7 @@ public:
     bool pregenerated(uint32_t bseq_idx, bool first_bseq) const;
     llvm::ArrayRef<uint8_t> get_bytecode(uint32_t bseq_idx, bool first_bseq) const;
     llvm::ArrayRef<BCGen::Clock> get_clock(uint32_t bseq_idx) const;
-
+    void get_vals(const uint8_t *code, size_t code_len, uint32_t chn_id, uint8_t* &ts_buf, size_t* ts_sz, uint8_t* &vals_buf, size_t* vals_sz);
 private:
     void add_channel(uint32_t chn_id, const std::string &chn_name) override;
     bool check_noramp(uint32_t chn_id, const std::string &chn_name) override;
