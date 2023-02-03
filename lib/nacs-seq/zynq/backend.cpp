@@ -970,6 +970,23 @@ NACS_EXPORT() llvm::ArrayRef<BCGen::Clock> Backend::get_clock(uint32_t bseq_idx)
     return it->second;
 }
 
+NACS_EXPORT() void Backend::get_vals(const uint8_t *code, size_t code_len, uint32_t chn_id, uint8_t* &ts_buf, size_t* ts_sz, uint8_t* &vals_buf, size_t* vals_sz)
+{
+    NaCs::Seq::Zynq::ByteCode::ExeState state;
+    auto it = m_chn_map.find(chn_id);
+    if (it == m_chn_map.end()) {
+        Log::error("Chn_id %lu cannot be found.", chn_id);
+    }
+    auto entry = it->second;
+    PulseCollector pc = PulseCollector(entry.first, entry.second);
+    state.run(pc, code, code_len);
+    malloc_ostream stm_t, stm_vals;
+    stm_t.write((char*) pc.ts.data(), pc.ts.size() * sizeof(pc.ts[0]));
+    stm_vals.write((char*) pc.vals.data(), pc.vals.size() * sizeof(pc.vals[0]));
+    ts_buf = (uint8_t*) stm_t.get_buf(*ts_sz);
+    vals_buf = (uint8_t*) stm_vals.get_buf(*vals_sz);
+}
+
 }
 
 extern "C" {
@@ -977,6 +994,27 @@ extern "C" {
 using namespace NaCs;
 using namespace NaCs::Seq;
 using namespace NaCs::Seq::Zynq;
+
+NACS_EXPORT() void nacs_seq_manager_expseq_get_zynq_val(Manager::ExpSeq *expseq, const char *name, uint32_t chn_id, uint8_t* &ts_buf, size_t* ts_sz, uint8_t* &vals_buf, size_t* vals_sz)
+{
+    expseq->mgr().call_guarded([&] () -> void {
+        auto dev = expseq->get_device(name, false);
+        if (!dev) {
+            Log::error("Device %s cannot be found.", name);
+        }
+        auto zynq_dev = dynamic_cast<Backend*>(dev);
+        if (!zynq_dev) {
+            Log::error("Device %s is not a Zynq FPGA.", name);
+        }
+        auto bytecode = zynq_dev->get_bytecode(expseq->host_seq.cur_seq_idx(),
+                                               expseq->host_seq.first_bseq);
+        auto code_len = bytecode.size();
+        auto code = (const uint8_t*) bytecode.data();
+        code += 12; // Go through len_ns and ttl_mask
+        code_len -= 12;
+        zynq_dev->get_vals(code, code_len, chn_id, ts_buf, ts_sz, vals_buf, vals_sz);
+    });
+}
 
 NACS_EXPORT() const uint8_t *nacs_seq_manager_expseq_get_zynq_bytecode(
     Manager::ExpSeq *expseq, const char *name, size_t *sz)

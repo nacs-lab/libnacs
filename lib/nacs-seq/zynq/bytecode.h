@@ -226,12 +226,19 @@ static inline size_t count(const std::vector<uint8_t> &code, uint32_t version)
  */
 void print(std::ostream &stm, const uint8_t *code, size_t code_len,
            uint32_t ttl_mask, uint32_t version);
+void print_dec(std::ostream &stm, const uint8_t *code, size_t code_len,
+           uint32_t ttl_mask, uint32_t version);
 static inline void print(std::ostream &stm, const std::vector<uint8_t> &code,
                          uint32_t ttl_mask, uint32_t version)
 {
     print(stm, &code[0], code.size(), ttl_mask, version);
 }
 
+static inline void print_dec(std::ostream &stm, const std::vector<uint8_t> &code,
+                         uint32_t ttl_mask, uint32_t version)
+{
+    print_dec(stm, &code[0], code.size(), ttl_mask, version);
+}
 /**
  * Print all raw instructions in a human readable format.
  *

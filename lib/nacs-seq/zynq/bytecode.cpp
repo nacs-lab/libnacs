@@ -196,6 +196,20 @@ NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len
     state.run(printer, code, code_len);
 }
 
+NACS_EXPORT() void print_dec(std::ostream &stm, const uint8_t *code, size_t code_len,
+                         uint32_t ttl_mask, uint32_t version)
+{
+    if (version == 0 || version > 2)
+        throw std::runtime_error("Invalid ByteCode version number.");
+    if (ttl_mask)
+        stm << "ttl_mask=0x" << std::hex << ttl_mask << std::dec << std::endl;
+    ArgPrinter printer;
+    ExeState state;
+    if (version >= 2)
+        state.min_time = PulseTime::Min2;
+    state.run(printer, code, code_len);
+}
+
 NACS_EXPORT() uint64_t total_time(const uint8_t *code, size_t code_len, uint32_t version)
 {
     if (version == 0 || version > 2)
