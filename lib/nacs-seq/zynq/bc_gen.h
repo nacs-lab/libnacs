@@ -44,6 +44,7 @@ public:
         Freq = 2,
         Amp = 3,
         DAC = 4,
+        Phase = 5,
     };
     enum class PulseType : uint8_t {
         Value,
@@ -104,7 +105,7 @@ public:
 private:
     template<typename T>
     struct ChnMap {
-        static constexpr int chn_num = 22 + 22 + 4;
+        static constexpr int chn_num = 22 + 22 + 4 + 22;
         T channels[chn_num];
 
         template<typename T2>
@@ -122,7 +123,10 @@ private:
             if (idx < 22)
                 return {BCGen::ChnType::Amp, idx};
             idx -= 22;
-            return {BCGen::ChnType::DAC, idx};
+            if (idx < 4)
+                return {BCGen::ChnType::DAC, idx};
+            idx -= 4;
+            return {BCGen::ChnType::Phase, idx};
         }
         static int to_index(std::pair<BCGen::ChnType,uint8_t> chn)
         {
@@ -137,6 +141,10 @@ private:
             else if (chn.first == BCGen::ChnType::DAC) {
                 assert(chn.second < 4);
                 return chn.second + 22 * 2;
+            }
+            else if (chn.first == BCGen::ChnType::Phase) {
+                assert(chn.second < 22);
+                return chn.second + 22 * 2 + 4;
             }
             assert(false && "Invalid channel type.");
             abort();

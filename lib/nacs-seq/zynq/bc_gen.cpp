@@ -481,6 +481,12 @@ NACS_EXPORT() uint32_t BCGen::convert_value(ChnType type, double value)
             return 4095;
         return round<int32_t>(value * factor);
     }
+    case ChnType::Phase: {
+        // Value is phase in degree
+        value = fmod(value, 360);
+        constexpr double phase_factor = (1 << 14) / 90.0;
+        return round<uint16_t>(value * phase_factor);
+    }
     case ChnType::DAC: {
         constexpr double factor = 65535 / 20.0;
         constexpr double offset = 10.0;
@@ -737,8 +743,10 @@ struct BCGen::Writer {
     struct DDS {
         uint32_t freq = 0;
         uint16_t amp = 0;
+        uint16_t phase = 0;
         bool freq_set = false;
         bool amp_set = false;
+        bool phase_set = false;
     };
     struct DAC {
         uint16_t V = 0;
@@ -999,6 +1007,20 @@ struct BCGen::Writer {
         return PulseTime::DDSFreq;
     }
 
+    int add_phase(int64_t t, uint8_t chn, uint16_t phase)
+    {
+        using namespace ByteCode;
+        if (dds[chn].phase_set && phase == dds[chn].phase)
+            return 0;
+        assert(t >= cur_t);
+        add_wait(t - cur_t);
+        cur_t += PulseTime::DDSPhase;
+        dds[chn].phase = phase;
+        dds[chn].phase_set = true;
+        add_inst(Inst::DDSPhase{OpCode::DDSPhase, uint8_t(chn & 0x1f), 0, phase});
+        return PulseTime::DDSPhase;
+    }
+
     int add_amp(int64_t t, uint8_t chn, uint16_t amp)
     {
         using namespace ByteCode;
@@ -1069,6 +1091,8 @@ struct BCGen::Writer {
             return PulseTime::DDSFreq;
         if (chn_typ == ChnType::Amp)
             return PulseTime::DDSAmp;
+        if (chn_typ == ChnType::Phase)
+            return PulseTime::DDSPhase;
         return PulseTime::Min2;
     }
 
@@ -1081,6 +1105,8 @@ struct BCGen::Writer {
             return add_freq(t, chn, val);
         case ChnType::Amp:
             return add_amp(t, chn, uint16_t(val));
+        case ChnType::Phase:
+            return add_phase(t, chn, uint16_t(val));
         case ChnType::DAC:
             return add_dac(t, chn, uint16_t(val));
         default:

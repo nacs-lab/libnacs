@@ -158,6 +158,12 @@ NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code
                 << std::hex << amp << std::dec << std::endl;
             break;
         }
+        case OpCode::DDSPhase: {
+            auto inst = Mem::load_unalign<Inst::DDSPhase>(p);
+            stm << "phase(" << int(inst.chn) << ")=0x"
+                << std::hex << inst.phase << std::dec << std::endl;
+            break;
+        }
         case OpCode::DAC: {
             auto inst = Mem::load_unalign<Inst::DAC>(p);
             stm << "dac(" << int(inst.chn) << ")=0x"

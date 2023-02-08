@@ -55,6 +55,7 @@ enum OpCode : uint8_t {
     DDSDetAmp = 11,
     DAC = 12,
     DACDet = 13,
+    DDSPhase = 14,
 };
 
 namespace Inst {
@@ -197,14 +198,23 @@ struct NACS_PACKED DACDet {
 };
 static_assert(sizeof(DACDet) == 2, "");
 
+struct NACS_PACKED DDSPhase {
+    uint8_t op: 4; // 14
+    uint16_t chn: 5;
+    uint16_t _0: 7;
+    uint16_t phase;
+};
+static_assert(sizeof(DDSPhase) == 4, "");
+
 }
 
-static constexpr uint8_t inst_size[14] = {
+static constexpr uint8_t inst_size[15] = {
     5, 2, 3, 4, // TTL
     3, 2, // wait, clock
     5, 2, 3, 4, // DDS Freq
     3, 2, // DDS Amp
     3, 2, // DAC
+    4, // DDS Phase
 };
 
 /**
@@ -267,6 +277,10 @@ struct ExeState {
      * * `dds_amp(uint8_t chn, uint16_t amp)`:
      *
      *    Generate a DDS amplitude pulse. Should take `PulseTime::DDSAmp` cycles.
+     *
+     * * `dds_phase(uint8_t chn, uint16_t phase)`:
+     *
+     *    Generate a DDS phase pulse. Should take `PulseTime::DDSPhase` cycles.
      *
      * * `dac(uint8_t chn, uint16_t V)`:
      *
@@ -444,6 +458,11 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
             if (amp & 0x40)
                 amp = amp | 0xff80;
             runDDSAmp(chn, uint16_t(amp + m_dds[chn].amp));
+            break;
+        }
+        case OpCode::DDSPhase: {
+            auto inst = Mem::load_unalign<Inst::DDSPhase>(p);
+            cb.dds_phase(inst.chn, inst.phase);
             break;
         }
         case OpCode::DAC: {

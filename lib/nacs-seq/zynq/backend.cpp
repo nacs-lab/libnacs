@@ -174,6 +174,10 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
             m_chn_map.emplace(chn_id, std::make_pair(BCGen::ChnType::Amp, chn_num));
             m_dds_used.set(uint8_t((1 << 6) | chn_num));
         }
+        else if (subname == "/PHASE") {
+            m_chn_map.emplace(chn_id, std::make_pair(BCGen::ChnType::Phase, chn_num));
+            m_dds_used.set(uint8_t((2 << 6) | chn_num));
+        }
         else {
             throw std::runtime_error(name() + ": Invalid DDS parameter name " + subname.str());
         }
@@ -186,7 +190,12 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
 
 bool Backend::check_noramp(uint32_t chn_id, const std::string &chn_name)
 {
-    return llvm::StringRef(chn_name).startswith("TTL");
+    if (llvm::StringRef(chn_name).startswith("TTL"))
+        return true;
+    if (llvm::StringRef(chn_name).startswith("DDS") &&
+        llvm::StringRef(chn_name).endswith("/PHASE"))
+        return true;
+    return false;
 }
 
 static unsigned get_vector_size()
