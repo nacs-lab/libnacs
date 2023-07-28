@@ -176,7 +176,9 @@ public:
     std::pair<const void*,size_t> get_data(uint64_t id) const;
     void load_config_file(const char *fname);
     void load_config_string(const char *str);
+    char *get_config_str(const std::string &name, size_t *sz) const;
     int64_t tick_per_sec() const;
+    uint64_t max_seq_len() const;
     LLVM::Exe::Engine &exe_engine()
     {
         return m_engine;

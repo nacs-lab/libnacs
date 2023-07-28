@@ -164,6 +164,26 @@ int create_sequence(int argc, char **argv)
     return 0;
 }
 
+int print_config(int argc, char **argv)
+{
+    if (argc < 1) {
+        Log::error("No config file specified.\n");
+        return 1;
+    }
+    if (argc < 2) {
+        Log::error("No device name specified.\n");
+        return 1;
+    }
+    Seq::Manager manager;
+    manager.load_config_file(argv[0]);
+
+    size_t sz;
+    auto res = manager.get_config_str(argv[1], &sz);
+    printf("%s\n", res);
+    free(res);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -184,6 +204,9 @@ int main(int argc, char **argv)
     }
     else if (strcmp(argv[1], "create_sequence") == 0) {
         return create_sequence(argc - 2, argv + 2);
+    }
+    else if (strcmp(argv[1], "print_config") == 0) {
+        return print_config(argc - 2, argv + 2);
     }
     else {
         Log::error("Unknown action: %s.\n", argv[1]);

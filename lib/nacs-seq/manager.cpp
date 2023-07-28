@@ -515,11 +515,29 @@ void Manager::update_config(const YAML::Node &config)
     }
 }
 
+NACS_EXPORT() char *Manager::get_config_str(const std::string &name, size_t *sz) const
+{
+    auto it = m_device_info.find(name);
+    if (it == m_device_info.end())
+        throw std::runtime_error("Invalid device name");
+    YAML::Emitter out;
+    out << it->second.config;
+    *sz = out.size();
+    return strdup(out.c_str());
+}
+
 NACS_EXPORT() int64_t Manager::tick_per_sec() const
 {
     if (m_tick_per_sec == 0)
         throw std::runtime_error("Sequence time unit not initialized.");
     return m_tick_per_sec;
+}
+
+NACS_EXPORT() uint64_t Manager::max_seq_len() const
+{
+    if (m_max_seq_length == 0)
+        throw std::runtime_error("Max sequence length not initialized.");
+    return m_max_seq_length;
 }
 
 // Error+warning API for python/matlab
@@ -721,10 +739,24 @@ NACS_EXPORT() void nacs_seq_manager_load_config_string(Manager *mgr, const char 
     });
 }
 
+NACS_EXPORT() char *nacs_seq_manager_get_config_string(Manager *mgr, const char *name, size_t *sz)
+{
+    return mgr->call_guarded([&] {
+        return mgr->get_config_str(name, sz);
+    }, nullptr);
+}
+
 NACS_EXPORT() int64_t nacs_seq_manager_tick_per_sec(Manager *mgr)
 {
     return mgr->call_guarded([&] {
         return mgr->tick_per_sec();
+    }, 0);
+}
+
+NACS_EXPORT() uint64_t nacs_seq_manager_max_seq_len(Manager *mgr)
+{
+    return mgr->call_guarded([&] {
+        return mgr->max_seq_len();
     }, 0);
 }
 
