@@ -15,7 +15,7 @@ jobs:
       matrix:
         BUILD_TYPE: [ Release, Debug ]
         compiler: [ gcc, clang ]
-        LLVM_VER: [ '', 12 ]
+        LLVM_VER: [ '', 13 ]
         ENABLE_SIMD: [ On ]
         exclude:
           - BUILD_TYPE: Release
@@ -29,15 +29,15 @@ jobs:
         include:
           - BUILD_TYPE: Debug
             compiler: gcc
-            LLVM_VER: 10
-            ENABLE_SIMD: On
-          - BUILD_TYPE: Debug
-            compiler: gcc
             LLVM_VER: 11
             ENABLE_SIMD: On
           - BUILD_TYPE: Debug
             compiler: gcc
-            LLVM_VER: 11
+            LLVM_VER: 12
+            ENABLE_SIMD: On
+          - BUILD_TYPE: Debug
+            compiler: gcc
+            LLVM_VER: 12
             ENABLE_SIMD: Off
     env:
       CC: ${{matrix.compiler}}
