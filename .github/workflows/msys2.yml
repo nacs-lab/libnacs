@@ -71,6 +71,7 @@ jobs:
           mingw-w64-x86_64-intel-tbb
           mingw-w64-x86_64-yaml-cpp
           mingw-w64-x86_64-zeromq
+          mingw-w64-x86_64-cppzmq
           unzip
 
     - name: Install sleef
