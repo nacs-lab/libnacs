@@ -32,10 +32,20 @@
 #include <llvm/Support/Debug.h>
 #include <llvm/Transforms/Utils/ValueMapper.h>
 
+#include <optional>
+
 #define NACS_LLVM_VER (LLVM_VERSION_MAJOR * 10000 + LLVM_VERSION_MINOR * 100 \
                        + LLVM_VERSION_PATCH)
 
 namespace NaCs::LLVM {
+
+#if LLVM_VERSION_MAJOR >= 16
+
+template<typename T>
+using Optional = std::optional<T>;
+static constexpr std::nullopt_t None = std::nullopt;
+
+#endif
 
 NACS_EXPORT(utils) void dump(const llvm::Value *v);
 NACS_EXPORT(utils) void dump(const llvm::Type *v);

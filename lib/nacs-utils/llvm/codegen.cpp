@@ -59,8 +59,8 @@ ensurePureExtern(Module *M, FunctionType *ft, StringRef name, bool canread)
     f->addFnAttr(Attribute::NoRecurse);
     f->addFnAttr(Attribute::NoUnwind);
     if (canread) {
-        f->addFnAttr(Attribute::ReadOnly);
-        f->addFnAttr(Attribute::ArgMemOnly);
+        f->setOnlyReadsMemory();
+        f->setOnlyAccessesArgMemory();
     }
     else {
         f->addFnAttr(Attribute::ReadNone);
