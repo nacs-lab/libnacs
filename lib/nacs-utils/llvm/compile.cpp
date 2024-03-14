@@ -33,18 +33,156 @@
 #include <llvm/Support/Host.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Transforms/InstCombine/InstCombine.h>
-#include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/AlwaysInliner.h>
-#include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
 #include <llvm/Transforms/Utils.h>
 #include <llvm/Transforms/Vectorize.h>
 
+#if NACS_ENABLE_NEW_PASS
+#  include <llvm/Transforms/IPO/ConstantMerge.h>
+#  include <llvm/Transforms/IPO/GlobalDCE.h>
+#  include <llvm/Transforms/IPO/MergeFunctions.h>
+#  include <llvm/Transforms/Scalar/ADCE.h>
+#  include <llvm/Transforms/Scalar/DCE.h>
+#  include <llvm/Transforms/Scalar/DeadStoreElimination.h>
+#  include <llvm/Transforms/Scalar/EarlyCSE.h>
+#  include <llvm/Transforms/Scalar/JumpThreading.h>
+#  include <llvm/Transforms/Scalar/IndVarSimplify.h>
+#  include <llvm/Transforms/Scalar/LICM.h>
+#  include <llvm/Transforms/Scalar/LoopDeletion.h>
+#  include <llvm/Transforms/Scalar/LoopIdiomRecognize.h>
+#  include <llvm/Transforms/Scalar/LoopRotation.h>
+#  include <llvm/Transforms/Scalar/LoopUnrollPass.h>
+#  include <llvm/Transforms/Scalar/Reassociate.h>
+#  include <llvm/Transforms/Scalar/SCCP.h>
+#  include <llvm/Transforms/Scalar/Sink.h>
+#  include <llvm/Transforms/Scalar/SROA.h>
+#  include <llvm/Transforms/Scalar/SimplifyCFG.h>
+#  include <llvm/Transforms/Scalar/SimpleLoopUnswitch.h>
+#else
+#  include <llvm/Transforms/IPO.h>
+#  include <llvm/Transforms/Scalar.h>
+#endif
+
 #include <mutex>
 
 namespace NaCs::LLVM::Compile {
 
+#if NACS_ENABLE_NEW_PASS
+static void addOptimization(ModulePassManager &MPM)
+{
+#ifndef NDEBUG
+    MPM.addPass(VerifierPass());
+#endif
+    {
+        FunctionPassManager FPM;
+        FPM.addPass(SimplifyCFGPass());
+        FPM.addPass(DCEPass());
+        FPM.addPass(EarlyCSEPass());
+        FPM.addPass(DCEPass());
+        FPM.addPass(InstCombinePass());
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    }
+
+#ifndef NDEBUG
+    MPM.addPass(VerifierPass());
+#endif
+    MPM.addPass(VectorABIPass());            // Fix vector ABI
+#ifndef NDEBUG
+    MPM.addPass(VerifierPass());
+#endif
+    MPM.addPass(AlwaysInlinerPass());        // Respect always_inline
+    {
+        FunctionPassManager FPM;
+        FPM.addPass(InstCombinePass());      // Cleanup for scalarrepl.
+        FPM.addPass(SROAPass(SROAOptions::PreserveCFG)); // Break up aggregate allocas
+        FPM.addPass(InstCombinePass());      // Cleanup for scalarrepl.
+        FPM.addPass(JumpThreadingPass());    // Thread jumps.
+        FPM.addPass(InstCombinePass());      // Combine silly seq's
+        FPM.addPass(ReassociatePass());      // Reassociate expressions
+        FPM.addPass(EarlyCSEPass());         //// ****
+        {
+            LoopPassManager LPM;
+            LPM.addPass(LoopIdiomRecognizePass()); //// ****
+            LPM.addPass(LoopRotatePass());         // Rotate loops.
+            LPM.addPass(LICMPass(LICMOptions()));  // Hoist loop invariants
+            LPM.addPass(SimpleLoopUnswitchPass()); // Unswitch loops.
+
+            FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
+        }
+        FPM.addPass(InstCombinePass());      // Combine silly seq's
+
+        {
+            LoopPassManager LPM;
+            LPM.addPass(IndVarSimplifyPass());     // Canonicalize indvars
+            LPM.addPass(LoopDeletionPass());       // Delete dead loops
+
+            FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
+        }
+
+        FPM.addPass(LoopUnrollPass());       // Unroll small loops
+        FPM.addPass(SROAPass(SROAOptions::PreserveCFG)); // Break up aggregate allocas
+
+        FPM.addPass(InstCombinePass());     // Clean up after the unroller
+        FPM.addPass(GVNPass());             // Remove redundancies
+        FPM.addPass(SCCPPass());            // Constant prop with SCCP
+        FPM.addPass(SinkingPass()); ////////////// ****
+
+#ifndef NDEBUG
+        FPM.addPass(VerifierPass());
+#endif
+        FPM.addPass(NaCsInstSimplifyPass()); // TODO support external symbol
+#ifndef NDEBUG
+        FPM.addPass(VerifierPass());
+#endif
+
+        FPM.addPass(InstCombinePass());
+        FPM.addPass(JumpThreadingPass());    // Thread jumps.
+        FPM.addPass(DSEPass());              // Delete dead stores
+
+        // see if all of the constant folding has exposed more loops
+        // to simplification and deletion
+        // this helps significantly with cleaning up iteration
+        FPM.addPass(SimplifyCFGPass());      // Merge & remove BBs
+
+        {
+            LoopPassManager LPM;
+            LPM.addPass(LoopIdiomRecognizePass());
+            LPM.addPass(LoopDeletionPass());       // Delete dead loops
+
+            FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
+        }
+
+        FPM.addPass(JumpThreadingPass());    // Thread jumps.
+        FPM.addPass(InstCombinePass());      // Clean up after SLP loop vectorizer
+
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    }
+
+#ifndef NDEBUG
+    MPM.addPass(VerifierPass());
+#endif
+    MPM.addPass(LowerVectorPass());
+#ifndef NDEBUG
+    MPM.addPass(VerifierPass());
+#endif
+    MPM.addPass(AlwaysInlinerPass());  // Inlining for lower vector pass
+
+    {
+        FunctionPassManager FPM;
+        FPM.addPass(ADCEPass());         // Delete dead instructions
+
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    }
+    MPM.addPass(GlobalDCEPass());
+    MPM.addPass(ConstantMergePass());
+    MPM.addPass(MergeFunctionsPass());
+#ifndef NDEBUG
+    MPM.addPass(VerifierPass());
+#endif
+}
+#else
 static void addOptimization(legacy::PassManagerBase &pm)
 {
 #ifndef NDEBUG
@@ -127,6 +265,7 @@ static void addOptimization(legacy::PassManagerBase &pm)
     pm.add(createVerifierPass());
 #endif
 }
+#endif
 
 NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M, bool opt)
 {
@@ -148,6 +287,23 @@ NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Modu
     if (!init_tramp || init_tramp->use_empty())
         appendToCompilerUsed(*M, {Intrinsic::getDeclaration(M, Intrinsic::init_trampoline)});
 #endif
+
+#if NACS_ENABLE_NEW_PASS
+    PassBuilder PB;
+    AnalysisManagers AM(*tgt, PB);
+    ModulePassManager MPM;
+    if (triple.getObjectFormat() == Triple::ObjectFormatType::MachO)
+        MPM.addPass(ElimMachOPrefixPass());
+    if (opt)
+        addOptimization(MPM);
+    MPM.run(*M, AM.MAM);
+
+    legacy::PassManager pm;
+    MCContext *ctx;
+    if (tgt->addPassesToEmitMC(pm, ctx, stm))
+        return false;
+    pm.run(*M);
+#else
     legacy::PassManager pm;
     pm.add(new TargetLibraryInfoWrapperPass(Triple(tgt->getTargetTriple())));
     pm.add(createTargetTransformInfoWrapperPass(tgt->getTargetIRAnalysis()));
@@ -159,6 +315,7 @@ NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Modu
     if (tgt->addPassesToEmitMC(pm, ctx, stm))
         return false;
     pm.run(*M);
+#endif
     return true;
 }
 
@@ -172,9 +329,17 @@ NACS_EXPORT() bool emit_objfile(SmallVectorImpl<char> &vec, TargetMachine *tgt,
 // For testing only
 NACS_EXPORT() Module *optimize(Module *mod)
 {
+#if NACS_ENABLE_NEW_PASS
+    PassBuilder PB;
+    AnalysisManagers AM(PB);
+    ModulePassManager MPM;
+    addOptimization(MPM);
+    MPM.run(*mod, AM.MAM);
+#else
     legacy::PassManager pm;
     addOptimization(pm);
     pm.run(*mod);
+#endif
     return mod;
 }
 

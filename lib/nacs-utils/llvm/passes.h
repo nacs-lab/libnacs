@@ -92,6 +92,7 @@ struct AnalysisManagers {
     ModuleAnalysisManager MAM;
 
     AnalysisManagers(PassBuilder &PB);
+    AnalysisManagers(TargetMachine &TM, PassBuilder &PB);
     ~AnalysisManagers();
 };
 

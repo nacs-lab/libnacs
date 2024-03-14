@@ -24,6 +24,9 @@
 #include <llvm/Transforms/IPO/AlwaysInliner.h>
 
 #if NACS_ENABLE_NEW_PASS
+#  include <llvm/Analysis/AliasAnalysis.h>
+#  include <llvm/Analysis/TargetTransformInfo.h>
+#  include <llvm/Target/TargetMachine.h>
 #else
 #  include <llvm/IR/LegacyPassManager.h>
 #endif
@@ -31,6 +34,33 @@
 namespace NaCs::LLVM {
 
 #if NACS_ENABLE_NEW_PASS
+static FunctionAnalysisManager createFAM(TargetMachine &TM)
+{
+    FunctionAnalysisManager FAM;
+    FAM.registerPass([&] {
+        AAManager AA;
+        TM.registerDefaultAliasAnalyses(AA);
+        return AA;
+    });
+    FAM.registerPass([&] {
+        return TargetIRAnalysis(TM.getTargetIRAnalysis());
+    });
+    FAM.registerPass([&] {
+        return TargetLibraryAnalysis(TargetLibraryInfoImpl(TM.getTargetTriple()));
+    });
+    return FAM;
+}
+
+NACS_EXPORT() AnalysisManagers::AnalysisManagers(TargetMachine &TM, PassBuilder &PB)
+: LAM(), FAM(createFAM(TM)), CGAM(), MAM()
+{
+    PB.registerLoopAnalyses(LAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerModuleAnalyses(MAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+}
+
 NACS_EXPORT() AnalysisManagers::AnalysisManagers(PassBuilder &PB)
 : LAM(), FAM(), CGAM(), MAM()
 {
