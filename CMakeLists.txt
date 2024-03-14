@@ -101,6 +101,20 @@ if(APPLE)
   target_link_libraries(PkgConfig::ZMQ INTERFACE cppzmq)
 endif()
 
+if(ENABLE_LLVM AND NOT APPLE)
+  find_package(TBB QUIET)
+  if(NOT TBB_FOUND OR NOT TARGET TBB::tbb)
+    pkg_check_modules(PkgTBB IMPORTED_TARGET tbb)
+    if(NOT PkgTBB_FOUND OR NOT TARGET PkgConfig::PkgTBB)
+      find_library(TBB_LINK tbb tbb12 REQUIRED)
+    else()
+      set(TBB_LINK PkgConfig::PkgTBB)
+    endif()
+  else()
+    set(TBB_LINK TBB::tbb)
+  endif()
+endif()
+
 add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden -Wconversion
   -fno-math-errno -Wno-sign-conversion -Wsign-compare
   -Wno-unused-parameter -Wno-psabi -D_FILE_OFFSET_BITS=64)
