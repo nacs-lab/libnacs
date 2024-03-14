@@ -31,10 +31,8 @@ using namespace llvm;
 using resolver_cb_t = std::function<uintptr_t(const std::string&)>;
 
 bool instSimplify(Function &F, const SimplifyQuery &SQ,
-                  const resolver_cb_t &cb=resolver_cb_t(),
-                  OptimizationRemarkEmitter *ORE=nullptr);
-bool instSimplify(Function &F, const resolver_cb_t &cb=resolver_cb_t(),
-                  OptimizationRemarkEmitter *ORE=nullptr);
+                  const resolver_cb_t &cb=resolver_cb_t());
+bool instSimplify(Function &F, const resolver_cb_t &cb=resolver_cb_t());
 FunctionPass *createNaCsInstSimplifyPass(const resolver_cb_t &cb=resolver_cb_t());
 
 }

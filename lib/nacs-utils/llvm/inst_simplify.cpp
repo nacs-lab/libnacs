@@ -25,7 +25,6 @@
 #include <llvm/Analysis/AssumptionCache.h>
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Analysis/InstructionSimplify.h>
-#include <llvm/Analysis/OptimizationRemarkEmitter.h>
 #include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/InitializePasses.h>
 #include <llvm/IR/BasicBlock.h>
@@ -43,12 +42,12 @@ static double call_ptr(uintptr_t ptr, Args... args)
 }
 
 static Value *simplify_inst(Instruction *I, const SimplifyQuery &SQ,
-                            const resolver_cb_t &cb, OptimizationRemarkEmitter *ORE)
+                            const resolver_cb_t &cb)
 {
 #if LLVM_VERSION_MAJOR >= 15
-    auto v = simplifyInstruction(I, SQ, ORE);
+    auto v = simplifyInstruction(I, SQ);
 #else
-    auto v = SimplifyInstruction(I, SQ, ORE);
+    auto v = SimplifyInstruction(I, SQ);
 #endif
     if (v) {
         if (!isa<Instruction>(v))
@@ -165,7 +164,7 @@ static Value *simplify_inst(Instruction *I, const SimplifyQuery &SQ,
 }
 
 NACS_EXPORT() bool instSimplify(Function &F, const SimplifyQuery &SQ,
-                                const resolver_cb_t &cb, OptimizationRemarkEmitter *ORE)
+                                const resolver_cb_t &cb)
 {
     SmallPtrSet<const Instruction*, 8> S1, S2, *to_simplify = &S1, *next = &S2;
     bool changed = false;
@@ -184,7 +183,7 @@ NACS_EXPORT() bool instSimplify(Function &F, const SimplifyQuery &SQ,
 
                 // Don't waste time simplifying unused instructions.
                 if (!I->use_empty()) {
-                    if (Value *V = simplify_inst(I, SQ, cb, ORE)) {
+                    if (Value *V = simplify_inst(I, SQ, cb)) {
                         // Mark all uses for resimplification next time round the loop.
                         for (User *U : I->users())
                             next->insert(cast<Instruction>(U));
@@ -212,11 +211,10 @@ NACS_EXPORT() bool instSimplify(Function &F, const SimplifyQuery &SQ,
     return changed;
 }
 
-NACS_EXPORT() bool instSimplify(Function &F, const resolver_cb_t &cb,
-                                OptimizationRemarkEmitter *ORE)
+NACS_EXPORT() bool instSimplify(Function &F, const resolver_cb_t &cb)
 {
     const DataLayout &DL = F.getParent()->getDataLayout();
-    return instSimplify(F, SimplifyQuery(DL), cb, ORE);
+    return instSimplify(F, SimplifyQuery(DL), cb);
 }
 
 namespace {
@@ -230,7 +228,6 @@ struct NaCsInstSimplify : public FunctionPass {
         initializeDominatorTreeWrapperPassPass(*PassRegistry::getPassRegistry());
         initializeAssumptionCacheTrackerPass(*PassRegistry::getPassRegistry());
         initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-        initializeOptimizationRemarkEmitterWrapperPassPass(*PassRegistry::getPassRegistry());
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override
@@ -239,7 +236,6 @@ struct NaCsInstSimplify : public FunctionPass {
         AU.addRequired<DominatorTreeWrapperPass>();
         AU.addRequired<AssumptionCacheTracker>();
         AU.addRequired<TargetLibraryInfoWrapperPass>();
-        AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     }
 
     /// runOnFunction - Remove instructions that simplify.
@@ -254,11 +250,9 @@ struct NaCsInstSimplify : public FunctionPass {
             &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
         AssumptionCache *AC =
             &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-        OptimizationRemarkEmitter *ORE =
-            &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
         const DataLayout &DL = F.getParent()->getDataLayout();
         const SimplifyQuery SQ(DL, TLI, DT, AC);
-        return instSimplify(F, SQ, m_cb, ORE);
+        return instSimplify(F, SQ, m_cb);
     }
 };
 }
