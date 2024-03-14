@@ -27,8 +27,6 @@
 #include <llvm/ADT/SetVector.h>
 #include <llvm/ADT/StringMap.h>
 #include <llvm/IR/Constants.h>
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/IR/Verifier.h>
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/Cloning.h>
@@ -911,19 +909,8 @@ void Env::finalize_vars()
 #endif
         var->_assign_call(newf, args, var->nfreeargs());
     }
-    llvm::legacy::PassManager PM;
-#ifndef NDEBUG
-    PM.add(llvm::createVerifierPass());
-#endif
-    PM.add(llvm::createGlobalDCEPass());
-    // Shorten all global names since we don't care what they are
-    // and this should slightly reduce the compiled binary size.
-    PM.add(LLVM::createGlobalRenamePass());
-#ifndef NDEBUG
-    PM.add(llvm::createVerifierPass());
-#endif
 
-    PM.run(*llvm_module());
+    LLVM::runGlobalRenamePasses(*llvm_module());
 }
 
 NACS_EXPORT() void Env::print(std::ostream &stm, bool sortvar) const

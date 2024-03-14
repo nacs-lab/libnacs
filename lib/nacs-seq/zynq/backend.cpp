@@ -27,10 +27,6 @@
 #include "../../nacs-utils/processor.h"
 
 #include <llvm/ADT/StringRef.h>
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/IR/Verifier.h>
-#include <llvm/Transforms/IPO.h>
-#include <llvm/Transforms/IPO/AlwaysInliner.h>
 
 namespace NaCs::Seq::Zynq {
 
@@ -297,17 +293,8 @@ void Backend::generate(Manager::ExpSeq &expseq, Compiler &compiler)
         f->setVisibility(llvm::GlobalValue::ProtectedVisibility);
         f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     }
-    {
-        llvm::legacy::PassManager PM0;
-#ifndef NDEBUG
-        PM0.add(llvm::createVerifierPass());
-#endif
-        PM0.add(llvm::createAlwaysInlinerLegacyPass());
-#ifndef NDEBUG
-        PM0.add(llvm::createVerifierPass());
-#endif
-        PM0.run(mod);
-    }
+
+    LLVM::runAlwaysInlinerPasses(mod);
 
     struct RampFunc {
         uint32_t bseq_idx;
@@ -463,18 +450,9 @@ void Backend::generate(Manager::ExpSeq &expseq, Compiler &compiler)
         ramp_func.f->setVisibility(llvm::GlobalValue::ProtectedVisibility);
         ramp_func.f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     }
-    llvm::legacy::PassManager PM;
-#ifndef NDEBUG
-    PM.add(llvm::createVerifierPass());
-#endif
-    PM.add(llvm::createGlobalDCEPass());
-    // Shorten all global names since we don't care what they are
-    // and this should slightly reduce the compiled binary size.
-    PM.add(LLVM::createGlobalRenamePass());
-#ifndef NDEBUG
-    PM.add(llvm::createVerifierPass());
-#endif
-    PM.run(mod);
+
+    LLVM::runGlobalRenamePasses(mod);
+
     // The optimization passes below (in `emit_objfile`) may recreate the functions
     // so the function handle may not be valid anymore.
     // We are done with the function renaming so we can simply get the names now.

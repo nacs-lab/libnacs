@@ -20,10 +20,18 @@
 
 #include "../utils.h"
 
+#include <llvm/Transforms/IPO/AlwaysInliner.h>
+
+#if NACS_ENABLE_NEW_PASS
+#else
+#  include <llvm/IR/LegacyPassManager.h>
+#endif
+
 namespace NaCs::LLVM {
 
+#if NACS_ENABLE_NEW_PASS
 NACS_EXPORT() AnalysisManagers::AnalysisManagers(PassBuilder &PB)
-    : LAM(), FAM(), CGAM(), MAM()
+: LAM(), FAM(), CGAM(), MAM()
 {
     PB.registerLoopAnalyses(LAM);
     PB.registerFunctionAnalyses(FAM);
@@ -33,5 +41,35 @@ NACS_EXPORT() AnalysisManagers::AnalysisManagers(PassBuilder &PB)
 }
 
 NACS_EXPORT() AnalysisManagers::~AnalysisManagers() = default;
+
+NACS_EXPORT() void runAlwaysInlinerPasses(Module &M)
+{
+    llvm::PassBuilder PB;
+    LLVM::AnalysisManagers AM(PB);
+
+    llvm::ModulePassManager MPM;
+#  ifndef NDEBUG
+    MPM.addPass(llvm::VerifierPass());
+#  endif
+    MPM.addPass(llvm::AlwaysInlinerPass());
+#  ifndef NDEBUG
+    MPM.addPass(llvm::VerifierPass());
+#  endif
+    MPM.run(M, AM.MAM);
+}
+#else
+NACS_EXPORT() void runAlwaysInlinerPasses(Module &M)
+{
+    llvm::legacy::PassManager PM;
+#ifndef NDEBUG
+    PM.add(llvm::createVerifierPass());
+#endif
+    PM.add(llvm::createAlwaysInlinerLegacyPass());
+#ifndef NDEBUG
+    PM.add(llvm::createVerifierPass());
+#endif
+    PM.run(M);
+}
+#endif
 
 }

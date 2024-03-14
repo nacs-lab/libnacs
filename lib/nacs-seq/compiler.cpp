@@ -31,10 +31,6 @@
 #include <algorithm>
 #include <numeric>
 
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/IR/Verifier.h>
-#include <llvm/Transforms/IPO.h>
-
 namespace NaCs::Seq {
 
 namespace {
@@ -1697,18 +1693,9 @@ void Compiler::generate_fptrs()
         ramp_func.f->setVisibility(llvm::GlobalValue::ProtectedVisibility);
         ramp_func.f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     }
-    llvm::legacy::PassManager PM;
-#ifndef NDEBUG
-    PM.add(llvm::createVerifierPass());
-#endif
-    PM.add(llvm::createGlobalDCEPass());
-    // Shorten all global names since we don't care what they are
-    // and this should slightly reduce the compiled binary size.
-    PM.add(LLVM::createGlobalRenamePass());
-#ifndef NDEBUG
-    PM.add(llvm::createVerifierPass());
-#endif
-    PM.run(mod);
+
+    LLVM::runGlobalRenamePasses(mod);
+
     // The optimization passes below (in `emit_objfile`) may recreate the functions
     // so the function handle may not be valid anymore.
     // We are done with the function renaming so we can simply get the names now.

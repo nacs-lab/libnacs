@@ -45,7 +45,7 @@
 
 namespace NaCs::LLVM::Compile {
 
-void addOptimization(legacy::PassManagerBase &pm)
+static void addOptimization(legacy::PassManagerBase &pm)
 {
 #ifndef NDEBUG
     pm.add(createVerifierPass());

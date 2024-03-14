@@ -46,6 +46,8 @@ using namespace llvm;
 
 using resolver_cb_t = std::function<uintptr_t(const std::string&)>;
 bool fixVectorABI(Function &F);
+void runGlobalRenamePasses(Module &M);
+void runAlwaysInlinerPasses(Module &M);
 
 #if NACS_ENABLE_LEGACY_PASS
 Pass *createElimMachOPrefixPass();

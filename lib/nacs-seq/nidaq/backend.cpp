@@ -32,10 +32,6 @@
 #include "../../nacs-utils/streams.h"
 
 #include <llvm/ADT/StringRef.h>
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/IR/Verifier.h>
-#include <llvm/Transforms/IPO.h>
-#include <llvm/Transforms/IPO/AlwaysInliner.h>
 
 #include <memory>
 
@@ -362,17 +358,7 @@ void Backend::prepare(Manager::ExpSeq &expseq, Compiler &compiler)
         f->setVisibility(llvm::GlobalValue::ProtectedVisibility);
         f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     }
-    {
-        llvm::legacy::PassManager PM0;
-#ifndef NDEBUG
-        PM0.add(llvm::createVerifierPass());
-#endif
-        PM0.add(llvm::createAlwaysInlinerLegacyPass());
-#ifndef NDEBUG
-        PM0.add(llvm::createVerifierPass());
-#endif
-        PM0.run(mod);
-    }
+    LLVM::runAlwaysInlinerPasses(mod);
 
     auto nvalues = nconst_map + nshared_map + nspecific_map_max;
     auto values_ty = llvm::ArrayType::get(cgctx.T_i8, nvalues * sizeof(double));
@@ -542,18 +528,9 @@ void Backend::prepare(Manager::ExpSeq &expseq, Compiler &compiler)
     }
     values_gv->setLinkage(llvm::GlobalValue::ExternalLinkage);
     values_gv->setVisibility(llvm::GlobalValue::ProtectedVisibility);
-    llvm::legacy::PassManager PM;
-#ifndef NDEBUG
-    PM.add(llvm::createVerifierPass());
-#endif
-    PM.add(llvm::createGlobalDCEPass());
-    // Shorten all global names since we don't care what they are
-    // and this should slightly reduce the compiled binary size.
-    PM.add(LLVM::createGlobalRenamePass());
-#ifndef NDEBUG
-    PM.add(llvm::createVerifierPass());
-#endif
-    PM.run(mod);
+
+    LLVM::runGlobalRenamePasses(mod);
+
     // The optimization passes below (in `emit_objfile`) may recreate the functions
     // so the function handle may not be valid anymore.
     // We are done with the function renaming so we can simply get the names now.

@@ -21,6 +21,12 @@
 #include "passes.h"
 #include "utils.h"
 
+#if NACS_ENABLE_NEW_PASS
+#  include <llvm/Transforms/IPO/GlobalDCE.h>
+#else
+#  include <llvm/IR/LegacyPassManager.h>
+#endif
+
 namespace NaCs::LLVM {
 
 using namespace llvm;
@@ -122,6 +128,41 @@ GlobalRenamePass::run(Module &M, ModuleAnalysisManager &AM)
     if (renameGlobal(M))
         return PreservedAnalyses::allInSet<CFGAnalyses>();
     return PreservedAnalyses::all();
+}
+
+NACS_EXPORT() void runGlobalRenamePasses(Module &M)
+{
+    llvm::PassBuilder PB;
+    LLVM::AnalysisManagers AM(PB);
+
+    llvm::ModulePassManager MPM;
+#  ifndef NDEBUG
+    MPM.addPass(llvm::VerifierPass());
+#  endif
+    MPM.addPass(llvm::GlobalDCEPass());
+    // Shorten all global names since we don't care what they are
+    // and this should slightly reduce the compiled binary size.
+    MPM.addPass(LLVM::GlobalRenamePass());
+#  ifndef NDEBUG
+    MPM.addPass(llvm::VerifierPass());
+#  endif
+    MPM.run(M, AM.MAM);
+}
+#else
+NACS_EXPORT() void runGlobalRenamePasses(Module &M)
+{
+    llvm::legacy::PassManager PM;
+#  ifndef NDEBUG
+    PM.add(llvm::createVerifierPass());
+#  endif
+    PM.add(llvm::createGlobalDCEPass());
+    // Shorten all global names since we don't care what they are
+    // and this should slightly reduce the compiled binary size.
+    PM.add(LLVM::createGlobalRenamePass());
+#  ifndef NDEBUG
+    PM.add(llvm::createVerifierPass());
+#  endif
+    PM.run(M);
 }
 #endif
 

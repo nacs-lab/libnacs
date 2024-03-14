@@ -28,11 +28,18 @@
 #include <stdexcept>
 
 #include <llvm/IR/Constants.h>
-#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Utils/Cloning.h>
+
+#if NACS_ENABLE_NEW_PASS
+#  include <llvm/Transforms/Scalar/EarlyCSE.h>
+#  include <llvm/Transforms/Scalar/SCCP.h>
+#  include <llvm/Transforms/Scalar/SimplifyCFG.h>
+#else
+#  include <llvm/IR/LegacyPassManager.h>
+#endif
 
 namespace NaCs::Seq {
 
@@ -345,6 +352,26 @@ static llvm::Type *merge_type(llvm::Type *t1, llvm::Type *t2)
 
 NACS_INTERNAL void Var::optimize_llvmf(llvm::Function *f)
 {
+#if NACS_ENABLE_NEW_PASS
+    llvm::FunctionPassManager FPM;
+#ifndef NDEBUG
+    FPM.addPass(llvm::VerifierPass());
+#endif
+    FPM.addPass(llvm::SCCPPass());
+    FPM.addPass(LLVM::NaCsInstSimplifyPass(m_env.cg_context()->get_extern_resolver()));
+    FPM.addPass(llvm::SimplifyCFGPass());
+    FPM.addPass(llvm::EarlyCSEPass());
+    FPM.addPass(llvm::SimplifyCFGPass());
+#ifndef NDEBUG
+    FPM.addPass(llvm::VerifierPass());
+#endif
+
+    llvm::PassBuilder PB;
+    LLVM::AnalysisManagers AM(PB);
+    FPM.run(*f, AM.FAM);
+
+#else
+
     llvm::legacy::FunctionPassManager FPM(f->getParent());
 #ifndef NDEBUG
     FPM.add(llvm::createVerifierPass());
@@ -361,6 +388,7 @@ NACS_INTERNAL void Var::optimize_llvmf(llvm::Function *f)
     FPM.doInitialization();
     FPM.run(*f);
     FPM.doFinalization();
+#endif
 }
 
 NACS_INTERNAL bool Var::reduce_args()
