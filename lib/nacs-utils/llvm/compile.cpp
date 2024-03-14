@@ -109,7 +109,7 @@ static void addOptimization(ModulePassManager &MPM)
             LPM.addPass(LICMPass(LICMOptions()));  // Hoist loop invariants
             LPM.addPass(SimpleLoopUnswitchPass()); // Unswitch loops.
 
-            FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
+            FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM), true));
         }
         FPM.addPass(InstCombinePass());      // Combine silly seq's
 
