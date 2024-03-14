@@ -21,7 +21,11 @@
 #include "passes.h"
 #include "utils.h"
 
-#include <llvm/ADT/Triple.h>
+#if LLVM_VERSION_MAJOR >= 16
+#  include <llvm/TargetParser/Triple.h>
+#else
+#  include <llvm/ADT/Triple.h>
+#endif
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/CallingConv.h>
 #include <llvm/IR/Instructions.h>

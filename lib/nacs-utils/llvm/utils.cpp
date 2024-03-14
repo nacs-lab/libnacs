@@ -19,7 +19,11 @@
 #include "utils.h"
 #include "cpu_p.h"
 
-#include <llvm/ADT/Triple.h>
+#if LLVM_VERSION_MAJOR >= 16
+#  include <llvm/TargetParser/Triple.h>
+#else
+#  include <llvm/ADT/Triple.h>
+#endif
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Host.h>
 #include <llvm/Support/Process.h>
