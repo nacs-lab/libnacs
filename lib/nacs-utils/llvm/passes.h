@@ -37,6 +37,7 @@
 #endif
 #if NACS_ENABLE_NEW_PASS
 #  include <llvm/IR/PassManager.h>
+#  include <llvm/Passes/PassBuilder.h>
 #endif
 
 namespace NaCs::LLVM {
@@ -81,6 +82,17 @@ struct VectorABIPass : PassInfoMixin<VectorABIPass> {
     PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
     static bool isRequired() { return true; }
 };
+
+struct AnalysisManagers {
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+
+    AnalysisManagers(PassBuilder &PB);
+    ~AnalysisManagers();
+};
+
 #endif
 
 }

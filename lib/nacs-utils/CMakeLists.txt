@@ -98,6 +98,7 @@ set(nacs_utils_llvm_SRCS
   llvm/lower_vector.cpp
   llvm/memmgr.cpp
   llvm/mergephi.cpp
+  llvm/passes.cpp
   llvm/utils.cpp
   llvm/vector_abi.cpp
   llvm/vectorize.cpp)
