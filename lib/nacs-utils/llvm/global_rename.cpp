@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2020 - 2020 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2020 - 2024 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -31,16 +31,6 @@ using namespace llvm;
 
 namespace {
 
-struct GlobalRenamePass : public ModulePass {
-    static char ID;
-    GlobalRenamePass()
-        : ModulePass(ID)
-    {}
-
-private:
-    bool runOnModule(Module &M) override;
-};
-
 class NameCounter {
 public:
     const char *next_name()
@@ -67,7 +57,7 @@ private:
     char name[8] = {};
 };
 
-bool GlobalRenamePass::runOnModule(Module &M)
+bool renameGlobal(Module &M)
 {
     bool changed = false;
     NameCounter counter;
@@ -96,16 +86,43 @@ bool GlobalRenamePass::runOnModule(Module &M)
     return changed;
 }
 
-char GlobalRenamePass::ID = 0;
-static RegisterPass<GlobalRenamePass> X("GlobalRename", "Rename all exported globals",
+#if NACS_ENABLE_LEGACY_PASS
+struct LegacyGlobalRenamePass : public ModulePass {
+    static char ID;
+    LegacyGlobalRenamePass()
+        : ModulePass(ID)
+    {}
+
+private:
+    bool runOnModule(Module &M) override
+    {
+        return renameGlobal(M);
+    }
+};
+
+char LegacyGlobalRenamePass::ID = 0;
+static RegisterPass<LegacyGlobalRenamePass> X("GlobalRename", "Rename all exported globals",
                                         false /* Only looks at CFG */,
                                         false /* Analysis Pass */);
+#endif
 
 }
 
+#if NACS_ENABLE_LEGACY_PASS
 NACS_EXPORT() Pass *createGlobalRenamePass()
 {
-    return new GlobalRenamePass();
+    return new LegacyGlobalRenamePass();
 }
+#endif
+
+#if NACS_ENABLE_NEW_PASS
+NACS_EXPORT() PreservedAnalyses
+GlobalRenamePass::run(Module &M, ModuleAnalysisManager &AM)
+{
+    if (renameGlobal(M))
+        return PreservedAnalyses::allInSet<CFGAnalyses>();
+    return PreservedAnalyses::all();
+}
+#endif
 
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2021 - 2021 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2021 - 2024 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -32,17 +32,7 @@ using namespace llvm;
 
 namespace {
 
-struct ElimMachOPrefixPass : public ModulePass {
-    static char ID;
-    ElimMachOPrefixPass()
-        : ModulePass(ID)
-    {}
-
-private:
-    bool runOnModule(Module &M) override;
-};
-
-bool ElimMachOPrefixPass::runOnModule(Module &M)
+static bool elimMachOPrefix(Module &M)
 {
     bool changed = false;
     for (auto &g: M.global_values()) {
@@ -67,17 +57,44 @@ bool ElimMachOPrefixPass::runOnModule(Module &M)
     return changed;
 }
 
-char ElimMachOPrefixPass::ID = 0;
-static RegisterPass<ElimMachOPrefixPass> X("ElimMachOPrefix",
+#if NACS_ENABLE_LEGACY_PASS
+struct LegacyElimMachOPrefixPass : public ModulePass {
+    static char ID;
+    LegacyElimMachOPrefixPass()
+        : ModulePass(ID)
+    {}
+
+private:
+    bool runOnModule(Module &M) override
+    {
+        return elimMachOPrefix(M);
+    }
+};
+
+char LegacyElimMachOPrefixPass::ID = 0;
+static RegisterPass<LegacyElimMachOPrefixPass> X("ElimMachOPrefix",
                                            "Prevent underscore prefix",
                                            false /* Only looks at CFG */,
                                            false /* Analysis Pass */);
+#endif
 
 }
 
+#if NACS_ENABLE_LEGACY_PASS
 NACS_EXPORT() Pass *createElimMachOPrefixPass()
 {
-    return new ElimMachOPrefixPass();
+    return new LegacyElimMachOPrefixPass();
 }
+#endif
+
+#if NACS_ENABLE_NEW_PASS
+NACS_EXPORT() PreservedAnalyses
+ElimMachOPrefixPass::run(Module &M, ModuleAnalysisManager &AM)
+{
+    if (elimMachOPrefix(M))
+        return PreservedAnalyses::allInSet<CFGAnalyses>();
+    return PreservedAnalyses::all();
+}
+#endif
 
 }
