@@ -90,7 +90,7 @@ struct LLVMTest : LLVM::Codegen::Context {
     void *get_ptr(const char *name=nullptr)
     {
         REQUIRE(f);
-        llvm::SmallVector<char,0> vec;
+        std::vector<char> vec;
         auto res = LLVM::Compile::emit_objfile(vec, LLVM::Compile::get_native_target(),
                                                get_module());
         REQUIRE(res);

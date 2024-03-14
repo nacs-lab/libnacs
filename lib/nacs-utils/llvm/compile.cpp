@@ -326,6 +326,18 @@ NACS_EXPORT() bool emit_objfile(SmallVectorImpl<char> &vec, TargetMachine *tgt,
     return emit_objfile(stm, tgt, M, opt);
 }
 
+// For testing only (to avoid directly linking to libLLVM in test).
+// Does not need to be efficient...
+NACS_EXPORT() bool emit_objfile(std::vector<char> &vec, TargetMachine *tgt,
+                                Module *M, bool opt)
+{
+    llvm::SmallVector<char,0> svec;
+    auto res = emit_objfile(svec, tgt, M, opt);
+    vec.resize(svec.size());
+    memcpy(&vec[0], &svec[0], svec.size());
+    return res;
+}
+
 // For testing only
 NACS_EXPORT() Module *optimize(Module *mod)
 {
