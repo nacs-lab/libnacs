@@ -18,7 +18,7 @@
 
 #define DEBUG_TYPE "vector_abi"
 
-#include "vector_abi.h"
+#include "passes.h"
 #include "utils.h"
 
 #include <llvm/ADT/Triple.h>

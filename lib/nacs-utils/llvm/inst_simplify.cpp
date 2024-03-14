@@ -16,7 +16,7 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#include "inst_simplify.h"
+#include "passes.h"
 
 #include "../number.h"
 #include "execute.h"
@@ -28,13 +28,15 @@
 #include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/InitializePasses.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/InstrTypes.h> // Required to workaround bug in `InstructionSimplify.h`
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Transforms/Utils/Local.h>
 
-
 namespace NaCs::LLVM {
 
+namespace {
 template<typename... Args>
 static double call_ptr(uintptr_t ptr, Args... args)
 {
@@ -163,8 +165,8 @@ static Value *simplify_inst(Instruction *I, const SimplifyQuery &SQ,
     return v;
 }
 
-NACS_EXPORT() bool instSimplify(Function &F, const SimplifyQuery &SQ,
-                                const resolver_cb_t &cb)
+static bool instSimplify(Function &F, const SimplifyQuery &SQ,
+                         const resolver_cb_t &cb)
 {
     SmallPtrSet<const Instruction*, 8> S1, S2, *to_simplify = &S1, *next = &S2;
     bool changed = false;
@@ -211,13 +213,6 @@ NACS_EXPORT() bool instSimplify(Function &F, const SimplifyQuery &SQ,
     return changed;
 }
 
-NACS_EXPORT() bool instSimplify(Function &F, const resolver_cb_t &cb)
-{
-    const DataLayout &DL = F.getParent()->getDataLayout();
-    return instSimplify(F, SimplifyQuery(DL), cb);
-}
-
-namespace {
 struct NaCsInstSimplify : public FunctionPass {
     static char ID;
     resolver_cb_t m_cb;
@@ -255,9 +250,9 @@ struct NaCsInstSimplify : public FunctionPass {
         return instSimplify(F, SQ, m_cb);
     }
 };
+char NaCsInstSimplify::ID = 0;
 }
 
-char NaCsInstSimplify::ID = 0;
 // Public interface to the simplify instructions pass.
 NACS_EXPORT() FunctionPass *createNaCsInstSimplifyPass(const resolver_cb_t &cb)
 {

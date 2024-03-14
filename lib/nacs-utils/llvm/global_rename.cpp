@@ -18,7 +18,7 @@
 
 #define DEBUG_TYPE "global_rename"
 
-#include "global_rename.h"
+#include "passes.h"
 #include "utils.h"
 
 namespace NaCs::LLVM {

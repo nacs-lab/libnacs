@@ -18,11 +18,8 @@
 
 #include "compile.h"
 
-#include "elim_macho_prefix.h"
-#include "inst_simplify.h"
-#include "lower_vector.h"
+#include "passes.h"
 #include "utils.h"
-#include "vector_abi.h"
 
 #include "../utils.h"
 

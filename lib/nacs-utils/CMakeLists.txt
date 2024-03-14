@@ -82,14 +82,10 @@ set(nacs_utils_llvm_HDRS
   llvm/analysis.h
   llvm/codegen.h
   llvm/compile.h
-  llvm/elim_macho_prefix.h
   llvm/execute.h
-  llvm/global_rename.h
-  llvm/inst_simplify.h
-  llvm/lower_vector.h
   llvm/mergephi.h
+  llvm/passes.h
   llvm/utils.h
-  llvm/vector_abi.h
   llvm/vectorize.h)
 set(nacs_utils_llvm_SRCS
   llvm/analysis.cpp

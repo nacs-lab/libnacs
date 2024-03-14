@@ -22,7 +22,7 @@
 #include "../nacs-utils/llvm/codegen.h"
 #include "../nacs-utils/llvm/compile.h"
 #include "../nacs-utils/llvm/execute.h"
-#include "../nacs-utils/llvm/inst_simplify.h"
+#include "../nacs-utils/llvm/passes.h"
 #include "../nacs-utils/llvm/utils.h"
 
 #include <stdexcept>

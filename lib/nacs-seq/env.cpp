@@ -20,7 +20,7 @@
 
 #include "../nacs-utils/llvm/analysis.h"
 #include "../nacs-utils/llvm/codegen.h"
-#include "../nacs-utils/llvm/global_rename.h"
+#include "../nacs-utils/llvm/passes.h"
 #include "../nacs-utils/llvm/utils.h"
 #include "../nacs-utils/streams.h"
 

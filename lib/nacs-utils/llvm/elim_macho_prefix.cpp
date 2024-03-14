@@ -18,7 +18,7 @@
 
 #define DEBUG_TYPE "elim_macho_prefix"
 
-#include "elim_macho_prefix.h"
+#include "passes.h"
 #include "utils.h"
 
 namespace NaCs::LLVM {

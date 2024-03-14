@@ -18,10 +18,9 @@
 
 #define DEBUG_TYPE "lower_vector"
 
-#include "lower_vector.h"
+#include "passes.h"
 #include "codegen_p.h"
 #include "utils.h"
-#include "vector_abi.h"
 
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/SmallSet.h>

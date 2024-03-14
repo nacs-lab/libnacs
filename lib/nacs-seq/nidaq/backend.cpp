@@ -26,7 +26,7 @@
 #include "../../nacs-utils/llvm/codegen.h"
 #include "../../nacs-utils/llvm/compile.h"
 #include "../../nacs-utils/llvm/execute.h"
-#include "../../nacs-utils/llvm/global_rename.h"
+#include "../../nacs-utils/llvm/passes.h"
 #include "../../nacs-utils/log.h"
 #include "../../nacs-utils/processor.h"
 #include "../../nacs-utils/streams.h"
