@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2018 - 2018 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2018 - 2024 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -213,10 +213,11 @@ static bool instSimplify(Function &F, const SimplifyQuery &SQ,
     return changed;
 }
 
-struct NaCsInstSimplify : public FunctionPass {
+#if NACS_ENABLE_LEGACY_PASS
+struct LegacyNaCsInstSimplifyPass : public FunctionPass {
     static char ID;
     resolver_cb_t m_cb;
-    NaCsInstSimplify(const resolver_cb_t &cb=resolver_cb_t()) :
+    LegacyNaCsInstSimplifyPass(const resolver_cb_t &cb) :
         FunctionPass(ID),
         m_cb(cb)
     {
@@ -250,13 +251,31 @@ struct NaCsInstSimplify : public FunctionPass {
         return instSimplify(F, SQ, m_cb);
     }
 };
-char NaCsInstSimplify::ID = 0;
+char LegacyNaCsInstSimplifyPass::ID = 0;
+#endif
+
 }
 
+#if NACS_ENABLE_LEGACY_PASS
 // Public interface to the simplify instructions pass.
 NACS_EXPORT() FunctionPass *createNaCsInstSimplifyPass(const resolver_cb_t &cb)
 {
-    return new NaCsInstSimplify(cb);
+    return new LegacyNaCsInstSimplifyPass(cb);
 }
+#endif
+
+#if NACS_ENABLE_NEW_PASS
+NACS_EXPORT() PreservedAnalyses NaCsInstSimplifyPass::run(Function &F, FunctionAnalysisManager &AM)
+{
+    auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+    auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+    auto &AC = AM.getResult<AssumptionAnalysis>(F);
+    const DataLayout &DL = F.getParent()->getDataLayout();
+    const SimplifyQuery SQ(DL, &TLI, &DT, &AC);
+    if (instSimplify(F, SQ, m_cb))
+        return PreservedAnalyses::allInSet<CFGAnalyses>();
+    return PreservedAnalyses::all();
+}
+#endif
 
 }
