@@ -21,6 +21,8 @@
 #include "passes.h"
 #include "utils.h"
 
+#include <llvm/IR/Verifier.h>
+
 #if NACS_ENABLE_NEW_PASS
 #  include <llvm/Transforms/IPO/GlobalDCE.h>
 #else

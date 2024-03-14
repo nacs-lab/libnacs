@@ -20,6 +20,7 @@
 
 #include "../utils.h"
 
+#include <llvm/IR/Verifier.h>
 #include <llvm/Transforms/IPO/AlwaysInliner.h>
 
 #if NACS_ENABLE_NEW_PASS
