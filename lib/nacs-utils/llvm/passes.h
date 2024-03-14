@@ -43,15 +43,14 @@ namespace NaCs::LLVM {
 
 using namespace llvm;
 
+using resolver_cb_t = std::function<uintptr_t(const std::string&)>;
 bool fixVectorABI(Function &F);
 
 #if NACS_ENABLE_LEGACY_PASS
 Pass *createElimMachOPrefixPass();
 Pass *createGlobalRenamePass();
-#endif
-
 Pass *createLowerVectorPass();
-using resolver_cb_t = std::function<uintptr_t(const std::string&)>;
+#endif
 FunctionPass *createNaCsInstSimplifyPass(const resolver_cb_t &cb=resolver_cb_t());
 Pass *createVectorABIPass();
 
@@ -61,6 +60,10 @@ struct ElimMachOPrefixPass : PassInfoMixin<ElimMachOPrefixPass> {
     static bool isRequired() { return true; }
 };
 struct GlobalRenamePass : PassInfoMixin<GlobalRenamePass> {
+    PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+    static bool isRequired() { return true; }
+};
+struct LowerVectorPass : PassInfoMixin<LowerVectorPass> {
     PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
     static bool isRequired() { return true; }
 };

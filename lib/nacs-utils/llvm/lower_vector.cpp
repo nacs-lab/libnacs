@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2019 - 2019 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2019 - 2024 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -42,14 +42,8 @@ namespace {
 #  define FixedVectorType VectorType
 #endif
 
-struct LowerVectorPass : public ModulePass {
-    static char ID;
-    LowerVectorPass()
-        : ModulePass(ID)
-    {}
-
-private:
-    bool runOnModule(Module &M) override;
+struct LowerVector {
+    bool run(Module &M);
     void replace_frem(BinaryOperator *binop);
     bool process_function(Function &F);
     static void replace_function(Function &F, StringRef new_name);
@@ -58,7 +52,7 @@ private:
     SmallSet<Function*, 4> m_tofix{};
 };
 
-void LowerVectorPass::replace_function(Function &F, StringRef new_name)
+void LowerVector::replace_function(Function &F, StringRef new_name)
 {
     auto _new_f = F.getParent()->getOrInsertFunction(new_name, F.getFunctionType(),
                                                      F.getAttributes());
@@ -67,7 +61,7 @@ void LowerVectorPass::replace_function(Function &F, StringRef new_name)
     fixVectorABI(*cast<Function>(new_f));
 }
 
-bool LowerVectorPass::process_intrinsic(Function &F, const std::string &name)
+bool LowerVector::process_intrinsic(Function &F, const std::string &name)
 {
     auto fname = F.getName();
     if (fname == "llvm." + name + ".v2f64") {
@@ -85,7 +79,7 @@ bool LowerVectorPass::process_intrinsic(Function &F, const std::string &name)
     return false;
 }
 
-void LowerVectorPass::replace_frem(BinaryOperator *binop)
+void LowerVector::replace_frem(BinaryOperator *binop)
 {
     auto ty = cast<FixedVectorType>(binop->getType());
     auto nele = ty->getNumElements();
@@ -115,7 +109,7 @@ void LowerVectorPass::replace_frem(BinaryOperator *binop)
     binop->replaceAllUsesWith(call);
 }
 
-bool LowerVectorPass::process_function(Function &F)
+bool LowerVector::process_function(Function &F)
 {
     if (process_intrinsic(F, "sin") || process_intrinsic(F, "cos") ||
         process_intrinsic(F, "pow") || process_intrinsic(F, "exp") ||
@@ -155,7 +149,7 @@ bool LowerVectorPass::process_function(Function &F)
     return changed;
 }
 
-bool LowerVectorPass::runOnModule(Module &M)
+bool LowerVector::run(Module &M)
 {
     bool changed = false;
     for (auto &f: M)
@@ -165,17 +159,46 @@ bool LowerVectorPass::runOnModule(Module &M)
     return changed;
 }
 
-char LowerVectorPass::ID = 0;
-static RegisterPass<LowerVectorPass> X("LowerVector",
+#if NACS_ENABLE_LEGACY_PASS
+struct LegacyLowerVectorPass : public ModulePass {
+    static char ID;
+    LegacyLowerVectorPass()
+        : ModulePass(ID)
+    {}
+
+private:
+    bool runOnModule(Module &M) override
+    {
+        LowerVector lv;
+        return lv.run(M);
+    }
+};
+
+char LegacyLowerVectorPass::ID = 0;
+static RegisterPass<LegacyLowerVectorPass> X("LowerVector",
                                        "Lower Vector Instructions and Calls Pass",
                                        false /* Only looks at CFG */,
                                        false /* Analysis Pass */);
+#endif
 
 }
 
-Pass *createLowerVectorPass()
+#if NACS_ENABLE_LEGACY_PASS
+NACS_EXPORT() Pass *createLowerVectorPass()
 {
-    return new LowerVectorPass();
+    return new LegacyLowerVectorPass();
 }
+#endif
+
+#if NACS_ENABLE_NEW_PASS
+NACS_EXPORT() PreservedAnalyses
+LowerVectorPass::run(Module &M, ModuleAnalysisManager &AM)
+{
+    LowerVector lv;
+    if (lv.run(M))
+        return PreservedAnalyses::allInSet<CFGAnalyses>();
+    return PreservedAnalyses::all();
+}
+#endif
 
 }
