@@ -27,6 +27,7 @@
 #  include <llvm/Transforms/IPO/GlobalDCE.h>
 #else
 #  include <llvm/IR/LegacyPassManager.h>
+#  include <llvm/Transforms/IPO.h>
 #endif
 
 namespace NaCs::LLVM {
