@@ -56,15 +56,11 @@ namespace {
 #  define FixedVectorType VectorType
 #endif
 
-struct VectorABIPass : public ModulePass {
-    static char ID;
-    VectorABIPass()
-        : ModulePass(ID)
-    {}
+struct VectorABI {
     static bool run_on_function(Function &F);
+    static bool run_on_module(Module &M);
 
 private:
-    bool runOnModule(Module &M) override;
     static bool handle_x86_func(const DataLayout &DL, FixedVectorType *T_v128,
                                 Function &f, bool is_win);
     static bool handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32,
@@ -82,7 +78,7 @@ private:
     static bool aarch64_abi(Module &M);
 };
 
-Function *VectorABIPass::clone_to_api(Function &F, FunctionType *new_fty)
+Function *VectorABI::clone_to_api(Function &F, FunctionType *new_fty)
 {
     auto old_name = F.getName().str();
     auto lt = F.getLinkage();
@@ -104,7 +100,7 @@ Function *VectorABIPass::clone_to_api(Function &F, FunctionType *new_fty)
     return newf;
 }
 
-Value *VectorABIPass::set_nele_vector(IRBuilder<> &builder, Value *v, unsigned nele)
+Value *VectorABI::set_nele_vector(IRBuilder<> &builder, Value *v, unsigned nele)
 {
     auto ty = cast<FixedVectorType>(v->getType());
     auto old_nele = ty->getNumElements();
@@ -120,8 +116,8 @@ Value *VectorABIPass::set_nele_vector(IRBuilder<> &builder, Value *v, unsigned n
     return builder.CreateShuffleVector(v, UndefValue::get(ty), mask);
 }
 
-Value *VectorABIPass::cast_vector(IRBuilder<> &builder, FixedVectorType *ty, Value *v,
-                                  const DataLayout &DL)
+Value *VectorABI::cast_vector(IRBuilder<> &builder, FixedVectorType *ty, Value *v,
+                              const DataLayout &DL)
 {
     auto old_ty = cast<FixedVectorType>(v->getType());
     auto old_elsz = DL.getTypeSizeInBits(old_ty->getElementType());
@@ -145,7 +141,7 @@ Value *VectorABIPass::cast_vector(IRBuilder<> &builder, FixedVectorType *ty, Val
 }
 
 // Ignore global alias.... We don't emit them and I don't want to think about them....
-bool VectorABIPass::is_vector_func(Function &F, bool export_only)
+bool VectorABI::is_vector_func(Function &F, bool export_only)
 {
     // LLVM knows how to deal with it so let it be...
     if (F.isIntrinsic())
@@ -196,8 +192,8 @@ static bool fix_call_cc(Function &f)
     return changed;
 }
 
-bool VectorABIPass::handle_x86_func(const DataLayout &DL, FixedVectorType *T_v128,
-                                    Function &f, bool is_win32)
+bool VectorABI::handle_x86_func(const DataLayout &DL, FixedVectorType *T_v128,
+                                Function &f, bool is_win32)
 {
     // On win32 we need to fix the caller, which may be created
     // after the function itself has been fixed.
@@ -297,7 +293,7 @@ bool VectorABIPass::handle_x86_func(const DataLayout &DL, FixedVectorType *T_v12
     return true;
 }
 
-bool VectorABIPass::x86_abi(Module &M, bool is_win32)
+bool VectorABI::x86_abi(Module &M, bool is_win32)
 {
     auto &DL = M.getDataLayout();
     auto T_v128 = FixedVectorType::get(Type::getInt32Ty(M.getContext()), 4);
@@ -307,8 +303,8 @@ bool VectorABIPass::x86_abi(Module &M, bool is_win32)
     return changed;
 }
 
-bool VectorABIPass::handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32,
-                                        Function &f)
+bool VectorABI::handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32,
+                                    Function &f)
 {
     if (!is_vector_func(f, true))
         return false;
@@ -423,7 +419,7 @@ bool VectorABIPass::handle_aarch64_func(const DataLayout &DL, IntegerType *T_i32
     return true;
 }
 
-bool VectorABIPass::aarch64_abi(Module &M)
+bool VectorABI::aarch64_abi(Module &M)
 {
     auto &DL = M.getDataLayout();
     auto T_i32 = Type::getInt32Ty(M.getContext());
@@ -433,7 +429,7 @@ bool VectorABIPass::aarch64_abi(Module &M)
     return changed;
 }
 
-bool VectorABIPass::run_on_function(Function &F)
+bool VectorABI::run_on_function(Function &F)
 {
     auto *M = F.getParent();
     assert(M && "Function must have a parent");
@@ -452,7 +448,7 @@ bool VectorABIPass::run_on_function(Function &F)
     }
 }
 
-bool VectorABIPass::runOnModule(Module &M)
+bool VectorABI::run_on_module(Module &M)
 {
     Triple triple(M.getTargetTriple());
     switch (triple.getArch()) {
@@ -467,21 +463,48 @@ bool VectorABIPass::runOnModule(Module &M)
     }
 }
 
-char VectorABIPass::ID = 0;
-static RegisterPass<VectorABIPass> X("VectorABI", "Fixing Vector ABI Pass",
-                                     false /* Only looks at CFG */,
-                                     false /* Analysis Pass */);
+#if NACS_ENABLE_LEGACY_PASS
+struct LegacyVectorABIPass : public ModulePass {
+    static char ID;
+    LegacyVectorABIPass()
+        : ModulePass(ID)
+    {}
+
+private:
+    bool runOnModule(Module &M) override
+    {
+        return VectorABI::run_on_module(M);
+    }
+};
+
+char LegacyVectorABIPass::ID = 0;
+static RegisterPass<LegacyVectorABIPass> X("VectorABI", "Fixing Vector ABI Pass",
+                                           false /* Only looks at CFG */,
+                                           false /* Analysis Pass */);
+#endif
 
 }
 
-Pass *createVectorABIPass()
+NACS_EXPORT() bool fixVectorABI(Function &F)
 {
-    return new VectorABIPass();
+    return VectorABI::run_on_function(F);
 }
 
-bool fixVectorABI(Function &F)
+#if NACS_ENABLE_LEGACY_PASS
+NACS_EXPORT() Pass *createVectorABIPass()
 {
-    return VectorABIPass::run_on_function(F);
+    return new LegacyVectorABIPass();
 }
+#endif
+
+#if NACS_ENABLE_NEW_PASS
+NACS_EXPORT() PreservedAnalyses
+VectorABIPass::run(Module &M, ModuleAnalysisManager &AM)
+{
+    if (VectorABI::run_on_module(M))
+        return PreservedAnalyses::allInSet<CFGAnalyses>();
+    return PreservedAnalyses::all();
+}
+#endif
 
 }

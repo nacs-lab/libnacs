@@ -50,9 +50,9 @@ bool fixVectorABI(Function &F);
 Pass *createElimMachOPrefixPass();
 Pass *createGlobalRenamePass();
 Pass *createLowerVectorPass();
+Pass *createVectorABIPass();
 #endif
 FunctionPass *createNaCsInstSimplifyPass(const resolver_cb_t &cb=resolver_cb_t());
-Pass *createVectorABIPass();
 
 #if NACS_ENABLE_NEW_PASS
 struct ElimMachOPrefixPass : PassInfoMixin<ElimMachOPrefixPass> {
@@ -64,6 +64,10 @@ struct GlobalRenamePass : PassInfoMixin<GlobalRenamePass> {
     static bool isRequired() { return true; }
 };
 struct LowerVectorPass : PassInfoMixin<LowerVectorPass> {
+    PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+    static bool isRequired() { return true; }
+};
+struct VectorABIPass : PassInfoMixin<VectorABIPass> {
     PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
     static bool isRequired() { return true; }
 };
