@@ -169,6 +169,7 @@ struct TagVal {
           val(_val)
     {}
     TagVal(const TagVal&) = default;
+    TagVal &operator=(const TagVal&) = default;
     TagVal(bool b)
         : typ(Type::Bool)
     {
@@ -258,6 +259,8 @@ struct Function {
     {}
     Function(Function&&) = default;
     Function(const Function&) = default;
+    Function &operator=(Function&&) = default;
+    Function &operator=(const Function&) = default;
     NACS_EXPORT(utils) void dump(void) const;
     NACS_EXPORT(utils) Type valType(int32_t id) const;
     TagVal evalConst(int32_t id) const
