@@ -27,7 +27,13 @@
 #include <sstream>
 #include <math.h>
 
-NACS_EXPORT() IR::GenVal global_vals[10];
+// Do not use NACS_EXPORT() here since we disable it for this test...
+#if NACS_OS_WINDOWS
+__declspec(dllexport)
+#else
+__attribute__((visibility("default")))
+#endif
+IR::GenVal global_vals[10];
 
 TEST_CASE("Closure") {
     TestCtx ctx;
