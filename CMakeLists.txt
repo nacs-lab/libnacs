@@ -129,9 +129,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 set(LINKER_FLAGS -pthread -fno-math-errno)
-set(DYN_LINKER_FLAGS)
 if(NOT APPLE)
-  set(DYN_LINKER_FLAGS -Wl,--as-needed -Wl,--no-undefined -Wl,--gc-sections ${DYN_LINKER_FLAGS})
+  set(LINKER_FLAGS -Wl,--as-needed -Wl,--no-undefined -Wl,--gc-sections ${LINKER_FLAGS})
 endif()
 
 if(IS_WINDOWS)
@@ -162,15 +161,16 @@ elseif(NOT APPLE)
   # to overwrite the address in the library with the external one.
   # With `-Bsymbolic` the two will be refering to
   # two different versions of the global variable.
-  set(DYN_LINKER_FLAGS ${DYN_LINKER_FLAGS} -Wl,-Bsymbolic-functions)
+  set(LINKER_FLAGS ${LINKER_FLAGS} -Wl,-Bsymbolic-functions)
 endif()
 
 cmake_c_add_flags(CMAKE_C_FLAGS -std=gnu11)
 cmake_c_add_flags(CMAKE_CXX_FLAGS -D__STDCPP_WANT_MATH_SPEC_FUNCS__)
-cmake_c_add_flags(CMAKE_EXE_LINKER_FLAGS ${LINKER_FLAGS} ${DYN_LINKER_FLAGS})
-cmake_c_add_flags(CMAKE_STATIC_LINKER_FLAGS ${LINKER_FLAGS})
-cmake_c_add_flags(CMAKE_SHARED_LINKER_FLAGS ${LINKER_FLAGS} ${DYN_LINKER_FLAGS})
-cmake_c_add_flags(CMAKE_MODULE_LINKER_FLAGS ${LINKER_FLAGS} ${DYN_LINKER_FLAGS})
+cmake_c_add_flags(CMAKE_EXE_LINKER_FLAGS ${LINKER_FLAGS})
+# The flags we are adding are dynamic-linkers only
+# cmake_c_add_flags(CMAKE_STATIC_LINKER_FLAGS)
+cmake_c_add_flags(CMAKE_SHARED_LINKER_FLAGS ${LINKER_FLAGS})
+cmake_c_add_flags(CMAKE_MODULE_LINKER_FLAGS ${LINKER_FLAGS})
 cmake_c_add_flags(CMAKE_C_FLAGS_DEBUG -ggdb3 -O0)
 cmake_c_add_flags(CMAKE_CXX_FLAGS_DEBUG -ggdb3 -O0 -D_GLIBCXX_ASSERTIONS)
 cmake_c_add_flags(CMAKE_C_FLAGS_RELEASE -O3)
