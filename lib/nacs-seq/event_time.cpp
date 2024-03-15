@@ -207,7 +207,7 @@ NACS_EXPORT() Var *EventTime::to_var(Env &env) const
     f->addFnAttr(llvm::Attribute::Speculatable);
     f->addFnAttr(llvm::Attribute::NoRecurse);
     f->addFnAttr(llvm::Attribute::NoUnwind);
-    f->addFnAttr(llvm::Attribute::ReadOnly);
+    f->setOnlyReadsMemory();
 
     {
         auto b0 = llvm::BasicBlock::Create(ctx, "top", f);

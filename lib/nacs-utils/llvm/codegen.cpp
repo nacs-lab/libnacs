@@ -357,7 +357,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     wrapf->addFnAttr(Attribute::NoRecurse);
     wrapf->addFnAttr(Attribute::NoUnwind);
     if (!ret_ref && !ret_closure)
-        wrapf->addFnAttr(Attribute::ReadOnly);
+        wrapf->setOnlyReadsMemory();
 
     BasicBlock *b0 = BasicBlock::Create(m_ctx, "top", wrapf);
     IRBuilder<> builder(b0);
@@ -474,7 +474,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
     f->addFnAttr(Attribute::Speculatable);
     f->addFnAttr(Attribute::NoRecurse);
     f->addFnAttr(Attribute::NoUnwind);
-    f->addFnAttr(Attribute::ReadOnly);
+    f->setOnlyReadsMemory();
 
     BasicBlock *b0 = BasicBlock::Create(m_ctx, "top", f);
     IRBuilder<> builder(b0);
