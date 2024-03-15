@@ -37,7 +37,7 @@ add_seq_test(zynq_bc_gen)
 
 if(ENABLE_LLVM)
   function(add_llvm_test target)
-    add_seq_test(${ARGV})
+    add_seq_test(${ARGV} STATIC)
     set_property(TARGET test-${target} APPEND
       PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
     set_property(TARGET test-${target} APPEND_STRING
