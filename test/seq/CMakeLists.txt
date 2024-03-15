@@ -8,9 +8,9 @@ function(add_seq_test target)
     set(SOURCES "test_${target}.cpp")
   endif()
   add_executable(test-${target} ${SOURCES})
-  if(UTILS_TEST_STATIC AND BUILD_STATIC_LIB)
+  if(SEQ_TEST_STATIC AND BUILD_STATIC_LIB)
     target_link_libraries(test-${target}
-      nacs-seq-static nacs-utils-static Catch2::Catch2)
+      nacs-seq-static Catch2::Catch2)
     set_property(TARGET test-${target} APPEND_STRING
       PROPERTY COMPILE_FLAGS " -DNACS_STATIC_ONLY=1")
   else()
