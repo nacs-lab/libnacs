@@ -75,7 +75,7 @@ jobs:
     - name: Generate coverage report (Clang)
       if: ${{matrix.compiler == 'clang'}}
       run: |
-        find ${{github.workspace}}/build/{lib,tools} -iname '*.o' -exec llvm-cov gcov -abcfupr {} -s ${{github.workspace}} \;
+        find ${{github.workspace}}/build/{lib,tools} -iname '*.o' -exec llvm-cov${{matrix.LLVM_VER != '' && format('-{0}', matrix.LLVM_VER) || ''}} gcov -abcfupr {} -s ${{github.workspace}} \;
 
     - name: Upload coverage
       uses: codecov/codecov-action@v4
