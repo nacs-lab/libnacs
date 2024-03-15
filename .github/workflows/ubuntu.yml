@@ -45,7 +45,7 @@ jobs:
       CXXFLAGS_COV: -fprofile-arcs -ftest-coverage
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Install dependencies
       run: sudo apt-get install libopenlibm-dev libsleef-dev libzmq3-dev libyaml-cpp-dev libtbb-dev
