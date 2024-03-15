@@ -3,9 +3,7 @@ name: MSYS2
 on:
   workflow_dispatch:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    branches: [ test ]
 
 env:
   CC: /mingw64/bin/gcc
@@ -21,12 +19,8 @@ jobs:
       fail-fast: false
       matrix:
         BUILD_TYPE: [ Release, Debug ]
-        with_llvm: [ true, false ]
+        with_llvm: [ true ]
         static_llvm: [ true ]
-        include:
-          - BUILD_TYPE: Release
-            with_llvm: true
-            static_llvm: false
 
     steps:
     - uses: actions/checkout@v2
@@ -86,7 +80,7 @@ jobs:
 
     - name: Build
       shell: msys2 {0}
-      run: cmake --build '${{github.workspace}}/build' --config ${{matrix.BUILD_TYPE}} -j $(nproc)
+      run: cmake --build '${{github.workspace}}/build' --verbose --config ${{matrix.BUILD_TYPE}} -j $(nproc)
 
     - name: Builder info
       shell: msys2 {0}
