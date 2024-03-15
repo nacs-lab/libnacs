@@ -78,4 +78,4 @@ jobs:
         find ${{github.workspace}}/build/{lib,tools} -iname '*.o' -exec llvm-cov gcov -abcfupr {} -s ${{github.workspace}} \;
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v4
