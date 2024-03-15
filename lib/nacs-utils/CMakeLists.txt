@@ -128,6 +128,18 @@ add_definitions("-\"DNACS_EXPORT_LIB_utils()=\"")
 add_library(nacs-utils SHARED
   ${nacs_utils_SRCS})
 add_dependencies(nacs-utils nacs-lib-names)
+if(BUILD_STATIC_LIB)
+  add_library(nacs-utils-static STATIC
+    ${nacs_utils_SRCS})
+  add_dependencies(nacs-utils-static nacs-lib-names)
+endif()
+
+function(link_nacs_utils)
+  target_link_libraries(nacs-utils ${ARGV})
+  if(BUILD_STATIC_LIB)
+    target_link_libraries(nacs-utils-static ${ARGV})
+  endif()
+endfunction()
 
 if(ENABLE_LLVM)
   if(STATIC_LLVM)
@@ -150,23 +162,32 @@ if(ENABLE_LLVM)
   # that cannot interact with each other safely.
   # See also comments in `lib/nacs-utils/llvm/utils.h`
   target_link_libraries(nacs-utils PRIVATE ${llvm_libs})
+  if(BUILD_STATIC_LIB)
+    target_link_libraries(nacs-utils-static PUBLIC ${llvm_libs})
+  endif()
   if(MINGW AND STATIC_LLVM)
-    target_link_libraries(nacs-utils PRIVATE ole32 uuid z)
+    link_nacs_utils(PRIVATE ole32 uuid z)
   endif()
   if(ENABLE_SIMD)
-    target_link_libraries(nacs-utils PRIVATE ${SLEEF_LIBRARIES})
+    link_nacs_utils(PRIVATE ${SLEEF_LIBRARIES})
   endif()
 endif()
 if(IS_UNIX)
-  target_link_libraries(nacs-utils PRIVATE dl)
+  link_nacs_utils(PRIVATE dl)
 endif()
-target_link_libraries(nacs-utils PUBLIC ${nacs_utils_LINKS})
+link_nacs_utils(PUBLIC ${nacs_utils_LINKS})
 
 set_target_properties(nacs-utils PROPERTIES
   VERSION "${MAJOR_VERSION}.${MINOR_VERSION}"
   SOVERSION "${MAJOR_VERSION}"
   COMPILE_FLAGS "-fvisibility=hidden"
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+if(BUILD_STATIC_LIB)
+  set_target_properties(nacs-utils-static PROPERTIES
+    COMPILE_FLAGS "-fvisibility=hidden"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
 
 configure_file(nacs-utils.pc.in nacs-utils.pc @ONLY)
 if(ENABLE_INSTALL_NONLIB)

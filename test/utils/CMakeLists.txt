@@ -1,14 +1,18 @@
 #
 
 function(add_utils_test target)
-  cmake_parse_arguments(UTILS_TEST "NOTEST;EXCLUDE" "" "" ${ARGN})
+  cmake_parse_arguments(UTILS_TEST "NOTEST;EXCLUDE;STATIC" "" "" ${ARGN})
   if(UTILS_TEST_UNPARSED_ARGUMENTS)
     set(SOURCES ${UTILS_TEST_UNPARSED_ARGUMENTS})
   else()
     set(SOURCES "test_${target}.cpp")
   endif()
   add_executable(test-${target} ${SOURCES})
-  target_link_libraries(test-${target} nacs-utils Catch2::Catch2)
+  if(UTILS_TEST_STATIC AND BUILD_STATIC_LIB)
+    target_link_libraries(test-${target} nacs-utils-static Catch2::Catch2)
+  else()
+    target_link_libraries(test-${target} nacs-utils Catch2::Catch2)
+  endif()
   if(NOT UTILS_TEST_NOTEST)
     if(UTILS_TEST_EXCLUDE)
       add_test(NAME test/excluded/utils/${target} COMMAND test-${target})
@@ -66,11 +70,14 @@ add_utils_test(wavemeter2 NOTEST)
 
 if(ENABLE_LLVM)
   function(add_llvm_test target)
-    add_utils_test(${ARGV})
+    add_utils_test(${ARGV} STATIC)
     set_property(TARGET test-${target} APPEND
       PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
     set_property(TARGET test-${target} APPEND_STRING
       PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
+    if(NOT BUILD_STATIC_LIB)
+      target_link_libraries(test-${target} LLVM)
+    endif()
   endfunction()
 
   foreach(TESTSET RANGE 5)
