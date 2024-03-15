@@ -63,7 +63,7 @@ ensurePureExtern(Module *M, FunctionType *ft, StringRef name, bool canread)
         f->setOnlyAccessesArgMemory();
     }
     else {
-        f->addFnAttr(Attribute::ReadNone);
+        f->setDoesNotAccessMemory();
     }
     return f;
 }
