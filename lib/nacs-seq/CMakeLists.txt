@@ -64,12 +64,13 @@ endfunction()
 
 if(SEQ_IN_UTILS)
   add_library(nacs-seq SHARED anchor.cpp)
+  target_link_libraries(nacs-seq PUBLIC nacs-utils)
   if(BUILD_STATIC_LIB)
     add_library(nacs-seq-static STATIC anchor.cpp)
     set_property(TARGET nacs-seq-static APPEND_STRING
       PROPERTY COMPILE_FLAGS " -DNACS_STATIC_ONLY=1")
+    target_link_libraries(nacs-seq-static PUBLIC nacs-utils-static)
   endif()
-  link_nacs_seq(PUBLIC nacs-utils)
 
   foreach(SRC ${nacs_seq_SRCS})
     get_filename_component(SRC "${SRC}" ABSOLUTE)
@@ -100,14 +101,14 @@ if(SEQ_IN_UTILS)
 else()
   add_library(nacs-seq SHARED
     ${nacs_seq_SRCS})
+  target_link_libraries(nacs-seq PUBLIC nacs-utils ${nacs_seq_LINKS})
   if(BUILD_STATIC_LIB)
     add_library(nacs-seq-static STATIC
       ${nacs_seq_SRCS})
     set_property(TARGET nacs-seq-static APPEND_STRING
       PROPERTY COMPILE_FLAGS " -DNACS_STATIC_ONLY=1")
+    target_link_libraries(nacs-seq-static PUBLIC nacs-utils-static ${nacs_seq_LINKS})
   endif()
-
-  link_nacs_seq(PUBLIC nacs-utils ${nacs_seq_LINKS})
 
   if(ENABLE_LLVM)
     set_property(SOURCE ${nacs_seq_llvm_SRCS} APPEND_STRING
