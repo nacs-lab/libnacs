@@ -104,4 +104,6 @@ jobs:
         find build/{lib,tools} -iname '*.obj' -exec /mingw64/bin/gcov -abcfupr {} -s $(cygpath -u '${{github.workspace}}') \;
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v4
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
