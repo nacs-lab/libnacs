@@ -154,7 +154,11 @@
 /**
  * \brief Export symbol.
  */
-#if NACS_OS_WINDOWS
+#if defined(NACS_STATIC_ONLY)
+#  define NACS_EXPORT(lib...)
+#  define NACS_PROTECTED(lib...)
+#  define NACS_INTERNAL
+#elif NACS_OS_WINDOWS
 #  define NACS_EXPORT_SWITCH_REAL(s)                                    \
     NACS_SWITCH(s, __declspec(dllimport), __declspec(dllexport))
 #  define NACS_EXPORT_SWITCH(lib)                       \

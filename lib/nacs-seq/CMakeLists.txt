@@ -66,6 +66,8 @@ if(SEQ_IN_UTILS)
   add_library(nacs-seq SHARED anchor.cpp)
   if(BUILD_STATIC_LIB)
     add_library(nacs-seq-static STATIC anchor.cpp)
+    set_property(TARGET nacs-seq-static APPEND_STRING
+      PROPERTY COMPILE_FLAGS " -DNACS_STATIC_ONLY=1")
   endif()
   link_nacs_seq(PUBLIC nacs-utils)
 
@@ -98,6 +100,12 @@ if(SEQ_IN_UTILS)
 else()
   add_library(nacs-seq SHARED
     ${nacs_seq_SRCS})
+  if(BUILD_STATIC_LIB)
+    add_library(nacs-seq-static STATIC
+      ${nacs_seq_SRCS})
+    set_property(TARGET nacs-seq-static APPEND_STRING
+      PROPERTY COMPILE_FLAGS " -DNACS_STATIC_ONLY=1")
+  endif()
 
   link_nacs_seq(PUBLIC nacs-utils ${nacs_seq_LINKS})
 

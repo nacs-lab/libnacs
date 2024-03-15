@@ -131,6 +131,8 @@ add_dependencies(nacs-utils nacs-lib-names)
 if(BUILD_STATIC_LIB)
   add_library(nacs-utils-static STATIC
     ${nacs_utils_SRCS})
+  set_property(TARGET nacs-utils-static APPEND_STRING
+    PROPERTY COMPILE_FLAGS " -DNACS_STATIC_ONLY=1")
   add_dependencies(nacs-utils-static nacs-lib-names)
 endif()
 
