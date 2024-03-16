@@ -23,11 +23,17 @@ jobs:
       volumes:
         - /sys/fs/cgroup:/sys/fs/cgroup
     steps:
+      - name: Install git
+        run: |
+          pacman-key --init
+          pacman-key --populate archlinux
+
+          pacman -Syu --noconfirm git
+      - uses: actions/checkout@v4
       - name: Initialize ArchLinux
         run: |
           bash github/setup-archlinux.sh
           chown -R user .
-      - uses: actions/checkout@v4
       - name: Setup ArchLinux CN repo
         # For sleef
         run: |
