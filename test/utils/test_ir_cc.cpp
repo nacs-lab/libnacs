@@ -89,13 +89,48 @@ double ArgSet::get<double>(int i)
     return double_args[i + 1];
 }
 
+static NACS_NOINLINE auto
+_build_single_arg(IR::ExeContext *exectx, IR::Type ret,
+                  const std::vector<IR::Type> &ids, int arg)
+    -> decltype(exectx->getFuncBase(std::declval<IR::Function>()))
+{
+    // Outline as much as possible from test_single_arg to reduce compiler workload.
+    IR::Builder builder(ret, ids);
+    builder.createRet(arg);
+    return exectx->getFuncBase(builder.get());
+}
+
+static NACS_NOINLINE auto
+_build_const_ret(IR::ExeContext *exectx, IR::Type ret,
+                 const std::vector<IR::Type> &ids)
+    -> decltype(exectx->getFuncBase(std::declval<IR::Function>()))
+{
+    // Outline as much as possible from test_const_ret to reduce compiler workload.
+    IR::Builder builder(ret, ids);
+    IR::TagVal res;
+    switch (ret) {
+    case IR::Type::Bool:
+        res = IR::TagVal(bool_args[0]);
+        break;
+    case IR::Type::Int32:
+        res = IR::TagVal(int32_args[0]);
+        break;
+    case IR::Type::Float64:
+        res = IR::TagVal(double_args[0]);
+        break;
+    default:
+        FAIL("Invalid type id");
+    }
+    builder.createRet(builder.getConst(res));
+    return exectx->getFuncBase(builder.get());
+}
+
 template<typename Ret, typename... Arg, int... I>
 static void test_single_arg(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
                             int arg, const std::vector<IR::Type> &ids)
 {
-    IR::Builder builder(type_id_v<Ret>, ids);
-    builder.createRet(arg);
-    auto f = exectx->getFunc<Ret(Arg...)>(builder.get());
+    auto f = IR::ExeContext::Func<Ret(Arg...)>(_build_single_arg(exectx, type_id_v<Ret>,
+                                                                 ids, arg));
     ArgSet::test(f(ArgSet::get<Arg>(I)...), arg, ids[arg]);
 }
 
@@ -103,11 +138,9 @@ template<typename Ret, typename... Arg, int... I>
 static void test_const_ret(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
                            const std::vector<IR::Type> &ids)
 {
-    IR::Builder builder(type_id_v<Ret>, ids);
-    auto res = ArgSet::get<Ret>(-1);
-    builder.createRet(builder.getConst(IR::TagVal(res)));
-    auto f = exectx->getFunc<Ret(Arg...)>(builder.get());
-    require(f(ArgSet::get<Arg>(I)...), res);
+    auto f = IR::ExeContext::Func<Ret(Arg...)>(_build_const_ret(exectx, type_id_v<Ret>,
+                                                                ids));
+    ArgSet::test(f(ArgSet::get<Arg>(I)...), -1, type_id_v<Ret>);
 }
 
 template<typename Ret, typename... Arg, int... I>
@@ -160,7 +193,7 @@ static void test_prefix(IR::ExeContext *exectx)
     Tester<4,ArgPrefix...>::test(exectx);
 }
 
-void do_test(IR::ExeContext *exectx)
+static void do_test(IR::ExeContext *exectx)
 {
 #if IR_CC_TESTSET == 0
     test_prefix<>(exectx);
