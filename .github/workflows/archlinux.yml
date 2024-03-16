@@ -23,11 +23,11 @@ jobs:
       volumes:
         - /sys/fs/cgroup:/sys/fs/cgroup
     steps:
-      - uses: actions/checkout@v4
       - name: Initialize ArchLinux
         run: |
           bash github/setup-archlinux.sh
           chown -R user .
+      - uses: actions/checkout@v4
       - name: Setup ArchLinux CN repo
         # For sleef
         run: |
@@ -54,7 +54,5 @@ jobs:
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
-        with:
-          root_dir: .
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

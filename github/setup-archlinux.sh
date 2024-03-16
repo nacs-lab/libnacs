@@ -6,7 +6,7 @@
 pacman-key --init
 pacman-key --populate archlinux
 
-pacman -Syu --noconfirm devtools
+pacman -Syu --noconfirm devtools git
 systemd-machine-id-setup # devtools requires a machine ID
 sed -i "s|MAKEFLAGS=.*|MAKEFLAGS=-j$(nproc)|" /etc/makepkg.conf
 useradd -m user # makepkg needs to be run with non-root
