@@ -78,7 +78,10 @@ void addOptimization(legacy::PassManagerBase &pm)
     pm.add(createLoopIdiomPass()); //// ****
     pm.add(createLoopRotatePass());           // Rotate loops.
     pm.add(createLICMPass());                 // Hoist loop invariants
+#if LLVM_VERSION_MAJOR < 15
+    // Removed from legacy pass manager
     pm.add(createLoopUnswitchPass());         // Unswitch loops.
+#endif
     pm.add(createInstructionCombiningPass());
     pm.add(createIndVarSimplifyPass());       // Canonicalize indvars
     pm.add(createLoopDeletionPass());         // Delete dead loops

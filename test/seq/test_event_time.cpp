@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2021 - 2021 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2021 - 2022 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -114,6 +114,26 @@ TEST_CASE("EventTime") {
             REQUIRE(t.terms[i].id == t3.terms[i].id);
             REQUIRE(t.terms[i].id != 0);
         }
+    }
+
+    SECTION("Compare extra terms") {
+        auto term1 = env.new_extern({IR::Type::Float64, 10});
+        auto term2 = env.new_extern({IR::Type::Float64, 20});
+
+        Seq::EventTime t;
+        t.add_term(Seq::Sign::Pos, term1, 1);
+        Seq::EventTime t2;
+        t2.add_term(Seq::Sign::Pos, term1, 1);
+        t2.add_term(Seq::Sign::Unknown, term2, 2);
+        Seq::EventTime t3;
+        t3.add_term(Seq::Sign::Unknown, term2, 2);
+        t3.add_term(Seq::Sign::Pos, term1, 1);
+
+        REQUIRE(t.isless_terms(t2) == Seq::Sign::Unknown);
+        REQUIRE(t2.isless_terms(t) == Seq::Sign::Unknown);
+
+        REQUIRE(t.isless_terms(t3) == Seq::Sign::Unknown);
+        REQUIRE(t3.isless_terms(t) == Seq::Sign::Unknown);
     }
 }
 

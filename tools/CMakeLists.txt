@@ -24,6 +24,16 @@ if(ENABLE_LLVM)
     PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
   set_property(TARGET nacs-seq-tool APPEND_STRING
     PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
-  install(TARGETS nacs-seq-tool
+
+  set(nacs_seq_pre_run_tool_SOURCES nacs_seq_pre_run.cpp)
+  add_executable(nacs-seq-pre-run-tool ${nacs_seq_pre_run_tool_SOURCES})
+  target_link_libraries(nacs-seq-pre-run-tool nacs-seq)
+  set_target_properties(nacs-seq-pre-run-tool PROPERTIES OUTPUT_NAME nacs-seq-pre-run)
+  set_property(TARGET nacs-seq-pre-run-tool APPEND
+    PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+  set_property(TARGET nacs-seq-pre-run-tool APPEND_STRING
+    PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
+
+  install(TARGETS nacs-seq-tool nacs-seq-pre-run-tool
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()

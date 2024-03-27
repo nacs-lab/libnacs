@@ -1,5 +1,5 @@
 /*************************************************************************
- *   Copyright (c) 2021 - 2021 Yichao Yu <yyc1992@gmail.com>             *
+ *   Copyright (c) 2021 - 2022 Yichao Yu <yyc1992@gmail.com>             *
  *                                                                       *
  *   This library is free software; you can redistribute it and/or       *
  *   modify it under the terms of the GNU Lesser General Public          *
@@ -161,6 +161,24 @@ NACS_EXPORT() void BasicSeq::add_endtime(EventTime &t)
 {
     m_endtimes.push_back(t.ref());
 }
+
+#ifndef NDEBUG
+// For debugger
+NACS_EXPORT() void print_time_order(
+    std::ostream &ostm,
+    const std::map<const EventTime*,std::map<const EventTime*,bool>> &time_order)
+{
+    for (auto &[t, m]: time_order) {
+        ostm << "(" << (void*)t << ") ";
+        t->print(ostm, 0);
+        ostm << ":" << std::endl;
+        for (auto &[t2, eq]: m) {
+            ostm << "  " << (eq ? ">= " : "> ") << "(" << (void*)t2 << ") ";
+            t2->print(ostm, 1);
+        }
+    }
+}
+#endif
 
 NACS_EXPORT() void BasicSeq::add_time_order(const EventTime *front, const EventTime *back,
                                             bool may_equal)
@@ -755,6 +773,13 @@ void BasicSeq::sort_times()
         {
             set_scc_lowest(time);
             // Not a root of the SCC
+            // This check is sufficent since m_scc_index_lowest == m_scc_index
+            // happens after finishing a DFS of the node iff
+            // no lower scc_index is reachable from the node.
+            // Note that this does **NOT** mean the m_scc_index_lowest
+            // has been accurated computed either
+            // since we may not have finished scanning the element with
+            // m_scc_index == our m_scc_index_lowest yet.
             if (time->m_scc_index_lowest != time->m_scc_index)
                 return;
             time->m_order_id = time_order_id++;
@@ -775,7 +800,10 @@ void BasicSeq::sort_times()
                     t->m_on_stack = false;
                     if (t == time)
                         break;
-                    assert(t->m_scc_index_lowest == time->m_scc_index_lowest);
+                    // The m_scc_index_lowest we see may not be accurate
+                    // since we might have scanned `t` before we got the final value
+                    // of `m_scc_index_lowest` for `time`.
+                    assert(t->m_scc_index_lowest >= time->m_scc_index_lowest);
                     t->m_order_id = time->m_order_id;
                     if (t->tconst < best_time->tconst ||
                         (t->tconst == best_time->tconst &&

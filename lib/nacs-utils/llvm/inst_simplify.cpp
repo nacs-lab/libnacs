@@ -45,7 +45,11 @@ static double call_ptr(uintptr_t ptr, Args... args)
 static Value *simplify_inst(Instruction *I, const SimplifyQuery &SQ,
                             const resolver_cb_t &cb, OptimizationRemarkEmitter *ORE)
 {
+#if LLVM_VERSION_MAJOR >= 15
+    auto v = simplifyInstruction(I, SQ, ORE);
+#else
     auto v = SimplifyInstruction(I, SQ, ORE);
+#endif
     if (v) {
         if (!isa<Instruction>(v))
             return v;
