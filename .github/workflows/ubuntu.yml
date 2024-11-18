@@ -78,6 +78,6 @@ jobs:
         find ${{github.workspace}}/build/{lib,tools} -iname '*.o' -exec llvm-cov${{matrix.LLVM_VER != '' && format('-{0}', matrix.LLVM_VER) || ''}} gcov -abcfupr {} -s ${{github.workspace}} \;
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
