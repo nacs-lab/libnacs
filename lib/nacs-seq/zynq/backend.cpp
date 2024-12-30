@@ -30,6 +30,32 @@
 
 namespace NaCs::Seq::Zynq {
 
+#if LLVM_VERSION_MAJOR >= 18
+template<typename T1, typename T2>
+static inline bool starts_with(T1 &&str, T2 &&prefix)
+{
+    return std::forward<T1>(str).starts_with(prefix);
+}
+
+template<typename T1, typename T2>
+static inline bool ends_with(T1 &&str, T2 &&prefix)
+{
+    return std::forward<T1>(str).ends_with(prefix);
+}
+#else
+template<typename T1, typename T2>
+static inline bool starts_with(T1 &&str, T2 &&prefix)
+{
+    return std::forward<T1>(str).startswith(prefix);
+}
+
+template<typename T1, typename T2>
+static inline bool ends_with(T1 &&str, T2 &&prefix)
+{
+    return std::forward<T1>(str).endswith(prefix);
+}
+#endif
+
 static Device::Register<Backend> register_backend("zynq");
 
 namespace {
@@ -140,7 +166,7 @@ NACS_EXPORT() void Backend::set_clock_active_time(
 void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
 {
     llvm::StringRef chn_name(_chn_name);
-    if (chn_name.startswith("TTL")) {
+    if (starts_with(chn_name, "TTL")) {
         auto chn_num_str = chn_name.substr(3);
         uint8_t chn_num;
         if (chn_num_str.getAsInteger(10, chn_num) || chn_num >= 32)
@@ -150,14 +176,14 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
         m_chn_map.emplace(chn_id, std::make_pair(BCGen::ChnType::TTL, chn_num));
         m_ttl_mask = setBit(m_ttl_mask, chn_num, true);
     }
-    else if (chn_name.startswith("DAC")) {
+    else if (starts_with(chn_name, "DAC")) {
         auto chn_num_str = chn_name.substr(3);
         uint8_t chn_num;
         if (chn_num_str.getAsInteger(10, chn_num) || chn_num >= 4)
             throw std::runtime_error(name() + ": Invalid DAC channel " + _chn_name);
         m_chn_map.emplace(chn_id, std::make_pair(BCGen::ChnType::DAC, chn_num));
     }
-    else if (chn_name.startswith("DDS")) {
+    else if (starts_with(chn_name, "DDS")) {
         auto subname = chn_name.substr(3);
         uint8_t chn_num;
         if (subname.consumeInteger(10, chn_num) || chn_num >= 22)
@@ -186,10 +212,10 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
 
 bool Backend::check_noramp(uint32_t chn_id, const std::string &chn_name)
 {
-    if (llvm::StringRef(chn_name).startswith("TTL"))
+    if (starts_with(llvm::StringRef(chn_name), "TTL"))
         return true;
-    if (llvm::StringRef(chn_name).startswith("DDS") &&
-        llvm::StringRef(chn_name).endswith("/PHASE"))
+    if (starts_with(llvm::StringRef(chn_name), "DDS") &&
+        ends_with(llvm::StringRef(chn_name), "/PHASE"))
         return true;
     return false;
 }
@@ -742,7 +768,7 @@ void Backend::config(const YAML::Node &config)
         for (auto chn_node: override_ignore_node) {
             auto chn_string = chn_node.as<std::string>();
             llvm::StringRef chn_name(chn_string);
-            if (chn_name.startswith("TTL")) {
+            if (starts_with(chn_name, "TTL")) {
                 auto chn_num_str = chn_name.substr(3);
                 uint8_t chn_num;
                 if (chn_num_str.getAsInteger(10, chn_num) || chn_num >= 32)
@@ -753,7 +779,7 @@ void Backend::config(const YAML::Node &config)
                                              "on start trigger TTL channel");
                 m_ttl_ovr_ignore = setBit(m_ttl_ovr_ignore, chn_num, true);
             }
-            else if (chn_name.startswith("DDS")) {
+            else if (starts_with(chn_name, "DDS")) {
                 auto subname = chn_name.substr(3);
                 uint8_t chn_num;
                 if (subname.consumeInteger(10, chn_num) || chn_num >= 22)
