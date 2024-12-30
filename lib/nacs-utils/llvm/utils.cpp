@@ -25,7 +25,11 @@
 #  include <llvm/ADT/Triple.h>
 #endif
 #include <llvm/Support/CommandLine.h>
-#include <llvm/Support/Host.h>
+#if LLVM_VERSION_MAJOR >= 18
+#  include <llvm/TargetParser/Host.h>
+#else
+#  include <llvm/Support/Host.h>
+#endif
 #include <llvm/Support/Process.h>
 #include <llvm/Support/StringSaver.h>
 #include <llvm/Transforms/Utils/Cloning.h>

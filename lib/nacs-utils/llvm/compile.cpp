@@ -30,14 +30,20 @@
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/MC/MCContext.h>
-#include <llvm/Support/Host.h>
+#if LLVM_VERSION_MAJOR >= 18
+#  include <llvm/TargetParser/Host.h>
+#else
+#  include <llvm/Support/Host.h>
+#endif
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Transforms/InstCombine/InstCombine.h>
 #include <llvm/Transforms/IPO/AlwaysInliner.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
 #include <llvm/Transforms/Utils.h>
-#include <llvm/Transforms/Vectorize.h>
+#if LLVM_VERSION_MAJOR < 18
+#  include <llvm/Transforms/Vectorize.h>
+#endif
 
 #if NACS_ENABLE_NEW_PASS
 #  include <llvm/Transforms/IPO/ConstantMerge.h>
@@ -68,6 +74,11 @@
 #include <mutex>
 
 namespace NaCs::LLVM::Compile {
+
+#if LLVM_VERSION_MAJOR < 18
+using CodeGenOptLevel = CodeGenOpt;
+#endif
+
 
 #if NACS_ENABLE_NEW_PASS
 static void addOptimization(ModulePassManager &MPM)
@@ -369,7 +380,7 @@ static TargetMachine *create_native_target()
     eb.setEngineKind(EngineKind::JIT)
         .setTargetOptions(options)
         .setRelocationModel(Reloc::Static)
-        .setOptLevel(CodeGenOpt::Aggressive);
+        .setOptLevel(CodeGenOptLevel::Aggressive);
     if (sizeof(void*) > 4)
         eb.setCodeModel(CodeModel::Large);
     Triple TheTriple(sys::getProcessTriple());
@@ -415,7 +426,7 @@ NACS_EXPORT() std::unique_ptr<TargetMachine> create_target(StringRef triple,
     eb.setEngineKind(EngineKind::JIT)
         .setTargetOptions(options)
         .setRelocationModel(Reloc::Static)
-        .setOptLevel(CodeGenOpt::Aggressive);
+        .setOptLevel(CodeGenOptLevel::Aggressive);
     if (TheTriple.isArch64Bit())
         eb.setCodeModel(CodeModel::Large);
     SmallVector<StringRef,16> attr_sr;
