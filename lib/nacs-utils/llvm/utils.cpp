@@ -299,8 +299,12 @@ const std::string &get_cpu_features()
 {
     static const std::string features =
         [] {
+#if LLVM_VERSION_MAJOR >= 19
+            auto HostFeatures = sys::getHostCPUFeatures();
+#else
             StringMap<bool> HostFeatures;
             sys::getHostCPUFeatures(HostFeatures);
+#endif
             std::string attr;
             for (auto &ele: HostFeatures) {
                 if (ele.getValue()) {

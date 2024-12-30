@@ -384,8 +384,12 @@ static TargetMachine *create_native_target()
     if (sizeof(void*) > 4)
         eb.setCodeModel(CodeModel::Large);
     Triple TheTriple(sys::getProcessTriple());
+#if LLVM_VERSION_MAJOR >= 19
+    auto HostFeatures = sys::getHostCPUFeatures();
+#else
     StringMap<bool> HostFeatures;
     sys::getHostCPUFeatures(HostFeatures);
+#endif
     SmallVector<std::string,10> attr;
     for (auto it = HostFeatures.begin(); it != HostFeatures.end(); it++) {
         if (it->getValue()) {
