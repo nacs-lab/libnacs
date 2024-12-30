@@ -76,7 +76,7 @@
 namespace NaCs::LLVM::Compile {
 
 #if LLVM_VERSION_MAJOR < 18
-using CodeGenOptLevel = CodeGenOpt;
+using CodeGenOptLevel = CodeGenOpt::Level;
 #endif
 
 
