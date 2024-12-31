@@ -231,6 +231,8 @@ bool MergePhi::processPhiCmp(PHINode *phi, Instruction *first_non_phi) const
 {
     bool changed = false;
     SmallVector<std::pair<CmpInst*,PHINode*>,16> replace;
+    auto &entry_bb = phi->getParent()->getParent()->getEntryBlock();
+    IRBuilder entry_builder(entry_bb.getFirstNonPHI());
     for (auto &use: phi->uses()) {
         auto cmp = dyn_cast<CmpInst>(use.getUser());
         if (!cmp)
@@ -247,10 +249,10 @@ bool MergePhi::processPhiCmp(PHINode *phi, Instruction *first_non_phi) const
         PHINode *newphi = PHINode::Create(T_bool, nincoming, "", first_non_phi);
         for (unsigned i = 0; i < nincoming; i++) {
             auto val = opno == 0 ?
-                llvm::ConstantExpr::getCompare(
+                entry_builder.CreateCmp(
                     cmp->getPredicate(),
                     cast<Constant>(phi->getIncomingValue(i)), otherop) :
-                llvm::ConstantExpr::getCompare(
+                entry_builder.CreateCmp(
                     cmp->getPredicate(), otherop,
                     cast<Constant>(phi->getIncomingValue(i)));
             newphi->addIncoming(val, phi->getIncomingBlock(i));
