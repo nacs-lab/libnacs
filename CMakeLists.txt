@@ -110,11 +110,14 @@ if(ENABLE_LLVM AND NOT APPLE)
     pkg_check_modules(PkgTBB IMPORTED_TARGET tbb)
     if(NOT PkgTBB_FOUND OR NOT TARGET PkgConfig::PkgTBB)
       find_library(TBB_LINK tbb tbb12 REQUIRED)
+      set(TBB_LIB_PATH ${TBB_LINK})
     else()
       set(TBB_LINK PkgConfig::PkgTBB)
+      get_target_property(TBB_LIB_PATH PkgConfig::PkgTBB LOCATION)
     endif()
   else()
     set(TBB_LINK TBB::tbb)
+    get_target_property(TBB_LIB_PATH TBB::tbb LOCATION)
   endif()
 endif()
 
@@ -276,9 +279,9 @@ if(EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS
       "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libyaml-cpp${YAML_CPP_PKGVER}")
 
-    # Hard code for now...
+    get_soname(TBB_SOVER libtbb TBB_LIB_PATH)
     set(CPACK_DEBIAN_PACKAGE_DEPENDS
-      "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libtbb2")
+      "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libtbb${TBB_SOVER}")
   endif()
   if(ENABLE_SIMD)
     get_soname(SLEEF_SOVER libsleef SLEEF_LIBRARIES)
