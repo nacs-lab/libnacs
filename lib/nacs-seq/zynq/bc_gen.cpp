@@ -482,10 +482,8 @@ NACS_EXPORT() uint32_t BCGen::convert_value(ChnType type, double value)
         return round<int32_t>(value * factor);
     }
     case ChnType::Phase: {
-        // Value is phase in degree
-        value = fmod(value, 360);
-        constexpr double phase_factor = (1 << 14) / 90.0;
-        return round<uint16_t>(value * phase_factor);
+        // Value is phase in [0, 1]
+        return round<int32_t>(value * (1 << 16)) & ((1 << 16) - 1);
     }
     case ChnType::DAC: {
         constexpr double factor = 65535 / 20.0;
