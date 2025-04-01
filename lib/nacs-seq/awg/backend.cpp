@@ -8,14 +8,11 @@
 #include "../../nacs-utils/llvm/codegen.h"
 #include "../../nacs-utils/llvm/compile.h"
 #include "../../nacs-utils/llvm/execute.h"
-#include "../../nacs-utils/llvm/global_rename.h"
+#include "../../nacs-utils/llvm/passes.h"
 #include "../../nacs-utils/processor.h"
 #include "../../nacs-utils/streams.h"
 
 #include <llvm/ADT/StringRef.h>
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/IR/Verifier.h>
-#include <llvm/Transforms/IPO.h>
 
 #include <memory>
 
@@ -164,9 +161,9 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
     uint8_t phys_chn_num;
     uint32_t chn_num;
     Backend::ChnType chn_type;
-    if (!phys_chn_str.startswith("OUT"))
+    if (!phys_chn_str.starts_with("OUT"))
         throw std::runtime_error("Physical channel should be specified with OUT");
-    if (!chn_num_str.startswith("CHN"))
+    if (!chn_num_str.starts_with("CHN"))
         throw std::runtime_error("Virtual channel should be specified with CHN");
     phys_chn_str = phys_chn_str.substr(3);
     chn_num_str = chn_num_str.substr(3);
@@ -484,16 +481,7 @@ void Backend::prepare (Manager::ExpSeq &expseq, Compiler &compiler)
                 be_bseq.iData_name_map.try_emplace(iData_id, iDataName);
             }
         }
-        llvm::legacy::PassManager PM;
-
-#ifndef NDEBUG
-        PM.add(llvm::createVerifierPass());
-#endif
-        PM.add(llvm::createGlobalDCEPass());
-        // Shorten all global names since we don't care what they are
-        // and this should slightly reduce the compiled binary size.
-        PM.add(LLVM::createGlobalRenamePass());
-        PM.run(mod);
+        LLVM::runGlobalRenamePasses(mod);
         // The optimization passes below (in `emit_objfile`) may recreate the functions
         // so the function handle may not be valid anymore.
         // We are done with the function renaming so we can simply get the names now.
