@@ -17,8 +17,7 @@ set(nacs_seq_nidaq_HDRS
   nidaq/backend.h
   nidaq/data_gen.h)
 set(nacs_seq_awg_HDRS
-  awg/backend.h
-  awg/DummyClient.h)
+  awg/backend.h)
 set(nacs_seq_SRCS
   error.cpp
   host_seq.cpp
@@ -41,7 +40,6 @@ set(nacs_seq_llvm_HDRS
   seq.h)
 set(nacs_seq_llvm_SRCS
   awg/backend.cpp
-  awg/DummyClient.cpp
   basic_seq.cpp
   builder.cpp
   compiler.cpp
