@@ -13,9 +13,6 @@
 #include "../../nacs-utils/streams.h"
 
 #include <llvm/ADT/StringRef.h>
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/IR/Verifier.h>
-#include <llvm/Transforms/IPO.h>
 
 #include <memory>
 
