@@ -83,7 +83,7 @@ void Device::prepare_run(HostSeq&)
 {
 }
 
-void Device::finish_run(HostSeq&)
+void Device::post_run(HostSeq&)
 {
 }
 
@@ -111,7 +111,7 @@ private:
     void start(HostSeq &host_seq) override {}
     void cancel(HostSeq &host_seq) override {}
     void wait(HostSeq &host_seq) override {}
-    // void finish_run(HostSeq &host_seq) override;
+    // void post_run(HostSeq &host_seq) override;
 
     void config(const YAML::Node&) override {}
     // void parse_data(const uint8_t *data, size_t len) override;
