@@ -65,7 +65,7 @@ public:
     virtual void cancel(HostSeq &host_seq) = 0;
     // Not allowed to throw
     virtual void wait(HostSeq &host_seq) = 0;
-    virtual void finish_run(HostSeq &host_seq);
+    virtual void post_run(HostSeq &host_seq);
 
     virtual void config(const YAML::Node&) = 0;
     virtual void parse_data(const uint8_t *data, size_t len);

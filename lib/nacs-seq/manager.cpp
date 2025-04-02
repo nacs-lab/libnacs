@@ -254,11 +254,13 @@ NACS_EXPORT() uint32_t Manager::ExpSeq::post_run()
     mgr().add_debug_printf("Finishing basic sequence [index %d]\n", host_seq.cur_seq_idx());
     auto id = host_seq.post_run();
     mgr().add_debug_printf("Next basic sequence [index %d]\n", host_seq.cur_seq_idx());
+    for (auto &[name, dev]: m_devices) {
+        mgr().call_guarded([&] {
+	    dev->post_run(host_seq);
+        });
+    }
     if (id == 0) {
         mgr().add_debug_printf("Sequence ended\n");
-        for (auto &[name, dev]: m_devices) {
-            dev->finish_run(host_seq);
-        }
     }
     return id;
 }

@@ -66,7 +66,7 @@ private:
     void start(HostSeq &host_seq) override;
     void cancel(HostSeq &host_seq) override;
     void wait(HostSeq &host_seq) override;
-    // void finish_run(HostSeq &host_seq) override;
+    // void post_run(HostSeq &host_seq) override;
 
     void run_bytecode(const std::vector<uint8_t> &bc);
     // Return whether pregeneration completed
