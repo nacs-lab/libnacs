@@ -132,10 +132,14 @@ NACS_EXPORT() uint64_t MultiClient::SockRef::send_addr()
     return id;
 }
 
-NACS_EXPORT() void MultiClient::SockRef::add_wait(uint64_t id, finish_cb_t finish_cb)
+NACS_EXPORT() void MultiClient::SockRef::add_wait(uint64_t id, CBWithTimeout finish_cb)
 {
     // Assume the client lock is held.
-    m_info.callbacks.emplace(id, finish_cb);
+    if (m_info.earliest_deadline > finish_cb.deadline) {
+        // Update the earliest deadline for the worker thread to poll on.
+        m_info.earliest_deadline = finish_cb.deadline;
+    }
+    m_info.callbacks.emplace(id, std::move(finish_cb));
 }
 
 NACS_EXPORT() MultiClient::SockRef MultiClient::get_socket(const std::string &addr)
@@ -169,13 +173,16 @@ void MultiClient::worker_func()
     std::vector<zmq::pollitem_t> poll_items;
     poll_items.push_back({(void*)m_cmd_sockets.first, 0, ZMQ_POLLIN, 0});
     std::vector<decltype(m_sockets.begin())> sockets;
+    std::vector<finish_cb_t> expired_cbs;
     zmq::message_t msg;
     std::vector<zmq::message_t> msgs;
     while (true) {
         poll_items.resize(1);
         // Cache the socket since other thread may have added new ones when we are polling.
         sockets.clear();
+        auto poll_time = time_point::max();
         std::unique_lock<std::mutex> locker(m_lock);
+        auto cur_time = std::chrono::high_resolution_clock::now();
         for (auto it = m_sockets.begin(), end = m_sockets.end(); it != end;) {
             auto &info = it->second;
             if (info.ref_count == 0 && info.callbacks.empty()) {
@@ -184,17 +191,58 @@ void MultiClient::worker_func()
             else {
                 poll_items.push_back({(void*)info.sock, 0, ZMQ_POLLIN, 0});
                 sockets.push_back(it);
+                if (info.earliest_deadline <= cur_time) {
+                    // In this case, we have a timeout, so we need to get rid of all expired callbacks
+                    // To calculate a new earliest deadline, reset to max.
+                    auto earliest_deadline = time_point::max();
+                    for (auto it2 = info.callbacks.begin(); it2 != info.callbacks.end();) {
+                        auto &cb_with_timeout = it2->second;
+                        if (cb_with_timeout.deadline <= cur_time) {
+                            // This callback has expired, store it and erase it.
+                            expired_cbs.push_back(cb_with_timeout.callback);
+                            it2 = info.callbacks.erase(it2); // Remove from the map
+                        }
+                        else {
+                            if (earliest_deadline > cb_with_timeout.deadline) {
+                                earliest_deadline = cb_with_timeout.deadline; // Update the earliest deadline
+                            }
+                            ++it2;
+                        }
+                    }
+                    info.earliest_deadline = earliest_deadline;
+                }
+                if (info.earliest_deadline < poll_time) {
+                    // Find the earliest deadline for the poll timeout.
+                    poll_time = info.earliest_deadline;
+                }
                 ++it;
             }
         }
         locker.unlock();
+        // Call all expired callbacks
+        for (auto &cb: expired_cbs) {
+            std::exception_ptr e_ptr = std::make_exception_ptr(timeout_error("Network timeout occurred"));
+            try {
+                cb(e_ptr, std::vector<zmq::message_t>());
+            }
+            catch (...) {
+                // Ignore
+            }
+        }
+        expired_cbs.clear(); // Clear the expired callbacks for next iteration
         if (poll_items.size() == 1)
             break;
+        // Now calculate poll time
+        int64_t poll_timeout = -1;
+        if (poll_time != time_point::max()) {
+            poll_timeout = std::chrono::duration_cast<std::chrono::milliseconds>(
+                poll_time - cur_time).count();
+        }
         // `zmq::poll(poll_items)` causes deprecation warning.
         // Ref https://github.com/zeromq/cppzmq/issues/494
         // `zmq::poll(poll_items.data(), poll_items.size())`
         // causes an error on ubuntu 18.04 due to ambiguity caused by a zmq bug.
-        zmq_poll(poll_items.data(), (int)poll_items.size(), -1);
+        zmq_poll(poll_items.data(), (int)poll_items.size(), poll_timeout);
         if (poll_items[0].revents) {
             assert(poll_items[0].revents == ZMQ_POLLIN);
             recv(m_cmd_sockets.first, msg);
@@ -242,7 +290,7 @@ void MultiClient::worker_func()
                 readall(info.sock);
                 continue;
             }
-            auto cb = cb_it->second;
+            auto cb = cb_it->second.callback;
             info.callbacks.erase(cb_it);
             locker.unlock();
             while (recv_more(info.sock, msg))

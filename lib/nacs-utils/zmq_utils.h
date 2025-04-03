@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <future>
 #include <map>
@@ -35,6 +36,11 @@
 #define __NACS_UTILS_ZMQ_H__
 
 namespace NaCs::ZMQ {
+
+// Custom error class for request timeout.
+struct timeout_error : std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
 
 // Wrapper functions for CPPZMQ 4.3.1 deprecation.
 static inline void send(zmq::socket_t &sock, zmq::message_t &msg)
@@ -181,6 +187,22 @@ NACS_EXPORT(utils) void shutdown();
 
 class MultiClient {
     using finish_cb_t = std::function<void(std::exception_ptr,std::vector<zmq::message_t>)>;
+    using time_point = std::chrono::time_point<std::chrono::high_resolution_clock>;
+    struct CBWithTimeout {
+        CBWithTimeout(finish_cb_t cb, int64_t timeout_ms)
+            : callback(std::move(cb))
+        {
+            if (timeout_ms < 0) {
+                deadline = time_point::max();
+            }
+            else {
+                auto start_time = std::chrono::high_resolution_clock::now();
+                deadline = start_time + std::chrono::milliseconds(timeout_ms);
+            }
+        }
+        time_point deadline;
+        finish_cb_t callback;
+    };
     struct SocketInfo {
         SocketInfo(MultiClient &client)
             : sock(client.m_context, ZMQ_DEALER),
@@ -191,8 +213,9 @@ class MultiClient {
         MultiClient &client;
         std::atomic<uint32_t> ref_count{0};
         uint64_t msg_counter = 0;
-        std::map<uint64_t,finish_cb_t> callbacks{};
+        std::map<uint64_t,CBWithTimeout> callbacks{};
         zmq::message_t empty{};
+        time_point earliest_deadline = time_point::max();
     };
 
 public:
@@ -219,15 +242,15 @@ public:
         }
         // Send function should not throw.
         template<typename SendFunc>
-        void send_msg(SendFunc &&send_func, finish_cb_t finish_cb)
+        void send_msg(SendFunc &&send_func, finish_cb_t finish_cb, uint64_t timeout_ms = -1)
         {
             std::lock_guard<std::mutex> locker(m_info.client.m_lock);
             auto id = send_addr();
             std::forward<SendFunc>(send_func)(m_info.client.m_cmd_sockets.second);
-            add_wait(id, finish_cb);
+            add_wait(id, {finish_cb, timeout_ms});
         }
         template<typename SendFunc>
-        std::future<std::vector<zmq::message_t>> send_msg(SendFunc &&send_func)
+        std::future<std::vector<zmq::message_t>> send_msg(SendFunc &&send_func, uint64_t timeout_ms = -1)
         {
             // Use a shared pointer to work around std::function's requirement on copyable.
             auto promise = std::make_shared<std::promise<std::vector<zmq::message_t>>>();
@@ -239,13 +262,13 @@ public:
                          else {
                              promise->set_value(std::move(res));
                          }
-                     });
+                     }, timeout_ms);
             return promise->get_future();
         }
 
     private:
         NACS_EXPORT(utils) uint64_t send_addr();
-        NACS_EXPORT(utils) void add_wait(uint64_t id, finish_cb_t finish_cb);
+        NACS_EXPORT(utils) void add_wait(uint64_t id, CBWithTimeout finish_cb);
 
         SocketInfo &m_info;
     };
