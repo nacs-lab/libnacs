@@ -311,6 +311,8 @@ NACS_EXPORT() Manager::ExpSeq *Manager::create_sequence(const uint8_t *data, siz
                 throw std::runtime_error("Invalid channel name.");
             add_debug_printf("Adding channel: %s\n", name.c_str());
             auto dev = expseq->get_device(name.substr(0, sep), true);
+            if (!dev)
+                throw std::runtime_error("Invalid device name.");
             auto chn_name = name.substr(sep + 1);
             assert(chn_name.size() == name_len - sep - 1);
             dev->add_channel(chn_id, chn_name);
