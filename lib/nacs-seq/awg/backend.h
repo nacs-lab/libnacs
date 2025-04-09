@@ -20,6 +20,11 @@ class Backend;
 
 namespace AWG {
 
+// Custom error class for request timeout.
+struct awg_seq_error : std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
 //globals for all AWG backends
 uint64_t seqcount = 0;
 
@@ -69,7 +74,7 @@ private:
     void start(HostSeq &host_seq) override;
     void cancel(HostSeq &host_seq) override;
     void wait(HostSeq &host_seq) override;
-    void finish_run(HostSeq &host_seq) override;
+    void post_run(HostSeq &host_seq) override;
     // void config(const YAML::Node&) override;
     uint32_t refresh_restart() override;
     void sort_channels();
@@ -110,6 +115,8 @@ private:
 
     std::string m_trig_dev;
     Zynq::Backend *m_zynq_dev = nullptr;
+
+    bool error_during_seq = false;
 };
 
 }
