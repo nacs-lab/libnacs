@@ -606,7 +606,7 @@ void Backend::pre_run(HostSeq &host_seq)
         auto conf_reply = m_sock->send_msg([&] (auto &sock) {
             ZMQ::send_more(sock, ZMQ::str_msg("set_out_config"));
             ZMQ::send(sock, zmq::message_t(config_msg.data(), config_msg.size()));
-        }).get();
+        }, 1000).get();
         if (conf_reply.empty())
             throw std::runtime_error("did not get reply from server");
         std::string conf_reply_str((char*) conf_reply[0].data(), conf_reply[0].size());
@@ -678,7 +678,7 @@ void Backend::pre_run(HostSeq &host_seq)
             ZMQ::send_more(sock, ZMQ::bits_msg(version));
             ZMQ::send_more(sock, zmq::message_t(id_bc.data(), id_bc.size()));
             ZMQ::send(sock, zmq::message_t(next_msg.data(), next_msg.size()));
-        }).get();
+        }, 1000).get();
         // handle response
         if (reply.empty())
             throw std::runtime_error("did not get reply from server");
@@ -719,14 +719,28 @@ void Backend::cancel(HostSeq &host_seq)
 }
 void Backend::wait(HostSeq &host_seq)
 {
-    m_sock->send_msg([&] (auto &sock) {
-            ZMQ::send_more(sock, ZMQ::str_msg("wait_seq"));
-            ZMQ::send(sock, ZMQ::bits_msg(m_cur_wait_id));
-    }).wait();
+    try {
+        m_sock->send_msg([&] (auto &sock) {
+                ZMQ::send_more(sock, ZMQ::str_msg("wait_seq"));
+                ZMQ::send(sock, ZMQ::bits_msg(m_cur_wait_id));
+        }, 1000).wait();
+    }
+    catch (...) {
+        error_during_seq = true;
+    }
 }
 void Backend::post_run(HostSeq &host_seq)
 {
-    refresh_restart();
+    try {
+        refresh_restart();
+    }
+    catch (...) {
+        error_during_seq = true;
+    }
+    if (error_during_seq) {
+        throw awg_seq_error("AWG error during sequence execution. Most likely due to timeout.");
+        error_during_seq = false;
+    }
 }
 uint8_t Backend::get_pulse_type(Backend::ChnType type, bool is_fn, bool is_vector){
     // map from chn_info and whether it's a vector to a uint8_t describing the pulse type
@@ -831,21 +845,21 @@ NACS_EXPORT() void Backend::reqServerInfo()
     else {
         auto reply = m_sock->send_msg([&] (auto &sock) {
             ZMQ::send(sock, ZMQ::str_msg("req_client_id"));
-        }).get();
+        }, 1000).get();
         if (reply.empty())
             throw std::runtime_error("client id not obtained");
         auto rep_data = (const uint8_t*)reply[0].data();
         memcpy(&m_client_id, rep_data, sizeof(m_client_id));
         reply = m_sock->send_msg([&] (auto &sock) {
             ZMQ::send(sock, ZMQ::str_msg("req_server_id"));
-        }).get();
+        }, 1000).get();
         if (reply.empty())
             throw std::runtime_error("server id not obtained");
         rep_data = (const uint8_t*)reply[0].data();
         memcpy(&m_server_id, rep_data, sizeof(m_server_id));
         reply = m_sock->send_msg([&] (auto &sock) {
             ZMQ::send(sock, ZMQ::str_msg("req_triple"));
-        }).get();
+        }, 1000).get();
         if (reply.empty())
             throw std::runtime_error("triple not obtained");
         std::string triple_str((char*) reply[0].data(), reply[0].size());
@@ -868,7 +882,7 @@ NACS_EXPORT() uint32_t Backend::refresh_restart()
         throw std::runtime_error("Backend socket not configured");
     auto reply = m_sock->send_msg([&] (auto &sock) {
         ZMQ::send(sock, ZMQ::str_msg("req_restarts"));
-    }).get();
+    }, 1000).get();
     if (reply.empty())
         throw std::runtime_error("restart number not obtained");
     auto rep_data = (const uint8_t*)reply[0].data();

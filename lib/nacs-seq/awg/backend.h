@@ -20,6 +20,11 @@ class Backend;
 
 namespace AWG {
 
+// Custom error class for request timeout.
+struct awg_seq_error : std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
 //globals for all AWG backends
 uint64_t seqcount = 0;
 
@@ -110,6 +115,8 @@ private:
 
     std::string m_trig_dev;
     Zynq::Backend *m_zynq_dev = nullptr;
+
+    bool error_during_seq = false;
 };
 
 }
