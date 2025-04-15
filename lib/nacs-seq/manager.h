@@ -77,6 +77,20 @@ public:
 
     class ExpSeq {
     public:
+        struct ChnOutput {
+            ChnOutput(char *name, size_t name_sz, int64_t *times, double *values, uint32_t *pulse_ids, size_t npts)
+            : name(name), name_sz(name_sz), times(times), values(values), pulse_ids(pulse_ids), npts(npts)
+            {
+                //
+            }
+
+            char *name;
+            size_t name_sz;
+            int64_t *times;
+            double *values;
+            uint32_t *pulse_ids;
+            size_t npts;
+        };
         ExpSeq(Manager *mgr, CGContext *cgctx);
         ~ExpSeq();
 
@@ -138,8 +152,10 @@ public:
             std::vector<uint8_t> seq_opt;
         };
         std::unique_ptr<Dump> dump;
+        std::map<std::string,uint32_t> m_chn_map; // Tracks the mapping from channel name to index.
 
         uint32_t refresh_device_restart(const char *dname);
+        ChnOutput* get_nominal_output(uint64_t pts_per_ramp, size_t *out_sz);
 
     private:
         template<typename Str>
