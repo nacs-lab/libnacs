@@ -275,6 +275,168 @@ NACS_EXPORT() uint32_t Manager::ExpSeq::refresh_device_restart(const char *dname
     return uint32_t(-1);
 }
 
+NACS_EXPORT() Manager::ExpSeq::ChnOutput* Manager::ExpSeq::get_nominal_output(uint64_t pts_per_ramp, size_t *out_sz)
+{
+    // pts_per_ramp includes the first and last point, so it must be at least 2. It will be set to 2 if not the case.
+    // Temporary insofar as keeping the start value, and pulses for this channel. 
+    struct FilledPulse {
+        FilledPulse(uint32_t id, int64_t time, int64_t len, double (*ramp_func)(double, void*),
+                    double endvalue, bool cond)
+            : id(id), time(time), len(len), ramp_func(ramp_func),
+              endvalue(endvalue), cond(cond)
+        {
+            // empty
+        }
+        uint32_t id;
+
+        int64_t time;
+        int64_t len; // 0 for a set pulse and nonzero for a ramp.
+        double (*ramp_func)(double, void*);
+
+        double endvalue;
+        bool cond;
+    };
+    struct TempChnOutput {
+        TempChnOutput(std::string name, double start_val)
+            : m_name(std::move(name)), 
+              m_start_val(start_val)
+            {
+                //
+            }
+        std::string m_name;
+        double m_start_val;
+        std::vector<FilledPulse> m_pulses;
+    };
+    uint32_t nchannels = host_seq.nchannels;
+    auto seq_idx = host_seq.cur_seq_idx();
+    if (nchannels == 0 || seq_idx == uint32_t(-1)) {
+        *out_sz = 0;
+        return nullptr;
+    }
+
+    std::vector<TempChnOutput> temp_chn_outputs;
+    std::vector<Manager::ExpSeq::ChnOutput> outputs;
+
+    // Initialize the temp output for each channel.
+    for (auto &[name, chn_id]: m_chn_map) {
+        std::string chn_name = name;
+        double start_val = host_seq.start_values[chn_id - 1].f64;
+        temp_chn_outputs.emplace_back(std::move(chn_name), start_val);
+    }
+    // Collect the pulses along with their filled values for each channel.
+    auto &bseq = host_seq.seqs[seq_idx];
+    for (auto &pulse: bseq.pulses) {
+        if (pulse.is_measure())
+            continue;
+        int64_t time = host_seq.get_time(pulse.time); //TODO check this
+        // Using this call double get_value(uint32_t i, uint32_t seq_idx) const
+        int64_t len = pulse.len == uint32_t(-1) ? 0 : round<int64_t>(host_seq.get_value(pulse.len, seq_idx));
+        double endvalue = host_seq.get_value(pulse.endvalue, seq_idx);
+        bool cond = pulse.cond == uint32_t(-1) ? true : (bool) host_seq.get_value(pulse.cond, seq_idx);
+        temp_chn_outputs[pulse.chn - 1].m_pulses.emplace_back(pulse.id, time, len, pulse.ramp_func, endvalue, cond);
+    }
+    // With all the pulses, we now build our output.
+    for (auto &temp_output: temp_chn_outputs) {
+        // First we sort them.
+        auto &pulses = temp_output.m_pulses;
+        std::sort(pulses.begin(), pulses.end(), [] (auto &p1, auto &p2) {
+            if (p1.time < p2.time)
+                return true;
+            if (p1.time > p2.time)
+                return false;
+            return p1.id < p2.id;
+        });
+        // Start building the output with the start value
+        std::vector<int64_t> times;
+        std::vector<double> values;
+        std::vector<uint32_t> pulse_ids;
+        times.push_back(0);
+        values.push_back(temp_output.m_start_val);
+        pulse_ids.push_back(uint32_t(-1)); // the start value is not identified with any particular pulse.
+        auto npulses = pulses.size();
+        for (uint32_t i = 0; i < npulses;) {
+            auto &pulse = pulses[i];
+            // This check should rarely execute, except if the first pulse is disabled.
+            if (!pulse.cond) {
+                // Skip disabled pulse
+                i++;
+                continue;
+            }
+            // Find next pulse which is important for ensuring that this set pulse will take place and
+            // determines the end time for a potentially interrupted ramp.
+            bool found = false;
+            FilledPulse *next_pulse_ptr = nullptr;
+            i++; // Move to the next pulse
+            while (!found) {
+                if (i >= npulses) {
+                    found = true;
+                }
+                else {
+                    if (pulses[i].cond) {
+                        next_pulse_ptr = &pulses[i];
+                        found = true;
+                    } else {
+                        // Skip disabled pulse
+                        i++;
+                    }
+                }
+            }
+            // Below here, i does not need to be advanced!
+            if (pulse.len == 0) {
+                // Set pulse
+                // Only valid if next pulse is not at the same time.
+                if (next_pulse_ptr && (next_pulse_ptr->time <= pulse.time)) {
+                    // Skip current pulse
+                    continue;
+                }
+                times.push_back(pulse.time);
+                values.push_back(pulse.endvalue);
+                pulse_ids.push_back(pulse.id);
+            } else {
+                // Ramp pulse
+                // Get end time by looking for the next pulse.
+                int64_t end_time;
+                if (next_pulse_ptr) {
+                    end_time = min(next_pulse_ptr->time, pulse.time + pulse.len);
+                }
+                else {
+                    end_time = pulse.time + pulse.len;
+                }
+                int64_t ramp_time = end_time - pulse.time;
+                assert(ramp_time >= 0);
+                if (ramp_time == 0) {
+                    // If the ramp time is 0, we let the next pulse dictate what happens.
+                    continue;
+                }
+                // Calculate the ramp with at least pts_per_ramp points.
+                uint64_t npts = max(2, min((uint64_t) ramp_time, pts_per_ramp));
+                for (uint64_t j = 0; j < npts; j++) {
+                    uint64_t this_time = pulse.time + round<uint64_t>(j * ramp_time / (npts - 1));
+                    times.push_back(this_time);
+                    values.push_back(pulse.ramp_func(this_time, host_seq.values.data()));
+                    pulse_ids.push_back(pulse.id);
+                }
+            }
+        }
+        // Now, we have built our output for this channel. We need to allocate some memory to pass it onto the next user.
+        auto times_ptr = (int64_t*) malloc(times.size() * sizeof(int64_t));
+        auto values_ptr = (double*) malloc(values.size() * sizeof(double));
+        auto pulse_ids_ptr = (uint32_t*) malloc(pulse_ids.size() * sizeof(uint32_t));
+        size_t out_pts = times.size(); // All sizes should be the same.
+        memcpy(times_ptr, times.data(), out_pts * sizeof(int64_t));
+        memcpy(values_ptr, values.data(), out_pts * sizeof(double));
+        memcpy(pulse_ids_ptr, pulse_ids.data(), out_pts * sizeof(uint32_t));
+        // Create the output object
+        outputs.emplace_back(std::move(temp_output.m_name), times_ptr, values_ptr, pulse_ids_ptr, out_pts);
+    }
+    // Last allocation of memory for the outputs array, which carries a bunch of addresses.
+    auto outputs_ptr = (Manager::ExpSeq::ChnOutput*) malloc(outputs.size() * sizeof(Manager::ExpSeq::ChnOutput));
+    memcpy(outputs_ptr, outputs.data(), outputs.size() * sizeof(Manager::ExpSeq::ChnOutput));
+    *out_sz = outputs.size();
+
+    return outputs_ptr;
+}
+
 NACS_EXPORT_ Manager::Manager()
 {
 }
@@ -319,6 +481,7 @@ NACS_EXPORT() Manager::ExpSeq *Manager::create_sequence(const uint8_t *data, siz
             if (dev->check_noramp(chn_id, chn_name)) {
                 builder.noramp_chns.push_back(chn_id);
             }
+            expseq->m_chn_map.emplace(name, chn_id);
         }
         add_debug("Building sequence\n");
         builder.buildseq();
