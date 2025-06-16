@@ -24,7 +24,8 @@ enum class Backend::ChnType : uint8_t
 {
     Freq,
     Amp,
-    Phase
+    Phase,
+    Analog
 };
 
 struct Backend::ChannelInfo {
@@ -163,23 +164,33 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
     Backend::ChnType chn_type;
     if (!phys_chn_str.starts_with("OUT"))
         throw std::runtime_error("Physical channel should be specified with OUT");
-    if (!chn_num_str.starts_with("CHN"))
-        throw std::runtime_error("Virtual channel should be specified with CHN");
+    if (!chn_num_str.starts_with("CHN") && !chn_num_str.starts_with("A"))
+        throw std::runtime_error("Virtual channel should be specified with CHN or A");
     phys_chn_str = phys_chn_str.substr(3);
-    chn_num_str = chn_num_str.substr(3);
+    if (chn_num_str.starts_with("CHN")) {
+        chn_num_str = chn_num_str.substr(3);
+        if (chn_num_str.getAsInteger(10, chn_num))
+            throw std::runtime_error("Channel for AWG must be a number.");
+        if (type_str == "FREQ")
+            chn_type = Backend::ChnType::Freq;
+        else if (type_str == "AMP")
+            chn_type = Backend::ChnType::Amp;
+        else if (type_str == "PHASE")
+            chn_type = Backend::ChnType::Phase;
+        else {
+            throw std::runtime_error("Unknown name for channel. Use FREQ, AMP, PHASE");
+        }
+    }
+    else {
+        // A1, A2, A3,...
+        chn_num_str = chn_num_str.substr(1);
+        if (chn_num_str.getAsInteger(10, chn_num))
+            throw std::runtime_error("Analog channel for AWG must be a number.");
+        chn_type = Backend::ChnType::Analog;
+    }
     if (phys_chn_str.getAsInteger(10, phys_chn_num))
         throw std::runtime_error("Physical output for AWG must be a number.");
-    if (chn_num_str.getAsInteger(10, chn_num))
-        throw std::runtime_error("Channel for AWG must be a number.");
-    if (type_str == "FREQ")
-        chn_type = Backend::ChnType::Freq;
-    else if (type_str == "AMP")
-        chn_type = Backend::ChnType::Amp;
-    else if (type_str == "PHASE")
-        chn_type = Backend::ChnType::Phase;
-    else {
-        throw std::runtime_error("Unknown name for channel. Use FREQ, AMP, PHASE");
-    }
+    
     m_chn_map.try_emplace(chn_id, phys_chn_num, chn_num, chn_type);
     auto it = out_chns.begin();
     for (; it != out_chns.end(); ++it) {
@@ -200,7 +211,7 @@ static unsigned get_vector_size()
 
 void Backend::sort_channels()
 {
-    // assignment of linear channel id
+    // assignment of linear channel id. Sorting is based on the order in Backend::ChnType. Doesn't really matter...
     auto nchn = (uint32_t)m_chn_map.size();
     m_linear_chns.resize(nchn);
     auto it = m_chn_map.begin();
@@ -738,9 +749,13 @@ uint8_t Backend::get_pulse_type(Backend::ChnType type, bool is_fn, bool is_vecto
     // FreqSet, 4
     // FreqFn, 5
     // FreqVecFn, 6
-    // ModChn, // add or delete channels
-    // Phase,
-    // _MAX = Phase // keeps track of how many CmdType options there are
+    // ModChn, 7 // add or delete channels
+    // Phase, 8
+    // AnalogModChn, 9
+    // AnalogSet, 10
+    // AnalogFn, 11
+    // AnalogVecFn, 12
+    // _MAX = AnalogVecFn // keeps track of how many CmdType options there are
 // };
     //auto type = chn_info.m_chn_type;
     if (type == Backend::ChnType::Phase) {
@@ -748,6 +763,15 @@ uint8_t Backend::get_pulse_type(Backend::ChnType type, bool is_fn, bool is_vecto
             throw std::runtime_error("Cannot program a pulse on a phase");
         }
         return 8;
+    }
+    if (type == Backend::ChnType::Analog) {
+        if (is_fn) {
+            if (is_vector) {
+                return 12; // AnalogVecFn
+            }
+            return 11; // AnalogFn
+        }
+        return 10; // AnalogSet
     }
     uint8_t base = 0;
     if (type == Backend::ChnType::Freq) {
