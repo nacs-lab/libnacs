@@ -29,7 +29,7 @@ jobs:
           pacman-key --populate archlinux
 
           pacman -Syu --noconfirm git
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Initialize ArchLinux
         run: |
           bash github/setup-archlinux.sh
