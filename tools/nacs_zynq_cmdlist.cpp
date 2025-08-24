@@ -50,9 +50,9 @@ int parse(int argc, char **argv)
     uint32_t ver = 2;
 
     uvector_ostream vstm;
-    uint32_t ttl_mask;
+    Seq::Zynq::SeqMetadata meta;
     try {
-        ttl_mask = Seq::Zynq::CmdList::parse(vstm, istm, ver);
+        meta = Seq::Zynq::CmdList::parse(vstm, istm, ver);
     }
     catch (const SyntaxError &err) {
         std::cerr << err;
@@ -67,7 +67,7 @@ int parse(int argc, char **argv)
     auto v = vstm.get_buf();
     uint64_t len_ns = Seq::Zynq::CmdList::total_time(v.data(), v.size(), ver) * 10;
     ostm.write((char*)&len_ns, 8);
-    ostm.write((char*)&ttl_mask, 4);
+    ostm.write((char*)&meta.ttl_masks[0], 4);
     ostm.write((char*)v.data(), v.size());
     return 0;
 }

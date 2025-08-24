@@ -70,6 +70,17 @@ bool ParserBase::skip_comments()
     }
 }
 
+static inline bool isalphanum(char c, bool num=true)
+{
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
+        return true;
+    }
+    else if (!num) {
+        return false;
+    }
+    return c >= '0' && c <= '9';
+}
+
 std::pair<const std::string&,int> ParserBase::read_name(bool allow_num0)
 {
     buff.clear();
@@ -78,16 +89,6 @@ std::pair<const std::string&,int> ParserBase::read_name(bool allow_num0)
     int linelen = (int)line.size();
     if (colno >= linelen)
         return {buff, -1};
-    auto isalphanum = [] (char c, bool num=true) {
-        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
-            return true;
-        }
-        else if (!num) {
-            return false;
-        }
-        return c >= '0' && c <= '9';
-    };
-
     auto c0 = line[colno];
     if (!isalphanum(c0, allow_num0))
         return {buff, -1};
@@ -247,7 +248,7 @@ uint64_t ParserBase::read_ttlwait()
     return read_waittime() - min_time;
 }
 
-uint32_t ParserBase::read_ttlall()
+uint32_t ParserBase::read_ttlall0()
 {
     assert(peek() == '=');
     colno++;
@@ -257,11 +258,34 @@ uint32_t ParserBase::read_ttlall()
     return (uint32_t)res.first;
 }
 
-std::pair<uint8_t,bool> ParserBase::read_ttl1()
+std::pair<uint32_t,uint8_t> ParserBase::read_ttlall(int max_bank)
+{
+    assert(peek() == '[');
+    assert(max_bank <= 8);
+    colno++;
+    auto [bank, bank_start] = read_dec(0, max_bank - 1);
+    if (bank_start == -1)
+        syntax_error("Missing TTL bank number", colno + 1);
+    skip_whitespace();
+    if (peek() != ']')
+        syntax_error("Expecting `]` after TTL bank number", colno + 1);
+    colno++;
+    skip_whitespace();
+    if (peek() != '=')
+        syntax_error("Expecting `=` before TTL value", colno + 1);
+    colno++;
+    auto res = read_hex(0, UINT32_MAX);
+    if (res.second == -1)
+        syntax_error("Missing TTL value", colno + 1);
+    return {uint32_t(res.first), uint8_t(bank)};
+}
+
+std::pair<uint8_t,bool> ParserBase::read_ttl1(int max_bank)
 {
     assert(peek() == '(');
+    assert(max_bank <= 8);
     colno++;
-    auto [chn, chn_start] = read_dec(0, 31);
+    auto [chn, chn_start] = read_dec(0, 32 * max_bank - 1);
     if (chn_start == -1)
         syntax_error("Missing TTL channel", colno + 1);
     skip_whitespace();
@@ -469,30 +493,46 @@ uint8_t ParserBase::read_clockcmd()
     return clock;
 }
 
-std::pair<bool,uint32_t> ParserBase::read_ttlmask()
+std::pair<bool,std::vector<uint32_t>> ParserBase::read_ttlmask(int max_bank)
 {
     if (!skip_comments())
-        return {false, 0};
+        return {false, {}};
     auto res = read_name();
-    uint32_t ttl_mask = 0;
+    std::vector<uint32_t> ttl_masks;
     if (res.first == "ttl_mask") {
         skip_whitespace();
         if (peek() != '=')
             syntax_error("Expecting `=` after `ttl_mask`", colno + 1);
         colno++;
         skip_whitespace();
-        int oldcol;
-        std::tie(ttl_mask, oldcol) = read_hex(0, UINT32_MAX);
-        if (oldcol < 0)
-            syntax_error("Expecting hex literal", colno + 1);
+        for (int bank = 0; bank < max_bank; bank++) {
+            // We expect a new mask value to be present
+            auto [ttl_mask, oldcol] = read_hex(0, UINT32_MAX);
+            if (oldcol < 0)
+                syntax_error("Expecting hex literal", colno + 1);
+            ttl_masks.push_back(ttl_mask);
+            // Here we need to decide whether we expect a new mask value to be present.
+            auto c0 = peek();
+            if (!std::isspace(c0)) {
+                // No space following the last mask, either EOL or error
+                break;
+            }
+            skip_whitespace();
+            if (!isalphanum(peek())) {
+                // Found something that's not alpha-numeric,
+                // can't be a hex number, either comment or error.
+                break;
+            }
+        }
+        // Expect end of line
         if (!checked_next_line() || !skip_comments()) {
-            return {false, ttl_mask};
+            return {false, ttl_masks};
         }
     }
     else if (res.second != -1) {
         colno = res.second;
     }
-    return {true, ttl_mask};
+    return {true, ttl_masks};
 }
 
 }

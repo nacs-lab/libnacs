@@ -1,4 +1,4 @@
-SyntaxError: Invalid ttl command: expecting `(` or `=`
+SyntaxError: Invalid ttl command: expecting `(`, `[` or `=`
 Line: 3, Column: 4
 ttl-
    ^

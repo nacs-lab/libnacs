@@ -165,14 +165,20 @@ struct ParserBase {
 
     // Read a TTL all command. Assume (and assert) the first character is `=`.
     // The TTL value returned is parsed from a hex literal following the `=`.
-    uint32_t read_ttlall();
+    uint32_t read_ttlall0();
+    // Read a TTL all command with bank. Assume (and assert) the first character is `[`.
+    // The format is `[<bank number>]=<value>` where `bank number` is a decimal integer in
+    // `[0, max_bank)`.
+    // Returns `{value, bank}`.
+    std::pair<uint32_t,uint8_t> read_ttlall(int max_bank);
     // Read a single TTL setting command. Assume (and assert) the first character is `(`.
-    // The format is `(<chn>)=<value>` where `chn` is a decimal integer in `[0, 31]`
+    // The format is `(<chn>)=<value>` where `chn` is a decimal integer in
+    // `[0, 32 * max_bank)`
     // and `value` can be one of `on`, `On`, `ON`, `true`, `True`, `TRUE` or `1`
     // for true logic, or one of `off`, `Off`, `OFF`, `false`, `False`, `FALSE` or `0`
     // for false logic.
     // Returns `{chn, value}`
-    std::pair<uint8_t,bool> read_ttl1();
+    std::pair<uint8_t,bool> read_ttl1(int max_bank);
 
     // Read a DDS frequency command.
     // Format is `(<chn>)=<freq>`. `chn` is a decimal integer in `[0, 21]`.
@@ -217,10 +223,11 @@ struct ParserBase {
     // This may be present at the beginning of the text representation.
     // The final `ttl_mask` in effect will also include
     // all the TTL channels used in the cmdlist (a `ttl=...` command uses all the channels).
-    // Return `0` if no `ttl_mask` spec is found.
-    // The spec format is `ttl_mask=<val>` where `val` is a 32bit hex literal.
+    // Return empty array if no `ttl_mask` spec is found.
+    // The spec format is `ttl_mask=[<val> x n]` where `val` is a 32bit hex literal.
+    // multiple values are separated by space.
     // Only throw error if the parsing failed after matching `ttl_mask`.
-    std::pair<bool,uint32_t> read_ttlmask();
+    std::pair<bool,std::vector<uint32_t>> read_ttlmask(int max_bank);
 };
 
 template<typename T>
