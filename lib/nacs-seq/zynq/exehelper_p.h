@@ -31,9 +31,15 @@ namespace NaCs::Seq::Zynq {
 namespace {
 
 struct Printer {
-    void ttl(uint32_t ttl, uint64_t t)
+    void ttl(uint32_t ttl, uint64_t t, int bank=0)
     {
-        stm << "ttl=0x" << std::hex << ttl << " t=0x" << t << std::dec << std::endl;
+        if (bank == 0) {
+            stm << "ttl=0x" << std::hex << ttl << " t=0x" << t << std::dec << std::endl;
+        }
+        else {
+            stm << "ttl[" << bank << "]=0x"
+                << std::hex << ttl << " t=0x" << t << std::dec << std::endl;
+        }
     }
     void ttl1(uint8_t chn, bool val, uint64_t t)
     {
@@ -80,7 +86,7 @@ struct Printer {
 };
 
 struct TimeKeeper {
-    void ttl(uint32_t, uint64_t t)
+    void ttl(uint32_t, uint64_t t, int=0)
     {
         total_t += t;
     }

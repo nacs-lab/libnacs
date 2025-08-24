@@ -32,6 +32,7 @@
  */
 
 #include "pulse_time.h"
+#include "seq_shared.h"
 
 #include <istream>
 #include <stdexcept>
@@ -58,12 +59,12 @@ enum OpCode : uint8_t {
     DAC = 9,
 };
 
-namespace Inst {
+namespace InstDefs {
 
 /**
- * Command format:
- * TTL all: [#0: 8][val: 32] (5 bytes)
- * TTL1: [#1: 8][t: 2][val: 1][chn: 5] (2 bytes)
+ * Command format (ver 3):
+ * TTL all: [#0: 8][t: 5][bank: 3][val: 32] (6 bytes)
+ * TTL1: [#1: 8][t: 7][val: 1][chn: 8] (3 bytes)
  * Wait: [#2: 8][t: 64] (9 bytes)
  * Clock: [#3: 8][period: 8] (2 bytes)
  * DDS Freq: [#4: 8][chn: 8][freq: 32] (6 bytes)
@@ -72,21 +73,41 @@ namespace Inst {
  * DDS Det Phase: [#7: 8][chn: 8][det_phase: 16] (4 bytes)
  * DDS Reset: [#8: 8][chn: 8] (2 bytes)
  * DAC: [#9: 8][chn: 8][val: 16] (4 bytes)
+ *
+ * Old command formats:
+ * TTL all (ver 1-2): [#0: 8][val: 32] (5 bytes)
+ * TTL1 (ver 1-2): [#1: 8][t: 2][val: 1][chn: 5] (2 bytes)
  **/
 
-struct NACS_PACKED TTLAll {
+struct NACS_PACKED TTLAll_v1 {
     OpCode op; // 0
     uint32_t val;
 };
-static_assert(sizeof(TTLAll) == 5, "");
+static_assert(sizeof(TTLAll_v1) == 5, "");
 
-struct NACS_PACKED TTL1 {
+struct NACS_PACKED TTL1_v1 {
     OpCode op; // 1
     uint8_t t: 2; // Total time is `t + PulseTime::Min`
     uint8_t val: 1;
     uint8_t chn: 5;
 };
-static_assert(sizeof(TTL1) == 2, "");
+static_assert(sizeof(TTL1_v1) == 2, "");
+
+struct NACS_PACKED TTLAll_v3 {
+    OpCode op; // 0
+    uint8_t t: 5;
+    uint8_t bank: 3;
+    uint32_t val;
+};
+static_assert(sizeof(TTLAll_v3) == 6, "");
+
+struct NACS_PACKED TTL1_v3 {
+    OpCode op; // 1
+    uint8_t t: 7; // Total time is `t + PulseTime::Min`
+    uint8_t val: 1;
+    uint8_t chn;
+};
+static_assert(sizeof(TTL1_v3) == 3, "");
 
 struct NACS_PACKED Wait {
     OpCode op; // 2
@@ -143,12 +164,48 @@ static_assert(sizeof(DAC) == 4, "");
 
 }
 
-static constexpr uint8_t cmd_size[10] = {
-    5, 2, // TTL
-    9, 2, // wait, clock
-    6, 4, 4, 4, 2, // DDS
-    4, // DAC
+struct Inst_v1 {
+    using TTLAll = InstDefs::TTLAll_v1;
+    using TTL1 = InstDefs::TTL1_v1;
+    using Wait = InstDefs::Wait;
+    using Clock = InstDefs::Clock;
+    using DDSFreq = InstDefs::DDSFreq;
+    using DDSAmp = InstDefs::DDSAmp;
+    using DDSPhase = InstDefs::DDSPhase;
+    using DDSDetPhase = InstDefs::DDSDetPhase;
+    using DDSReset = InstDefs::DDSReset;
+    using DAC = InstDefs::DAC;
+    static constexpr uint8_t version = 1;
+    static constexpr uint8_t cmd_size[10] = {
+        sizeof(TTLAll), sizeof(TTL1), // TTL
+        sizeof(Wait), sizeof(Clock), // wait, clock
+        sizeof(DDSFreq), sizeof(DDSAmp), sizeof(DDSPhase),
+        sizeof(DDSDetPhase), sizeof(DDSReset), // DDS
+        sizeof(DAC), // DAC
+    };
 };
+
+struct Inst_v3 {
+    using TTLAll = InstDefs::TTLAll_v3;
+    using TTL1 = InstDefs::TTL1_v3;
+    using Wait = InstDefs::Wait;
+    using Clock = InstDefs::Clock;
+    using DDSFreq = InstDefs::DDSFreq;
+    using DDSAmp = InstDefs::DDSAmp;
+    using DDSPhase = InstDefs::DDSPhase;
+    using DDSDetPhase = InstDefs::DDSDetPhase;
+    using DDSReset = InstDefs::DDSReset;
+    using DAC = InstDefs::DAC;
+    static constexpr uint8_t version = 3;
+    static constexpr uint8_t cmd_size[10] = {
+        sizeof(TTLAll), sizeof(TTL1), // TTL
+        sizeof(Wait), sizeof(Clock), // wait, clock
+        sizeof(DDSFreq), sizeof(DDSAmp), sizeof(DDSPhase),
+        sizeof(DDSDetPhase), sizeof(DDSReset), // DDS
+        sizeof(DAC), // DAC
+    };
+};
+
 
 /**
  * Returns the number of instructions.
@@ -169,10 +226,13 @@ static inline size_t count(const std::vector<uint8_t> &code, uint32_t version)
  */
 void print(std::ostream &stm, const uint8_t *code, size_t code_len,
            uint32_t ttl_mask, uint32_t version);
+void print(std::ostream &stm, const uint8_t *code, size_t code_len,
+           const std::vector<uint32_t> &ttl_mask, uint32_t version);
+template<typename T>
 static inline void print(std::ostream &stm, const std::vector<uint8_t> &code,
-                         uint32_t ttl_mask, uint32_t version)
+                         T &&ttl_mask, uint32_t version)
 {
-    print(stm, &code[0], code.size(), ttl_mask, version);
+    print(stm, &code[0], code.size(), std::forward<T>(ttl_mask), version);
 }
 
 /**
@@ -234,18 +294,36 @@ struct ExeState {
      *    Generate a clock pulse (`255` is off). Should take `PulseTime::Clock` cycles.
      */
     template<typename T>
-    void run(T &&cb, const uint8_t *code, size_t len);
+    void run(T &&cb, const uint8_t *code, size_t len, uint32_t version);
 
     uint8_t min_time = PulseTime::Min;
+private:
+    template<typename Inst, typename T>
+    void _run(T &&cb, const uint8_t *code, size_t len);
 };
 
 template<typename T>
-void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
+void ExeState::run(T &&cb, const uint8_t *code, size_t code_len, uint32_t version)
+{
+    if (version == 0 || version > 3)
+        throw std::runtime_error("Invalid CmdList version number.");
+    if (version >= 2)
+        min_time = PulseTime::Min2;
+    if (version >= 3) {
+        _run<Inst_v3>(std::forward<T>(cb), code, code_len);
+    }
+    else {
+        _run<Inst_v1>(std::forward<T>(cb), code, code_len);
+    }
+}
+
+template<typename Inst, typename T>
+void ExeState::_run(T &&cb, const uint8_t *code, size_t code_len)
 {
     for (size_t i = 0; i < code_len;) {
         auto *p = &code[i];
         uint8_t op = *p;
-        auto inst_len = cmd_size[op];
+        auto inst_len = Inst::cmd_size[op];
         i += inst_len;
         // Look forward until the end of the code or a non-wait pulse is find.
         // Return the total time consumed.
@@ -256,67 +334,71 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
                 uint8_t op2 = *p2;
                 if (op2 != OpCode::Wait)
                     break;
-                i += sizeof(Inst::Wait);
-                auto inst = Mem::load_unalign<Inst::Wait>(p2);
+                i += sizeof(typename Inst::Wait);
+                auto inst = Mem::load_unalign<typename Inst::Wait>(p2);
                 t += inst.t;
             }
             return t;
         };
-        auto runTTL = [&] (uint32_t ttl) {
-            cb.ttl(ttl, consumeAllWait() + min_time);
+        auto runTTL = [&] (uint32_t ttl, uint64_t t, int bank) {
+            cb.ttl(ttl, consumeAllWait() + t + min_time, bank);
         };
         auto runTTL1 = [&] (uint8_t chn, bool val, uint64_t t) {
-            t += consumeAllWait();
-            cb.ttl1(chn, val, t);
+            cb.ttl1(chn, val, consumeAllWait() + t + min_time);
         };
         switch (op) {
         case OpCode::TTLAll: {
-            auto inst = Mem::load_unalign<Inst::TTLAll>(p);
-            runTTL(inst.val);
+            auto inst = Mem::load_unalign<typename Inst::TTLAll>(p);
+            if constexpr (Inst::version >= 3) {
+                runTTL(inst.val, inst.t, inst.bank);
+            }
+            else {
+                runTTL(inst.val, 0, 0);
+            }
             break;
         }
         case OpCode::TTL1: {
-            auto inst = Mem::load_unalign<Inst::TTL1>(p);
-            runTTL1(inst.chn, inst.val, inst.t + min_time);
+            auto inst = Mem::load_unalign<typename Inst::TTL1>(p);
+            runTTL1(inst.chn, inst.val, inst.t);
             break;
         }
         case OpCode::Wait: {
-            auto inst = Mem::load_unalign<Inst::Wait>(p);
+            auto inst = Mem::load_unalign<typename Inst::Wait>(p);
             uint64_t t = inst.t;
             cb.wait(t + consumeAllWait());
             break;
         }
         case OpCode::Clock: {
-            cb.clock(Mem::load_unalign<Inst::Clock>(p).period);
+            cb.clock(Mem::load_unalign<typename Inst::Clock>(p).period);
             break;
         }
         case OpCode::DDSFreq: {
-            auto inst = Mem::load_unalign<Inst::DDSFreq>(p);
+            auto inst = Mem::load_unalign<typename Inst::DDSFreq>(p);
             cb.dds_freq(inst.chn, inst.freq);
             break;
         }
         case OpCode::DDSAmp: {
-            auto inst = Mem::load_unalign<Inst::DDSAmp>(p);
+            auto inst = Mem::load_unalign<typename Inst::DDSAmp>(p);
             cb.dds_amp(inst.chn, inst.amp);
             break;
         }
         case OpCode::DDSPhase: {
-            auto inst = Mem::load_unalign<Inst::DDSPhase>(p);
+            auto inst = Mem::load_unalign<typename Inst::DDSPhase>(p);
             cb.dds_phase(inst.chn, inst.phase);
             break;
         }
         case OpCode::DDSDetPhase: {
-            auto inst = Mem::load_unalign<Inst::DDSDetPhase>(p);
+            auto inst = Mem::load_unalign<typename Inst::DDSDetPhase>(p);
             cb.dds_detphase(inst.chn, inst.det_phase);
             break;
         }
         case OpCode::DDSReset: {
-            auto inst = Mem::load_unalign<Inst::DDSReset>(p);
+            auto inst = Mem::load_unalign<typename Inst::DDSReset>(p);
             cb.dds_reset(inst.chn);
             break;
         }
         case OpCode::DAC: {
-            auto inst = Mem::load_unalign<Inst::DAC>(p);
+            auto inst = Mem::load_unalign<typename Inst::DAC>(p);
             cb.dac(inst.chn, inst.amp);
             break;
         }
@@ -326,7 +408,7 @@ void ExeState::run(T &&cb, const uint8_t *code, size_t code_len)
     }
 }
 
-uint32_t parse(buff_ostream &output, std::istream &input, uint32_t version);
+SeqMetadata parse(buff_ostream &output, std::istream &input, uint32_t version);
 
 }
 }
