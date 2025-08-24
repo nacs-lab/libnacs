@@ -10,6 +10,7 @@ set(nacs_seq_zynq_HDRS
   zynq/bytecode.h
   zynq/cmdlist.h
   zynq/pulse_time.h
+  zynq/seq_shared.h
   zynq/legacy_seq.h)
 set(nacs_seq_nidaq_HDRS
   nidaq/backend.h

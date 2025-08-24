@@ -70,22 +70,26 @@ static void test(const std::string &dir, const std::string &name)
     string_ostream vstm;
     uint32_t ver = 1;
     try {
-        uint32_t ttl_mask = CmdList::parse(vstm, istm, ver);
+        auto meta = CmdList::parse(vstm, istm, ver);
+        REQUIRE(meta.version == ver);
+        REQUIRE(meta.is_cmd);
         auto vec = vstm.get_buf();
         std::ifstream bstm(path + ".cmdbin", std::ios::binary);
         REQUIRE(bstm.good());
         std::string binstr(std::istreambuf_iterator<char>(bstm), {});
-        uint64_t len_ns = test_cmdlist_eq(vec, ttl_mask, binstr);
+        uint64_t len_ns = test_cmdlist_eq(vec, meta.ttl_masks[0], binstr);
 
         string_ostream tstm;
         tstm << "# " << len_ns << " ns" << std::endl;
-        CmdList::print(tstm, (uint8_t*)vec.data(), vec.size(), ttl_mask, ver);
+        CmdList::print(tstm, (uint8_t*)vec.data(), vec.size(), meta.ttl_masks[0], ver);
         auto text = tstm.get_buf();
         test_file_eq(path + ".txt", text);
 
         const_istream tistm(text);
-        auto ttl_mask2 = CmdList::parse(vstm, tistm, ver);
-        REQUIRE(ttl_mask == ttl_mask2);
+        auto meta2 = CmdList::parse(vstm, tistm, ver);
+        REQUIRE(meta2.version == ver);
+        REQUIRE(meta2.is_cmd);
+        REQUIRE(meta2.ttl_masks == meta.ttl_masks);
         REQUIRE(vec == vstm.get_buf());
     }
     catch (const SyntaxError &err) {
