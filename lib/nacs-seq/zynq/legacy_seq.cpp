@@ -393,10 +393,10 @@ class Writer {
         for (int i = 15; i >= 0; i--) {
             if (!times[i])
                 continue;
-            addInst(Inst::Wait{OpCode::Wait, uint8_t(i & 0xf), times[i]});
+            addInst(Inst_v1::Wait{OpCode::Wait, uint8_t(i & 0xf), times[i]});
         }
         if (times[16]) {
-            addInst(Inst::Wait2{OpCode::Wait2, 1, uint16_t(times[16] & 2047)});
+            addInst(Inst_v1::Wait2{OpCode::Wait2, 1, uint16_t(times[16] & 2047)});
         }
     }
 
@@ -423,7 +423,7 @@ class Writer {
         // the generic case below.
         if (nchgs == 1) {
             auto bit = __builtin_ffs(changes) - 1;
-            last_timed_inst = addInst(Inst::TTL2{OpCode::TTL2, 0, uint8_t(bit & 0x1f),
+            last_timed_inst = addInst(Inst_v1::TTL2{OpCode::TTL2_v1, 0, uint8_t(bit & 0x1f),
                     uint8_t(bit & 0x1f)});
             max_time_left = 3;
         }
@@ -431,7 +431,7 @@ class Writer {
             auto bit1 = __builtin_ffs(changes) - 1;
             changes = changes ^ (1 << bit1);
             auto bit2 = __builtin_ffs(changes) - 1;
-            last_timed_inst = addInst(Inst::TTL2{OpCode::TTL2, 0, uint8_t(bit1 & 0x1f),
+            last_timed_inst = addInst(Inst_v1::TTL2{OpCode::TTL2_v1, 0, uint8_t(bit1 & 0x1f),
                     uint8_t(bit2 & 0x1f)});
             max_time_left = 3;
         }
@@ -441,7 +441,7 @@ class Writer {
             auto bit2 = __builtin_ffs(changes) - 1;
             changes = changes ^ (1 << bit2);
             auto bit3 = __builtin_ffs(changes) - 1;
-            addInst(Inst::TTL4{OpCode::TTL4, uint8_t(bit1 & 0x1f),
+            addInst(Inst_v1::TTL4{OpCode::TTL4_v1, uint8_t(bit1 & 0x1f),
                     uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit3 & 0x1f)});
         }
         else if (nchgs == 4) {
@@ -452,7 +452,7 @@ class Writer {
             auto bit3 = __builtin_ffs(changes) - 1;
             changes = changes ^ (1 << bit3);
             auto bit4 = __builtin_ffs(changes) - 1;
-            addInst(Inst::TTL4{OpCode::TTL4, uint8_t(bit1 & 0x1f),
+            addInst(Inst_v1::TTL4{OpCode::TTL4_v1, uint8_t(bit1 & 0x1f),
                     uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit4 & 0x1f)});
         }
         else if (nchgs == 5) {
@@ -465,13 +465,13 @@ class Writer {
             auto bit4 = __builtin_ffs(changes) - 1;
             changes = changes ^ (1 << bit4);
             auto bit5 = __builtin_ffs(changes) - 1;
-            last_timed_inst = addInst(Inst::TTL5{OpCode::TTL5, 0, uint8_t(bit1 & 0x1f),
+            last_timed_inst = addInst(Inst_v1::TTL5{OpCode::TTL5, 0, uint8_t(bit1 & 0x1f),
                     uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f),
                     uint8_t(bit4 & 0x1f), uint8_t(bit5 & 0x1f)});
             max_time_left = 7;
         }
         else {
-            last_timed_inst = addInst(Inst::TTLAll{OpCode::TTLAll, 0, ttl});
+            last_timed_inst = addInst(Inst_v1::TTLAll{OpCode::TTLAll, 0, ttl});
             max_time_left = 15;
         }
         return PulseTime::Min;
@@ -496,7 +496,7 @@ class Writer {
     {
         addWait(t - cur_t);
         cur_t += PulseTime::Clock;
-        addInst(Inst::Clock{OpCode::Clock, 0, period});
+        addInst(Inst_v1::Clock{OpCode::Clock, 0, period});
         keeper.addPulse(PulseTime::Clock);
         return PulseTime::Clock;
     }
@@ -516,19 +516,19 @@ class Writer {
         dds[chn].freq = freq;
         dds[chn].freq_set = true;
         if (dfreq <= 0x3f || dfreq >= 0xffffffc0) {
-            addInst(Inst::DDSDetFreq2{OpCode::DDSDetFreq2, uint8_t(chn & 0x1f),
+            addInst(Inst_v1::DDSDetFreq2{OpCode::DDSDetFreq2, uint8_t(chn & 0x1f),
                     uint8_t(dfreq & 0x7f)});
         }
         else if (dfreq <= 0x3fff || dfreq >= 0xffffc000) {
-            addInst(Inst::DDSDetFreq3{OpCode::DDSDetFreq3, uint8_t(chn & 0x1f),
+            addInst(Inst_v1::DDSDetFreq3{OpCode::DDSDetFreq3, uint8_t(chn & 0x1f),
                     uint16_t(dfreq & 0x7fff)});
         }
         else if (dfreq <= 0x003fffff || dfreq >= 0xffc00000) {
-            addInst(Inst::DDSDetFreq4{OpCode::DDSDetFreq4, uint8_t(chn & 0x1f),
+            addInst(Inst_v1::DDSDetFreq4{OpCode::DDSDetFreq4, uint8_t(chn & 0x1f),
                     uint32_t(dfreq & 0x7fffff)});
         }
         else {
-            addInst(Inst::DDSFreq{OpCode::DDSFreq, uint8_t(chn & 0x1f),
+            addInst(Inst_v1::DDSFreq{OpCode::DDSFreq, uint8_t(chn & 0x1f),
                     uint32_t(freq & 0x7fffffff)});
         }
         return PulseTime::DDSFreq;
@@ -548,11 +548,11 @@ class Writer {
         dds[chn].amp = amp;
         dds[chn].amp_set = true;
         if (damp <= 0x3f || damp >= 0xffc0) {
-            addInst(Inst::DDSDetAmp{OpCode::DDSDetAmp, uint8_t(chn & 0x1f),
+            addInst(Inst_v1::DDSDetAmp{OpCode::DDSDetAmp, uint8_t(chn & 0x1f),
                     uint8_t(damp & 0x7f)});
         }
         else {
-            addInst(Inst::DDSAmp{OpCode::DDSAmp, 0, uint8_t(chn & 0x1f),
+            addInst(Inst_v1::DDSAmp{OpCode::DDSAmp, 0, uint8_t(chn & 0x1f),
                     uint16_t(amp & 0xfff)});
         }
         return PulseTime::DDSAmp;
@@ -582,10 +582,10 @@ class Writer {
         dac[chn].V = V;
         dac[chn].set = true;
         if (dV <= 0x1ff || dV >= 0xfe00) {
-            addInst(Inst::DACDet{OpCode::DACDet, uint8_t(chn & 0x3), uint16_t(dV & 0x3ff)});
+            addInst(Inst_v1::DACDet{OpCode::DACDet, uint8_t(chn & 0x3), uint16_t(dV & 0x3ff)});
         }
         else {
-            addInst(Inst::DAC{OpCode::DAC, 0, uint8_t(chn & 0x3), V});
+            addInst(Inst_v1::DAC{OpCode::DAC, 0, uint8_t(chn & 0x3), V});
         }
         return PulseTime::DAC;
     }
