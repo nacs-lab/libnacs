@@ -35,7 +35,7 @@ class BCGen {
     struct Pulse;
     struct TTLPulse;
     struct TTLManager;
-    struct Writer;
+    template<typename Inst> struct Writer;
     struct DataStream;
 
 public:

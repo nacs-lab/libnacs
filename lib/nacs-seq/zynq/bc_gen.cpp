@@ -744,6 +744,7 @@ NACS_EXPORT() void BCGen::generate(const HostSeq &host_seq) const
     emit_bytecode(host_seq.values.data());
 }
 
+template<typename Inst>
 struct BCGen::Writer {
     struct DDS {
         uint32_t freq = 0;
@@ -758,10 +759,13 @@ struct BCGen::Writer {
         bool set = false;
     };
 
-    Writer(std::vector<uint8_t> &bytecode, int8_t start_chn)
+    Writer(std::vector<uint8_t> &bytecode, uint8_t start_chn)
         : start_ttl_chn(start_chn),
           bytecode(bytecode)
     {
+        if (Inst::version < 3) {
+            assert(start_ttl_chn < 32);
+        }
     }
 
     template<typename T>
@@ -781,21 +785,35 @@ struct BCGen::Writer {
         return write<T>(inst);
     }
 
-    void write_header(int64_t len_ns, uint32_t ttl_mask)
+    void write_header(int64_t len_ns, const uint32_t *ttl_masks, uint32_t nmasks)
     {
         // Version number is in a different ZMQ message and won't be included here.
         // See `BCGen::version()`.
         write(len_ns);
-        write(setBit(ttl_mask, start_ttl_chn, true));
+        if (Inst::version < 3) {
+            assert(nmasks == 1);
+            write(setBit(*ttl_masks, start_ttl_chn, true));
+        }
+        else {
+            assert(nmasks <= NUM_TTL_BANKS);
+            assert(start_ttl_chn < nmasks * 32);
+            uint8_t start_ttl_bank = start_ttl_chn / 32;
+            for (uint32_t bank = 0; bank < nmasks; bank++) {
+                auto ttl_mask = ttl_masks[bank];
+                if (bank == start_ttl_bank)
+                    ttl_mask = setBit(ttl_mask, start_ttl_chn % 32, true);
+                write(ttl_mask);
+            }
+        }
     }
 
     // States
-    uint32_t cur_ttl = 0;
-    bool ttl_set = false;
+    uint32_t cur_ttl[NUM_TTL_BANKS] = {0};
+    bool ttl_set[NUM_TTL_BANKS] = {false};
     DDS dds[22] = {};
     DAC dac[4] = {};
 
-    int8_t start_ttl_chn;
+    uint8_t start_ttl_chn;
     std::vector<uint8_t> &bytecode;
 
     // This is the time of the end of the last pulse.
@@ -815,17 +833,33 @@ struct BCGen::Writer {
         uint8_t b = bytecode[last_timed_inst];
         uint8_t op = b & 0xf;
         uint8_t tmask = 0xf0;
-        switch (op) {
-        case 0: // TTLAll
-            break;
-        case 1: // TTL2
-            tmask = 0x30;
-            break;
-        case 3: // TTL5
-            tmask = 0x70;
-            break;
-        default:
-            abort();
+        if constexpr (Inst::version >= 3) {
+            switch (op) {
+            case ByteCode::TTLAll:
+                tmask = 0x10;
+                break;
+            case ByteCode::TTL1_v3:
+                break;
+            case ByteCode::TTL3_v3:
+                tmask = 0x30;
+                break;
+            default:
+                abort();
+            }
+        }
+        else {
+            switch (op) {
+            case ByteCode::TTLAll:
+                break;
+            case ByteCode::TTL2_v1:
+                tmask = 0x30;
+                break;
+            case ByteCode::TTL5:
+                tmask = 0x70;
+                break;
+            default:
+                abort();
+            }
         }
         t = uint8_t(t + ((b & tmask) >> 4));
         bytecode[last_timed_inst] = uint8_t((b & ~tmask) | ((t << 4) & tmask));
@@ -884,46 +918,61 @@ struct BCGen::Writer {
         for (int i = 15; i >= 0; i--) {
             if (!times[i])
                 continue;
-            add_inst(Inst::Wait{OpCode::Wait, uint8_t(i & 0xf), times[i]});
+            add_inst(typename Inst::Wait{OpCode::Wait, uint8_t(i & 0xf), times[i]});
         }
         if (times[16]) {
-            add_inst(Inst::Wait2{OpCode::Wait2, 1, uint16_t(times[16] & 2047)});
+            add_inst(typename Inst::Wait2{OpCode::Wait2, 1, uint16_t(times[16] & 2047)});
         }
     }
 
-    int add_ttl(int64_t t, uint32_t ttl)
+    int add_ttl(int64_t t, uint32_t ttl, int bank=0)
     {
         using namespace ByteCode;
-        if (ttl == cur_ttl && ttl_set)
+        if (ttl == cur_ttl[bank] && ttl_set[bank])
             return 0;
         assert(t >= cur_t);
         add_wait(t - cur_t);
         cur_t += PulseTime::Min2;
-        auto changes = ttl ^ cur_ttl;
-        if (!ttl_set) {
-            ttl_set = true;
+        auto changes = ttl ^ cur_ttl[bank];
+        if (!ttl_set[bank]) {
+            ttl_set[bank] = true;
             changes = ttl;
         }
         else {
             assert(changes);
         }
-        cur_ttl = ttl;
+        cur_ttl[bank] = ttl;
         auto nchgs = __builtin_popcountll(changes);
         // The case where nchgs == 0, i.e. initial setting to 0, will be handled by
         // the generic case below.
         if (nchgs == 1) {
             auto bit = __builtin_ffs(changes) - 1;
-            last_timed_inst = add_inst(Inst::TTL2{OpCode::TTL2, 0, uint8_t(bit & 0x1f),
-                    uint8_t(bit & 0x1f)});
-            max_time_left = 3;
+            if constexpr (Inst::version >= 3) {
+                last_timed_inst = add_inst(typename Inst::TTL1{OpCode::TTL1_v3, 0,
+                        uint8_t(bank & 7), uint8_t(bit & 0x1f)});
+                max_time_left = 0xf;
+            }
+            else {
+                last_timed_inst = add_inst(typename Inst::TTL2{OpCode::TTL2_v1, 0,
+                        uint8_t(bit & 0x1f), uint8_t(bit & 0x1f)});
+                max_time_left = 3;
+            }
         }
         else if (nchgs == 2) {
             auto bit1 = __builtin_ffs(changes) - 1;
             changes = changes ^ (1 << bit1);
             auto bit2 = __builtin_ffs(changes) - 1;
-            last_timed_inst = add_inst(Inst::TTL2{OpCode::TTL2, 0, uint8_t(bit1 & 0x1f),
-                    uint8_t(bit2 & 0x1f)});
-            max_time_left = 3;
+            if constexpr (Inst::version >= 3) {
+                last_timed_inst = add_inst(typename Inst::TTL3{OpCode::TTL3_v3, 0,
+                        uint8_t(bank & 7), uint8_t(bit1 & 0x1f), uint8_t(bit2 & 0x1f),
+                        uint8_t(bit2 & 0x1f)});
+                max_time_left = 3;
+            }
+            else {
+                last_timed_inst = add_inst(typename Inst::TTL2{OpCode::TTL2_v1, 0,
+                        uint8_t(bit1 & 0x1f), uint8_t(bit2 & 0x1f)});
+                max_time_left = 3;
+            }
         }
         else if (nchgs == 3) {
             auto bit1 = __builtin_ffs(changes) - 1;
@@ -931,8 +980,16 @@ struct BCGen::Writer {
             auto bit2 = __builtin_ffs(changes) - 1;
             changes = changes ^ (1 << bit2);
             auto bit3 = __builtin_ffs(changes) - 1;
-            add_inst(Inst::TTL4{OpCode::TTL4, uint8_t(bit1 & 0x1f),
-                    uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit3 & 0x1f)});
+            if constexpr (Inst::version >= 3) {
+                last_timed_inst = add_inst(typename Inst::TTL3{OpCode::TTL3_v3, 0,
+                        uint8_t(bank & 7), uint8_t(bit1 & 0x1f), uint8_t(bit2 & 0x1f),
+                        uint8_t(bit3 & 0x1f)});
+                max_time_left = 3;
+            }
+            else {
+                add_inst(typename Inst::TTL4{OpCode::TTL4_v1, uint8_t(bit1 & 0x1f),
+                        uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit3 & 0x1f)});
+            }
         }
         else if (nchgs == 4) {
             auto bit1 = __builtin_ffs(changes) - 1;
@@ -942,8 +999,15 @@ struct BCGen::Writer {
             auto bit3 = __builtin_ffs(changes) - 1;
             changes = changes ^ (1 << bit3);
             auto bit4 = __builtin_ffs(changes) - 1;
-            add_inst(Inst::TTL4{OpCode::TTL4, uint8_t(bit1 & 0x1f),
-                    uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit4 & 0x1f)});
+            if constexpr (Inst::version >= 3) {
+                add_inst(typename Inst::TTL5{OpCode::TTL5, uint8_t(bank & 7),
+                        uint8_t(bit1 & 0x1f), uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f),
+                        uint8_t(bit4 & 0x1f), uint8_t(bit4 & 0x1f)});
+            }
+            else {
+                add_inst(typename Inst::TTL4{OpCode::TTL4_v1, uint8_t(bit1 & 0x1f),
+                        uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f), uint8_t(bit4 & 0x1f)});
+            }
         }
         else if (nchgs == 5) {
             auto bit1 = __builtin_ffs(changes) - 1;
@@ -955,21 +1019,36 @@ struct BCGen::Writer {
             auto bit4 = __builtin_ffs(changes) - 1;
             changes = changes ^ (1 << bit4);
             auto bit5 = __builtin_ffs(changes) - 1;
-            last_timed_inst = add_inst(Inst::TTL5{OpCode::TTL5, 0, uint8_t(bit1 & 0x1f),
-                    uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f),
-                    uint8_t(bit4 & 0x1f), uint8_t(bit5 & 0x1f)});
-            max_time_left = 7;
+            if constexpr (Inst::version >= 3) {
+                add_inst(typename Inst::TTL5{OpCode::TTL5, uint8_t(bank & 7),
+                        uint8_t(bit1 & 0x1f), uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f),
+                        uint8_t(bit4 & 0x1f), uint8_t(bit4 & 0x1f)});
+            }
+            else {
+                last_timed_inst = add_inst(typename Inst::TTL5{OpCode::TTL5, 0, uint8_t(bit1 & 0x1f),
+                        uint8_t(bit2 & 0x1f), uint8_t(bit3 & 0x1f),
+                        uint8_t(bit4 & 0x1f), uint8_t(bit5 & 0x1f)});
+                max_time_left = 7;
+            }
         }
         else {
-            last_timed_inst = add_inst(Inst::TTLAll{OpCode::TTLAll, 0, ttl});
-            max_time_left = 15;
+            if constexpr (Inst::version >= 3) {
+                last_timed_inst = add_inst(typename Inst::TTLAll{OpCode::TTLAll, 0,
+                        uint8_t(bank & 7), ttl});
+                max_time_left = 1;
+            }
+            else {
+                last_timed_inst = add_inst(typename Inst::TTLAll{OpCode::TTLAll, 0, ttl});
+                max_time_left = 15;
+            }
         }
         return PulseTime::Min2;
     }
 
     int add_ttl_single(int64_t t, uint8_t chn, bool val)
     {
-        return add_ttl(t, setBit(cur_ttl, chn, val));
+        auto bank = chn / 32;
+        return add_ttl(t, setBit(cur_ttl[bank], chn % 32, val), bank);
     }
 
     int add_clock(int64_t t, uint8_t period)
@@ -978,7 +1057,7 @@ struct BCGen::Writer {
         assert(t >= cur_t);
         add_wait(t - cur_t);
         cur_t += PulseTime::Clock;
-        add_inst(Inst::Clock{OpCode::Clock, 0, uint8_t(period - 1)});
+        add_inst(typename Inst::Clock{OpCode::Clock, 0, uint8_t(period - 1)});
         return PulseTime::Clock;
     }
 
@@ -994,19 +1073,19 @@ struct BCGen::Writer {
         dds[chn].freq = freq;
         dds[chn].freq_set = true;
         if (dfreq <= 0x3f || dfreq >= 0xffffffc0) {
-            add_inst(Inst::DDSDetFreq2{OpCode::DDSDetFreq2, uint8_t(chn & 0x1f),
+            add_inst(typename Inst::DDSDetFreq2{OpCode::DDSDetFreq2, uint8_t(chn & 0x1f),
                     uint8_t(dfreq & 0x7f)});
         }
         else if (dfreq <= 0x3fff || dfreq >= 0xffffc000) {
-            add_inst(Inst::DDSDetFreq3{OpCode::DDSDetFreq3, uint8_t(chn & 0x1f),
+            add_inst(typename Inst::DDSDetFreq3{OpCode::DDSDetFreq3, uint8_t(chn & 0x1f),
                     uint16_t(dfreq & 0x7fff)});
         }
         else if (dfreq <= 0x003fffff || dfreq >= 0xffc00000) {
-            add_inst(Inst::DDSDetFreq4{OpCode::DDSDetFreq4, uint8_t(chn & 0x1f),
+            add_inst(typename Inst::DDSDetFreq4{OpCode::DDSDetFreq4, uint8_t(chn & 0x1f),
                     uint32_t(dfreq & 0x7fffff)});
         }
         else {
-            add_inst(Inst::DDSFreq{OpCode::DDSFreq, uint8_t(chn & 0x1f),
+            add_inst(typename Inst::DDSFreq{OpCode::DDSFreq, uint8_t(chn & 0x1f),
                     uint32_t(freq & 0x7fffffff)});
         }
         return PulseTime::DDSFreq;
@@ -1022,7 +1101,7 @@ struct BCGen::Writer {
         cur_t += PulseTime::DDSPhase;
         dds[chn].phase = phase;
         dds[chn].phase_set = true;
-        add_inst(Inst::DDSPhase{OpCode::DDSPhase, uint8_t(chn & 0x1f), 0, phase});
+        add_inst(typename Inst::DDSPhase{OpCode::DDSPhase, uint8_t(chn & 0x1f), 0, phase});
         return PulseTime::DDSPhase;
     }
 
@@ -1038,11 +1117,11 @@ struct BCGen::Writer {
         dds[chn].amp = amp;
         dds[chn].amp_set = true;
         if (damp <= 0x3f || damp >= 0xffc0) {
-            add_inst(Inst::DDSDetAmp{OpCode::DDSDetAmp, uint8_t(chn & 0x1f),
+            add_inst(typename Inst::DDSDetAmp{OpCode::DDSDetAmp, uint8_t(chn & 0x1f),
                     uint8_t(damp & 0x7f)});
         }
         else {
-            add_inst(Inst::DDSAmp{OpCode::DDSAmp, 0, uint8_t(chn & 0x1f),
+            add_inst(typename Inst::DDSAmp{OpCode::DDSAmp, 0, uint8_t(chn & 0x1f),
                     uint16_t(amp & 0xfff)});
         }
         return PulseTime::DDSAmp;
@@ -1060,10 +1139,10 @@ struct BCGen::Writer {
         dac[chn].V = V;
         dac[chn].set = true;
         if (dV <= 0x1ff || dV >= 0xfe00) {
-            add_inst(Inst::DACDet{OpCode::DACDet, uint8_t(chn & 0x3), uint16_t(dV & 0x3ff)});
+            add_inst(typename Inst::DACDet{OpCode::DACDet, uint8_t(chn & 0x3), uint16_t(dV & 0x3ff)});
         }
         else {
-            add_inst(Inst::DAC{OpCode::DAC, 0, uint8_t(chn & 0x3), V});
+            add_inst(typename Inst::DAC{OpCode::DAC, 0, uint8_t(chn & 0x3), V});
         }
         return PulseTime::DAC;
     }
@@ -1104,8 +1183,6 @@ struct BCGen::Writer {
     int add_pulse(ChnType chn_typ, uint8_t chn, uint32_t val, int64_t t)
     {
         switch (chn_typ) {
-        case ChnType::TTL:
-            return add_ttl(t, val);
         case ChnType::Freq:
             return add_freq(t, chn, val);
         case ChnType::Amp:
@@ -1115,6 +1192,7 @@ struct BCGen::Writer {
         case ChnType::DAC:
             return add_dac(t, chn, uint16_t(val));
         default:
+            assert(chn_typ != ChnType::TTL);
             return 0;
         }
     }
@@ -1123,12 +1201,15 @@ struct BCGen::Writer {
 void BCGen::emit_bytecode(const void *data) const
 {
     bytecode.clear();
-    Writer writer(bytecode, start_ttl_chn);
-    writer.write_header(len_ns, ttl_mask);
+    Writer<ByteCode::Inst_v1> writer(bytecode, start_ttl_chn);
+    writer.write_header(len_ns, &ttl_mask, 1);
 
-    auto ttl_start_it = m_real_start_vals.find({ChnType::TTL, 0});
-    if (ttl_start_it != m_real_start_vals.end())
-        writer.cur_ttl = ttl_start_it->second;
+    for (int bank = 0; bank < NUM_TTL_BANKS; bank++) {
+        auto ttl_start_it = m_real_start_vals.find({ChnType::TTL, bank * 32});
+        if (ttl_start_it != m_real_start_vals.end()) {
+            writer.cur_ttl[bank] = ttl_start_it->second;
+        }
+    }
     // Initialize channels
     if (first_bseq) {
         for (auto [chn, val]: m_real_start_vals) {
