@@ -566,22 +566,8 @@ inline bool Backend::pregenerate(Manager::ExpSeq &expseq, Compiler &compiler, ui
                     value = host_seq.get_value(pulse.endvalue_id, seq_idx);
                     continue;
                 }
-                auto data = host_seq.values.data();
-                if (pulse.pulse_type == BCGen::PulseType::Scalar) {
-                    auto func = (double (*)(double, const void*))pulse.ramp_func;
-                    value = func(0, data);
-                }
-                else {
-                    // This needs to be consistent with the bc_gen data stream.
-                    // Note that for simplicity
-                    // we simply use the largest size on all platforms.
-                    // TODO: SVE
-                    double buffer[8];
-                    double time_buffer[8] = {0};
-                    auto func = (void (*)(double*, const double*, const void*))pulse.ramp_func;
-                    func(buffer, time_buffer, data);
-                    value = buffer[0];
-                }
+                value = BCGen::compute_start_val(pulse.pulse_type, pulse.ramp_func,
+                                                 host_seq.values.data());
             }
             bc_gen->start_vals.emplace(fpga_chn, BCGen::convert_value(fpga_chn.first, value));
         }
