@@ -500,6 +500,13 @@ NACS_EXPORT() uint32_t BCGen::convert_value(ChnType type, double value)
     }
 }
 
+NACS_EXPORT() double BCGen::compute_start_val(PulseType pulse_type,
+                                              void (*ramp_func)(void),
+                                              const void *data)
+{
+    return DataStream::compute_start_val(pulse_type, ramp_func, data);
+}
+
 NACS_EXPORT() void BCGen::add_ttl_manager(uint8_t chn, int64_t off_delay, int64_t on_delay,
                                           int64_t skip_time, int64_t min_time, bool off_val)
 {
