@@ -281,7 +281,11 @@ static void addOptimization(legacy::PassManagerBase &pm)
 NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Module *M, bool opt)
 {
     auto &triple = tgt->getTargetTriple();
+#if LLVM_VERSION_MAJOR >= 21
+    M->setTargetTriple(triple);
+#else
     M->setTargetTriple(triple.getTriple());
+#endif
     M->setDataLayout(tgt->createDataLayout());
     // By default, if we didn't need executable stack, LLVM emits
     // `.note.GNU-stack` section to disable executable stack.
