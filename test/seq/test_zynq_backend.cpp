@@ -215,8 +215,9 @@ TEST_CASE("empty") {
 
     {
         auto bc = zynq_backend->get_bytecode(0, true);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, true);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
@@ -232,8 +233,9 @@ TEST_CASE("empty") {
 
     {
         auto bc = zynq_backend->get_bytecode(1, false);
+        auto bc_ver = zynq_backend->get_bytecode_version(1, false);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
@@ -340,8 +342,9 @@ TEST_CASE("empty+clock_unset") {
     expseq->pre_run();
     {
         auto bc = zynq_backend->get_bytecode(0, true);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, true);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
@@ -362,8 +365,9 @@ TEST_CASE("empty+clock_unset") {
     expseq->pre_run();
     {
         auto bc = zynq_backend->get_bytecode(1, false);
+        auto bc_ver = zynq_backend->get_bytecode_version(1, false);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
@@ -392,8 +396,9 @@ TEST_CASE("empty+clock_unset") {
     expseq->pre_run();
     {
         auto bc = zynq_backend->get_bytecode(0, true);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, true);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
@@ -414,8 +419,9 @@ TEST_CASE("empty+clock_unset") {
     expseq->pre_run();
     {
         auto bc = zynq_backend->get_bytecode(1, false);
+        auto bc_ver = zynq_backend->get_bytecode_version(1, false);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
@@ -537,8 +543,9 @@ TEST_CASE("empty+clock_set") {
     REQUIRE(zynq_backend->pregenerated(1, false));
     {
         auto bc = zynq_backend->get_bytecode(0, true);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, true);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
@@ -553,8 +560,9 @@ TEST_CASE("empty+clock_set") {
     }
     {
         auto bc = zynq_backend->get_bytecode(1, false);
+        auto bc_ver = zynq_backend->get_bytecode_version(1, false);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
@@ -677,8 +685,9 @@ TEST_CASE("loop") {
 
     {
         auto bc = zynq_backend->get_bytecode(0, true);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, true);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
@@ -694,8 +703,9 @@ TEST_CASE("loop") {
 
     {
         auto bc = zynq_backend->get_bytecode(0, false);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, false);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
@@ -710,8 +720,9 @@ TEST_CASE("loop") {
 
     {
         auto bc = zynq_backend->get_bytecode(1, false);
+        auto bc_ver = zynq_backend->get_bytecode_version(1, false);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
@@ -869,8 +880,9 @@ TEST_CASE("setpulse") {
 
     {
         auto bc = zynq_backend->get_bytecode(0, true);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, true);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(32000)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(0x201)); // ttl_mask
         // Startup
@@ -1015,8 +1027,9 @@ TEST_CASE("ramp") {
 
     {
         auto bc = zynq_backend->get_bytecode(0, true);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, true);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(0x1)); // ttl_mask
         // Startup
@@ -1283,8 +1296,9 @@ TEST_CASE("setpulse_global") {
     expseq->pre_run();
     {
         auto bc = zynq_backend->get_bytecode(0, true);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, true);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(32000)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(0x201)); // ttl_mask
         // Startup
@@ -1316,8 +1330,9 @@ TEST_CASE("setpulse_global") {
     expseq->pre_run();
     {
         auto bc = zynq_backend->get_bytecode(0, true);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, true);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(32000)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(0x201)); // ttl_mask
         // Startup
@@ -1456,8 +1471,9 @@ TEST_CASE("ramp_global") {
     expseq->pre_run();
     {
         auto bc = zynq_backend->get_bytecode(0, true);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, true);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(0x1)); // ttl_mask
         // Startup
@@ -1483,8 +1499,9 @@ TEST_CASE("ramp_global") {
     expseq->pre_run();
     {
         auto bc = zynq_backend->get_bytecode(0, true);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, true);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(0x1)); // ttl_mask
         // Startup
@@ -1781,8 +1798,9 @@ TEST_CASE("ttl_mgr") {
 
     {
         auto bc = zynq_backend->get_bytecode(0, true);
+        auto bc_ver = zynq_backend->get_bytecode_version(0, true);
         Checker checker(bc.data(), bc.size());
-        INFO(dump_bytecode(bc.data(), bc.size()));
+        INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
         REQUIRE(checker.cmp<int64_t>(15500)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(0x7)); // ttl_mask
         // Startup
@@ -1909,8 +1927,9 @@ TEST_CASE("offset") {
         REQUIRE(offset + 97 < 2048);
         {
             auto bc = zynq_backend->get_bytecode(0, true);
+            auto bc_ver = zynq_backend->get_bytecode_version(0, true);
             Checker checker(bc.data(), bc.size());
-            INFO(dump_bytecode(bc.data(), bc.size()));
+            INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
             REQUIRE(checker.cmp<int64_t>(0)); // len_ns
             REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
             // Startup
@@ -1927,8 +1946,9 @@ TEST_CASE("offset") {
 
         {
             auto bc = zynq_backend->get_bytecode(1, false);
+            auto bc_ver = zynq_backend->get_bytecode_version(1, false);
             Checker checker(bc.data(), bc.size());
-            INFO(dump_bytecode(bc.data(), bc.size()));
+            INFO(dump_bytecode(bc.data(), bc.size(), bc_ver));
             REQUIRE(checker.cmp<int64_t>(0)); // len_ns
             REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
             // Startup

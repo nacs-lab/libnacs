@@ -514,7 +514,7 @@ NACS_EXPORT() void BCGen::add_ttl_manager(uint8_t chn, int64_t off_delay, int64_
     m_ttl_managers[chn] = TTLManager{off_delay, on_delay, skip_time, min_time, off_val};
 }
 
-NACS_EXPORT() uint32_t BCGen::version()
+NACS_EXPORT() uint32_t BCGen::version() const
 {
     // Bytecode version
     return 2;

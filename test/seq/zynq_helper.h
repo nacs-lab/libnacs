@@ -55,7 +55,7 @@ NACS_UNUSED static unsigned vector_size = [] {
 #endif
 }();
 
-NACS_UNUSED static auto dump_bytecode(const uint8_t *bytecode, size_t size)
+NACS_UNUSED static auto dump_bytecode(const uint8_t *bytecode, size_t size, uint32_t ver)
 {
     uint64_t len;
     memcpy(&len, bytecode, sizeof(uint64_t));
@@ -67,13 +67,18 @@ NACS_UNUSED static auto dump_bytecode(const uint8_t *bytecode, size_t size)
     stm << "# len_ns=" << len << std::endl;
     stm << "ttl_mask=0x" << std::hex << ttl_mask << std::dec << std::endl;
     Zynq::ByteCode::print_raw(stm, bytecode + sizeof(uint32_t),
-                              size - sizeof(uint32_t), Zynq::BCGen::version());
+                              size - sizeof(uint32_t), ver);
     return stm.str();
 }
 
-NACS_UNUSED static auto dump_bytecode(const std::vector<uint8_t> &bytecode)
+NACS_UNUSED static auto dump_bytecode(const std::vector<uint8_t> &bytecode, uint32_t ver)
 {
-    return dump_bytecode(bytecode.data(), bytecode.size());
+    return dump_bytecode(bytecode.data(), bytecode.size(), ver);
+}
+
+NACS_UNUSED static auto dump_bytecode(const Zynq::BCGen &bc_gen)
+{
+    return dump_bytecode(bc_gen.bytecode, bc_gen.version());
 }
 
 struct Checker {

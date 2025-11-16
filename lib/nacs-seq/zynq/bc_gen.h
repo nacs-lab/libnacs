@@ -82,7 +82,7 @@ public:
                                     const void *data);
     void add_ttl_manager(uint8_t chn, int64_t off_delay, int64_t on_delay,
                          int64_t skip_time, int64_t min_time, bool off_val);
-    static uint32_t version();
+    uint32_t version() const;
 
     // Inputs
     uint32_t seq_idx;
