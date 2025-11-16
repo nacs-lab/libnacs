@@ -52,6 +52,7 @@ public:
     bool has_generator(uint32_t bseq_idx) const;
     bool pregenerated(uint32_t bseq_idx, bool first_bseq) const;
     llvm::ArrayRef<uint8_t> get_bytecode(uint32_t bseq_idx, bool first_bseq) const;
+    uint32_t get_bytecode_version(uint32_t bseq_idx, bool first_bseq) const;
     llvm::ArrayRef<BCGen::Clock> get_clock(uint32_t bseq_idx) const;
 
 private:
@@ -68,7 +69,7 @@ private:
     void wait(HostSeq &host_seq) override;
     // void post_run(HostSeq &host_seq) override;
 
-    void run_bytecode(const std::vector<uint8_t> &bc);
+    void run_bytecode(const std::vector<uint8_t> &bc, uint32_t version);
     // Return whether pregeneration completed
     bool pregenerate(Manager::ExpSeq &expseq, Compiler &compiler, uint32_t seq_idx);
 

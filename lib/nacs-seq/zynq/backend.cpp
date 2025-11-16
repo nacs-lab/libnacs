@@ -81,6 +81,8 @@ struct Backend::BasicSeq {
     std::unique_ptr<BCGen> bc_gen;
     std::vector<uint8_t> bytecode;
     std::vector<uint8_t> bytecode_first;
+    uint32_t bytecode_version{0};
+    uint32_t bytecode_first_version{0};
     bool clock_set = false; // Whether clock is set at generation time.
     bool all_known = false;
 };
@@ -574,6 +576,7 @@ inline bool Backend::pregenerate(Manager::ExpSeq &expseq, Compiler &compiler, ui
         }
         bc_gen->first_bseq = true;
         bc_gen->generate(host_seq);
+        be_bseq.bytecode_first_version = bc_gen->version();
         be_bseq.bytecode_first = std::move(bc_gen->bytecode);
         if (!bseq->has_branchin()) {
             be_bseq.bc_gen.reset(nullptr);
@@ -611,6 +614,7 @@ inline bool Backend::pregenerate(Manager::ExpSeq &expseq, Compiler &compiler, ui
     }
     bc_gen->first_bseq = false;
     bc_gen->generate(host_seq);
+    be_bseq.bytecode_version = bc_gen->version();
     be_bseq.bytecode = std::move(bc_gen->bytecode);
     be_bseq.bc_gen.reset(nullptr);
     return true;
@@ -651,7 +655,13 @@ void Backend::start(HostSeq &host_seq)
     const auto &bc = host_seq.first_bseq ? bseq.bytecode_first : bseq.bytecode;
     mgr().add_debug_printf("%s: starting basic sequence [index %d], bytecode length: %zu\n",
                            name().c_str(), idx, bc.size());
-    run_bytecode(bc.empty() ? bseq.bc_gen->bytecode : bc);
+    if (bc.empty()) {
+        run_bytecode(bseq.bc_gen->bytecode, bseq.bc_gen->version());
+    }
+    else {
+        run_bytecode(bc, host_seq.first_bseq ? bseq.bytecode_first_version :
+                     bseq.bytecode_version);
+    }
 }
 
 void Backend::cancel(HostSeq &host_seq)
@@ -799,7 +809,7 @@ void Backend::config(const YAML::Node &config)
     }
 }
 
-inline void Backend::run_bytecode(const std::vector<uint8_t> &bc)
+inline void Backend::run_bytecode(const std::vector<uint8_t> &bc, uint32_t version)
 {
     if (!m_sock) {
         if (mgr().dummy_mode)
@@ -808,7 +818,7 @@ inline void Backend::run_bytecode(const std::vector<uint8_t> &bc)
     }
     auto reply = m_sock->send_msg([&] (auto &sock) {
         ZMQ::send_more(sock, ZMQ::str_msg("run_seq"));
-        ZMQ::send_more(sock, ZMQ::bits_msg(BCGen::version()));
+        ZMQ::send_more(sock, ZMQ::bits_msg(version));
         ZMQ::send(sock, zmq::message_t(bc.data(), bc.size()));
     }).get();
     if (reply.empty() || reply[0].size() < 16)
@@ -962,6 +972,15 @@ NACS_EXPORT() llvm::ArrayRef<uint8_t> Backend::get_bytecode(uint32_t bseq_idx,
     return bc.empty() ? bseq.bc_gen->bytecode : bc;
 }
 
+NACS_EXPORT() uint32_t Backend::get_bytecode_version(uint32_t bseq_idx,
+                                                     bool first_bseq) const
+{
+    auto &bseq = m_seqs[bseq_idx];
+    const auto &bc = first_bseq ? bseq.bytecode_first : bseq.bytecode;
+    return bc.empty() ? bseq.bc_gen->version() :
+        (first_bseq ? bseq.bytecode_first_version : bseq.bytecode_version);
+}
+
 NACS_EXPORT() llvm::ArrayRef<BCGen::Clock> Backend::get_clock(uint32_t bseq_idx) const
 {
     auto it = m_clocks.find(bseq_idx);
@@ -997,6 +1016,25 @@ NACS_EXPORT() const uint8_t *nacs_seq_manager_expseq_get_zynq_bytecode(
         *sz = bytecode.size();
         return bytecode.data();
     }, nullptr);
+}
+
+NACS_EXPORT() uint32_t nacs_seq_manager_expseq_get_zynq_bytecode_version(
+    Manager::ExpSeq *expseq, const char *name)
+{
+    return expseq->mgr().call_guarded([&] () -> uint32_t {
+        auto dev = expseq->get_device(name, false);
+        if (!dev) {
+            Log::error("Device %s cannot be found.", name);
+            return 0;
+        }
+        auto zynq_dev = dynamic_cast<Backend*>(dev);
+        if (!zynq_dev) {
+            Log::error("Device %s is not a Zynq FPGA.", name);
+            return 0;
+        }
+        return zynq_dev->get_bytecode_version(expseq->host_seq.cur_seq_idx(),
+                                              expseq->host_seq.first_bseq);
+    }, 0);
 }
 
 NACS_EXPORT() const BCGen::Clock *nacs_seq_manager_expseq_get_zynq_clock(
