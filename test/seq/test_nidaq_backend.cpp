@@ -294,7 +294,7 @@ TEST_CASE("empty") {
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
         // Sequence
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 195}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 194}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
         // Finish
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
@@ -313,7 +313,7 @@ TEST_CASE("empty") {
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
         // Finish
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 97}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 296}));
         REQUIRE(checker.is_end());
     }
 
@@ -459,7 +459,7 @@ TEST_CASE("Short sequence") {
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
         // Sequence
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 60395}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 60394}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
         // Finish
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
@@ -615,7 +615,7 @@ TEST_CASE("Short sequence with ramp") {
         // Sequence
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 1, 0x275a}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 3}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 2}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
         // Finish
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
@@ -780,7 +780,7 @@ TEST_CASE("Ramp with clip") {
         // Sequence
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 1, 0x275a}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 3}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 2}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
         // Finish
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
@@ -953,7 +953,7 @@ TEST_CASE("Unknown time") {
         // Sequence
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 1, 0x275a}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 3}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 2}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
         // Finish
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
@@ -1120,7 +1120,7 @@ TEST_CASE("Unknown value") {
         // Sequence
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 1, 0x275a}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 3}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 2}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
         // Finish
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
@@ -1324,7 +1324,7 @@ TEST_CASE("Unknown init") {
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
         // Sequence
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 195}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 194}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
         // Finish
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
@@ -1345,7 +1345,7 @@ TEST_CASE("Unknown init") {
         // Sequence
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 1, 0x275a}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 3}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 2}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
         // Finish
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
@@ -1573,7 +1573,7 @@ TEST_CASE("Specific map") {
     //     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     //     // Sequence
     //     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
-    //     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 195}));
+    //     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 194}));
     //     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
     //     // Finish
     //     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
@@ -1603,7 +1603,7 @@ TEST_CASE("Specific map") {
     //     // Sequence
     //     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
     //     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 1, 0x30ec})); // total wait 100095
-    //     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 3}));
+    //     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 2}));
     //     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
     //     // Finish
     //     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
@@ -1634,7 +1634,7 @@ TEST_CASE("Specific map") {
         // Sequence
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 1, 0x9294})); // total wait 300095
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 3}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 2}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
         // Finish
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));

@@ -168,42 +168,39 @@ TEST_CASE("offset") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
     // Finish
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 197}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 196}));
     REQUIRE(checker.is_end());
 }
 
 TEST_CASE("clock") {
-    for (int i = 0; i < 2; i++) {
-        DummyHostSeq host_seq;
-        Zynq::BCGen bc_gen;
-        bc_gen.seq_idx = 0;
-        // The clock offset will swallow a small sequence delay
-        bc_gen.seq_delay = i * 40;
-        bc_gen.first_bseq = false;
-        bc_gen.start_ttl_chn = 0;
-        bc_gen.ttl_mask = 0;
-        bc_gen.fpga_clock_div = 10000;
-        bc_gen.len_ns = 300;
-        bc_gen.clocks.push_back({-100 * 10000, 100});
-        bc_gen.clocks.push_back({1000 * 10000, 0});
-        check_generate(bc_gen, host_seq);
-        Checker checker(bc_gen.bytecode);
-        INFO(dump_bytecode(bc_gen.bytecode));
-        REQUIRE(checker.cmp<int64_t>(300)); // len_ns
-        REQUIRE(checker.cmp<uint32_t>(1)); // ttl_mask
-        // Startup
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 2500}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
-        // Sequence
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 1095}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
-        // Finish
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
-        REQUIRE(checker.is_end());
-    }
+    DummyHostSeq host_seq;
+    Zynq::BCGen bc_gen;
+    bc_gen.seq_idx = 0;
+    bc_gen.seq_delay = 0;
+    bc_gen.first_bseq = false;
+    bc_gen.start_ttl_chn = 0;
+    bc_gen.ttl_mask = 0;
+    bc_gen.fpga_clock_div = 10000;
+    bc_gen.len_ns = 300;
+    bc_gen.clocks.push_back({-100 * 10000, 100});
+    bc_gen.clocks.push_back({1000 * 10000, 0});
+    check_generate(bc_gen, host_seq);
+    Checker checker(bc_gen.bytecode);
+    INFO(dump_bytecode(bc_gen.bytecode));
+    REQUIRE(checker.cmp<int64_t>(300)); // len_ns
+    REQUIRE(checker.cmp<uint32_t>(1)); // ttl_mask
+    // Startup
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 2500}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 91}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
+    // Sequence
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 996}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
+    // Finish
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
+    REQUIRE(checker.is_end());
 }
 
 TEST_CASE("clock+offset") {
@@ -229,7 +226,7 @@ TEST_CASE("clock+offset") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 2900}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 2899}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 1095}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
@@ -300,7 +297,7 @@ TEST_CASE("ttl_set") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 2500}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 1, 0, 0}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 3, 3}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 5}));
@@ -372,7 +369,7 @@ TEST_CASE("ttl_set_off") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 2500}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 1, 0, 0}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 3, 3}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 5}));
@@ -613,7 +610,7 @@ TEST_CASE("ttl_set+offset") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
     // Sequence
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 38}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 37}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 3, 3}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 5}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 3, 9}));
@@ -623,84 +620,80 @@ TEST_CASE("ttl_set+offset") {
 }
 
 TEST_CASE("ttl_set+clock") {
-    for (int i = 0; i < 2; i++) {
-        DummyHostSeq host_seq;
-        Zynq::BCGen bc_gen;
-        bc_gen.seq_idx = 0;
-        // The clock offset will swallow a small sequence delay
-        bc_gen.seq_delay = i * 40;
-        bc_gen.first_bseq = false;
-        bc_gen.start_ttl_chn = 0;
-        bc_gen.ttl_mask = 0x208;
-        bc_gen.fpga_clock_div = 10000;
-        bc_gen.len_ns = 987;
-        bc_gen.clocks.push_back({-100 * 10000, 100});
-        bc_gen.clocks.push_back({1000 * 10000, 0});
-        host_seq.set_value<int64_t>(0, 10300);
-        host_seq.set_value<bool>(1, true);
-        host_seq.set_value<int64_t>(2, 100800);
-        host_seq.set_value<bool>(3, false);
-        host_seq.set_value<int64_t>(4, 100700);
-        bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 3}] = 0;
-        bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 9}] = 0;
-        bc_gen.seq_pulses.push_back({
-                .chn_type = Zynq::BCGen::ChnType::TTL,
-                .pulse_type = Zynq::BCGen::PulseType::Value,
-                .chn = 3,
+    DummyHostSeq host_seq;
+    Zynq::BCGen bc_gen;
+    bc_gen.seq_idx = 0;
+    bc_gen.seq_delay = 0;
+    bc_gen.first_bseq = false;
+    bc_gen.start_ttl_chn = 0;
+    bc_gen.ttl_mask = 0x208;
+    bc_gen.fpga_clock_div = 10000;
+    bc_gen.len_ns = 987;
+    bc_gen.clocks.push_back({-100 * 10000, 100});
+    bc_gen.clocks.push_back({1000 * 10000, 0});
+    host_seq.set_value<int64_t>(0, 10300);
+    host_seq.set_value<bool>(1, true);
+    host_seq.set_value<int64_t>(2, 100800);
+    host_seq.set_value<bool>(3, false);
+    host_seq.set_value<int64_t>(4, 100700);
+    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 3}] = 0;
+    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 9}] = 0;
+    bc_gen.seq_pulses.push_back({
+            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .pulse_type = Zynq::BCGen::PulseType::Value,
+            .chn = 3,
 
-                .id = 1,
-                .time_id = 0,
-                .len_id = uint32_t(-1),
-                .endvalue_id = 1,
-                .cond_id = uint32_t(-1),
-                .ramp_func = nullptr
-            });
-        bc_gen.seq_pulses.push_back({
-                .chn_type = Zynq::BCGen::ChnType::TTL,
-                .pulse_type = Zynq::BCGen::PulseType::Value,
-                .chn = 3,
+            .id = 1,
+            .time_id = 0,
+            .len_id = uint32_t(-1),
+            .endvalue_id = 1,
+            .cond_id = uint32_t(-1),
+            .ramp_func = nullptr
+        });
+    bc_gen.seq_pulses.push_back({
+            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .pulse_type = Zynq::BCGen::PulseType::Value,
+            .chn = 3,
 
-                .id = 2,
-                .time_id = 2,
-                .len_id = uint32_t(-1),
-                .endvalue_id = 3,
-                .cond_id = uint32_t(-1),
-                .ramp_func = nullptr
-            });
-        bc_gen.seq_pulses.push_back({
-                .chn_type = Zynq::BCGen::ChnType::TTL,
-                .pulse_type = Zynq::BCGen::PulseType::Value,
-                .chn = 9,
+            .id = 2,
+            .time_id = 2,
+            .len_id = uint32_t(-1),
+            .endvalue_id = 3,
+            .cond_id = uint32_t(-1),
+            .ramp_func = nullptr
+        });
+    bc_gen.seq_pulses.push_back({
+            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .pulse_type = Zynq::BCGen::PulseType::Value,
+            .chn = 9,
 
-                .id = 3,
-                .time_id = 4,
-                .len_id = uint32_t(-1),
-                .endvalue_id = 1,
-                .cond_id = uint32_t(-1),
-                .ramp_func = nullptr
-            });
-        check_generate(bc_gen, host_seq);
-        Checker checker(bc_gen.bytecode);
-        INFO(dump_bytecode(bc_gen.bytecode));
-        REQUIRE(checker.cmp<int64_t>(987)); // len_ns
-        REQUIRE(checker.cmp<uint32_t>(0x209)); // ttl_mask
-        // Startup
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 2500}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
-        // Sequence
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 3, 3}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 5}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 3, 9}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 986}));
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
-        // Finish
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
-        REQUIRE(checker.is_end());
-    }
+            .id = 3,
+            .time_id = 4,
+            .len_id = uint32_t(-1),
+            .endvalue_id = 1,
+            .cond_id = uint32_t(-1),
+            .ramp_func = nullptr
+        });
+    check_generate(bc_gen, host_seq);
+    Checker checker(bc_gen.bytecode);
+    INFO(dump_bytecode(bc_gen.bytecode));
+    REQUIRE(checker.cmp<int64_t>(987)); // len_ns
+    REQUIRE(checker.cmp<uint32_t>(0x209)); // ttl_mask
+    // Startup
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 2500}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 91}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
+    // Sequence
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 3, 3}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 5}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 3, 9}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 986}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
+    // Finish
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
+    REQUIRE(checker.is_end());
 }
 
 TEST_CASE("dds_set") {
@@ -766,7 +759,7 @@ TEST_CASE("dds_set") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 2500}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 1, 0, 0}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSFreq{6, 3, 0x7507507}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 449}));
@@ -842,9 +835,8 @@ TEST_CASE("dds_set_skip") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 2500}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 7}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSFreq{6, 3, 0x80bb3ee}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0x666}));
     // Finish
@@ -894,7 +886,7 @@ TEST_CASE("dds_set_skip+offset") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
     // Sequence+Finish
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 1131}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 1130}));
     REQUIRE(checker.is_end());
 }
 
@@ -963,7 +955,7 @@ TEST_CASE("dds_set+offset") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
     // Sequence
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 1032}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 1031}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSFreq{6, 3, 0x7507507}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 449}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0x666}));
@@ -1037,7 +1029,6 @@ TEST_CASE("dds_ramp") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq2{7, 3, 0}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1046,8 +1037,9 @@ TEST_CASE("dds_ramp") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 49}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0x666}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1131,7 +1123,6 @@ TEST_CASE("dds_ramp_vector") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq2{7, 3, 0}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1140,8 +1131,9 @@ TEST_CASE("dds_ramp_vector") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 49}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0x666}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1222,7 +1214,6 @@ TEST_CASE("dds_ramp_interrupt") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq2{7, 3, 0}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1231,6 +1222,7 @@ TEST_CASE("dds_ramp_interrupt") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 49}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSFreq{6, 3, 0xbb3ee7}));
     // Finish
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
@@ -1299,7 +1291,6 @@ TEST_CASE("dds_ramp_interrupt_off") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq2{7, 3, 0}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1322,7 +1313,7 @@ TEST_CASE("dds_ramp_interrupt_off") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 0xbec17}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 0x136627}));
     // Finish
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
     REQUIRE(checker.is_end());
@@ -1392,7 +1383,6 @@ TEST_CASE("dds_ramp+offset") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 4875}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq2{7, 3, 0}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1401,8 +1391,9 @@ TEST_CASE("dds_ramp+offset") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 49}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0x666}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1483,14 +1474,12 @@ TEST_CASE("dds_ramp+clock") {
     REQUIRE(checker.cmp<uint32_t>(1)); // ttl_mask
     // Startup
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait{4, 0, 2500}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 91}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 95}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq2{7, 3, 0}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1499,9 +1488,10 @@ TEST_CASE("dds_ramp+clock") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 49}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 255}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0x666}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1050000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1540000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1590,7 +1580,6 @@ TEST_CASE("dds_multiramp") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq2{7, 3, 0}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1599,8 +1588,9 @@ TEST_CASE("dds_multiramp") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 49}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xfff}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xf87}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xf0f}));
@@ -1612,11 +1602,11 @@ TEST_CASE("dds_multiramp") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xda7}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xd2f}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 0x1b2e57}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xcb7}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 0xbec17}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xc3f}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetAmp{11, 7, 0x44})); // -60
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetAmp{11, 7, 0x44}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetAmp{11, 7, 0x44}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetAmp{11, 7, 0x44}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetAmp{11, 7, 0x44}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetAmp{11, 7, 0x44}));
@@ -1703,7 +1693,6 @@ TEST_CASE("dds_multiramp+clock") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq2{7, 3, 0}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1712,8 +1701,9 @@ TEST_CASE("dds_multiramp+clock") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 49}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xfff}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Clock{5, 0, 99}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xf81}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1050000}));
@@ -1812,7 +1802,6 @@ TEST_CASE("dds_slowramp") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq2{7, 3, 0}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
@@ -1821,8 +1810,9 @@ TEST_CASE("dds_slowramp") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 500000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 49}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetAmp{11, 7, 0}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1490000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetAmp{11, 7, 1}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetAmp{11, 7, 1}));
@@ -1953,8 +1943,8 @@ TEST_CASE("dds0") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSFreq{6, 3, 0x7507507}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSFreq{6, 5, 0x80bb3ee}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0x666}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSFreq{6, 5, 0x80bb3ee}));
     // Finish
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
     REQUIRE(checker.is_end());
@@ -2101,23 +2091,22 @@ TEST_CASE("dds_ramp0") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq3{8, 3, 0x170}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xfc3}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq3{8, 3, 0x2880}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xfc2}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xf4b}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xf4a}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xed3}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xed2}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xe5b}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xe5a}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xde3}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xde2}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xd6b}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xd6a}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xcf3}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0x666}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xcf2}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSFreq{6, 3, 0xbb3ee7}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0x666}));
     // Finish
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 100}));
     REQUIRE(checker.is_end());
@@ -2192,21 +2181,20 @@ TEST_CASE("dds_ramp0_start") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xfff}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 0x7a120}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xf87}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq3{8, 3, 0x2710}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xfc2}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xf0f}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xf4a}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xe97}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xed2}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xe1f}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xe5a}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xda7}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xde2}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xd2f}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xd6a}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSDetFreq4{9, 3, 1000000}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xcb7}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0xcf2}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSFreq{6, 3, 0xbb3ee7}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::DDSAmp{10, 0, 7, 0x666}));
     // Finish
@@ -2480,7 +2468,7 @@ TEST_CASE("ttl_mgr") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 2}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 266}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 265}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 2}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 506}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 2}));
@@ -2697,7 +2685,7 @@ TEST_CASE("ttl_mgr_inverse") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 2}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 276}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 275}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 2}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 886}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 2}));
@@ -2913,7 +2901,7 @@ TEST_CASE("ttl_mgr_start") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
     // Sequence
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 267}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 266}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 2}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 506}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 2}));
@@ -3130,7 +3118,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 0, 0, 0}));
     // Sequence
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 2}));
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 276}));
+    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 275}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 2}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 886}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 2}));
@@ -3182,21 +3170,19 @@ TEST_CASE("ttl_rate_limit") {
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 96}));
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 0, 0}));
     // Sequence
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 7}));
-    for (int i = 0; i < 1023; i++) {
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 1}));
+    for (int i = 0; i < 1024; i++) {
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 6}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 1}));
     }
     // We should probably make this transition smoother...
     for (int i = 0; i < 385; i++) {
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 1}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 246}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 1}));
     }
     for (int i = 0; i < 5956; i++) {
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 1}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 146}));
+        REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 1}));
     }
-    REQUIRE(checker.cmp(Zynq::ByteCode::Inst::TTL2{1, 3, 1, 1}));
     // Finish
     REQUIRE(checker.cmp(Zynq::ByteCode::Inst::Wait2{5, 1, 97}));
     REQUIRE(checker.is_end());

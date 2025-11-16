@@ -354,7 +354,8 @@ void Backend::generate(Manager::ExpSeq &expseq, Compiler &compiler)
         }
         bc_gen->seq_idx = idx;
         bc_gen->fpga_clock_div = fpga_clock_div;
-        bc_gen->seq_delay = m_seq_delay;
+        bc_gen->seq_delay = (m_has_clock ? std::max(m_seq_delay, uint32_t(200)) :
+                             m_seq_delay);
         bc_gen->start_ttl_chn = m_start_ttl_chn;
         bc_gen->ttl_mask = m_ttl_mask;
         bc_gen->first_bseq = idx == 0;

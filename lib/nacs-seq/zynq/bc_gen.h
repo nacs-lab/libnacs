@@ -45,6 +45,7 @@ public:
         Amp = 3,
         DAC = 4,
         Phase = 5,
+        Clock = 6,
     };
     enum class PulseType : uint8_t {
         Value,
@@ -205,7 +206,7 @@ private:
     void emit_bytecode(const void *data) const;
 
     std::vector<TTLManager> m_ttl_managers;
-    mutable ChnMap<std::vector<Pulse>> m_pulses;
+    mutable std::vector<Pulse> m_pulses;
     mutable std::vector<TTLPulse> m_ttlpulses;
     // This is basically a copy of `start_vals` which we will mutate during generation.
     // We need to keep all the inputs untouched in order to be able to do multiple generations.

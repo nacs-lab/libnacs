@@ -27,6 +27,9 @@ namespace NaCs::Seq::Zynq {
 
 struct BCGen::Pulse {
     PulseType pulse_type;
+    ChnType chn_type;
+    uint8_t chn;
+    bool need_endvalue;
     uint32_t id;
     uint32_t endvalue;
     int64_t time; // in sequence unit before sorting and 10ns unit after sorting
@@ -73,8 +76,6 @@ struct BCGen::DataStream {
     bool is_vector;
     uint32_t endvalue;
     int64_t time; // in 10ns unit
-    // 0 for non-ramps or pulses that are too short
-    int64_t endtime; // in 10ns unit
     void (*ramp_func)(void) = nullptr;
 
     double rel_time(int64_t t, const StreamBuffer &streambuffer)
@@ -127,7 +128,6 @@ struct BCGen::DataStream {
         is_vector = pulse.pulse_type == PulseType::Vector;
         endvalue = pulse.endvalue;
         time = pulse.time;
-        endtime = time + pulse.len;
         ramp_func = pulse.ramp_func;
         assert(ramp_func);
         nsteps = 0;
@@ -162,7 +162,6 @@ struct BCGen::DataStream {
     }
     double compute(int64_t t, const void *data, int64_t step, const StreamBuffer &streambuffer)
     {
-        assert(t <= endtime);
         if (!is_vector)
             return compute_scalar(t, data, streambuffer);
         return (this->*compute_vector)(t, data, step, streambuffer);
@@ -267,7 +266,6 @@ struct BCGen::DataStream {
     }
     double compute(int64_t t, const void *data, int64_t step, const StreamBuffer &streambuffer)
     {
-        assert(t <= endtime);
         if (!is_vector)
             return compute_scalar(t, data, streambuffer);
         if (nsteps > 0) {
@@ -291,7 +289,6 @@ struct BCGen::DataStream {
     }
     double compute(int64_t t, const void *data, int64_t, const StreamBuffer &streambuffer)
     {
-        assert(t <= endtime);
         return compute_scalar(t, data, streambuffer);
     }
 #endif
@@ -525,8 +522,7 @@ NACS_EXPORT() uint32_t BCGen::version()
 
 void BCGen::populate_pulses(const HostSeq &host_seq) const
 {
-    for (auto &pulses: m_pulses)
-        pulses.clear();
+    m_pulses.clear();
     m_ttlpulses.clear();
     for (auto &ttl_mgr: m_ttl_managers)
         ttl_mgr.clear();
@@ -576,8 +572,11 @@ void BCGen::populate_pulses(const HostSeq &host_seq) const
             m_real_start_vals.insert_or_assign({chn_type, seq_pulse.chn},
                                                convert_value(chn_type, start_val));
         }
-        m_pulses[{chn_type, seq_pulse.chn}].push_back({
+        m_pulses.push_back({
                 .pulse_type = seq_pulse.pulse_type,
+                .chn_type = chn_type,
+                .chn = seq_pulse.chn,
+                .need_endvalue = true,
                 .id = seq_pulse.id,
                 .endvalue = endvalue,
                 .time = time,
@@ -586,18 +585,16 @@ void BCGen::populate_pulses(const HostSeq &host_seq) const
             });
     }
     preprocess_ttl_managers();
-    for (auto &pulses: m_pulses) {
-        std::sort(pulses.begin(), pulses.end(), [&] (auto &p1, auto &p2) {
-            if (p1.time < p2.time)
-                return true;
-            if (p1.time > p2.time)
-                return false;
-            return p1.id < p2.id;
-        });
-        for (auto &pulse: pulses) {
-            assume(pulse.time >= 0);
-            pulse.time = convert_time(pulse.time);
-        }
+    std::sort(m_pulses.begin(), m_pulses.end(), [&] (auto &p1, auto &p2) {
+        if (p1.time < p2.time)
+            return true;
+        if (p1.time > p2.time)
+            return false;
+        return p1.id < p2.id;
+    });
+    for (auto &pulse: m_pulses) {
+        assume(pulse.time >= 0);
+        pulse.time = convert_time(pulse.time);
     }
     std::sort(m_ttlpulses.begin(), m_ttlpulses.end(), [&] (auto &p1, auto &p2) {
         if (p1.time < p2.time)
@@ -614,23 +611,29 @@ void BCGen::populate_pulses(const HostSeq &host_seq) const
 
 void BCGen::merge_pulses() const
 {
-    for (auto &pulses: m_pulses) {
-        int64_t prev_time = -1;
-        uint32_t to = 0;
-        uint32_t from = 0;
-        uint32_t npulses = (uint32_t)pulses.size();
-        for (;from < npulses; from++, to++) {
-            auto &pulse = pulses[from];
-            if (prev_time == pulse.time) {
-                to--;
-                pulses[to] = pulse;
-            }
-            else if (from != to) {
-                prev_time = pulse.time;
-                pulses[to] = std::move(pulse);
-            }
+    ChnMap<int64_t> next_times;
+    next_times.fill(INT64_MAX);
+    int32_t npulses = (int32_t)m_pulses.size();
+    int32_t to = npulses - 1;
+    int32_t from = npulses - 1;
+    for (; from >= 0; from--) {
+        auto &pulse = m_pulses[from];
+        auto &time = next_times[{pulse.chn_type, pulse.chn}];
+        assert(pulse.time <= time);
+        if (pulse.time == time)
+            continue;
+        if (pulse.len >= time - pulse.time) {
+            // Truncated ramp, shorten length and no need to output endvalue.
+            pulse.len = time - pulse.time;
+            pulse.need_endvalue = false;
         }
-        pulses.resize(to);
+        time = pulse.time;
+        if (from != to)
+            m_pulses[to] = std::move(pulse);
+        to--;
+    }
+    if (to >= 0) {
+        m_pulses.erase(m_pulses.begin(), m_pulses.begin() + (to + 1));
     }
 }
 
@@ -742,6 +745,21 @@ NACS_EXPORT() void BCGen::generate(const HostSeq &host_seq) const
     merge_pulses();
     merge_ttl_pulses();
     emit_bytecode(host_seq.values.data());
+}
+
+static uint8_t pulse_mintime(BCGen::ChnType chn_typ)
+{
+    if (chn_typ == BCGen::ChnType::DAC)
+        return PulseTime::DAC;
+    if (chn_typ == BCGen::ChnType::Freq)
+        return PulseTime::DDSFreq;
+    if (chn_typ == BCGen::ChnType::Amp)
+        return PulseTime::DDSAmp;
+    if (chn_typ == BCGen::ChnType::Phase)
+        return PulseTime::DDSPhase;
+    if (chn_typ == BCGen::ChnType::Clock)
+        return PulseTime::Clock;
+    return PulseTime::Min2;
 }
 
 struct BCGen::Writer {
@@ -967,11 +985,6 @@ struct BCGen::Writer {
         return PulseTime::Min2;
     }
 
-    int add_ttl_single(int64_t t, uint8_t chn, bool val)
-    {
-        return add_ttl(t, setBit(cur_ttl, chn, val));
-    }
-
     int add_clock(int64_t t, uint8_t period)
     {
         using namespace ByteCode;
@@ -1068,44 +1081,13 @@ struct BCGen::Writer {
         return PulseTime::DAC;
     }
 
-    void start()
-    {
-        // wait 25us
-        auto t = cur_t + 2500;
-        // Note that this will also make sure the initial ttl value is set.
-        add_ttl_single(t, start_ttl_chn, true);
-        // 1us
-        t += 100;
-        add_ttl_single(t, start_ttl_chn, false);
-        cur_t = 0;
-    }
-
-    void end(int64_t t)
-    {
-        // 1us
-        t += 100;
-        assert(t >= cur_t);
-        add_wait(t - cur_t);
-    }
-
-    uint8_t pulse_mintime(ChnType chn_typ)
-    {
-        if (chn_typ == ChnType::DAC)
-            return PulseTime::DAC;
-        if (chn_typ == ChnType::Freq)
-            return PulseTime::DDSFreq;
-        if (chn_typ == ChnType::Amp)
-            return PulseTime::DDSAmp;
-        if (chn_typ == ChnType::Phase)
-            return PulseTime::DDSPhase;
-        return PulseTime::Min2;
-    }
-
     int add_pulse(ChnType chn_typ, uint8_t chn, uint32_t val, int64_t t)
     {
         switch (chn_typ) {
         case ChnType::TTL:
             return add_ttl(t, val);
+        case ChnType::Clock:
+            return add_clock(t, uint8_t(val));
         case ChnType::Freq:
             return add_freq(t, chn, val);
         case ChnType::Amp:
@@ -1120,6 +1102,75 @@ struct BCGen::Writer {
     }
 };
 
+namespace {
+
+struct SinglePulse {
+    BCGen::ChnType typ;
+    uint8_t chn;
+    uint32_t val;
+    uint8_t mintime() const
+    {
+        return pulse_mintime(typ);
+    }
+    static SinglePulse clock(uint8_t period)
+    {
+        return { BCGen::ChnType::Clock, 0, period };
+    }
+    static SinglePulse ttl(uint32_t val)
+    {
+        return { BCGen::ChnType::TTL, 0, val };
+    }
+};
+
+struct PulseSequence {
+    // Map from start time to pulse object
+    std::map<int64_t,SinglePulse> single_pulses;
+    auto add(int64_t t, SinglePulse pulse, int64_t ub=INT64_MAX)
+    {
+        auto it = single_pulses.upper_bound(t); // it->first > t
+        if (it != single_pulses.begin()) {
+            auto prev_it = it;
+            --prev_it; // prev_it->first <= t
+            auto prev_end = prev_it->first + prev_it->second.mintime();
+            if (prev_end > ub)
+                return single_pulses.end();
+            t = std::max(t, prev_end);
+        }
+        auto mintime = pulse.mintime();
+        while (it != single_pulses.end() && it->first < t + mintime) {
+            t = it->first + it->second.mintime();
+            if (t > ub)
+                return single_pulses.end();
+            ++it;
+        }
+        return single_pulses.emplace(t, pulse).first;
+    }
+    // Find the first empty slot or the first pulse that is on the same channel
+    // as `pulse` no earlier than `t`.
+    auto add_endval(int64_t t, SinglePulse pulse)
+    {
+        auto it = single_pulses.lower_bound(t); // it->first >= t
+        if (it != single_pulses.begin()) {
+            auto prev_it = it;
+            --prev_it; // prev_it->first < t
+            auto prev_end = prev_it->first + prev_it->second.mintime();
+            t = std::max(t, prev_end);
+        }
+        auto mintime = pulse.mintime();
+        while (true) {
+            if (it == single_pulses.end() || it->first >= t + mintime)
+                return single_pulses.emplace(t, pulse).first;
+            if (it->second.typ == pulse.typ && it->second.chn == pulse.chn) {
+                // Found a new pulse on the same channel,
+                // no need to output the end value anymore.
+                return it;
+            }
+        }
+    }
+};
+
+}
+
 void BCGen::emit_bytecode(const void *data) const
 {
     bytecode.clear();
@@ -1130,308 +1181,195 @@ void BCGen::emit_bytecode(const void *data) const
     if (ttl_start_it != m_real_start_vals.end())
         writer.cur_ttl = ttl_start_it->second;
     // Initialize channels
-    if (first_bseq) {
-        for (auto [chn, val]: m_real_start_vals) {
-            // TTL will be set during `start()`
-            if (chn.first == ChnType::TTL)
-                continue;
+    ChnMap<uint32_t> chn_values;
+    chn_values.fill(0);
+    for (auto [chn, val]: m_real_start_vals) {
+        // TTL will be set during `start()`
+        if (chn.first == ChnType::TTL)
+            continue;
+        chn_values[chn] = val;
+        if (first_bseq) {
             auto min_dt = writer.add_pulse(chn.first, chn.second, val, writer.cur_t);
             assert(min_dt >= 0);
             (void)min_dt;
         }
     }
-    uint32_t clock_idx = 0;
-    auto nclocks = (uint32_t)clocks.size();
-    int64_t next_clock_time;
-    if (clocks.empty()) {
-        next_clock_time = INT64_MAX;
-    }
-    else {
-        next_clock_time = convert_time(clocks.front().time);
-    }
-    int64_t time_offset = 0;
-    auto real_seq_delay = seq_delay;
-    // writer.cur_t == time_offset -> sequence time 0.
-    if (next_clock_time < 0) {
-        auto clock_offset = uint32_t(-next_clock_time);
 
-        // If we want to start the clock right away (which we most likely will)
-        // the time for the first clock command will be negative since
-        // we want the first lowering edge to happen at the correct time.
-        if (real_seq_delay <= clock_offset) {
-            real_seq_delay = 0;
-        }
-        else {
-            real_seq_delay -= clock_offset;
-        }
-        writer.start(); // cur_t == 0
-        auto period = clocks.front().period;
-        writer.add_clock(real_seq_delay, period);
-        // cur_t == real_seq_delay + PulseTime::Clock
-        // the clock output was added at `real_seq_delay` or `cur_t - PulseTime::Clock`
-        clock_idx = 1;
-        if (clock_idx < nclocks) {
-            assume(clocks[clock_idx].time >= 0);
-            next_clock_time = convert_time(clocks[clock_idx].time);
-        }
-        else {
-            next_clock_time = INT64_MAX;
-        }
-        // Now align the start of the sequence time to get the correct t=0.
-        // we should have `<input time for 1st clock> + time_offset == <cur_t for 1st clock>`
-        // or `-clock_offset + time_offset == cur_t - PulseTime::Clock`
-        // or `time_offset == cur_t - PulseTime::Clock + clock_offset`
-        // Moreover, since we might have a pulse at t=0,
-        // which would have a `cur_t` of `0 + time_offset`
-        // we want to make sure `time_offset >= cur_t` so that we don't go back in time.
-        if (PulseTime::Clock < clock_offset) {
-            time_offset = writer.cur_t + clock_offset - PulseTime::Clock;
-        }
-        else {
-            time_offset = writer.cur_t;
-        }
-    }
-    else {
-        // Start the sequence and restart timer.
-        writer.start();
-        time_offset = real_seq_delay;
-    }
+    PulseSequence pseq;
+    // Note that this will also make sure the initial ttl value is set.
+    auto set_start_ttl = [&] (int64_t t, bool val) {
+        return pseq.add(t, SinglePulse::ttl(setBit(writer.cur_ttl, start_ttl_chn, val)));
+    };
+    set_start_ttl(-int32_t(seq_delay), false);
 
-    // Now we have three kinds of pulses to deal with
     // 1. Clock out: these will always be outputted at the right time with the highest priority
+    for (auto clock: clocks)
+        pseq.add(convert_time(clock.time), SinglePulse::clock(clock.period));
+    // Add the start_ttl on after the clock since we don't care about it's timing
+    // that much.
+    set_start_ttl(-int32_t(seq_delay) - 100, true);
     // 2. TTL out: after we make sure we can do the clock correct,
     //    we will try to respect ttl output time as much as possible.
-    // 3. DDS/DAC: output at the correct time if we can
+    for (auto &pulse: m_ttlpulses)
+        pseq.add(pulse.time, SinglePulse::ttl(pulse.val));
 
+    // 3. DDS/DAC: output at the correct time if we can
+    ChnMap<int64_t> last_times;
+    // This is a value that is more negative than the largest mintime
+    last_times.fill(-1000);
+    std::vector<Pulse*> ramps;
     const StreamBuffer streambuffer(fpga_clock_div);
     ChnMap<DataStream> streams;
-    ChnMap<uint32_t> pulse_idxs;
-    pulse_idxs.fill(0);
+    for (auto &pulse: m_pulses) {
+        auto &last_time = last_times[{pulse.chn_type, pulse.chn}];
+        auto &chn_value = chn_values[{pulse.chn_type, pulse.chn}];
+        auto &stream = streams[{pulse.chn_type, pulse.chn}];
 
-    int64_t next_ttl_time = m_ttlpulses.empty() ? INT64_MAX : m_ttlpulses.front().time;
+        auto mintime = pulse_mintime(pulse.chn_type);
+        auto last_finish_time = last_time + mintime;
+        uint32_t new_value = pulse.endvalue;
+        // Initialize stream to be used later
+        if (pulse.ramp_func)
+            stream.add_pulse(pulse);
 
-    bool has_pulses = false;
-    for (auto &pulses: m_pulses)
-        has_pulses |= !pulses.empty();
-    auto nttlpulses = (uint32_t)m_ttlpulses.size();
-    // Index points to the item to be processed next.
-    uint32_t ttlpulse_idx = 0;
-    // Time between each ramp update. 50 for each DDS, 45 for each DAC
-    uint32_t step_time = 0;
+        if (pulse.time <= last_finish_time) {
+            // The last output on this channel is already in the future.
+            // Simply update it to the value specified by the new pulse.
+            auto pulse_it = pseq.single_pulses.find(last_time);
+            assert(pulse_it != pseq.single_pulses.end());
+            assert(pulse_it->second.typ == pulse.chn_type);
+            assert(pulse_it->second.chn == pulse.chn);
+            // The last output time is ahead of the pulse start time but may or may not
+            // be ahead of the pulse end time. We might still need to schedule the ramp
+            // for this pulse if there is one.
+            if (pulse.ramp_func && pulse.time + pulse.len > last_finish_time) {
+                auto t = std::max(last_time, pulse.time);
+                auto start_val = stream.compute(t, data, 0, streambuffer);
+                new_value = convert_value(pulse.chn_type, start_val);
+                ramps.push_back(&pulse);
+            }
+            if (new_value != chn_value) {
+                pulse_it->second.val = new_value;
+                chn_value = new_value;
+            }
+            continue;
+        }
+        // First figure out the time we can do an output before we decide which value
+        // to use.
+        auto new_pulse_it = pseq.add(pulse.time, { pulse.chn_type, pulse.chn, new_value });
+        auto new_time = new_pulse_it->first;
+        if (pulse.ramp_func && new_time + mintime < pulse.time + pulse.len) {
+            // If the output time isn't exactly at the pulse start time,
+            // compute the actual value for the output time.
+            auto start_val = stream.compute(new_time, data, 0, streambuffer);
+            new_value = convert_value(pulse.chn_type, start_val);
+            new_pulse_it->second.val = new_value;
+            ramps.push_back(&pulse);
+        }
+        last_time = new_time;
+        chn_value = new_value;
+    }
 
-    // Record the last channel that could do an output before the deadline.
-    // This way, when we are cut-off by a deadline, we can restart from where we left off.
-    int chn_offset = 0;
-
-    int64_t cur_time = 0;
-
-    constexpr auto max_ramp_step = max(PulseTime::_DDS, PulseTime::DAC);
-    auto should_continue = [&] {
-        return clock_idx < nclocks || ttlpulse_idx < nttlpulses || has_pulses;
+    struct RampState {
+        Pulse *pulse;
+        decltype(pseq.single_pulses.begin()) last_it;
     };
 
-    while (should_continue()) {
-        // Record the time when we started.
-        // If the channels are ramping too slowly we could end up not forwarding
-        // the time at all in the loop otherwise.
-        auto start_time = cur_time;
-        auto next_critical_time = min(next_clock_time, next_ttl_time);
-
-        // Whether there's a on-going ramp.
-        // When this is true, we should not jump forward in time to the next pulse until
-        // the current ramps are all finished.
-        bool has_ramp = false;
-        // This is used to determine how much we can jump forward
-        // (together with next_critical_time) if there's no on-going ramps.
-        // We need to update this whenever we set has_pulse without has_ramp.
-        int64_t next_pulse_time = INT64_MAX;
-
-        // First check if we can do any normal pulse output before the deadline.
-        // We'll output at most one pulse per channel.
-        // Also recompute if we have any pulses to handle in the next cycle.
-        if (has_pulses) {
-            has_pulses = false;
-
-            int new_chn_offset = chn_offset;
-
-            // If there might be space to do a output.
-            for (int _chn_idx = 0; _chn_idx < m_pulses.chn_num; _chn_idx++) {
-                int chn_idx = (_chn_idx + chn_offset) % m_pulses.chn_num;
-                auto [chn_type, chn] = m_pulses.to_channel(chn_idx);
-                auto &pulses = m_pulses[chn_idx];
-                auto &stream = streams[chn_idx];
-                auto &pulse_idx = pulse_idxs[chn_idx];
-                auto mindt = writer.pulse_mintime(chn_type);
-                if (cur_time + mindt > next_critical_time) {
-                    if (pulse_idx < pulses.size()) {
-                        // We don't have time to output anything
-                        // but if a new ramp is starting we can setup our datastream.
-                        auto &pulse = pulses[pulse_idx];
-                        if (pulse.ramp_func && pulse.time <= cur_time + mindt) {
-                            if (!stream.ramp_func)
-                                step_time += mindt;
-                            stream.add_pulse(pulse);
-                            pulse_idx++;
-                            has_ramp = true;
-                        }
-                        else if (stream.ramp_func) {
-                            has_ramp = true;
-                        }
-                        else {
-                            next_pulse_time = min(next_pulse_time, pulse.time);
-                        }
-                        has_pulses = true;
-                    }
-                    else if (stream.ramp_func) {
-                        has_pulses = true;
-                        has_ramp = true;
-                    }
-                    continue;
+    ChnMap<RampState> ramp_states;
+    ramp_states.fill(RampState{ nullptr, pseq.single_pulses.end() });
+    auto nramps = (int)ramps.size();
+    auto ramp_idx = 0;
+    int64_t cur_time = 0;
+    int cur_chn = 0;
+    auto last_progress_chn = ramp_states.chn_num - 1;
+    auto next_chn = [&] { return cur_chn == ramp_states.chn_num - 1 ? 0 : cur_chn + 1; };
+    int ramp_step = 0;
+    while (true) {
+        if (ramp_step == 0) {
+            // No on-going ramp, jump ahead or exit
+            if (ramp_idx >= nramps)
+                break;
+            cur_time = ramps[ramp_idx]->time;
+        }
+        for (; ramp_idx < nramps; ramp_idx++) {
+            auto pulse = ramps[ramp_idx];
+            if (pulse->time > cur_time)
+                break;
+            auto &ramp_state = ramp_states[{pulse->chn_type, pulse->chn}];
+            if (!ramp_state.pulse)
+                ramp_step += pulse_mintime(pulse->chn_type);
+            ramp_state = { pulse, pseq.single_pulses.end() };
+            streams[{pulse->chn_type, pulse->chn}].add_pulse(*pulse);
+        }
+        assert(ramp_step);
+#ifndef NDEBUG
+        {
+            auto has_ramp = false;
+            for (auto &state: ramp_states)
+                has_ramp |= state.pulse != nullptr;
+            assert(has_ramp);
+        }
+#endif
+        // Find the next channel
+        while (!ramp_states[cur_chn].pulse) {
+            if (cur_chn == last_progress_chn)
+                cur_time += 50;
+            cur_chn = next_chn();
+        }
+        auto &ramp_state = ramp_states[cur_chn];
+        auto pulse = ramp_state.pulse;
+        auto endtime = pulse->time + pulse->len;
+        auto mintime = pulse_mintime(pulse->chn_type);
+        if (endtime > cur_time) {
+            auto new_pulse_it = pseq.add(cur_time,
+                                         { pulse->chn_type, pulse->chn, 0 },
+                                         endtime);
+            if (new_pulse_it != pseq.single_pulses.end()) {
+                // Found a new slot for the ramp output
+                auto new_time = new_pulse_it->first;
+                auto val = streams[cur_chn].compute(new_time, data, ramp_step,
+                                                    streambuffer);
+                new_pulse_it->second.val = convert_value(pulse->chn_type, val);
+                if (ramp_state.last_it != pseq.single_pulses.end() &&
+                    ramp_state.last_it->second.val == new_pulse_it->second.val) {
+                    // Repeated value, skipping
+                    if (cur_chn == last_progress_chn)
+                        cur_time += 50;
+                    pseq.single_pulses.erase(new_pulse_it);
                 }
-                new_chn_offset = chn_idx + 1;
-                // Before we compute any values, make sure the pulse is still the current one.
-                // First check if it is replaced.
-                if (pulse_idx < pulses.size()) {
-                    if (pulses[pulse_idx].time < cur_time + mindt) {
-                        // If we have many DDS pulses in this time range,
-                        // find the last one...
-                        while (pulse_idx + 1 < pulses.size() &&
-                               pulses[pulse_idx + 1].time < cur_time + mindt)
-                            pulse_idx++;
-                        auto &pulse = pulses[pulse_idx];
-                        assert(pulse.time < cur_time + mindt);
-                        pulse_idx++;
-                        if (pulse.ramp_func) {
-                            if (!stream.ramp_func)
-                                step_time += mindt;
-                            stream.add_pulse(pulse);
-                        }
-                        else {
-                            // For non-ramp pulses, simply output its value.
-                            if (pulse_idx < pulses.size()) {
-                                next_pulse_time = min(next_pulse_time, pulses[pulse_idx].time);
-                                has_pulses = true;
-                            }
-                            // If the time is slightly later,
-                            // see if we have enough time to move it to the correct time.
-                            auto t = cur_time;
-                            if (pulse.time > t)
-                                t = min(pulse.time, next_critical_time - mindt);
-                            // The `add_pulse` might be a no-op
-                            // in which case we do not need to forward the `cur_time`.
-                            // Most importantly, if the first pulse in the sequence is skipped,
-                            // `writer.cur_t` might not have be increased
-                            // to be larger than `time_offset` yet.
-                            if (writer.add_pulse(chn_type, chn, pulse.endvalue,
-                                                 t + time_offset)) {
-                                assert(writer.cur_t >= time_offset);
-                                cur_time = max(cur_time, writer.cur_t - time_offset);
-                            }
-                            if (stream.ramp_func)
-                                step_time -= mindt;
-                            assert(step_time <= streams.chn_num * max_ramp_step);
-                            stream.clear();
-                            continue;
-                        }
-                    }
+                else {
+                    last_progress_chn = cur_chn;
+                    ramp_state.last_it = new_pulse_it;
+                    cur_time = new_time + mintime;
                 }
-                // No current ramp, move to the next channel.
-                if (!stream.ramp_func) {
-                    if (pulse_idx < pulses.size()) {
-                        next_pulse_time = min(next_pulse_time, pulses[pulse_idx].time);
-                        has_pulses = true;
-                    }
-                    continue;
-                }
-                // Next, check if the current one is finished.
-                if (stream.endtime <= cur_time + mindt) {
-                    if (writer.add_pulse(chn_type, chn, stream.endvalue,
-                                         cur_time + time_offset)) {
-                        assert(writer.cur_t >= time_offset);
-                        cur_time = max(cur_time, writer.cur_t - time_offset);
-                    }
-                    step_time -= mindt;
-                    assert(step_time <= streams.chn_num * max_ramp_step);
-                    stream.clear();
-                    if (pulse_idx < pulses.size()) {
-                        next_pulse_time = min(next_pulse_time, pulses[pulse_idx].time);
-                        has_pulses = true;
-                    }
-                    continue;
-                }
-                // Now we have a on-going ramp, output one sample on it.
-                has_ramp = true;
-                has_pulses = true;
-                auto v = convert_value(chn_type, stream.compute(max(cur_time, stream.time),
-                                                                data, step_time, streambuffer));
-                if (writer.add_pulse(chn_type, chn, v, cur_time + time_offset)) {
-                    assert(writer.cur_t >= time_offset);
-                    cur_time = max(cur_time, writer.cur_t - time_offset);
-                }
+                cur_chn = next_chn();
+                continue;
             }
-            chn_offset = new_chn_offset;
         }
-
-        // Code below assume we still need to do something,
-        // break out of the loop if we have nothing left to do.
-        if (!should_continue())
-            break;
-        // If there's no pulse for a while, we can forward the time.
-        if (!has_ramp) {
-            assert(min(next_critical_time, next_pulse_time) != INT64_MAX);
-            cur_time = max(cur_time, min(next_critical_time, next_pulse_time));
-        }
-        else if (start_time == cur_time) {
-            // We have ramps but didn't output anything.
-            // This is either because we hit a deadline,
-            // or because none of the ramps changed anything.
-            // Make sure we are alway forwarding the time.
-            cur_time = min(next_critical_time, cur_time + max_ramp_step);
-        }
-        // We can run another loop without having to check TTL or clocks.
-        if (cur_time + max_ramp_step <= next_critical_time)
-            continue;
-        // Now we can deal with TTL and Clock pulses.
-        if (next_ttl_time < next_clock_time) {
-            static_assert(PulseTime::Min2 == 1);
-            // Try outputting a TTL pulse. Since its length is 1,
-            // we'll always have enough time to output the clock at the correct time
-            // as long as it's after the TTL in time.
-
-            // Since `next_ttl_time < next_clock_time <= INT64_MAX`
-            // we know that we have a current ttl pulse.
-            assert(next_ttl_time == m_ttlpulses[ttlpulse_idx].time);
-            if (writer.add_ttl(next_ttl_time + time_offset, m_ttlpulses[ttlpulse_idx].val)) {
-                assert(writer.cur_t >= time_offset);
-                cur_time = max(cur_time, writer.cur_t - time_offset);
-            }
-            ttlpulse_idx++;
-            if (ttlpulse_idx < nttlpulses) {
-                next_ttl_time = m_ttlpulses[ttlpulse_idx].time;
+        last_progress_chn = cur_chn;
+        // No more slot available
+        if (pulse->need_endvalue) {
+            if (ramp_state.last_it != pseq.single_pulses.end()) {
+                ramp_state.last_it->second.val = pulse->endvalue;
             }
             else {
-                next_ttl_time = INT64_MAX;
-            }
-            continue;
-        }
-        if (clock_idx < nclocks) {
-            assert(next_clock_time == convert_time(clocks[clock_idx].time));
-            writer.add_clock(next_clock_time + time_offset, clocks[clock_idx].period);
-            assert(writer.cur_t >= time_offset);
-            cur_time = max(cur_time, writer.cur_t - time_offset);
-            clock_idx++;
-            if (clock_idx < nclocks) {
-                assume(clocks[clock_idx].time >= 0);
-                next_clock_time = convert_time(clocks[clock_idx].time);
-            }
-            else {
-                next_clock_time = INT64_MAX;
+                pseq.add_endval(std::min(endtime, cur_time),
+                                { pulse->chn_type, pulse->chn, pulse->endvalue });
             }
         }
+        ramp_state.pulse = nullptr;
+        ramp_step -= mintime;
+        cur_chn = next_chn();
     }
+    assert(!pseq.single_pulses.empty());
+    // Shift cur_t so that the first pulse happens 25us after the initialization step.
+    writer.cur_t = pseq.single_pulses.begin()->first - 2500;
+    for (auto [t, pulse]: pseq.single_pulses)
+        writer.add_pulse(pulse.typ, pulse.chn, pulse.val, t);
+
     // Wait for 1us at the end of the sequence.
     // This just adds a little spacing before the termination sequence.
-    writer.end(cur_time + time_offset);
+    writer.add_wait(std::max(int64_t(0), -writer.cur_t) + 100);
 }
 
 }
