@@ -439,7 +439,7 @@ void BCGen::preprocess_ttl_managers() const
 {
     // Note that start time is in sequence unit and not FPGA unit at this point.
     auto nmgrs = m_ttl_managers.size();
-    for (uint8_t chn = 0; chn < nmgrs && chn < 32; chn++) {
+    for (uint8_t chn = 0; chn < nmgrs; chn++) {
         auto &ttl_mgr = m_ttl_managers[chn];
         if (!ttl_mgr || ttl_mgr.pulses.empty())
             continue;
@@ -507,7 +507,7 @@ NACS_EXPORT() double BCGen::compute_start_val(PulseType pulse_type,
 NACS_EXPORT() void BCGen::add_ttl_manager(uint8_t chn, int64_t off_delay, int64_t on_delay,
                                           int64_t skip_time, int64_t min_time, bool off_val)
 {
-    if (chn >= 32)
+    if (chn >= max_ttl_chn)
         throw std::runtime_error("TTL Manager on invalid channel.");
     if (chn >= m_ttl_managers.size())
         m_ttl_managers.resize(chn + 1);
