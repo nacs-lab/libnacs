@@ -22,6 +22,7 @@
 #include "seq.h"
 
 #include "../nacs-utils/llvm/codegen.h"
+#include "../nacs-utils/llvm/utils.h"
 #include "../nacs-utils/number.h"
 
 #include <algorithm>
@@ -1371,8 +1372,8 @@ bool BasicSeq::optimize_order(uint32_t chn)
 #endif
                 builder.setFastMathFlags(fmf);
 
-                auto intrin = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::minnum,
-                                                              { cgctx->T_f64 });
+                auto intrin = LLVM::get_intrinsic(mod, llvm::Intrinsic::minnum,
+                                                  { cgctx->T_f64 });
                 builder.CreateRet(builder.CreateCall(intrin, { f->getArg(0), f->getArg(1) }));
             }
             toffset = env.new_call(f, { Arg::create_var(toffset),

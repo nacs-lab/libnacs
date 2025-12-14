@@ -43,7 +43,7 @@ Constant*
 ensurePureExtern(Module *M, FunctionType *ft, StringRef name, bool canread)
 {
     if (auto f = M->getNamedValue(name)) {
-        auto pft = ft->getPointerTo();
+        auto pft = get_pointer_type(ft);
 #if LLVM_VERSION_MAJOR >= 11
         if (f->getType() != pft)
             return {ft, ConstantExpr::getBitCast(f, pft)};
@@ -80,7 +80,7 @@ Context::Context(LLVMContext &ctx)
       F_f64_f64f64f64(FunctionType::get(T_f64, {T_f64, T_f64, T_f64}, false)),
       F_f64_f64i32(FunctionType::get(T_f64, {T_f64, T_i32}, false)),
       F_f64_i32f64(FunctionType::get(T_f64, {T_i32, T_f64}, false)),
-      F_f64_f64i32pf64(FunctionType::get(T_f64, {T_f64, T_i32, T_f64->getPointerTo()}, false)),
+      F_f64_f64i32pf64(FunctionType::get(T_f64, {T_f64, T_i32, get_pointer_type(T_f64)}, false)),
       V_undefbool(UndefValue::get(T_bool)),
       m_mdbuilder(m_ctx),
       tbaa_root(m_mdbuilder.createTBAARoot("nacs_tbaa"))
@@ -321,7 +321,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             ret_closure = true;
         }
         else if (ret_spec->second.type & Wrapper::ByRef) {
-            fsig.push_back(rt->getPointerTo());
+            fsig.push_back(get_pointer_type(rt));
             rt = Type::getVoidTy(func->getContext());
             ret_ref = true;
             ret_ref_align = ret_spec->second.idx;
@@ -340,14 +340,14 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             // Nothing to do with this argument
         }
         else if (arg_spec->second.type & Wrapper::ByRef) {
-            fsig.push_back(argt->getPointerTo());
+            fsig.push_back(get_pointer_type(argt));
         }
         else {
             fsig.push_back(argt);
         }
     }
     if (spec.closure && !spec.closure_ptr)
-        fsig.push_back(T_i8->getPointerTo());
+        fsig.push_back(get_pointer_type(T_i8));
     auto wrapf_type = FunctionType::get(rt, fsig, false);
 
     // 2. Create function
@@ -368,7 +368,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     auto clarg = (spec.closure && !spec.closure_ptr) ? &*(--argit) : nullptr;
     Value *closure_ptr = clarg;
     if (spec.closure && spec.closure_ptr)
-        closure_ptr = builder.CreateBitCast(spec.closure_ptr, T_i8->getPointerTo());
+        closure_ptr = builder.CreateBitCast(spec.closure_ptr, get_pointer_type(T_i8));
     argit = wrapf->arg_begin();
     if (ret_ref)
         ++argit;
@@ -384,7 +384,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             auto argt = fty->getParamType(i);
             auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(T_i8, closure_ptr,
                                                                         offset * 8),
-                                             argt->getPointerTo());
+                                             get_pointer_type(argt));
             max_offset = max(max_offset, offset + 1);
             auto load = builder.CreateLoad(argt, ptr);
 #if LLVM_VERSION_MAJOR >= 11
@@ -438,7 +438,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
         auto offset = ret_spec->second.idx;
         auto ptr = builder.CreateBitCast(builder.CreateConstGEP1_32(
                                              T_i8, closure_ptr, offset * 8),
-                                         res->getType()->getPointerTo());
+                                         get_pointer_type(res->getType()));
         auto store = builder.CreateStore(res, ptr);
 #if LLVM_VERSION_MAJOR >= 11
         store->setAlignment(Align(alignof(double)));
@@ -665,7 +665,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             auto emit_intrinsic =
                 [&] (Intrinsic::ID intrinsic, unsigned _nargs) {
                     assert((unsigned)nargs == _nargs);
-                    auto intrin = Intrinsic::getDeclaration(m_mod, intrinsic, {T_f64});
+                    auto intrin = LLVM::get_intrinsic(m_mod, intrinsic, {T_f64});
                     for (unsigned i = 0; i < _nargs; i++)
                         largs[i] = emit_convert(builder, IR::Type::Float64, largs[i]);
                     lres = builder.CreateCall(intrin, largs);
@@ -801,7 +801,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
             pc++;
 
             auto datap = ConstantExpr::getBitCast(emit_interp_data(data_offset, ndata),
-                                                  T_f64->getPointerTo());
+                                                  get_pointer_type(T_f64));
             input = builder.CreateFSub(input, x0);
             input = builder.CreateFDiv(input, dx);
             auto interp_f = ensurePureFunc("interp", F_f64_f64i32pf64, true);

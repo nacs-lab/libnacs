@@ -245,8 +245,8 @@ struct Vectorizer {
                 auto vty = FixedVectorType::get(ty, vec_size);
                 auto callee = call->getCalledFunction();
                 if (auto id = callee->getIntrinsicID()) {
-                    auto intrin = Intrinsic::getDeclaration(const_cast<Module*>(F.getParent()),
-                                                            id, {vty});
+                    auto intrin = LLVM::get_intrinsic(const_cast<Module*>(F.getParent()),
+                                                      id, {vty});
                     SmallVector<Value*, 4> args;
                     for (const auto &op: call->args())
                         args.push_back(map_val(op.get(), true));

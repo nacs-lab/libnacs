@@ -300,7 +300,7 @@ NACS_EXPORT() bool emit_objfile(raw_pwrite_stream &stm, TargetMachine *tgt, Modu
     // Disable for now since the verifier doesn't like this.
     auto init_tramp = M->getFunction("llvm.init.trampoline");
     if (!init_tramp || init_tramp->use_empty())
-        appendToCompilerUsed(*M, {Intrinsic::getDeclaration(M, Intrinsic::init_trampoline)});
+        appendToCompilerUsed(*M, {LLVM::get_intrinsic(M, Intrinsic::init_trampoline)});
 #endif
 
 #if NACS_ENABLE_NEW_PASS

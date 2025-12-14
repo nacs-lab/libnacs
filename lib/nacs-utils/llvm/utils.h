@@ -102,6 +102,25 @@ NACS_EXPORT(utils) llvm::ArrayType *get_array_type(llvm::Type *ElementType,
                                                    uint64_t NumElements);
 NACS_EXPORT(utils) llvm::ConstantAggregateZero *get_aggregate_zero(llvm::Type *ty);
 
+static inline auto get_pointer_type(llvm::Type *ElType, unsigned AddrSpace=0)
+{
+#if LLVM_VERSION_MAJOR >= 20
+    return llvm::PointerType::get(ElType->getContext(), AddrSpace);
+#else
+    return ElType->getPointerTo(AddrSpace);
+#endif
+}
+
+static inline auto get_intrinsic(llvm::Module *mod, llvm::Intrinsic::ID id,
+                                 llvm::ArrayRef<llvm::Type*> types={})
+{
+#if LLVM_VERSION_MAJOR >= 21
+    return llvm::Intrinsic::getOrInsertDeclaration(mod, id, types);
+#else
+    return llvm::Intrinsic::getDeclaration(mod, id, types);
+#endif
+}
+
 NACS_EXPORT(utils) IR::Type get_ir_type(llvm::Type*, bool apitype=true);
 NACS_EXPORT(utils) llvm::Value *convert_scalar(llvm::IRBuilder<> &builder,
                                                llvm::Type *typ, llvm::Value *val);

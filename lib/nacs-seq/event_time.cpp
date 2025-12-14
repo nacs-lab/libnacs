@@ -20,6 +20,7 @@
 #include "error.h"
 
 #include "../nacs-utils/llvm/codegen.h"
+#include "../nacs-utils/llvm/utils.h"
 #include "../nacs-utils/number.h"
 
 #include <algorithm>
@@ -224,8 +225,8 @@ NACS_EXPORT() Var *EventTime::to_var(Env &env) const
         llvm::Value *v = nullptr;
         auto T_i64 = llvm::Type::getInt64Ty(ctx);
         // lrint can be lowered directly into SSE instructions
-        auto intrin = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::lrint,
-                                                      {T_i64, cgctx->T_f64});
+        auto intrin = LLVM::get_intrinsic(mod, llvm::Intrinsic::lrint,
+                                          {T_i64, cgctx->T_f64});
         for (auto &arg: f->args()) {
             llvm::Value *argv = builder.CreateCall(intrin, {&arg});
             if (!v) {

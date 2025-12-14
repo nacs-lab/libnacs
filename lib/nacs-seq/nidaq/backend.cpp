@@ -196,10 +196,10 @@ static llvm::Function *clamp_ramp_range(LLVM::Codegen::Context &cgctx, llvm::Fun
     for (uint32_t i = 0; i < nargs; i++)
         call_args[i] = newf->getArg(i);
     llvm::Value *res = builder.CreateCall(f, call_args);
-    auto max_f = llvm::Intrinsic::getDeclaration(f->getParent(), llvm::Intrinsic::maxnum,
-                                                 {cgctx.T_f64});
-    auto min_f = llvm::Intrinsic::getDeclaration(f->getParent(), llvm::Intrinsic::minnum,
-                                                 {cgctx.T_f64});
+    auto max_f = LLVM::get_intrinsic(f->getParent(), llvm::Intrinsic::maxnum,
+                                     {cgctx.T_f64});
+    auto min_f = LLVM::get_intrinsic(f->getParent(), llvm::Intrinsic::minnum,
+                                     {cgctx.T_f64});
     res = builder.CreateCall(min_f, {res, llvm::ConstantFP::get(cgctx.T_f64, 10)});
     res = builder.CreateCall(max_f, {res, llvm::ConstantFP::get(cgctx.T_f64, -10)});
     builder.CreateRet(res);

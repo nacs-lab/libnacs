@@ -1569,11 +1569,10 @@ void Compiler::generate_fptrs()
 
     // Then do the same for the times
     llvm::FunctionType *val_ftype = llvm::FunctionType::get(
-        llvm::Type::getVoidTy(llvm_ctx), {cgctx.T_i8->getPointerTo()}, false);
+        llvm::Type::getVoidTy(llvm_ctx), {LLVM::get_pointer_type(cgctx.T_i8)}, false);
     auto T_i64 = llvm::Type::getInt64Ty(llvm_ctx);
     // lrint can be lowered directly into SSE instructions
-    auto intrin = llvm::Intrinsic::getDeclaration(&mod, llvm::Intrinsic::lrint,
-                                                  {T_i64, cgctx.T_f64});
+    auto intrin = LLVM::get_intrinsic(&mod, llvm::Intrinsic::lrint, {T_i64, cgctx.T_f64});
     uint32_t ntimevals = m_timevals.size();
     for (uint32_t timevalid = 0; timevalid < ntimevals; timevalid++) {
         auto fptr_slot = find_fptr_slot(timevalid, false);
@@ -1611,7 +1610,7 @@ void Compiler::generate_fptrs()
             llvm::Value *val;
             auto ref_type = m_all_vars[refid]->type();
             auto ref_ltype = cgctx.llvm_ty(ref_type);
-            ptr = builder.CreateBitCast(ptr, ref_ltype->getPointerTo());
+            ptr = builder.CreateBitCast(ptr, LLVM::get_pointer_type(ref_ltype));
             load = builder.CreateLoad(ref_ltype, ptr);
             switch (ref_type) {
             case IR::Type::Bool:
@@ -1646,7 +1645,7 @@ void Compiler::generate_fptrs()
             auto ptr = builder.CreateConstGEP1_32(cgctx.T_i8, clarg, refslot * 8);
             llvm::LoadInst *load;
             llvm::Value *val;
-            ptr = builder.CreateBitCast(ptr, T_i64->getPointerTo());
+            ptr = builder.CreateBitCast(ptr, LLVM::get_pointer_type(T_i64));
             load = builder.CreateLoad(T_i64, ptr);
             val = load;
 #if LLVM_VERSION_MAJOR >= 11
@@ -1664,7 +1663,7 @@ void Compiler::generate_fptrs()
             sumv = builder.CreateAdd(sumv, val);
         }
         auto resptr = builder.CreateConstGEP1_32(cgctx.T_i8, clarg, slot * 8);
-        resptr = builder.CreateBitCast(resptr, T_i64->getPointerTo());
+        resptr = builder.CreateBitCast(resptr, LLVM::get_pointer_type(T_i64));
         auto store = builder.CreateStore(sumv, resptr);
 #if LLVM_VERSION_MAJOR >= 11
         store->setAlignment(llvm::Align(alignof(double)));
