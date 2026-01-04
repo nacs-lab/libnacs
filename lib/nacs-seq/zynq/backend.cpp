@@ -60,7 +60,7 @@ static Device::Register<Backend> register_backend("zynq");
 
 namespace {
 struct Status {
-    uint32_t ttl_ovr_warned;
+    std::array<uint32_t,8> ttl_ovr_warned;
     std::bitset<256> dds_ovr_warned;
 };
 }
@@ -71,7 +71,7 @@ static Call register_sigal([] {
     Manager::new_run().connect([] (Manager *mgr) {
         auto &all_status = server_status.get(*mgr);
         for (auto &[url, status]: all_status) {
-            status.ttl_ovr_warned = 0;
+            status.ttl_ovr_warned.fill(0);
             status.dds_ovr_warned.reset();
         }
     });
@@ -171,12 +171,15 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
     if (starts_with(chn_name, "TTL")) {
         auto chn_num_str = chn_name.substr(3);
         uint8_t chn_num;
-        if (chn_num_str.getAsInteger(10, chn_num) || chn_num >= 32)
+        if (chn_num_str.getAsInteger(10, chn_num) || chn_num > m_max_ttl_chn)
             throw std::runtime_error(name() + ": Invalid TTL channel " + _chn_name);
         if (chn_num == m_start_ttl_chn)
             throw std::runtime_error(name() + ": Cannot output on start trigger TTL channel");
         m_chn_map.emplace(chn_id, std::make_pair(BCGen::ChnType::TTL, chn_num));
-        m_ttl_mask = setBit(m_ttl_mask, chn_num, true);
+        auto bank = chn_num / 32;
+        if (int(m_ttl_mask.size()) <= bank)
+            m_ttl_mask.resize(bank + 1, 0);
+        m_ttl_mask[bank] = setBit(m_ttl_mask[bank], chn_num % 32, true);
     }
     else if (starts_with(chn_name, "DAC")) {
         auto chn_num_str = chn_name.substr(3);
@@ -359,7 +362,7 @@ void Backend::generate(Manager::ExpSeq &expseq, Compiler &compiler)
         bc_gen->seq_delay = (m_has_clock ? std::max(m_seq_delay, uint32_t(200)) :
                              m_seq_delay);
         bc_gen->start_ttl_chn = m_start_ttl_chn;
-        bc_gen->ttl_mask[0] = m_ttl_mask;
+        bc_gen->ttl_mask = m_ttl_mask;
         bc_gen->first_bseq = idx == 0;
         for (auto [chn_id, ttl_mgr]: m_ttl_managers) {
             auto it = m_chn_map.find(chn_id);
@@ -733,9 +736,21 @@ void Backend::config(const YAML::Node &config)
     else {
         m_seq_delay = 0;
     }
+    if (auto max_ttl_chn_node = config["max_ttl_chn"]) {
+        auto max_ttl_chn = max_ttl_chn_node.as<int>();
+        if (max_ttl_chn < 0 || max_ttl_chn >= 256)
+            throw std::runtime_error(name() + ": Invalid max_ttl_chn " +
+                                     std::to_string(max_ttl_chn));
+        m_max_ttl_chn = uint8_t(max_ttl_chn);
+    }
+    else {
+        m_max_ttl_chn = 31;
+    }
+    m_ttl_mask.resize(1);
+    m_ttl_mask[0] = 0;
     if (auto start_ttl_chn_node = config["start_ttl_chn"]) {
         m_start_ttl_chn = start_ttl_chn_node.as<int>();
-        if (m_start_ttl_chn < 0 || m_start_ttl_chn >= 32) {
+        if (m_start_ttl_chn < 0 || m_start_ttl_chn > int(m_max_ttl_chn)) {
             throw std::runtime_error(name() + ": Invalid start_ttl_chn " +
                                      std::to_string(m_start_ttl_chn));
         }
@@ -757,7 +772,7 @@ void Backend::config(const YAML::Node &config)
     else {
         throw std::runtime_error(name() + ": Missing url in config");
     }
-    m_ttl_ovr_ignore = 0;
+    m_ttl_ovr_ignore.fill(0);
     m_dds_ovr_ignore.reset();
     if (auto override_ignore_node = config["override_ignore"]) {
         if (!override_ignore_node.IsSequence())
@@ -768,13 +783,14 @@ void Backend::config(const YAML::Node &config)
             if (starts_with(chn_name, "TTL")) {
                 auto chn_num_str = chn_name.substr(3);
                 uint8_t chn_num;
-                if (chn_num_str.getAsInteger(10, chn_num) || chn_num >= 32)
+                if (chn_num_str.getAsInteger(10, chn_num) || chn_num > m_max_ttl_chn)
                     throw std::runtime_error(name() + ": Invalid TTL channel number " +
                                              chn_string + " in override_ignore");
                 if (chn_num == m_start_ttl_chn)
                     throw std::runtime_error(name() + ": Cannot ignore override "
                                              "on start trigger TTL channel");
-                m_ttl_ovr_ignore = setBit(m_ttl_ovr_ignore, chn_num, true);
+                m_ttl_ovr_ignore[chn_num / 32] = setBit(m_ttl_ovr_ignore[chn_num / 32],
+                                                        chn_num % 32, true);
             }
             else if (starts_with(chn_name, "DDS")) {
                 auto subname = chn_name.substr(3);
@@ -843,17 +859,17 @@ inline void Backend::run_bytecode(const std::vector<uint8_t> &bc, uint32_t versi
                         Mem::load_unalign<uint32_t>(rep_data + 20));
     // Clear non-override channels from the `ttl_ovr_warned` flags
     // so that we'll warn again about them if they are overriden again.
-    status.ttl_ovr_warned &= ttl_ovr;
-    ttl_ovr &= ~m_ttl_ovr_ignore;
+    status.ttl_ovr_warned[0] &= ttl_ovr;
+    ttl_ovr &= ~m_ttl_ovr_ignore[0];
     auto dds_ovr_start = rep_data + 24;
     auto dds_ovr_end = rep_data + reply0.size();
     if (ttl_ovr) {
         for (int i = 0; i < 32; i++) {
             uint32_t bitmask = uint32_t(1) << i;
             // Only warn if the channel was used and we haven't warned about it yet.
-            if ((ttl_ovr & bitmask) && (m_ttl_mask & bitmask) &&
-                !(status.ttl_ovr_warned & bitmask)) {
-                status.ttl_ovr_warned |= bitmask;
+            if ((ttl_ovr & bitmask) && (m_ttl_mask[0] & bitmask) &&
+                !(status.ttl_ovr_warned[0] & bitmask)) {
+                status.ttl_ovr_warned[0] |= bitmask;
                 get_msg() += "TTL" + std::to_string(i);
             }
         }

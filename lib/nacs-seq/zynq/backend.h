@@ -25,6 +25,7 @@
 
 #include <nacs-utils/zmq_utils.h>
 
+#include <array>
 #include <bitset>
 #include <map>
 #include <memory>
@@ -79,8 +80,9 @@ private:
     std::vector<BasicSeq> m_seqs;
     std::map<uint32_t,std::pair<BCGen::ChnType,uint8_t>> m_chn_map;
     std::map<uint32_t,std::vector<BCGen::Clock>> m_clocks;
-    uint32_t m_ttl_mask = 0;
+    std::vector<uint32_t> m_ttl_mask{0};
     uint32_t m_seq_delay; // in unit of 10ns.
+    uint8_t m_max_ttl_chn = 31;
     int8_t m_start_ttl_chn;
     bool m_has_clock = false;
     bool m_generated = false;
@@ -93,7 +95,7 @@ private:
     // since we don't know about all the channel mapping yet when we populate this.
     std::map<uint32_t,TTLManager> m_ttl_managers;
 
-    uint32_t m_ttl_ovr_ignore = 0;
+    std::array<uint32_t,8> m_ttl_ovr_ignore{};
     std::bitset<256> m_dds_ovr_ignore;
     std::bitset<256> m_dds_used;
 };
