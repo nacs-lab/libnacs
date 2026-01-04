@@ -128,7 +128,7 @@ TEST_CASE("empty") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 0;
     check_generate(bc_gen, host_seq);
@@ -153,7 +153,7 @@ TEST_CASE("offset") {
     bc_gen.seq_delay = 100;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 0;
     check_generate(bc_gen, host_seq);
@@ -178,7 +178,7 @@ TEST_CASE("clock") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 300;
     bc_gen.clocks.push_back({-100 * 10000, 100});
@@ -209,7 +209,7 @@ TEST_CASE("clock+offset") {
     bc_gen.seq_delay = 3000;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 300;
     bc_gen.clocks.push_back({-100 * 10000, 100});
@@ -241,7 +241,7 @@ TEST_CASE("ttl_set") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x208;
+    bc_gen.ttl_mask[0] = 0x208;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 3}] = 0;
@@ -313,7 +313,7 @@ TEST_CASE("ttl_set_off") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x208;
+    bc_gen.ttl_mask[0] = 0x208;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 3}] = 0;
@@ -385,7 +385,7 @@ TEST_CASE("ttl0") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x4;
+    bc_gen.ttl_mask[0] = 0x4;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     host_seq.set_value<int64_t>(0, 0);
@@ -427,7 +427,7 @@ TEST_CASE("ttl0_first_bseq") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = true;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x4;
+    bc_gen.ttl_mask[0] = 0x4;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     host_seq.set_value<int64_t>(0, 0);
@@ -467,7 +467,7 @@ TEST_CASE("ttl0_first_bseq_off") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = true;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x4;
+    bc_gen.ttl_mask[0] = 0x4;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     host_seq.set_value<int64_t>(0, 0);
@@ -508,7 +508,7 @@ TEST_CASE("ttl0+_first_bseq") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = true;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x4;
+    bc_gen.ttl_mask[0] = 0x4;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     // Automatic update of start value should only happen if the sequence time is 0
@@ -552,7 +552,7 @@ TEST_CASE("ttl_set+offset") {
     bc_gen.seq_delay = 40;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x208;
+    bc_gen.ttl_mask[0] = 0x208;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     host_seq.set_value<int64_t>(0, 10300);
@@ -625,7 +625,7 @@ TEST_CASE("ttl_set+clock") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x208;
+    bc_gen.ttl_mask[0] = 0x208;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 987;
     bc_gen.clocks.push_back({-100 * 10000, 100});
@@ -702,7 +702,7 @@ TEST_CASE("dds_set") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 10300);
@@ -777,7 +777,7 @@ TEST_CASE("dds_set_skip") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     host_seq.set_value<int64_t>(0, 10300);
@@ -855,7 +855,7 @@ TEST_CASE("dds_set_skip+offset") {
     bc_gen.seq_delay = 1034;
     bc_gen.first_bseq = true;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     host_seq.set_value<int64_t>(0, 1);
@@ -896,7 +896,7 @@ TEST_CASE("dds_set+offset") {
     bc_gen.seq_delay = 1034;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 10300);
@@ -977,7 +977,7 @@ TEST_CASE("dds_ramp") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 10300);
@@ -1069,7 +1069,7 @@ TEST_CASE("dds_ramp_vector") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 10300);
@@ -1163,7 +1163,7 @@ TEST_CASE("dds_ramp_interrupt") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 10300);
@@ -1240,7 +1240,7 @@ TEST_CASE("dds_ramp_interrupt_off") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 10300);
@@ -1330,7 +1330,7 @@ TEST_CASE("dds_ramp+offset") {
     bc_gen.seq_delay = 4875;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 10300);
@@ -1423,7 +1423,7 @@ TEST_CASE("dds_ramp+clock") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     bc_gen.clocks.push_back({-100 * 10000, 100});
@@ -1523,7 +1523,7 @@ TEST_CASE("dds_multiramp") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 10300);
@@ -1634,7 +1634,7 @@ TEST_CASE("dds_multiramp+clock") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     bc_gen.clocks.push_back({600 * 10000, 100});
@@ -1744,7 +1744,7 @@ TEST_CASE("dds_slowramp") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 10300);
@@ -1883,7 +1883,7 @@ TEST_CASE("dds0") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 0);
@@ -1956,7 +1956,7 @@ TEST_CASE("dds0_start") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = true;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 0);
@@ -2035,7 +2035,7 @@ TEST_CASE("dds_ramp0") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 0);
@@ -2123,7 +2123,7 @@ TEST_CASE("dds_ramp0_start") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = true;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0;
+    bc_gen.ttl_mask[0] = 0;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 1230;
     host_seq.set_value<int64_t>(0, 0);
@@ -2208,7 +2208,7 @@ TEST_CASE("start_vals") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x228;
+    bc_gen.ttl_mask[0] = 0x228;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 0;
     bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 3}] = 0;
@@ -2238,7 +2238,7 @@ TEST_CASE("start_vals_start") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = true;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x228;
+    bc_gen.ttl_mask[0] = 0x228;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 0;
     bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 3}] = 0;
@@ -2270,7 +2270,7 @@ TEST_CASE("ttl_mgr") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x6;
+    bc_gen.ttl_mask[0] = 0x6;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     host_seq.set_value<bool>(0, false);
@@ -2487,7 +2487,7 @@ TEST_CASE("ttl_mgr_inverse") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = false;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x6;
+    bc_gen.ttl_mask[0] = 0x6;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     host_seq.set_value<bool>(0, false);
@@ -2704,7 +2704,7 @@ TEST_CASE("ttl_mgr_start") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = true;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x6;
+    bc_gen.ttl_mask[0] = 0x6;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     host_seq.set_value<bool>(0, false);
@@ -2920,7 +2920,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = true;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x6;
+    bc_gen.ttl_mask[0] = 0x6;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     host_seq.set_value<bool>(0, false);
@@ -3137,7 +3137,7 @@ TEST_CASE("ttl_rate_limit") {
     bc_gen.seq_delay = 0;
     bc_gen.first_bseq = true;
     bc_gen.start_ttl_chn = 0;
-    bc_gen.ttl_mask = 0x6;
+    bc_gen.ttl_mask[0] = 0x6;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
     host_seq.set_value<bool>(0, false);

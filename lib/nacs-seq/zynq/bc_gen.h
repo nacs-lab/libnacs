@@ -98,7 +98,7 @@ public:
     uint8_t max_ttl_chn = 32;
 
     int8_t start_ttl_chn;
-    uint32_t ttl_mask;
+    std::vector<uint32_t> ttl_mask{0};
     // How many sequence cycle corresponds to one FPGA clock cycle.
     uint32_t fpga_clock_div;
     int64_t len_ns;
@@ -205,6 +205,9 @@ private:
     void merge_ttl_pulses() const;
 
     void emit_bytecode(const void *data) const;
+
+    template<typename Inst>
+    void _emit_bytecode(const void *data) const;
 
     std::vector<TTLManager> m_ttl_managers;
     mutable std::vector<Pulse> m_pulses;

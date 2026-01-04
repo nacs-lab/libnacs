@@ -517,7 +517,7 @@ NACS_EXPORT() void BCGen::add_ttl_manager(uint8_t chn, int64_t off_delay, int64_
 NACS_EXPORT() uint32_t BCGen::version() const
 {
     // Bytecode version
-    return 2;
+    return max_ttl_chn > 32 ? 3 : 2;
 }
 
 void BCGen::populate_pulses(const HostSeq &host_seq) const
@@ -532,7 +532,7 @@ void BCGen::populate_pulses(const HostSeq &host_seq) const
         // We cannot translate the time unit yet since that may affect sorting
         // as well as the `time == 0` check.
         auto time = host_seq.get_time(seq_pulse.time_id);
-        // Pulses at t=0 are already merged into the initial value.
+        // Pulses at t=0 will be merged into the initial values.
         // For the first subsequence, this will be set before the sequence starts
         // so we can ignore those pulses.
         if (seq_pulse.cond_id != uint32_t(-1) &&
@@ -652,12 +652,10 @@ class TimeKeeper {
     static constexpr int32_t min_time_span = avg_window * 200;
 
 public:
-    bool add_ttl_time(int64_t time)
+    int64_t next_available(int64_t time) const
     {
-        if (m_npulses < avg_window) {
-            m_pulse_times[m_npulses++] = time;
-            return true;
-        }
+        if (m_npulses < avg_window)
+            return time;
         auto idx = m_npulses % avg_window;
         auto prev_idx = (m_npulses - 1) % avg_window;
         // The time span between the last `avg_window` TTL pulses.
@@ -665,20 +663,31 @@ public:
         auto prev_time = m_pulse_times[prev_idx];
         auto cur_span = prev_time - m_pulse_times[idx];
         assert(cur_span > 0);
-        assert(time > prev_time);
-        if (cur_span < min_time_span / 2 && time < prev_time + 250)
-            return false;
-        if (cur_span < min_time_span && time < prev_time + 150)
-            return false;
-        if (cur_span < min_time_span * 2 && time < prev_time + 70)
-            return false;
-        if (cur_span < min_time_span * 4 && time < prev_time + 20)
-            return false;
-        if (cur_span < min_time_span * 8 && time < prev_time + 5)
-            return false;
+        auto update_time = [&] (bool cond, int64_t limit) {
+            if (cond && time < limit) {
+                time = limit;
+            }
+        };
+        update_time(cur_span < min_time_span / 2, prev_time + 250);
+        update_time(cur_span < min_time_span, prev_time + 150);
+        update_time(cur_span < min_time_span * 2, prev_time + 70);
+        update_time(cur_span < min_time_span * 4, prev_time + 20);
+        update_time(cur_span < min_time_span * 8, prev_time + 5);
+        update_time(true, prev_time + 1);
+        return time;
+    }
+    void add_time(int64_t time)
+    {
+        // Ignore
+        if (m_npulses != 0) {
+            auto prev_time = m_pulse_times[(m_npulses - 1) % avg_window];
+            // The user might've ignored the time limit.
+            if (time < prev_time)
+                return;
+            assert(time != prev_time);
+        }
+        m_pulse_times[m_npulses % avg_window] = time;
         m_npulses++;
-        m_pulse_times[idx] = time;
-        return true;
     }
 
 private:
@@ -690,52 +699,103 @@ private:
 
 void BCGen::merge_ttl_pulses() const
 {
-    uint32_t ttl_val = 0;
+    uint32_t ttl_vals[NUM_TTL_BANKS] = {};
     for (auto it = m_real_start_vals.begin(), end = m_real_start_vals.end(); it != end;) {
         auto [chn, val] = *it;
         if (chn.first != ChnType::TTL) {
             ++it;
             continue;
         }
-        if (chn.second < 32)
-            ttl_val = setBit(ttl_val, chn.second, val != 0);
+        auto bank = chn.second / 32;
+        uint8_t ttlchn = chn.second % 32;
+        if (bank < NUM_TTL_BANKS)
+            ttl_vals[bank] = setBit(ttl_vals[bank], ttlchn, val != 0);
         it = m_real_start_vals.erase(it);
     }
-    // Note that unlike for DDS channels,
-    // the initial TTL value computed here is always going to be used
-    // when we set the startup trigger signal.
-    // This also means that we can ignore ttl pulses that doesn't change the value
-    // even if it's the first pulse in the sequence.
-    m_real_start_vals.emplace(std::make_pair(ChnType::TTL, 0), ttl_val);
+    for (int bank = 0; bank < min(int(ttl_mask.size()), NUM_TTL_BANKS); bank++) {
+        m_real_start_vals.emplace(std::make_pair(ChnType::TTL, bank * 32),
+                                  ttl_vals[bank]);
+    }
 
     TimeKeeper time_keeper;
-    int64_t prev_ttl_t = -1;
-    uint32_t to = 0;
-    uint32_t from = 0;
     uint32_t nttlpulses = (uint32_t)m_ttlpulses.size();
-    for (;from < nttlpulses; from++, to++) {
-        auto &pulse = m_ttlpulses[from];
-        auto new_ttl_val = setBit(ttl_val, pulse.chn, pulse.val != 0);
-        if (new_ttl_val == ttl_val) {
-            to--;
-            continue;
-        }
-        ttl_val = new_ttl_val;
-        if (prev_ttl_t == pulse.time || !time_keeper.add_ttl_time(pulse.time)) {
-            // Neither condition should trigger before we actually added a TTL pulse.
-            assert(to != 0);
-            to--;
-            m_ttlpulses[to].val = ttl_val;
-        } else {
-            prev_ttl_t = pulse.time;
-            pulse.chn = 0;
-            pulse.val = ttl_val;
-            if (from != to) {
-                m_ttlpulses[to] = std::move(pulse);
+
+    struct BankStatus {
+        int64_t prev_t{-1};
+        uint32_t last_idx{0};
+    } bank_statuses[NUM_TTL_BANKS] = {};
+
+    auto check_time_conflict = [&] (int64_t time) {
+        for (auto status: bank_statuses) {
+            if (status.prev_t == time) {
+                return false;
             }
         }
+        return true;
+    };
+
+    uint32_t to = 0;
+    uint32_t from = 0;
+    for (;from < nttlpulses; from++) {
+        auto &pulse = m_ttlpulses[from];
+        auto chn = pulse.chn;
+        auto bank = chn / 32;
+        auto &ttl_val = ttl_vals[bank];
+        auto new_ttl_val = setBit(ttl_val, chn % 32, pulse.val != 0);
+        if (new_ttl_val == ttl_val)
+            continue;
+        ttl_val = new_ttl_val;
+        auto &bank_status = bank_statuses[bank];
+        auto time = pulse.time;
+
+        if (bank_status.prev_t >= time) {
+            // Shouldn't trigger before we actually added a TTL pulse.
+            assert(to != 0);
+            m_ttlpulses[bank_status.last_idx].val = new_ttl_val;
+            continue;
+        }
+
+        // Bump `to` since we'll now add a new pulse one way or another
+        auto available_time = time_keeper.next_available(time);
+
+        if (available_time > time) {
+            if (bank_status.prev_t >= 0 && time < bank_status.prev_t + 1000) {
+                // We'll respect the time limit if we have output on this bank
+                // in the past 10us (arbitrary limit).
+                time = available_time;
+            }
+            else {
+                // We are ignoring the throughput limit since it's caused by other banks
+                // but we still need to make sure we don't schedule any output
+                // at exactly the same time as another bank.
+                // We do so by maintaining the invariance that for each bank,
+                // there's no output on this bank in the range
+                // [current_time, bank_status.prev_t)
+                while (check_time_conflict(time)) {
+                    time++;
+                }
+            }
+        }
+        time_keeper.add_time(time);
+
+        auto &out_pulse = m_ttlpulses[to];
+        out_pulse.chn = uint8_t(bank * 32);
+        if (from != to)
+            out_pulse.id = pulse.id;
+        out_pulse.val = new_ttl_val;
+        out_pulse.time = time;
+        bank_status.prev_t = time;
+        bank_status.last_idx = to;
+        to++;
     }
     m_ttlpulses.resize(to);
+    std::sort(m_ttlpulses.begin(), m_ttlpulses.end(), [&] (auto &p1, auto &p2) {
+        if (p1.time < p2.time)
+            return true;
+        if (p1.time > p2.time)
+            return false;
+        return p1.id < p2.id;
+    });
 }
 
 NACS_EXPORT() void BCGen::generate(const HostSeq &host_seq) const
@@ -815,6 +875,7 @@ struct BCGen::Writer {
         else {
             assert(nmasks <= NUM_TTL_BANKS);
             assert(start_ttl_chn < nmasks * 32);
+            write(nmasks);
             uint8_t start_ttl_bank = start_ttl_chn / 32;
             for (uint32_t bank = 0; bank < nmasks; bank++) {
                 auto ttl_mask = ttl_masks[bank];
@@ -1253,8 +1314,19 @@ struct PulseSequence {
 void BCGen::emit_bytecode(const void *data) const
 {
     bytecode.clear();
-    Writer<ByteCode::Inst_v1> writer(bytecode, start_ttl_chn);
-    writer.write_header(len_ns, &ttl_mask, 1);
+    if (version() >= 3) {
+        _emit_bytecode<ByteCode::Inst_v3>(data);
+    }
+    else {
+        _emit_bytecode<ByteCode::Inst_v1>(data);
+    }
+}
+
+template<typename Inst>
+void BCGen::_emit_bytecode(const void *data) const
+{
+    Writer<Inst> writer(bytecode, start_ttl_chn);
+    writer.write_header(len_ns, &ttl_mask[0], uint32_t(ttl_mask.size()));
 
     for (int bank = 0; bank < NUM_TTL_BANKS; bank++) {
         auto ttl_start_it = m_real_start_vals.find({ChnType::TTL, bank * 32});
@@ -1266,9 +1338,13 @@ void BCGen::emit_bytecode(const void *data) const
     ChnMap<uint32_t> chn_values;
     chn_values.fill(0);
     for (auto [chn, val]: m_real_start_vals) {
-        // TTL will be set during `start()`
-        if (chn.first == ChnType::TTL)
+        if (chn.first == ChnType::TTL) {
+            // TTL on the start trigger bank will be set during `start()`
+            uint8_t bank = chn.second / 32;
+            if (first_bseq && bank != start_ttl_chn / 32)
+                writer.add_ttl(writer.cur_t, val, bank);
             continue;
+        }
         chn_values[chn] = val;
         if (first_bseq) {
             auto min_dt = writer.add_pulse(chn.first, chn.second, val, writer.cur_t);

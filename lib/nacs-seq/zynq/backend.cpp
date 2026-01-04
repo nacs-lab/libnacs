@@ -359,7 +359,7 @@ void Backend::generate(Manager::ExpSeq &expseq, Compiler &compiler)
         bc_gen->seq_delay = (m_has_clock ? std::max(m_seq_delay, uint32_t(200)) :
                              m_seq_delay);
         bc_gen->start_ttl_chn = m_start_ttl_chn;
-        bc_gen->ttl_mask = m_ttl_mask;
+        bc_gen->ttl_mask[0] = m_ttl_mask;
         bc_gen->first_bseq = idx == 0;
         for (auto [chn_id, ttl_mgr]: m_ttl_managers) {
             auto it = m_chn_map.find(chn_id);
