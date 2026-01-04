@@ -832,6 +832,8 @@ inline void Backend::run_bytecode(const std::vector<uint8_t> &bc, uint32_t versi
             return;
         throw std::runtime_error(name() + ": Backend not configured.");
     }
+    auto nbanks = int(m_ttl_mask.size());
+    assert(nbanks <= 8);
     auto reply = m_sock->send_msg([&] (auto &sock) {
         ZMQ::send_more(sock, ZMQ::str_msg("run_seq"));
         ZMQ::send_more(sock, ZMQ::bits_msg(version));
@@ -842,8 +844,10 @@ inline void Backend::run_bytecode(const std::vector<uint8_t> &bc, uint32_t versi
     auto &reply0 = reply[0];
     auto rep_data = (const uint8_t*)reply[0].data();
     memcpy(m_seq_id, rep_data, sizeof(m_seq_id));
-    if (reply0.size() < 24)
+    if (reply0.size() < size_t(16 + nbanks * 8)) {
+        Log::warn("Invalid reply from molecube server: size too small.");
         return;
+    }
     auto &status = server_status.get(mgr())[m_url];
     std::string msg;
     auto get_msg = [&] () -> std::string& {
@@ -855,25 +859,34 @@ inline void Backend::run_bytecode(const std::vector<uint8_t> &bc, uint32_t versi
         }
         return msg;
     };
-    uint32_t ttl_ovr = (Mem::load_unalign<uint32_t>(rep_data + 16) |
-                        Mem::load_unalign<uint32_t>(rep_data + 20));
-    // Clear non-override channels from the `ttl_ovr_warned` flags
-    // so that we'll warn again about them if they are overriden again.
-    status.ttl_ovr_warned[0] &= ttl_ovr;
-    ttl_ovr &= ~m_ttl_ovr_ignore[0];
-    auto dds_ovr_start = rep_data + 24;
-    auto dds_ovr_end = rep_data + reply0.size();
-    if (ttl_ovr) {
-        for (int i = 0; i < 32; i++) {
-            uint32_t bitmask = uint32_t(1) << i;
-            // Only warn if the channel was used and we haven't warned about it yet.
-            if ((ttl_ovr & bitmask) && (m_ttl_mask[0] & bitmask) &&
-                !(status.ttl_ovr_warned[0] & bitmask)) {
-                status.ttl_ovr_warned[0] |= bitmask;
-                get_msg() += "TTL" + std::to_string(i);
+    auto ttl_ovr_lo_start = rep_data + 16;
+    auto ttl_ovr_hi_start = ttl_ovr_lo_start + nbanks * 4;
+    bool has_ttl_ovr = false;
+    uint32_t ttl_ovr[8];
+    for (int bank = 0; bank < nbanks; bank++) {
+        ttl_ovr[bank] = (Mem::load_unalign<uint32_t>(ttl_ovr_lo_start + bank * 4) |
+                         Mem::load_unalign<uint32_t>(ttl_ovr_hi_start + bank * 4));
+        // Clear non-override channels from the `ttl_ovr_warned` flags
+        // so that we'll warn again about them if they are overriden again.
+        status.ttl_ovr_warned[bank] &= ttl_ovr[bank];
+        ttl_ovr[bank] &= ~m_ttl_ovr_ignore[bank];
+        has_ttl_ovr |= bool(ttl_ovr[bank]);
+    }
+    if (has_ttl_ovr) {
+        for (int bank = 0; bank < nbanks; bank++) {
+            for (int i = 0; i < 32; i++) {
+                uint32_t bitmask = uint32_t(1) << i;
+                // Only warn if the channel was used and we haven't warned about it yet.
+                if ((ttl_ovr[bank] & bitmask) && (m_ttl_mask[bank] & bitmask) &&
+                    !(status.ttl_ovr_warned[bank] & bitmask)) {
+                    status.ttl_ovr_warned[bank] |= bitmask;
+                    get_msg() += "TTL" + std::to_string(i + bank * 32);
+                }
             }
         }
     }
+    auto dds_ovr_start = ttl_ovr_hi_start + nbanks * 4;
+    auto dds_ovr_end = rep_data + reply0.size();
     std::bitset<256> dds_ovr_set;
     // The format is 1 byte of channel identifier followed by 4 bytes of overriden values.
     for (auto p = dds_ovr_start; p < dds_ovr_end; p += 5) {
