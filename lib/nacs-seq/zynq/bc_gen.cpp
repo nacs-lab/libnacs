@@ -713,6 +713,9 @@ void BCGen::merge_ttl_pulses() const
         it = m_real_start_vals.erase(it);
     }
     for (int bank = 0; bank < min(int(ttl_mask.size()), NUM_TTL_BANKS); bank++) {
+        // Skip ttl banks that we are not using
+        if (ttl_mask[bank] == 0)
+            continue;
         m_real_start_vals.emplace(std::make_pair(ChnType::TTL, bank * 32),
                                   ttl_vals[bank]);
     }
