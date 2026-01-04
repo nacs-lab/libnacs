@@ -545,14 +545,14 @@ inline bool Backend::pregenerate(Manager::ExpSeq &expseq, Compiler &compiler, ui
 
     auto bc_gen = be_bseq.bc_gen.get();
     std::sort(bc_gen->seq_pulses.begin(), bc_gen->seq_pulses.end(), [&] (auto &p1, auto &p2) {
-            auto t1 = host_seq.get_time(p1.time_id);
-            auto t2 = host_seq.get_time(p2.time_id);
-            if (t1 < t2)
-                return true;
-            if (t1 > t2)
-                return false;
-            return p1.id < p2.id;
-        });
+        auto t1 = host_seq.get_time(p1.time_id);
+        auto t2 = host_seq.get_time(p2.time_id);
+        if (t1 < t2)
+            return true;
+        if (t1 > t2)
+            return false;
+        return p1.id < p2.id;
+    });
     bc_gen->len_ns = uint64_t(len * 1e9 / m_seq_tick_per_sec);
 
     if (seq_idx == 0) {
