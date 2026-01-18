@@ -23,6 +23,15 @@
 
 namespace NaCs::Seq::Zynq {
 
+enum class ChnType : uint8_t {
+    TTL = 1,
+    Freq = 2,
+    Amp = 3,
+    DAC = 4,
+    Phase = 5,
+    Clock = 6,
+};
+
 static inline uint32_t dds_freq_to_mu(double freq)
 {
     constexpr double factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;

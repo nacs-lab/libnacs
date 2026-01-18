@@ -78,7 +78,7 @@ private:
     void parse_data(const uint8_t *data, size_t len) override;
 
     std::vector<BasicSeq> m_seqs;
-    std::map<uint32_t,std::pair<BCGen::ChnType,uint8_t>> m_chn_map;
+    std::map<uint32_t,std::pair<ChnType,uint8_t>> m_chn_map;
     std::map<uint32_t,std::vector<BCGen::Clock>> m_clocks;
     std::vector<uint32_t> m_ttl_mask{0};
     uint32_t m_seq_delay; // in unit of 10ns.

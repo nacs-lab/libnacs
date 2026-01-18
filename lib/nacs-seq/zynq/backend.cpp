@@ -175,7 +175,7 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
             throw std::runtime_error(name() + ": Invalid TTL channel " + _chn_name);
         if (chn_num == m_start_ttl_chn)
             throw std::runtime_error(name() + ": Cannot output on start trigger TTL channel");
-        m_chn_map.emplace(chn_id, std::make_pair(BCGen::ChnType::TTL, chn_num));
+        m_chn_map.emplace(chn_id, std::make_pair(ChnType::TTL, chn_num));
         auto bank = chn_num / 32;
         if (int(m_ttl_mask.size()) <= bank)
             m_ttl_mask.resize(bank + 1, 0);
@@ -186,7 +186,7 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
         uint8_t chn_num;
         if (chn_num_str.getAsInteger(10, chn_num) || chn_num >= 4)
             throw std::runtime_error(name() + ": Invalid DAC channel " + _chn_name);
-        m_chn_map.emplace(chn_id, std::make_pair(BCGen::ChnType::DAC, chn_num));
+        m_chn_map.emplace(chn_id, std::make_pair(ChnType::DAC, chn_num));
     }
     else if (starts_with(chn_name, "DDS")) {
         auto subname = chn_name.substr(3);
@@ -194,15 +194,15 @@ void Backend::add_channel(uint32_t chn_id, const std::string &_chn_name)
         if (subname.consumeInteger(10, chn_num) || chn_num >= 22)
             throw std::runtime_error(name() + ": Invalid DDS channel " + _chn_name);
         if (subname == "/FREQ") {
-            m_chn_map.emplace(chn_id, std::make_pair(BCGen::ChnType::Freq, chn_num));
+            m_chn_map.emplace(chn_id, std::make_pair(ChnType::Freq, chn_num));
             m_dds_used.set(chn_num);
         }
         else if (subname == "/AMP") {
-            m_chn_map.emplace(chn_id, std::make_pair(BCGen::ChnType::Amp, chn_num));
+            m_chn_map.emplace(chn_id, std::make_pair(ChnType::Amp, chn_num));
             m_dds_used.set(uint8_t((1 << 6) | chn_num));
         }
         else if (subname == "/PHASE") {
-            m_chn_map.emplace(chn_id, std::make_pair(BCGen::ChnType::Phase, chn_num));
+            m_chn_map.emplace(chn_id, std::make_pair(ChnType::Phase, chn_num));
             m_dds_used.set(uint8_t((2 << 6) | chn_num));
         }
         else {
@@ -369,7 +369,7 @@ void Backend::generate(Manager::ExpSeq &expseq, Compiler &compiler)
             if (it == m_chn_map.end())
                 throw std::runtime_error(name() + ": Unknown channel " +
                                          std::to_string(chn_id) + " for TTL manager");
-            if (it->second.first != BCGen::ChnType::TTL)
+            if (it->second.first != ChnType::TTL)
                 throw std::runtime_error(name() + ": TTL manager can only be applied "
                                          "on TTL channels");
             auto chn = it->second.second;
@@ -590,7 +590,7 @@ inline bool Backend::pregenerate(Manager::ExpSeq &expseq, Compiler &compiler, ui
     auto &chn_infos = bseq->get_channel_infos();
     for (auto [chn_id, fpga_chn]: m_chn_map) {
         // We only care about TTL for non-first-bseq.
-        if (fpga_chn.first != BCGen::ChnType::TTL)
+        if (fpga_chn.first != ChnType::TTL)
             continue;
         auto it = chn_infos.find(chn_id);
         assert(it != chn_infos.end());
@@ -605,7 +605,7 @@ inline bool Backend::pregenerate(Manager::ExpSeq &expseq, Compiler &compiler, ui
             auto t = host_seq.get_time(pulse.time_id);
             if (t > 0)
                 break;
-            if (pulse.chn_type != BCGen::ChnType::TTL || pulse.chn != fpga_chn.second)
+            if (pulse.chn_type != ChnType::TTL || pulse.chn != fpga_chn.second)
                 continue;
             assert(!pulse.ramp_func);
             hasval = true;
@@ -641,7 +641,7 @@ void Backend::pre_run(HostSeq &host_seq)
     auto chn_value_offset = host_seq.nconsts + host_seq.nglobals + host_seq.nglobal_vals;
     bc_gen->start_vals.clear();
     for (auto [chn_id, fpga_chn]: m_chn_map) {
-        if (!host_seq.first_bseq && fpga_chn.first != BCGen::ChnType::TTL)
+        if (!host_seq.first_bseq && fpga_chn.first != ChnType::TTL)
             continue;
         auto value = host_seq.get_value(chn_id + chn_value_offset - 1, idx);
         bc_gen->start_vals.emplace(fpga_chn, BCGen::convert_value(fpga_chn.first, value));

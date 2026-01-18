@@ -788,17 +788,17 @@ NACS_EXPORT() void BCGen::generate(const HostSeq &host_seq) const
     emit_bytecode(host_seq.values.data());
 }
 
-static uint8_t pulse_mintime(BCGen::ChnType chn_typ)
+static uint8_t pulse_mintime(ChnType chn_typ)
 {
-    if (chn_typ == BCGen::ChnType::DAC)
+    if (chn_typ == ChnType::DAC)
         return PulseTime::DAC;
-    if (chn_typ == BCGen::ChnType::Freq)
+    if (chn_typ == ChnType::Freq)
         return PulseTime::DDSFreq;
-    if (chn_typ == BCGen::ChnType::Amp)
+    if (chn_typ == ChnType::Amp)
         return PulseTime::DDSAmp;
-    if (chn_typ == BCGen::ChnType::Phase)
+    if (chn_typ == ChnType::Phase)
         return PulseTime::DDSPhase;
-    if (chn_typ == BCGen::ChnType::Clock)
+    if (chn_typ == ChnType::Clock)
         return PulseTime::Clock;
     return PulseTime::Min2;
 }
@@ -1226,7 +1226,7 @@ struct BCGen::Writer {
 namespace {
 
 struct SinglePulse {
-    BCGen::ChnType typ;
+    ChnType typ;
     uint8_t chn;
     uint32_t val;
     uint8_t mintime() const
@@ -1235,11 +1235,11 @@ struct SinglePulse {
     }
     static SinglePulse clock(uint8_t period)
     {
-        return { BCGen::ChnType::Clock, 0, period };
+        return { ChnType::Clock, 0, period };
     }
     static SinglePulse ttl(uint32_t val, uint8_t bank)
     {
-        return { BCGen::ChnType::TTL, bank, val };
+        return { ChnType::TTL, bank, val };
     }
 };
 

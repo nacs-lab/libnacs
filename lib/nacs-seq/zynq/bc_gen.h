@@ -19,6 +19,8 @@
 #ifndef __NACS_SEQ_ZYNQ_BC_GEN_H__
 #define __NACS_SEQ_ZYNQ_BC_GEN_H__
 
+#include "utils.h"
+
 #include "../host_seq.h"
 
 #include <nacs-utils/number.h>
@@ -39,14 +41,6 @@ class BCGen {
     struct DataStream;
 
 public:
-    enum class ChnType : uint8_t {
-        TTL = 1,
-        Freq = 2,
-        Amp = 3,
-        DAC = 4,
-        Phase = 5,
-        Clock = 6,
-    };
     enum class PulseType : uint8_t {
         Value,
         Scalar,
@@ -118,34 +112,34 @@ private:
                 chn = v;
             }
         }
-        static std::pair<BCGen::ChnType,uint8_t> to_channel(int idx)
+        static std::pair<ChnType,uint8_t> to_channel(int idx)
         {
             if (idx < 22)
-                return {BCGen::ChnType::Freq, idx};
+                return {ChnType::Freq, idx};
             idx -= 22;
             if (idx < 22)
-                return {BCGen::ChnType::Amp, idx};
+                return {ChnType::Amp, idx};
             idx -= 22;
             if (idx < 4)
-                return {BCGen::ChnType::DAC, idx};
+                return {ChnType::DAC, idx};
             idx -= 4;
-            return {BCGen::ChnType::Phase, idx};
+            return {ChnType::Phase, idx};
         }
-        static int to_index(std::pair<BCGen::ChnType,uint8_t> chn)
+        static int to_index(std::pair<ChnType,uint8_t> chn)
         {
-            if (chn.first == BCGen::ChnType::Freq) {
+            if (chn.first == ChnType::Freq) {
                 assert(chn.second < 22);
                 return chn.second;
             }
-            else if (chn.first == BCGen::ChnType::Amp) {
+            else if (chn.first == ChnType::Amp) {
                 assert(chn.second < 22);
                 return chn.second + 22;
             }
-            else if (chn.first == BCGen::ChnType::DAC) {
+            else if (chn.first == ChnType::DAC) {
                 assert(chn.second < 4);
                 return chn.second + 22 * 2;
             }
-            else if (chn.first == BCGen::ChnType::Phase) {
+            else if (chn.first == ChnType::Phase) {
                 assert(chn.second < 22);
                 return chn.second + 22 * 2 + 4;
             }
@@ -162,11 +156,11 @@ private:
             assert(idx < chn_num);
             return channels[idx];
         }
-        const T &operator[](std::pair<BCGen::ChnType,uint8_t> chn) const
+        const T &operator[](std::pair<ChnType,uint8_t> chn) const
         {
             return this->operator[](to_index(chn));
         }
-        T &operator[](std::pair<BCGen::ChnType,uint8_t> chn)
+        T &operator[](std::pair<ChnType,uint8_t> chn)
         {
             return this->operator[](to_index(chn));
         }

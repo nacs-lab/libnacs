@@ -95,17 +95,17 @@ void DummyHostSeq::set_value<int64_t>(uint32_t idx, int64_t v)
 }
 
 TEST_CASE("static") {
-    REQUIRE(Zynq::BCGen::convert_value(Zynq::BCGen::ChnType::TTL, 0) == 0);
-    REQUIRE(Zynq::BCGen::convert_value(Zynq::BCGen::ChnType::TTL, 1) == 1);
-    REQUIRE(Zynq::BCGen::convert_value(Zynq::BCGen::ChnType::Freq, 0) == 0);
-    REQUIRE(Zynq::BCGen::convert_value(Zynq::BCGen::ChnType::Freq, 1.75e9 / 2) == (1u << 30u));
-    REQUIRE(Zynq::BCGen::convert_value(Zynq::BCGen::ChnType::Freq, 1.75e9) == (1u << 31u) - 1);
-    REQUIRE(Zynq::BCGen::convert_value(Zynq::BCGen::ChnType::Amp, 0) == 0);
-    REQUIRE(Zynq::BCGen::convert_value(Zynq::BCGen::ChnType::Amp, 0.29) == 1188);
-    REQUIRE(Zynq::BCGen::convert_value(Zynq::BCGen::ChnType::Amp, 1.0) == 4095);
-    REQUIRE(Zynq::BCGen::convert_value(Zynq::BCGen::ChnType::DAC, -10) == 0);
-    REQUIRE(Zynq::BCGen::convert_value(Zynq::BCGen::ChnType::DAC, 0.1) == 33095);
-    REQUIRE(Zynq::BCGen::convert_value(Zynq::BCGen::ChnType::DAC, 10) == 65535);
+    REQUIRE(Zynq::BCGen::convert_value(Zynq::ChnType::TTL, 0) == 0);
+    REQUIRE(Zynq::BCGen::convert_value(Zynq::ChnType::TTL, 1) == 1);
+    REQUIRE(Zynq::BCGen::convert_value(Zynq::ChnType::Freq, 0) == 0);
+    REQUIRE(Zynq::BCGen::convert_value(Zynq::ChnType::Freq, 1.75e9 / 2) == (1u << 30u));
+    REQUIRE(Zynq::BCGen::convert_value(Zynq::ChnType::Freq, 1.75e9) == (1u << 31u) - 1);
+    REQUIRE(Zynq::BCGen::convert_value(Zynq::ChnType::Amp, 0) == 0);
+    REQUIRE(Zynq::BCGen::convert_value(Zynq::ChnType::Amp, 0.29) == 1188);
+    REQUIRE(Zynq::BCGen::convert_value(Zynq::ChnType::Amp, 1.0) == 4095);
+    REQUIRE(Zynq::BCGen::convert_value(Zynq::ChnType::DAC, -10) == 0);
+    REQUIRE(Zynq::BCGen::convert_value(Zynq::ChnType::DAC, 0.1) == 33095);
+    REQUIRE(Zynq::BCGen::convert_value(Zynq::ChnType::DAC, 10) == 65535);
 }
 
 static void check_generate(Zynq::BCGen &bc_gen, HostSeq &host_seq)
@@ -244,15 +244,15 @@ TEST_CASE("ttl_set") {
     bc_gen.ttl_mask[0] = 0x208;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 9}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 9}] = 0;
     host_seq.set_value<int64_t>(0, 10300);
     host_seq.set_value<bool>(1, true);
     host_seq.set_value<int64_t>(2, 100800);
     host_seq.set_value<bool>(3, false);
     host_seq.set_value<int64_t>(4, 100700);
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -264,7 +264,7 @@ TEST_CASE("ttl_set") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -276,7 +276,7 @@ TEST_CASE("ttl_set") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 9,
 
@@ -316,15 +316,15 @@ TEST_CASE("ttl_set_off") {
     bc_gen.ttl_mask[0] = 0x208;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 123;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 9}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 9}] = 0;
     host_seq.set_value<int64_t>(0, 10300);
     host_seq.set_value<bool>(1, true);
     host_seq.set_value<int64_t>(2, 100800);
     host_seq.set_value<bool>(3, false);
     host_seq.set_value<int64_t>(4, 100700);
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -336,7 +336,7 @@ TEST_CASE("ttl_set_off") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -348,7 +348,7 @@ TEST_CASE("ttl_set_off") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 9,
 
@@ -390,9 +390,9 @@ TEST_CASE("ttl0") {
     bc_gen.len_ns = 123;
     host_seq.set_value<int64_t>(0, 0);
     host_seq.set_value<bool>(1, true);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 2}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 2}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -432,9 +432,9 @@ TEST_CASE("ttl0_first_bseq") {
     bc_gen.len_ns = 123;
     host_seq.set_value<int64_t>(0, 0);
     host_seq.set_value<bool>(1, true);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 2}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 2}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -473,9 +473,9 @@ TEST_CASE("ttl0_first_bseq_off") {
     host_seq.set_value<int64_t>(0, 0);
     host_seq.set_value<bool>(1, true);
     host_seq.set_value<bool>(2, false);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 2}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 2}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -515,9 +515,9 @@ TEST_CASE("ttl0+_first_bseq") {
     // not always when the FPGA time step is 0.
     host_seq.set_value<int64_t>(0, 10);
     host_seq.set_value<bool>(1, true);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 2}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 2}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -560,10 +560,10 @@ TEST_CASE("ttl_set+offset") {
     host_seq.set_value<int64_t>(2, 100800);
     host_seq.set_value<bool>(3, false);
     host_seq.set_value<int64_t>(4, 100700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 9}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 9}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -575,7 +575,7 @@ TEST_CASE("ttl_set+offset") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -587,7 +587,7 @@ TEST_CASE("ttl_set+offset") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 9,
 
@@ -635,10 +635,10 @@ TEST_CASE("ttl_set+clock") {
     host_seq.set_value<int64_t>(2, 100800);
     host_seq.set_value<bool>(3, false);
     host_seq.set_value<int64_t>(4, 100700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 9}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 9}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -650,7 +650,7 @@ TEST_CASE("ttl_set+clock") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -662,7 +662,7 @@ TEST_CASE("ttl_set+clock") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 9,
 
@@ -711,10 +711,10 @@ TEST_CASE("dds_set") {
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<int64_t>(4, 10000700);
     host_seq.set_value<double>(5, 110e6);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -726,7 +726,7 @@ TEST_CASE("dds_set") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 7,
 
@@ -738,7 +738,7 @@ TEST_CASE("dds_set") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -786,11 +786,11 @@ TEST_CASE("dds_set_skip") {
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<int64_t>(4, 100700);
     host_seq.set_value<double>(5, 110e6);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     // This pulse is only 10 cycles from the next one and should be skipped.
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -802,7 +802,7 @@ TEST_CASE("dds_set_skip") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 7,
 
@@ -814,7 +814,7 @@ TEST_CASE("dds_set_skip") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -860,9 +860,9 @@ TEST_CASE("dds_set_skip+offset") {
     bc_gen.len_ns = 123;
     host_seq.set_value<int64_t>(0, 1);
     host_seq.set_value<double>(1, 0);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -905,10 +905,10 @@ TEST_CASE("dds_set+offset") {
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<int64_t>(4, 10000700);
     host_seq.set_value<double>(5, 110e6);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -920,7 +920,7 @@ TEST_CASE("dds_set+offset") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 7,
 
@@ -932,7 +932,7 @@ TEST_CASE("dds_set+offset") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -985,10 +985,10 @@ TEST_CASE("dds_ramp") {
     host_seq.set_value<int64_t>(2, 5000800);
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<double>(4, 12000700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 3,
 
@@ -1005,7 +1005,7 @@ TEST_CASE("dds_ramp") {
             }
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 7,
 
@@ -1077,10 +1077,10 @@ TEST_CASE("dds_ramp_vector") {
     host_seq.set_value<int64_t>(2, 5000800);
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<double>(4, 12000700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Vector,
             .chn = 3,
 
@@ -1099,7 +1099,7 @@ TEST_CASE("dds_ramp_vector") {
             }
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 7,
 
@@ -1171,9 +1171,9 @@ TEST_CASE("dds_ramp_interrupt") {
     host_seq.set_value<int64_t>(2, 5000800);
     host_seq.set_value<bool>(3, true);
     host_seq.set_value<double>(4, 12000700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 3,
 
@@ -1190,7 +1190,7 @@ TEST_CASE("dds_ramp_interrupt") {
             }
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -1248,9 +1248,9 @@ TEST_CASE("dds_ramp_interrupt_off") {
     host_seq.set_value<int64_t>(2, 5000800);
     host_seq.set_value<bool>(3, false);
     host_seq.set_value<double>(4, 12000700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 3,
 
@@ -1267,7 +1267,7 @@ TEST_CASE("dds_ramp_interrupt_off") {
             }
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -1338,10 +1338,10 @@ TEST_CASE("dds_ramp+offset") {
     host_seq.set_value<int64_t>(2, 5000800);
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<double>(4, 12000700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 3,
 
@@ -1358,7 +1358,7 @@ TEST_CASE("dds_ramp+offset") {
             }
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 7,
 
@@ -1435,10 +1435,10 @@ TEST_CASE("dds_ramp+clock") {
     host_seq.set_value<int64_t>(2, 5000800);
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<double>(4, 12000700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 3,
 
@@ -1455,7 +1455,7 @@ TEST_CASE("dds_ramp+clock") {
             }
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 7,
 
@@ -1531,10 +1531,10 @@ TEST_CASE("dds_multiramp") {
     host_seq.set_value<int64_t>(2, 5000800);
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<double>(4, 12000700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 3,
 
@@ -1551,7 +1551,7 @@ TEST_CASE("dds_multiramp") {
             }
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 7,
 
@@ -1644,10 +1644,10 @@ TEST_CASE("dds_multiramp+clock") {
     host_seq.set_value<int64_t>(2, 5000800);
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<double>(4, 12000700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 3,
 
@@ -1664,7 +1664,7 @@ TEST_CASE("dds_multiramp+clock") {
             }
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 7,
 
@@ -1753,10 +1753,10 @@ TEST_CASE("dds_slowramp") {
     host_seq.set_value<double>(3, 0.1);
     host_seq.set_value<double>(4, 15000700);
     host_seq.set_value<double>(5, 35000700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 3,
 
@@ -1773,7 +1773,7 @@ TEST_CASE("dds_slowramp") {
             }
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 7,
 
@@ -1891,11 +1891,11 @@ TEST_CASE("dds0") {
     host_seq.set_value<int64_t>(2, 300);
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<double>(5, 110e6);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 5}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 5}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -1907,7 +1907,7 @@ TEST_CASE("dds0") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 7,
 
@@ -1919,7 +1919,7 @@ TEST_CASE("dds0") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 5,
 
@@ -1964,11 +1964,11 @@ TEST_CASE("dds0_start") {
     host_seq.set_value<int64_t>(2, 300);
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<double>(5, 110e6);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 5}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 5}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 3,
 
@@ -1980,7 +1980,7 @@ TEST_CASE("dds0_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 7,
 
@@ -1992,7 +1992,7 @@ TEST_CASE("dds0_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 5,
 
@@ -2043,10 +2043,10 @@ TEST_CASE("dds_ramp0") {
     host_seq.set_value<int64_t>(2, 200);
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<double>(4, 8000700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 3,
 
@@ -2063,7 +2063,7 @@ TEST_CASE("dds_ramp0") {
             }
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 7,
 
@@ -2131,10 +2131,10 @@ TEST_CASE("dds_ramp0_start") {
     host_seq.set_value<int64_t>(2, 200);
     host_seq.set_value<double>(3, 0.4);
     host_seq.set_value<double>(4, 8000700);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0;
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Freq,
+            .chn_type = Zynq::ChnType::Freq,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 3,
 
@@ -2151,7 +2151,7 @@ TEST_CASE("dds_ramp0_start") {
             }
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::Amp,
+            .chn_type = Zynq::ChnType::Amp,
             .pulse_type = Zynq::BCGen::PulseType::Scalar,
             .chn = 7,
 
@@ -2211,11 +2211,11 @@ TEST_CASE("start_vals") {
     bc_gen.ttl_mask[0] = 0x228;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 5}] = 1;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 9}] = 1;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0x94ab4e3;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0x348;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 5}] = 1;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 9}] = 1;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0x94ab4e3;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0x348;
     check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen));
@@ -2241,11 +2241,11 @@ TEST_CASE("start_vals_start") {
     bc_gen.ttl_mask[0] = 0x228;
     bc_gen.fpga_clock_div = 10000;
     bc_gen.len_ns = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 3}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 5}] = 1;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 9}] = 1;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Freq, 3}] = 0x94ab4e3;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::Amp, 7}] = 0x348;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 3}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 5}] = 1;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 9}] = 1;
+    bc_gen.start_vals[{Zynq::ChnType::Freq, 3}] = 0x94ab4e3;
+    bc_gen.start_vals[{Zynq::ChnType::Amp, 7}] = 0x348;
     check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen));
@@ -2282,12 +2282,12 @@ TEST_CASE("ttl_mgr") {
     host_seq.set_value<int64_t>(6, 12000000);
     host_seq.set_value<int64_t>(7, 15000000);
     host_seq.set_value<int64_t>(8, 15500000);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 1}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 2}] = 1;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 1}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 2}] = 1;
     bc_gen.add_ttl_manager(1, 300000, 200000, 1000000, 1300000, false);
     bc_gen.add_ttl_manager(2, 300000, 200000, 1000000, 1300000, true);
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2299,7 +2299,7 @@ TEST_CASE("ttl_mgr") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2311,7 +2311,7 @@ TEST_CASE("ttl_mgr") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2323,7 +2323,7 @@ TEST_CASE("ttl_mgr") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2335,7 +2335,7 @@ TEST_CASE("ttl_mgr") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2347,7 +2347,7 @@ TEST_CASE("ttl_mgr") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2359,7 +2359,7 @@ TEST_CASE("ttl_mgr") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2372,7 +2372,7 @@ TEST_CASE("ttl_mgr") {
         });
 
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2384,7 +2384,7 @@ TEST_CASE("ttl_mgr") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2396,7 +2396,7 @@ TEST_CASE("ttl_mgr") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2408,7 +2408,7 @@ TEST_CASE("ttl_mgr") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2420,7 +2420,7 @@ TEST_CASE("ttl_mgr") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2432,7 +2432,7 @@ TEST_CASE("ttl_mgr") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2444,7 +2444,7 @@ TEST_CASE("ttl_mgr") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2499,12 +2499,12 @@ TEST_CASE("ttl_mgr_inverse") {
     host_seq.set_value<int64_t>(6, 12000000);
     host_seq.set_value<int64_t>(7, 15000000);
     host_seq.set_value<int64_t>(8, 15500000);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 1}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 2}] = 1;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 1}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 2}] = 1;
     bc_gen.add_ttl_manager(1, 300000, 200000, 1000000, 1300000, true);
     bc_gen.add_ttl_manager(2, 300000, 200000, 1000000, 1300000, false);
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2516,7 +2516,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2528,7 +2528,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2540,7 +2540,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2552,7 +2552,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2564,7 +2564,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2576,7 +2576,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2589,7 +2589,7 @@ TEST_CASE("ttl_mgr_inverse") {
         });
 
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2601,7 +2601,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2613,7 +2613,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2625,7 +2625,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2637,7 +2637,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2649,7 +2649,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2661,7 +2661,7 @@ TEST_CASE("ttl_mgr_inverse") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2716,12 +2716,12 @@ TEST_CASE("ttl_mgr_start") {
     host_seq.set_value<int64_t>(6, 12000000);
     host_seq.set_value<int64_t>(7, 15000000);
     host_seq.set_value<int64_t>(8, 15500000);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 1}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 2}] = 1;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 1}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 2}] = 1;
     bc_gen.add_ttl_manager(1, 300000, 200000, 1000000, 1300000, false);
     bc_gen.add_ttl_manager(2, 300000, 200000, 1000000, 1300000, true);
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2733,7 +2733,7 @@ TEST_CASE("ttl_mgr_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2745,7 +2745,7 @@ TEST_CASE("ttl_mgr_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2757,7 +2757,7 @@ TEST_CASE("ttl_mgr_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2769,7 +2769,7 @@ TEST_CASE("ttl_mgr_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2781,7 +2781,7 @@ TEST_CASE("ttl_mgr_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2793,7 +2793,7 @@ TEST_CASE("ttl_mgr_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2806,7 +2806,7 @@ TEST_CASE("ttl_mgr_start") {
         });
 
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2818,7 +2818,7 @@ TEST_CASE("ttl_mgr_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2830,7 +2830,7 @@ TEST_CASE("ttl_mgr_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2842,7 +2842,7 @@ TEST_CASE("ttl_mgr_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2854,7 +2854,7 @@ TEST_CASE("ttl_mgr_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2866,7 +2866,7 @@ TEST_CASE("ttl_mgr_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2878,7 +2878,7 @@ TEST_CASE("ttl_mgr_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -2932,12 +2932,12 @@ TEST_CASE("ttl_mgr_inverse_start") {
     host_seq.set_value<int64_t>(6, 12000000);
     host_seq.set_value<int64_t>(7, 15000000);
     host_seq.set_value<int64_t>(8, 15500000);
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 1}] = 0;
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 2}] = 1;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 1}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 2}] = 1;
     bc_gen.add_ttl_manager(1, 300000, 200000, 1000000, 1300000, true);
     bc_gen.add_ttl_manager(2, 300000, 200000, 1000000, 1300000, false);
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2949,7 +2949,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2961,7 +2961,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2973,7 +2973,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2985,7 +2985,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -2997,7 +2997,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -3009,7 +3009,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 1,
 
@@ -3022,7 +3022,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
         });
 
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -3034,7 +3034,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -3046,7 +3046,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -3058,7 +3058,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -3070,7 +3070,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -3082,7 +3082,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -3094,7 +3094,7 @@ TEST_CASE("ttl_mgr_inverse_start") {
             .ramp_func = nullptr
         });
     bc_gen.seq_pulses.push_back({
-            .chn_type = Zynq::BCGen::ChnType::TTL,
+            .chn_type = Zynq::ChnType::TTL,
             .pulse_type = Zynq::BCGen::PulseType::Value,
             .chn = 2,
 
@@ -3145,7 +3145,7 @@ TEST_CASE("ttl_rate_limit") {
     for (int i = 0; i < 100000; i++) {
         host_seq.set_value<int64_t>(i + 2, int64_t(100000) * i);
         bc_gen.seq_pulses.push_back({
-                .chn_type = Zynq::BCGen::ChnType::TTL,
+                .chn_type = Zynq::ChnType::TTL,
                 .pulse_type = Zynq::BCGen::PulseType::Value,
                 .chn = 1,
 
@@ -3157,7 +3157,7 @@ TEST_CASE("ttl_rate_limit") {
                 .ramp_func = nullptr
             });
     }
-    bc_gen.start_vals[{Zynq::BCGen::ChnType::TTL, 1}] = 0;
+    bc_gen.start_vals[{Zynq::ChnType::TTL, 1}] = 0;
     check_generate(bc_gen, host_seq);
     Checker checker(bc_gen.bytecode);
     INFO(dump_bytecode(bc_gen));
