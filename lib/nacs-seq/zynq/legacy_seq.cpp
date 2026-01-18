@@ -18,6 +18,7 @@
 
 #include "legacy_seq.h"
 #include "bytecode.h"
+#include "utils.h"
 
 #include "../../nacs-utils/number.h"
 #include "../../nacs-utils/streams.h"
@@ -501,12 +502,9 @@ class Writer {
         return PulseTime::Clock;
     }
 
-    static constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
     int addDDSFreq(uint64_t t, uint8_t chn, double freqf)
     {
-        uint32_t freq = uint32_t(0.5 + freqf * freq_factor);
-        if (freq > 0x7fffffff)
-            freq = 0x7fffffff;
+        uint32_t freq = dds_freq_to_mu(freqf);
         if (dds[chn].freq_set && freq == dds[chn].freq)
             return 0;
         addWait(t - cur_t);
@@ -536,9 +534,7 @@ class Writer {
 
     int addDDSAmp(uint64_t t, uint8_t chn, double ampf)
     {
-        uint16_t amp = uint16_t(ampf * 4095.0 + 0.5);
-        if (amp > 4095)
-            amp = 4095;
+        uint16_t amp = dds_amp_to_mu(ampf);
         if (dds[chn].amp_set && amp == dds[chn].amp)
             return 0;
         addWait(t - cur_t);
@@ -560,19 +556,7 @@ class Writer {
 
     int addDAC(uint64_t t, uint8_t chn, double Vf)
     {
-        uint16_t V;
-        if (Vf >= 10) {
-            V = 0;
-        }
-        else if (Vf <= -10) {
-            V = 0xffff;
-        }
-        else {
-            // this is for the DAC8814 chip in SPI0
-            double scale = 65535 / 20.0;
-            double offset = 10.0;
-            V = uint16_t(((offset - Vf) * scale) + 0.5);
-        }
+        uint16_t V = dac_to_mu(Vf);
         if (dac[chn].set && V == dac[chn].V)
             return 0;
         addWait(t - cur_t);

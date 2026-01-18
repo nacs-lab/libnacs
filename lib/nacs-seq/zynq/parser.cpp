@@ -18,6 +18,7 @@
 
 #include "parser_p.h"
 #include "pulse_time.h"
+#include "utils.h"
 
 #include "../../nacs-utils/errors.h"
 
@@ -347,8 +348,7 @@ std::pair<uint8_t,uint32_t> ParserBase::read_freqcmd()
         }
         if (freq_hz > 1.75e9)
             syntax_error("Frequency too high (max 1.75GHz)", -1, freq_hz_start + 1, colno);
-        constexpr double freq_factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
-        freq = uint32_t(0.5 + freq_hz * freq_factor);
+        freq = dds_freq_to_mu(freq_hz);
     }
     return {chn, freq};
 }
@@ -364,7 +364,7 @@ std::pair<uint8_t,uint16_t> ParserBase::read_ampcmd()
         auto [ampf, ampf_start] = read_float(0, 1);
         if (ampf_start == -1)
             syntax_error("Invalid amplitude", colno + 1);
-        amp = uint16_t(ampf * 4095.0 + 0.5);
+        amp = dds_amp_to_mu(ampf);
     }
     return {chn, amp};
 }
@@ -417,8 +417,7 @@ std::pair<uint8_t,std::pair<bool,uint16_t>> ParserBase::read_phasecmd()
         if (!(abs(phase_deg) <= 360 * 10))
             syntax_error("Phase too high (max +-1000%)", -1, phase_deg_start + 1, colno);
         phase_deg = fmod(phase_deg, 360);
-        constexpr double phase_factor = (1 << 14) / 90.0;
-        phase = uint16_t(0.5 + phase_deg * phase_factor);
+        phase = dds_phase_to_mu(phase_deg / 360.0);
     }
     if (neg)
         phase = uint16_t(-phase);
@@ -510,7 +509,7 @@ std::pair<bool,std::vector<uint32_t>> ParserBase::read_ttlmask(int max_bank)
             auto [ttl_mask, oldcol] = read_hex(0, UINT32_MAX);
             if (oldcol < 0)
                 syntax_error("Expecting hex literal", colno + 1);
-            ttl_masks.push_back(ttl_mask);
+            ttl_masks.push_back(uint32_t(ttl_mask));
             // Here we need to decide whether we expect a new mask value to be present.
             auto c0 = peek();
             if (!std::isspace(c0)) {

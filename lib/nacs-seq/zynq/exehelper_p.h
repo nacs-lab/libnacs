@@ -22,6 +22,7 @@
 #include <ostream>
 
 #include "pulse_time.h"
+#include "utils.h"
 
 // This file contains a few classes/functions that are useful for both bytecode
 // and command list.
@@ -61,8 +62,7 @@ struct Printer {
     {
         stm << "freq(" << int(chn) << ")=";
         if (dec) {
-            constexpr double factor = 3.5e9 / (1 << 16) / (1 << 16);
-            stm << double(freq) * factor << std::endl;
+            stm << dds_freq_from_mu(freq) << std::endl;
         }
         else {
             stm << "0x" << std::hex << freq << std::dec << std::endl;
@@ -72,7 +72,7 @@ struct Printer {
     {
         stm << "amp(" << int(chn) << ")=";
         if (dec) {
-            stm << amp / 4095.0 << std::endl;
+            stm << dds_amp_from_mu(amp) << std::endl;
         }
         else {
             stm << "0x" << std::hex << amp << std::dec << std::endl;
@@ -82,7 +82,7 @@ struct Printer {
     {
         stm << "phase(" << int(chn) << ")=";
         if (dec) {
-            stm << phase / double(1 << 16) << std::endl;
+            stm << dds_phase_from_mu(phase) << std::endl;
         }
         else {
             stm << "0x" << std::hex << phase << std::dec << std::endl;

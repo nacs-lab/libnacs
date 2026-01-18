@@ -19,6 +19,7 @@
 #include "bc_gen.h"
 
 #include "bytecode.h"
+#include "utils.h"
 #include "../../nacs-utils/processor.h"
 
 #include <string.h>
@@ -461,37 +462,14 @@ NACS_EXPORT() uint32_t BCGen::convert_value(ChnType type, double value)
     switch (type) {
     case ChnType::TTL:
         return value != 0;
-    case ChnType::Freq: {
-        constexpr double factor = 1.0 * (1 << 16) * (1 << 16) / 3.5e9;
-        if (value <= 0)
-            return 0;
-        // The instruction only have 31 bits so it actually won't encode exactly 1.75 GHz.
-        if (value > 1.7499999987776392e9) // last float that would round to 2^31 - 2
-            return 0x7fffffff;
-        return round<int32_t>(value * factor);
-    }
-    case ChnType::Amp: {
-        constexpr double factor = 4095;
-        if (value <= 0)
-            return 0;
-        if (value >= 1)
-            return 4095;
-        return round<int32_t>(value * factor);
-    }
-    case ChnType::Phase: {
-        // Value is phase in [0, 1]
-        return round<int32_t>(value * (1 << 16)) & ((1 << 16) - 1);
-    }
-    case ChnType::DAC: {
-        constexpr double factor = 65535 / 20.0;
-        constexpr double offset = 10.0;
-        if (value <= -10)
-            return 0;
-        if (value >= 10)
-            return 0xffff;
-        value += offset;
-        return round<int32_t>(value * factor);
-    }
+    case ChnType::Freq:
+        return dds_freq_to_mu(value);
+    case ChnType::Amp:
+        return dds_amp_to_mu(value);
+    case ChnType::Phase:
+        return dds_phase_to_mu(value);
+    case ChnType::DAC:
+        return dac_to_mu(value);
     default:
         return 0;
     }
