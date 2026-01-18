@@ -342,14 +342,14 @@ static inline size_t count(const std::vector<uint8_t> &code, uint32_t version)
  * and also merge wait into TTL instructions.
  */
 void print(std::ostream &stm, const uint8_t *code, size_t code_len,
-           uint32_t ttl_mask, uint32_t version);
+           uint32_t ttl_mask, uint32_t version, bool dec);
 void print(std::ostream &stm, const uint8_t *code, size_t code_len,
-           const std::vector<uint32_t> &ttl_mask, uint32_t version);
+           const std::vector<uint32_t> &ttl_mask, uint32_t version, bool dec);
 template<typename T>
 static inline void print(std::ostream &stm, const std::vector<uint8_t> &code,
-                         T &&ttl_mask, uint32_t version)
+                         T &&ttl_mask, uint32_t version, bool dec)
 {
-    print(stm, &code[0], code.size(), std::forward<T>(ttl_mask), version);
+    print(stm, &code[0], code.size(), std::forward<T>(ttl_mask), version, dec);
 }
 
 /**

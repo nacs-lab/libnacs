@@ -34,37 +34,75 @@ struct Printer {
     void ttl(uint32_t ttl, uint64_t t, int bank=0)
     {
         if (bank == 0) {
-            stm << "ttl=0x" << std::hex << ttl << " t=0x" << t << std::dec << std::endl;
+            stm << "ttl";
         }
         else {
-            stm << "ttl[" << bank << "]=0x"
-                << std::hex << ttl << " t=0x" << t << std::dec << std::endl;
+            stm << "ttl[" << bank << "]=";
+        }
+        stm << "0x" << std::hex << ttl << " t=";
+        if (dec) {
+            stm << std::dec << t << std::endl;
+        }
+        else {
+            stm << "0x" << std::hex << t << std::dec << std::endl;
         }
     }
     void ttl1(uint8_t chn, bool val, uint64_t t)
     {
-        stm << "ttl(" << int(chn) << ")=" << int(val)
-            << " t=0x" << std::hex << t << std::dec << std::endl;
+        stm << "ttl(" << int(chn) << ")=" << int(val) << " t=";
+        if (dec) {
+            stm << std::dec << t << std::endl;
+        }
+        else {
+            stm << "0x" << std::hex << t << std::dec << std::endl;
+        }
     }
     void dds_freq(uint8_t chn, uint32_t freq)
     {
-        stm << "freq(" << int(chn) << ")=0x"
-            << std::hex << freq << std::dec << std::endl;
+        stm << "freq(" << int(chn) << ")=";
+        if (dec) {
+            constexpr double factor = 3.5e9 / (1 << 16) / (1 << 16);
+            stm << double(freq) * factor << std::endl;
+        }
+        else {
+            stm << "0x" << std::hex << freq << std::dec << std::endl;
+        }
     }
     void dds_amp(uint8_t chn, uint16_t amp)
     {
-        stm << "amp(" << int(chn) << ")=0x"
-            << std::hex << amp << std::dec << std::endl;
+        stm << "amp(" << int(chn) << ")=";
+        if (dec) {
+            stm << amp / 4095.0 << std::endl;
+        }
+        else {
+            stm << "0x" << std::hex << amp << std::dec << std::endl;
+        }
     }
     void dds_phase(uint8_t chn, uint16_t phase)
     {
-        stm << "phase(" << int(chn) << ")=0x"
-            << std::hex << phase << std::dec << std::endl;
+        stm << "phase(" << int(chn) << ")=";
+        if (dec) {
+            stm << phase / double(1 << 16) << std::endl;
+        }
+        else {
+            stm << "0x" << std::hex << phase << std::dec << std::endl;
+        }
     }
     void dds_detphase(uint8_t chn, uint16_t detphase)
     {
-        stm << "phase(" << int(chn) << ")+=0x"
-            << std::hex << detphase << std::dec << std::endl;
+        stm << "phase(" << int(chn) << ")";
+        if (dec) {
+            auto sdet = int16_t(detphase);
+            if (sdet < 0) {
+                stm << "-=" << -double(sdet) / double(1 << 16) << std::endl;
+            }
+            else {
+                stm << "+=" << double(sdet) / double(1 << 16) << std::endl;
+            }
+        }
+        else {
+            stm << "+=0x" << std::hex << detphase << std::dec << std::endl;
+        }
     }
     void dds_reset(uint8_t chn)
     {
@@ -72,17 +110,29 @@ struct Printer {
     }
     void dac(uint8_t chn, uint16_t V)
     {
-        stm << "dac(" << int(chn) << ")=0x" << std::hex << V << std::dec << std::endl;
+        stm << "dac(" << int(chn) << ")=";
+        if (dec) {
+            stm << V * (20.0 / 65535) - 10.0 << std::endl;
+        }
+        else {
+            stm << "0x" << std::hex << V << std::dec << std::endl;
+        }
     }
     void wait(uint64_t t)
     {
-        stm << "wait(0x" << std::hex << t << ")" << std::dec << std::endl;
+        if (dec) {
+            stm << "wait(" << t << ")" << std::endl;
+        }
+        else {
+            stm << "wait(0x" << std::hex << t << ")" << std::dec << std::endl;
+        }
     }
     void clock(uint8_t period)
     {
         stm << "clock(" << int(period) << ")" << std::endl;
     }
     std::ostream &stm;
+    bool dec;
 };
 
 struct TimeKeeper {

@@ -223,17 +223,18 @@ NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code
 }
 
 NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len,
-                         uint32_t ttl_mask, uint32_t version)
+                         uint32_t ttl_mask, uint32_t version, bool dec)
 {
     if (ttl_mask)
         stm << "ttl_mask=0x" << std::hex << ttl_mask << std::dec << std::endl;
-    Printer printer{stm};
+    Printer printer{stm, dec};
     ExeState state;
     state.run(printer, code, code_len, version);
 }
 
 NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len,
-                         const std::vector<uint32_t> &ttl_masks, uint32_t version)
+                         const std::vector<uint32_t> &ttl_masks, uint32_t version,
+                         bool dec)
 {
     stm << "ttl_mask=" << std::hex;
     bool isfirst = true;
@@ -242,7 +243,7 @@ NACS_EXPORT() void print(std::ostream &stm, const uint8_t *code, size_t code_len
         isfirst = false;
     }
     stm << std::dec << std::endl;
-    Printer printer{stm};
+    Printer printer{stm, dec};
     ExeState state;
     state.run(printer, code, code_len, version);
 }

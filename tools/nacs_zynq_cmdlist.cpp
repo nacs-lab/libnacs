@@ -129,7 +129,7 @@ int print(int argc, char **argv)
     str_sz -= 4;
 
     *stm << "# " << len_ns << " ns" << std::endl;
-    Seq::Zynq::CmdList::print(*stm, str_data, str_sz, ttl_mask, ver);
+    Seq::Zynq::CmdList::print(*stm, str_data, str_sz, ttl_mask, ver, false);
     return 0;
 }
 

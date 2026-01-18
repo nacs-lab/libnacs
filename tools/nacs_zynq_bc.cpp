@@ -26,7 +26,7 @@
 
 using namespace NaCs;
 
-int print(int argc, char **argv)
+int print(int argc, char **argv, bool dec)
 {
     std::ostream *stm;
     std::unique_ptr<std::ostream> ustm;
@@ -67,7 +67,7 @@ int print(int argc, char **argv)
     memcpy(&ver, str_data, 4);
     str_data += 4;
     str_sz -= 4;
-    if (ver == 0 || ver > 2) {
+    if (ver == 0 || ver > 3) {
         Log::error("Wrong bytecode file version.\n");
         return 1;
     }
@@ -83,7 +83,7 @@ int print(int argc, char **argv)
     str_sz -= 4;
 
     *stm << "# " << len_ns << " ns" << std::endl;
-    Seq::Zynq::ByteCode::print(*stm, str_data, str_sz, ttl_mask, ver);
+    Seq::Zynq::ByteCode::print(*stm, str_data, str_sz, ttl_mask, ver, dec);
     return 0;
 }
 
@@ -94,7 +94,10 @@ int main(int argc, char **argv)
         return 1;
     }
     if (strcmp(argv[1], "print") == 0) {
-        return print(argc - 2, argv + 2);
+        return print(argc - 2, argv + 2, false);
+    }
+    else if(strcmp(argv[1], "print_dec") == 0) {
+        return print(argc - 2, argv + 2, true);
     }
     else {
         Log::error("Unknown action: %s.\n", argv[1]);

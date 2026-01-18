@@ -81,7 +81,8 @@ static void test(const std::string &dir, const std::string &name)
 
         string_ostream tstm;
         tstm << "# " << len_ns << " ns" << std::endl;
-        CmdList::print(tstm, (uint8_t*)vec.data(), vec.size(), meta.ttl_masks[0], ver);
+        CmdList::print(tstm, (uint8_t*)vec.data(), vec.size(), meta.ttl_masks[0],
+                       ver, false);
         auto text = tstm.get_buf();
         test_file_eq(path + ".txt", text);
 
