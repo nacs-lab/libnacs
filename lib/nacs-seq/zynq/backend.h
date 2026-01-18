@@ -55,6 +55,8 @@ public:
     llvm::ArrayRef<uint8_t> get_bytecode(uint32_t bseq_idx, bool first_bseq) const;
     uint32_t get_bytecode_version(uint32_t bseq_idx, bool first_bseq) const;
     llvm::ArrayRef<BCGen::Clock> get_clock(uint32_t bseq_idx) const;
+    std::pair<std::vector<uint64_t>,std::vector<double>>
+    get_vals(uint32_t bseq_idx, bool first_bseq, uint32_t chn_id) const;
 
 private:
     void add_channel(uint32_t chn_id, const std::string &chn_name) override;

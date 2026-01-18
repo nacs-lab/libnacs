@@ -18,6 +18,9 @@
 
 #include "backend.h"
 
+#include "bytecode.h"
+#include "exehelper_p.h"
+
 #include "../../nacs-utils/llvm/utils.h"
 #include "../../nacs-utils/llvm/codegen.h"
 #include "../../nacs-utils/llvm/compile.h"
@@ -1018,6 +1021,24 @@ NACS_EXPORT() llvm::ArrayRef<BCGen::Clock> Backend::get_clock(uint32_t bseq_idx)
     return it->second;
 }
 
+NACS_EXPORT() std::pair<std::vector<uint64_t>,std::vector<double>>
+Backend::get_vals(uint32_t bseq_idx, bool first_bseq, uint32_t chn_id) const
+{
+    auto it = m_chn_map.find(chn_id);
+    if (it == m_chn_map.end())
+        throw std::runtime_error(name() + ": Channel id " + std::to_string(chn_id) +
+                                 " canot be found.");
+    auto entry = it->second;
+    auto bytecode = get_bytecode(bseq_idx, first_bseq);
+    auto version = get_bytecode_version(bseq_idx, first_bseq);
+    auto code_len = bytecode.size();
+    auto code = (const uint8_t*)bytecode.data();
+    code += 12; // Go through len_ns and ttl_mask
+    code_len -= 12;
+    return ByteCode::extract_values(code, code_len, version, entry.first, entry.second,
+                                    m_start_ttl_chn);
+}
+
 }
 
 extern "C" {
@@ -1025,6 +1046,56 @@ extern "C" {
 using namespace NaCs;
 using namespace NaCs::Seq;
 using namespace NaCs::Seq::Zynq;
+
+NACS_EXPORT() void nacs_seq_manager_expseq_get_zynq_val(Manager::ExpSeq *expseq, const char *name, uint32_t chn_id, uint8_t **ts_buf, size_t* ts_sz, uint8_t **vals_buf, size_t *vals_sz)
+{
+    expseq->mgr().call_guarded([&] () {
+        Log::warn("nacs_seq_manager_expseq_get_zynq_val is deprecated, use nacs_seq_manager_expseq_get_zynq_channel_val instead");
+        auto dev = expseq->get_device(name, false);
+        if (!dev) {
+            Log::error("Device %s cannot be found.", name);
+            return;
+        }
+        auto zynq_dev = dynamic_cast<Backend*>(dev);
+        if (!zynq_dev) {
+            Log::error("Device %s is not a Zynq FPGA.", name);
+            return;
+        }
+        auto [ts, vals] = zynq_dev->get_vals(expseq->host_seq.cur_seq_idx(),
+                                             expseq->host_seq.first_bseq, chn_id);
+        auto sz = ts.size();
+        *ts_sz = sz * sizeof(ts[0]);
+        *ts_buf = (uint8_t*)malloc(sz * sizeof(ts[0]));
+        memcpy(*ts_buf, ts.data(), sz * sizeof(ts[0]));
+        *vals_sz = sz * sizeof(vals[0]);
+        *vals_buf = (uint8_t*)malloc(sz * sizeof(vals[0]));
+        memcpy(*vals_buf, vals.data(), sz * sizeof(vals[0]));
+    });
+}
+
+NACS_EXPORT() size_t nacs_seq_manager_expseq_get_zynq_channel_val(Manager::ExpSeq *expseq, const char *name, uint32_t chn_id, uint64_t **ts_buf, double **vals_buf)
+{
+    return expseq->mgr().call_guarded([&] () -> size_t {
+        auto dev = expseq->get_device(name, false);
+        if (!dev) {
+            Log::error("Device %s cannot be found.", name);
+            return 0;
+        }
+        auto zynq_dev = dynamic_cast<Backend*>(dev);
+        if (!zynq_dev) {
+            Log::error("Device %s is not a Zynq FPGA.", name);
+            return 0;
+        }
+        auto [ts, vals] = zynq_dev->get_vals(expseq->host_seq.cur_seq_idx(),
+                                             expseq->host_seq.first_bseq, chn_id);
+        auto sz = ts.size();
+        *ts_buf = (uint64_t*)malloc(sz * sizeof(ts[0]));
+        memcpy(*ts_buf, ts.data(), sz * sizeof(ts[0]));
+        *vals_buf = (double*)malloc(sz * sizeof(vals[0]));
+        memcpy(*vals_buf, vals.data(), sz * sizeof(vals[0]));
+        return sz;
+    }, 0);
+}
 
 NACS_EXPORT() const uint8_t *nacs_seq_manager_expseq_get_zynq_bytecode(
     Manager::ExpSeq *expseq, const char *name, size_t *sz)
