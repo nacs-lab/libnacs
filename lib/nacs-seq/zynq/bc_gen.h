@@ -95,7 +95,6 @@ public:
     std::map<std::pair<ChnType,uint8_t>,uint32_t> start_vals;
     std::vector<Clock> clocks;
     bool first_bseq;
-    uint8_t max_ttl_chn = 32;
 
     int8_t start_ttl_chn;
     std::vector<uint32_t> ttl_mask{0};

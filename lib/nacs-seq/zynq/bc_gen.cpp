@@ -507,7 +507,7 @@ NACS_EXPORT() double BCGen::compute_start_val(PulseType pulse_type,
 NACS_EXPORT() void BCGen::add_ttl_manager(uint8_t chn, int64_t off_delay, int64_t on_delay,
                                           int64_t skip_time, int64_t min_time, bool off_val)
 {
-    if (chn >= max_ttl_chn)
+    if (chn >= ttl_mask.size() * 32)
         throw std::runtime_error("TTL Manager on invalid channel.");
     if (chn >= m_ttl_managers.size())
         m_ttl_managers.resize(chn + 1);
@@ -517,7 +517,7 @@ NACS_EXPORT() void BCGen::add_ttl_manager(uint8_t chn, int64_t off_delay, int64_
 NACS_EXPORT() uint32_t BCGen::version() const
 {
     // Bytecode version
-    return max_ttl_chn > 32 ? 3 : 2;
+    return ttl_mask.size() > 1 ? 3 : 2;
 }
 
 void BCGen::populate_pulses(const HostSeq &host_seq) const
