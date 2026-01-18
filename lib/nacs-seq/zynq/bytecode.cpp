@@ -256,4 +256,14 @@ NACS_EXPORT() uint64_t total_time(const uint8_t *code, size_t code_len, uint32_t
     return keeper.total_t;
 }
 
+NACS_EXPORT() std::pair<std::vector<uint64_t>,std::vector<double>>
+extract_values(const uint8_t *code, size_t code_len, uint32_t version,
+               ChnType type, uint8_t num, int start_ttl)
+{
+    PulseCollector collector{type, num, start_ttl};
+    ExeState state;
+    state.run(collector, code, code_len, version);
+    return {std::move(collector.ts), std::move(collector.vals)};
+}
+
 }

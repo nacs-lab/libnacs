@@ -33,6 +33,7 @@
 
 #include "pulse_time.h"
 #include "seq_shared.h"
+#include "utils.h"
 
 #include <istream>
 #include <stdexcept>
@@ -243,6 +244,10 @@ static inline uint64_t total_time(const std::vector<uint8_t> &code, uint32_t ver
 {
     return total_time(&code[0], code.size(), version);
 }
+
+std::pair<std::vector<uint64_t>,std::vector<double>>
+extract_values(const uint8_t *code, size_t code_len, uint32_t version,
+               ChnType type, uint8_t num, int start_ttl=-1);
 
 // Keep track of user state during execution of cmdlist
 struct ExeState {
