@@ -608,9 +608,9 @@ NACS_INTERNAL bool Env::optimize_global()
             return a->m_varid > b->m_varid;
         });
 #ifndef NDEBUG
-        std::is_sorted(branches.begin(), branches.end(), [&] (Var *a, Var *b) {
+        assert(std::is_sorted(branches.begin(), branches.end(), [&] (Var *a, Var *b) {
             return a->m_varid > b->m_varid;
-        });
+        }));
         assert(branches.front() == root);
 #endif
         // Now the branches are in the reverse order that we'll evaluate them
