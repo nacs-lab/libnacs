@@ -179,6 +179,136 @@ struct TimeKeeper {
     uint64_t total_t = 0;
 };
 
+struct PulseCollector : TimeKeeper {
+    PulseCollector(ChnType type, uint8_t num, int start_ttl) :
+        m_chntype(type),
+        chn_num(num),
+        start_ttl(start_ttl),
+        start_ttl_bank(start_ttl / 32),
+        start_ttl_mask(uint32_t(1) << (start_ttl % 32)),
+        seq_started(start_ttl < 0)
+    {
+    }
+
+    void ttl(uint32_t ttl, uint64_t t, int bank=0)
+    {
+        if (!seq_started && bank == start_ttl_bank) {
+            auto new_start_ttl_val = (ttl & start_ttl_mask) != 0;
+            if (start_ttl_val && !new_start_ttl_val)
+                seq_started = true;
+            start_ttl_val = new_start_ttl_val;
+        }
+        if (m_chntype == ChnType::TTL && chn_num / 32 == bank) {
+            ts.push_back(total_t);
+            vals.push_back((ttl & (1 << (chn_num % 32))) != 0);
+        }
+        if (!seq_started)
+            return;
+        TimeKeeper::ttl(ttl, t, bank); // Advances the time
+    }
+    void ttl1(uint8_t chn, bool val, uint64_t t)
+    {
+        if (!seq_started && chn == start_ttl) {
+            if (start_ttl_val && !val)
+                seq_started = true;
+            start_ttl_val = val;
+        }
+        if (m_chntype == ChnType::TTL && chn_num == chn) {
+            ts.push_back(total_t);
+            vals.push_back(val);
+        }
+        if (!seq_started)
+            return;
+        TimeKeeper::ttl1(chn, val, t); // Advances the time
+    }
+    void dds_freq(uint8_t chn, uint32_t freq)
+    {
+        if (m_chntype == ChnType::Freq && chn_num == chn) {
+            ts.push_back(total_t);
+            vals.push_back(dds_freq_from_mu(freq));
+        }
+        if (!seq_started)
+            return;
+        TimeKeeper::dds_freq(chn, freq);
+    }
+    void dds_amp(uint8_t chn, uint16_t amp)
+    {
+        if (m_chntype == ChnType::Amp && chn_num == chn) {
+            ts.push_back(total_t);
+            vals.push_back(dds_amp_from_mu(amp));
+        }
+        if (!seq_started)
+            return;
+        TimeKeeper::dds_amp(chn, amp);
+    }
+    void dds_phase(uint8_t chn, uint16_t phase)
+    {
+        if (m_chntype == ChnType::Phase && chn_num == chn) {
+            ts.push_back(total_t);
+            phase_val = phase;
+            vals.push_back(dds_phase_from_mu(phase_val) * 360); // in degrees
+        }
+        if (!seq_started)
+            return;
+        TimeKeeper::dds_phase(chn, phase);
+    }
+    void dds_detphase(uint8_t chn, uint16_t phase)
+    {
+        if (m_chntype == ChnType::Phase && chn_num == chn) {
+            ts.push_back(total_t);
+            phase_val = phase_val + phase;
+            vals.push_back(dds_phase_from_mu(phase_val) * 360); // in degrees
+        }
+        if (!seq_started)
+            return;
+        TimeKeeper::dds_detphase(chn, phase);
+    }
+    void dds_reset(uint8_t chn)
+    {
+        if ((m_chntype == ChnType::Freq || m_chntype == ChnType::Amp ||
+             m_chntype == ChnType::Phase) && chn_num == chn) {
+            ts.push_back(total_t);
+            vals.push_back(0);
+        }
+        if (!seq_started)
+            return;
+        TimeKeeper::dds_reset(chn);
+    }
+    void dac(uint8_t chn, uint16_t V)
+    {
+        if (m_chntype == ChnType::DAC && chn_num == chn) {
+            ts.push_back(total_t);
+            vals.push_back(dac_from_mu(V));
+        }
+        if (!seq_started)
+            return;
+        TimeKeeper::dac(chn, V);
+    }
+    void wait(uint64_t t)
+    {
+        if (!seq_started)
+            return;
+        TimeKeeper::wait(t);
+    }
+    void clock(uint8_t period)
+    {
+        if (!seq_started)
+            return;
+        TimeKeeper::clock(period);
+    }
+
+    std::vector<uint64_t> ts;
+    std::vector<double> vals;
+    ChnType m_chntype;
+    uint8_t chn_num;
+    int start_ttl;
+    int start_ttl_bank;
+    uint32_t start_ttl_mask;
+    bool seq_started;
+    bool start_ttl_val = false;
+    uint16_t phase_val{0};
+};
+
 }
 
 } // NaCs::Seq::Zynq
