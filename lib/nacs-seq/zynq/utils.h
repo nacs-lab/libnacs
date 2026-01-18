@@ -75,7 +75,7 @@ static constexpr inline double dds_phase_from_mu(uint32_t phase)
     return double(phase) / double(1 << 16);
 }
 
-static inline uint32_t dac_to_mu(double V)
+static inline uint16_t dac_to_mu(double V)
 {
     constexpr double factor = 65535 / 20.0;
     constexpr double offset = 10.0;
@@ -84,7 +84,7 @@ static inline uint32_t dac_to_mu(double V)
     if (V >= 10)
         return 0xffff;
     V += offset;
-    return round<int32_t>(V * factor);
+    return (uint16_t)round<int32_t>(V * factor);
 }
 
 static constexpr inline double dac_from_mu(uint32_t V)
