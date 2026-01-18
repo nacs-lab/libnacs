@@ -129,6 +129,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # Adding this unconditionally cause GCC to issue a warning if there are other warnings
   # so only add this conditionally for clang.
   add_definitions(-Wno-unknown-warning-option)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  add_definitions(-Wno-packed-bitfield-compat)
 endif()
 
 set(LINKER_FLAGS -pthread -fno-math-errno)
