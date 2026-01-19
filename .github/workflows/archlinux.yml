@@ -39,7 +39,9 @@ jobs:
         run: |
           bash github/setup-archlinux-cn.sh
       - name: Install dependencies
-        run: pacman -S --noconfirm cmake intel-tbb llvm openlibm sleef yaml-cpp zeromq cppzmq
+        run: |
+          pacman -S --noconfirm tlfloat-git
+          pacman -S --noconfirm cmake intel-tbb llvm openlibm sleef yaml-cpp zeromq cppzmq
 
       - name: Configure CMake
         run: CXXFLAGS+=" ${CXXFLAGS_COV}" cmake -B build -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=On
