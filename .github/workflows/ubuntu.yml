@@ -48,7 +48,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Install dependencies
-      run: sudo apt-get install libopenlibm-dev libsleef-dev libzmq3-dev libyaml-cpp-dev libtbb-dev
+      run: sudo apt-get install libsleef-dev libzmq3-dev libyaml-cpp-dev libtbb-dev
 
     - name: Install LLVM
       if: ${{matrix.LLVM_VER != ''}}
