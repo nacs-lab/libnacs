@@ -1286,6 +1286,8 @@ struct PulseSequence {
                 // no need to output the end value anymore.
                 return it;
             }
+            t = it->first + it->second.mintime();
+            ++it;
         }
     }
 };
