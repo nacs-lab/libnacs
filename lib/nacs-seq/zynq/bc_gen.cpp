@@ -925,6 +925,14 @@ struct BCGen::Writer {
         bytecode[last_timed_inst] = uint8_t((b & ~tmask) | ((t << 4) & tmask));
     }
 
+    void add_wait_trigger(uint8_t chn, bool trig_raise, uint32_t timeout)
+    {
+        using namespace ByteCode;
+        assert(timeout <= 0xffffff);
+        add_inst(typename Inst::WaitTrigger{OpCode::WaitTrigger, 0, trig_raise,
+                chn, timeout & 0xffffff});
+    }
+
     // The `add***` functions below provides an abstraction to the bytecode and hides
     // the detail about the bytecode encoding. The code tries to use the most compact
     // encoding when available and can fallback to generic encoding if not.
@@ -1336,6 +1344,9 @@ void BCGen::_emit_bytecode(const void *data) const
         }
     }
 
+    if (trig_type != TrigType::None)
+        writer.add_wait_trigger(trig_channel, trig_type == TrigType::Raise,
+                                trig_timeout_cycle);
     PulseSequence pseq;
     // Note that this will also make sure the initial ttl value is set.
     auto set_start_ttl = [&] (int64_t t, bool val) {

@@ -46,6 +46,11 @@ public:
         Scalar,
         Vector,
     };
+    enum class TrigType : uint8_t {
+        None = 0,
+        Lower = 1,
+        Raise = 2,
+    };
     struct SeqPulse {
         ChnType chn_type;
         PulseType pulse_type;
@@ -95,6 +100,10 @@ public:
     // How many sequence cycle corresponds to one FPGA clock cycle.
     uint32_t fpga_clock_div;
     int64_t len_ns;
+
+    TrigType trig_type{TrigType::None};
+    uint8_t trig_channel;
+    uint32_t trig_timeout_cycle;
 
     // Output
     mutable std::vector<uint8_t> bytecode;
