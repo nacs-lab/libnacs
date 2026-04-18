@@ -943,13 +943,14 @@ void Backend::parse_data(const uint8_t *data, size_t len)
         throw std::runtime_error(name() + ": Incorrect backend data target.");
     // [version <0>: 1B]
     int ver = reader.read<int8_t>();
-    if (ver != 0 && ver != 1)
+    if (ver != 0 && ver != 1 && ver != 2)
         throw std::runtime_error(name() + ": Unknown FPGA backend data version " +
                                  std::to_string(ver));
     // Ver 0: [nttl_mgrs: 1B][[chn_id: 4B][off_delay: 4B][on_delay: 4B]
     //                 [skip_time: 4B][min_time: 4B][off_val: 1B] x nttl_mgrs]
     // Ver 1: [nttl_mgrs: 1B][[chn_id: 4B][off_delay: 8B][on_delay: 8B]
     //                 [skip_time: 8B][min_time: 8B][off_val: 1B] x nttl_mgrs]
+    // Ver 2: [v1 data][trig_type: 1B][(if trig_type != 0)[trig_chn: 1B][timeout_ns: 4B]]
     auto nttl_mgrs = reader.read<uint8_t>();
     for (auto i = 0; i < nttl_mgrs; i++) {
         auto chn_id = reader.read<uint32_t>();
@@ -975,6 +976,14 @@ void Backend::parse_data(const uint8_t *data, size_t len)
         auto off_val = reader.read<uint8_t>() != 0;
         m_ttl_managers.emplace(chn_id, TTLManager{off_delay, on_delay,
                 skip_time, min_time, off_val});
+    }
+    if (ver >= 2) {
+        auto trig_type = reader.read<BCGen::TrigType>();
+        if (trig_type != BCGen::TrigType::None) {
+            auto trig_channel = reader.read<uint8_t>();
+            auto trig_timeout_ns = reader.read<uint32_t>();
+            set_trigger(trig_type, trig_channel, trig_timeout_ns);
+        }
     }
 }
 
