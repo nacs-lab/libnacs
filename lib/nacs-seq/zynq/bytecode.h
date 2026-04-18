@@ -62,6 +62,7 @@ enum OpCode : uint8_t {
     DAC = 12,
     DACDet = 13,
     DDSPhase = 14,
+    WaitTrigger = 15,
 };
 
 namespace InstDefs {
@@ -84,6 +85,7 @@ namespace InstDefs {
  * DAC: [#12: 4][#0: 2][chn: 2][val: 16] (3 bytes)
  * DAC det: [#13: 4][chn: 2][val: 10] (2 bytes)
  * DDS Phase: [#14: 4][chn: 5][#0: 7][phase: 16] (4 bytes)
+ * WaitTrigger: [#15: 4][#0: 3][trig_type: 1][chn: 8][timeout: 24] (5 bytes)
  *
  * Old byte code format:
  * TTL all: [#0: 4][t: 4][val: 32] (5 bytes)
@@ -262,6 +264,15 @@ struct NACS_PACKED DDSPhase {
 };
 static_assert(sizeof(DDSPhase) == 4, "");
 
+struct NACS_PACKED WaitTrigger {
+    uint8_t op: 4; // 15
+    uint8_t _0: 3;
+    bool trig_raise: 1;
+    uint8_t chn;
+    uint32_t timeout: 24;
+};
+static_assert(sizeof(WaitTrigger) == 5, "");
+
 }
 
 struct Inst_v1 {
@@ -284,14 +295,16 @@ struct Inst_v1 {
     using DAC = InstDefs::DAC;
     using DACDet = InstDefs::DACDet;
     using DDSPhase = InstDefs::DDSPhase;
+    using WaitTrigger = InstDefs::WaitTrigger;
     static constexpr uint8_t version = 1;
-    static constexpr uint8_t inst_size[15] = {
+    static constexpr uint8_t inst_size[16] = {
         sizeof(TTLAll), sizeof(TTL2), sizeof(TTL4), sizeof(TTL5),
         sizeof(Wait), sizeof(Wait2),
         sizeof(DDSFreq), sizeof(DDSDetFreq2), sizeof(DDSDetFreq3), sizeof(DDSDetFreq4),
         sizeof(DDSAmp), sizeof(DDSDetAmp),
         sizeof(DAC), sizeof(DACDet),
         sizeof(DDSPhase),
+        sizeof(WaitTrigger),
     };
 };
 
@@ -315,14 +328,16 @@ struct Inst_v3 {
     using DAC = InstDefs::DAC;
     using DACDet = InstDefs::DACDet;
     using DDSPhase = InstDefs::DDSPhase;
+    using WaitTrigger = InstDefs::WaitTrigger;
     static constexpr uint8_t version = 3;
-    static constexpr uint8_t inst_size[15] = {
+    static constexpr uint8_t inst_size[16] = {
         sizeof(TTLAll), sizeof(TTL1), sizeof(TTL3), sizeof(TTL5),
         sizeof(Wait), sizeof(Wait2),
         sizeof(DDSFreq), sizeof(DDSDetFreq2), sizeof(DDSDetFreq3), sizeof(DDSDetFreq4),
         sizeof(DDSAmp), sizeof(DDSDetAmp),
         sizeof(DAC), sizeof(DACDet),
         sizeof(DDSPhase),
+        sizeof(WaitTrigger),
     };
 };
 
@@ -648,6 +663,11 @@ void ExeState::_run(T &&cb, const uint8_t *code, size_t code_len)
             if (amp & 0x200)
                 amp = amp | 0xfc00;
             runDAC(chn, uint16_t(amp + m_dac[chn]));
+            break;
+        }
+        case OpCode::WaitTrigger: {
+            auto inst = Mem::load_unalign<typename Inst::WaitTrigger>(p);
+            cb.wait_trigger(inst.chn, inst.trig_raise, inst.timeout);
             break;
         }
         default:

@@ -131,6 +131,12 @@ struct Printer {
     {
         stm << "clock(" << int(period) << ")" << std::endl;
     }
+    void wait_trigger(uint8_t chn, bool trig_raise, uint32_t timeout)
+    {
+        stm << "trig(" << (trig_raise ? "raise, chn=" : "lower, chn=")
+                << int(chn) << ", 0x"
+                << std::hex << int(timeout) << std::dec << std::endl;
+    }
     std::ostream &stm;
     bool dec;
 };
@@ -175,6 +181,10 @@ struct TimeKeeper {
     void clock(uint8_t)
     {
         total_t += PulseTime::Clock;
+    }
+    void wait_trigger(uint8_t, bool, uint32_t timeout)
+    {
+        total_t += timeout;
     }
     uint64_t total_t = 0;
 };
@@ -295,6 +305,10 @@ struct PulseCollector : TimeKeeper {
         if (!seq_started)
             return;
         TimeKeeper::clock(period);
+    }
+    void wait_trigger(uint8_t, bool, uint32_t timeout)
+    {
+        wait(timeout);
     }
 
     std::vector<uint64_t> ts;

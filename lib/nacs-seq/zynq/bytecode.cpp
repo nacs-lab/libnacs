@@ -216,6 +216,13 @@ NACS_EXPORT() void print_raw(std::ostream &stm, const uint8_t *code, size_t code
                 << std::hex << amp << std::dec << std::endl;
             break;
         }
+        case OpCode::WaitTrigger: {
+            auto inst = Mem::load_unalign<InstDefs::WaitTrigger>(p);
+            stm << "trig(" << (inst.trig_raise ? "raise, chn=" : "lower, chn=")
+                << int(inst.chn) << ", 0x"
+                << std::hex << int(inst.timeout) << std::dec << std::endl;
+            break;
+        }
         default:
             throw std::runtime_error("Invalid opcode.");
         }
