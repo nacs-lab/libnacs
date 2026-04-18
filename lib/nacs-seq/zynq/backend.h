@@ -57,6 +57,15 @@ public:
     llvm::ArrayRef<BCGen::Clock> get_clock(uint32_t bseq_idx) const;
     std::pair<std::vector<uint64_t>,std::vector<double>>
     get_vals(uint32_t bseq_idx, bool first_bseq, uint32_t chn_id) const;
+    void set_trigger(BCGen::TrigType type, uint8_t chn, uint32_t timeout_ns)
+    {
+        if (timeout_ns > 0xffffff * 10)
+            throw std::runtime_error(
+                name() + ": Trigger timeout too long. (max 167ms)");
+        m_trig_type = type;
+        m_trig_channel = chn;
+        m_trig_timeout_cycle = timeout_ns / 10;
+    }
 
 private:
     void add_channel(uint32_t chn_id, const std::string &chn_name) override;
@@ -100,6 +109,10 @@ private:
     std::array<uint32_t,8> m_ttl_ovr_ignore{};
     std::bitset<256> m_dds_ovr_ignore;
     std::bitset<256> m_dds_used;
+
+    BCGen::TrigType m_trig_type{BCGen::TrigType::None};
+    uint8_t m_trig_channel{0};
+    uint32_t m_trig_timeout_cycle{0};
 };
 
 }

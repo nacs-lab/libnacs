@@ -367,6 +367,10 @@ void Backend::generate(Manager::ExpSeq &expseq, Compiler &compiler)
         bc_gen->start_ttl_chn = m_start_ttl_chn;
         bc_gen->ttl_mask = m_ttl_mask;
         bc_gen->first_bseq = idx == 0;
+
+        bc_gen->trig_type = m_trig_type;
+        bc_gen->trig_channel = m_trig_channel;
+        bc_gen->trig_timeout_cycle = m_trig_timeout_cycle;
         for (auto [chn_id, ttl_mgr]: m_ttl_managers) {
             auto it = m_chn_map.find(chn_id);
             if (it == m_chn_map.end())
