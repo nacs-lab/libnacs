@@ -83,6 +83,7 @@ namespace InstDefs {
  * DDS det Amp: [#11: 4][chn: 5][det_amp: 7] (2 bytes)
  * DAC: [#12: 4][#0: 2][chn: 2][val: 16] (3 bytes)
  * DAC det: [#13: 4][chn: 2][val: 10] (2 bytes)
+ * DDS Phase: [#14: 4][chn: 5][#0: 7][phase: 16] (4 bytes)
  *
  * Old byte code format:
  * TTL all: [#0: 4][t: 4][val: 32] (5 bytes)
