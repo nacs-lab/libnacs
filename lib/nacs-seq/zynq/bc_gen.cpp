@@ -1330,9 +1330,8 @@ void BCGen::_emit_bytecode(const void *data) const
     chn_values.fill(0);
     for (auto [chn, val]: m_real_start_vals) {
         if (chn.first == ChnType::TTL) {
-            // TTL on the start trigger bank will be set during `start()`
             uint8_t bank = chn.second / 32;
-            if (first_bseq && bank != start_ttl_chn / 32)
+            if (first_bseq)
                 writer.add_ttl(writer.cur_t, val, bank);
             continue;
         }
