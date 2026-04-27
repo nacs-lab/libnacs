@@ -1326,24 +1326,32 @@ void BCGen::_emit_bytecode(const void *data) const
         }
     }
     // Initialize channels
+    bool has_init = false;
     ChnMap<uint32_t> chn_values;
     chn_values.fill(0);
     for (auto [chn, val]: m_real_start_vals) {
         if (chn.first == ChnType::TTL) {
             uint8_t bank = chn.second / 32;
-            if (first_bseq)
+            if (first_bseq) {
+                has_init = true;
                 writer.add_ttl(writer.cur_t, val, bank);
+            }
             continue;
         }
         chn_values[chn] = val;
         if (first_bseq) {
+            has_init = true;
             auto min_dt = writer.add_pulse(chn.first, chn.second, val, writer.cur_t);
             assert(min_dt >= 0);
             (void)min_dt;
         }
     }
     // Add some time margin after channel initialization
-    writer.add_wait(2500);
+    // (which should only be non-empty for first bseq)
+    if (has_init) {
+        assert(first_bseq);
+        writer.add_wait(2500);
+    }
     if (trig_type != TrigType::None)
         writer.add_wait_trigger(trig_channel, trig_type == TrigType::Raise,
                                 trig_timeout_cycle);

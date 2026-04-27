@@ -240,7 +240,6 @@ TEST_CASE("empty") {
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait{4, 0, 2500}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 3, 0, 0}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait2{5, 1, 96}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 3, 0, 0}));
@@ -373,7 +372,6 @@ TEST_CASE("empty+clock_unset") {
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait{4, 0, 2500}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 3, 0, 0}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait2{5, 1, 96}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 0, 0, 0}));
@@ -428,7 +426,6 @@ TEST_CASE("empty+clock_unset") {
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait{4, 0, 2500}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 3, 0, 0}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait2{5, 1, 96}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 0, 0, 0}));
@@ -570,7 +567,6 @@ TEST_CASE("empty+clock_set") {
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait{4, 0, 2500}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 3, 0, 0}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait2{5, 1, 96}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 0, 0, 0}));
@@ -714,7 +710,6 @@ TEST_CASE("loop") {
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait{4, 0, 2500}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 3, 0, 0}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait2{5, 1, 96}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 3, 0, 0}));
@@ -731,7 +726,6 @@ TEST_CASE("loop") {
         REQUIRE(checker.cmp<int64_t>(0)); // len_ns
         REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
         // Startup
-        REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait{4, 0, 2500}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 3, 0, 0}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait2{5, 1, 96}));
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 3, 0, 0}));
@@ -1962,7 +1956,6 @@ TEST_CASE("offset") {
             REQUIRE(checker.cmp<int64_t>(0)); // len_ns
             REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
             // Startup
-            REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait{4, 0, 2500}));
             REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 3, 0, 0}));
             REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait2{5, 1, 96}));
             REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::TTL2{1, 3, 0, 0}));
