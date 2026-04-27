@@ -1342,10 +1342,12 @@ void BCGen::_emit_bytecode(const void *data) const
             (void)min_dt;
         }
     }
-
+    // Add some time margin after channel initialization
+    writer.add_wait(2500);
     if (trig_type != TrigType::None)
         writer.add_wait_trigger(trig_channel, trig_type == TrigType::Raise,
                                 trig_timeout_cycle);
+
     PulseSequence pseq;
     // Note that this will also make sure the initial ttl value is set.
     auto set_start_ttl = [&] (int64_t t, bool val) {
@@ -1516,8 +1518,8 @@ void BCGen::_emit_bytecode(const void *data) const
         cur_chn = next_chn();
     }
     assert(!pseq.single_pulses.empty());
-    // Shift cur_t so that the first pulse happens 25us after the initialization step.
-    writer.cur_t = pseq.single_pulses.begin()->first - 2500;
+    // Shift cur_t to match where we schedule the first pulse to be.
+    writer.cur_t = pseq.single_pulses.begin()->first;
     for (auto [t, pulse]: pseq.single_pulses)
         writer.add_pulse(pulse.typ, pulse.chn, pulse.val, t);
 
