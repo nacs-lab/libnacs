@@ -34,6 +34,8 @@ void freeOCMBuffer(void*, size_t);
 void *allocDMABuffer(size_t);
 void freeDMABuffer(void*, size_t);
 
+void *bufferPhyAddr(void*);
+
 }
 
 #endif

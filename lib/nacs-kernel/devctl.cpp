@@ -63,4 +63,11 @@ NACS_EXPORT() void freeDMABuffer(void *buff, size_t old_size)
     munmap(buff, old_size);
 }
 
+NACS_EXPORT() void *bufferPhyAddr(void *buff)
+{
+    unsigned long addr = (uintptr_t)buff;
+    checkErrno(ioctl(getFD(), KNACS_GET_BUFF_PHY_ADDR, &addr));
+    return (void*)(uintptr_t)addr;
+}
+
 }
