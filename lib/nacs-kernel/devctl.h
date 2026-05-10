@@ -35,6 +35,7 @@ void *allocDMABuffer(size_t);
 void freeDMABuffer(void*, size_t);
 
 void *bufferPhyAddr(void*);
+void cleanCache(void*, size_t, bool l1only=false);
 
 }
 

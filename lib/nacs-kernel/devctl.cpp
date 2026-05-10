@@ -70,4 +70,10 @@ NACS_EXPORT() void *bufferPhyAddr(void *buff)
     return (void*)(uintptr_t)addr;
 }
 
+NACS_EXPORT() void cleanCache(void *addr, size_t size, bool l1only)
+{
+    knacs_dma_buff_t buff{(unsigned long)addr, (unsigned long)size, (int)l1only};
+    checkErrno(ioctl(getFD(), KNACS_CLEAN_CACHE, &buff));
+}
+
 }
