@@ -29,9 +29,11 @@ knacs_version_t getDriverVersion();
 void *mapPulseCtrl();
 
 void *allocOCMBuffer(size_t);
+void *allocOCMBuffer(size_t, bool);
 void freeOCMBuffer(void*, size_t);
 
 void *allocDMABuffer(size_t);
+void *allocDMABuffer(size_t, bool);
 void freeDMABuffer(void*, size_t);
 
 void *bufferPhyAddr(void*);

@@ -48,6 +48,11 @@ NACS_EXPORT() void *allocOCMBuffer(size_t len)
     return mapFile(getFD(), page_size, len);
 }
 
+NACS_EXPORT() void *allocOCMBuffer(size_t len, bool writecombine)
+{
+    return mapFile(getFD(), writecombine ? page_size * 3 : page_size, len);
+}
+
 NACS_EXPORT() void freeOCMBuffer(void *buff, size_t old_size)
 {
     munmap(buff, old_size);
@@ -56,6 +61,11 @@ NACS_EXPORT() void freeOCMBuffer(void *buff, size_t old_size)
 NACS_EXPORT() void *allocDMABuffer(size_t len)
 {
     return mapFile(getFD(), page_size * 2, len);
+}
+
+NACS_EXPORT() void *allocDMABuffer(size_t len, bool writecombine)
+{
+    return mapFile(getFD(), writecombine ? page_size * 4 : page_size * 2, len);
 }
 
 NACS_EXPORT() void freeDMABuffer(void *buff, size_t old_size)
