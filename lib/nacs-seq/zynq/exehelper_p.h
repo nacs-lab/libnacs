@@ -104,10 +104,6 @@ struct Printer {
             stm << "+=0x" << std::hex << detphase << std::dec << std::endl;
         }
     }
-    void dds_reset(uint8_t chn)
-    {
-        stm << "reset(" << int(chn) << ")" << std::endl;
-    }
     void dac(uint8_t chn, uint16_t V)
     {
         stm << "dac(" << int(chn) << ")=";
@@ -165,10 +161,6 @@ struct TimeKeeper {
     void dds_detphase(uint8_t, uint16_t)
     {
         total_t += PulseTime::DDSPhase;
-    }
-    void dds_reset(uint8_t)
-    {
-        total_t += PulseTime::DDSReset;
     }
     void dac(uint8_t, uint16_t)
     {
@@ -272,17 +264,6 @@ struct PulseCollector : TimeKeeper {
         if (!seq_started)
             return;
         TimeKeeper::dds_detphase(chn, phase);
-    }
-    void dds_reset(uint8_t chn)
-    {
-        if ((m_chntype == ChnType::Freq || m_chntype == ChnType::Amp ||
-             m_chntype == ChnType::Phase) && chn_num == chn) {
-            ts.push_back(total_t);
-            vals.push_back(0);
-        }
-        if (!seq_started)
-            return;
-        TimeKeeper::dds_reset(chn);
     }
     void dac(uint8_t chn, uint16_t V)
     {

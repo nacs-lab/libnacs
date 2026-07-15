@@ -246,11 +246,6 @@ public:
         addInst(typename Inst::DDSDetPhase{OpCode::DDSDetPhase, chn, det_phase});
     }
 
-    void addDDSReset(uint8_t chn)
-    {
-        addInst(typename Inst::DDSReset{OpCode::DDSReset, chn});
-    }
-
     void addDAC(uint8_t chn, uint16_t amp)
     {
         addInst(typename Inst::DAC{OpCode::DAC, chn, amp});
@@ -321,9 +316,6 @@ struct Parser : ParserBase {
             else {
                 writer.addDDSPhase(res.first, res.second.second);
             }
-        }
-        else if (nres.first == "reset") {
-            writer.addDDSReset(read_ddschn("reset"));
         }
         else if (nres.first == "dac") {
             auto res = read_daccmd();

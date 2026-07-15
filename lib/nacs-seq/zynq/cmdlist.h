@@ -56,7 +56,7 @@ enum OpCode : uint8_t {
     DDSAmp = 5,
     DDSPhase = 6,
     DDSDetPhase = 7,
-    DDSReset = 8,
+    // DDSReset = 8,
     DAC = 9,
 };
 
@@ -72,7 +72,7 @@ namespace InstDefs {
  * DDS Amp: [#5: 8][chn: 8][amp: 16] (4 bytes)
  * DDS Phase: [#6: 8][chn: 8][phase: 16] (4 bytes)
  * DDS Det Phase: [#7: 8][chn: 8][det_phase: 16] (4 bytes)
- * DDS Reset: [#8: 8][chn: 8] (2 bytes)
+ * // DDS Reset: [#8: 8][chn: 8] (2 bytes)
  * DAC: [#9: 8][chn: 8][val: 16] (4 bytes)
  *
  * Old command formats:
@@ -150,12 +150,6 @@ struct NACS_PACKED DDSDetPhase {
 };
 static_assert(sizeof(DDSDetPhase) == 4, "");
 
-struct NACS_PACKED DDSReset {
-    OpCode op; // 8
-    uint8_t chn;
-};
-static_assert(sizeof(DDSReset) == 2, "");
-
 struct NACS_PACKED DAC {
     OpCode op; // 9
     uint8_t chn;
@@ -174,14 +168,13 @@ struct Inst_v1 {
     using DDSAmp = InstDefs::DDSAmp;
     using DDSPhase = InstDefs::DDSPhase;
     using DDSDetPhase = InstDefs::DDSDetPhase;
-    using DDSReset = InstDefs::DDSReset;
     using DAC = InstDefs::DAC;
     static constexpr uint8_t version = 1;
     static constexpr uint8_t cmd_size[10] = {
         sizeof(TTLAll), sizeof(TTL1), // TTL
         sizeof(Wait), sizeof(Clock), // wait, clock
         sizeof(DDSFreq), sizeof(DDSAmp), sizeof(DDSPhase),
-        sizeof(DDSDetPhase), sizeof(DDSReset), // DDS
+        sizeof(DDSDetPhase), 0, // DDS
         sizeof(DAC), // DAC
     };
 };
@@ -195,14 +188,13 @@ struct Inst_v3 {
     using DDSAmp = InstDefs::DDSAmp;
     using DDSPhase = InstDefs::DDSPhase;
     using DDSDetPhase = InstDefs::DDSDetPhase;
-    using DDSReset = InstDefs::DDSReset;
     using DAC = InstDefs::DAC;
     static constexpr uint8_t version = 3;
     static constexpr uint8_t cmd_size[10] = {
         sizeof(TTLAll), sizeof(TTL1), // TTL
         sizeof(Wait), sizeof(Clock), // wait, clock
         sizeof(DDSFreq), sizeof(DDSAmp), sizeof(DDSPhase),
-        sizeof(DDSDetPhase), sizeof(DDSReset), // DDS
+        sizeof(DDSDetPhase), 0, // DDS
         sizeof(DAC), // DAC
     };
 };
@@ -281,10 +273,6 @@ struct ExeState {
      * * `dds_detphase(uint8_t chn, uint16_t detphase)`:
      *
      *    Generate a DDS det phase pulse. Should take `PulseTime::DDSPhase` cycles.
-     *
-     * * `dds_reset(uint8_t chn)`:
-     *
-     *    Generate a DDS reset pulse. Should take `PulseTime::DDSReset` cycles.
      *
      * * `dac(uint8_t chn, uint16_t V)`:
      *
@@ -395,11 +383,6 @@ void ExeState::_run(T &&cb, const uint8_t *code, size_t code_len)
         case OpCode::DDSDetPhase: {
             auto inst = Mem::load_unalign<typename Inst::DDSDetPhase>(p);
             cb.dds_detphase(inst.chn, inst.det_phase);
-            break;
-        }
-        case OpCode::DDSReset: {
-            auto inst = Mem::load_unalign<typename Inst::DDSReset>(p);
-            cb.dds_reset(inst.chn);
             break;
         }
         case OpCode::DAC: {
