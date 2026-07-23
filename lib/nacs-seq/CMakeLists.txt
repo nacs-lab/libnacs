@@ -9,6 +9,7 @@ set(nacs_seq_zynq_HDRS
   zynq/bc_gen.h
   zynq/bytecode.h
   zynq/cmdlist.h
+  zynq/dma.h
   zynq/pulse_time.h
   zynq/seq_shared.h
   zynq/legacy_seq.h
@@ -23,6 +24,7 @@ set(nacs_seq_SRCS
   zynq/bc_gen.cpp
   zynq/bytecode.cpp
   zynq/cmdlist.cpp
+  zynq/dma.cpp
   zynq/parser.cpp
   zynq/legacy_seq.cpp)
 set(nacs_seq_LINKS)
