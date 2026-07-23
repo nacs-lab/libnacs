@@ -121,8 +121,8 @@ if(ENABLE_LLVM AND NOT APPLE)
   endif()
 endif()
 
-add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden -Wconversion
-  -fno-math-errno -Wno-sign-conversion -Wsign-compare
+add_definitions(-Wall -Wextra -g -pthread -fvisibility=hidden
+  -fno-math-errno -Wsign-compare
   -Wno-unused-parameter -Wno-psabi -D_FILE_OFFSET_BITS=64)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # We have GCC specific warning options that makes Clang unhappy.
