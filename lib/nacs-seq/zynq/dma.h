@@ -21,6 +21,10 @@
 
 #include "utils.h"
 
+#include <nacs-utils/mem.h>
+
+#include <optional>
+#include <span>
 #include <stdexcept>
 
 namespace NaCs::Seq::Zynq::DMA {
@@ -67,6 +71,11 @@ enum OpCode : uint8_t {
 
 namespace Inst_v0 {
 
+struct NACS_PACKED _Header {
+    uint8_t len: 2;
+    OpCode op: 2;
+};
+
 /**
  * 16 bit instructions
  */
@@ -75,6 +84,7 @@ struct NACS_PACKED Wait1 {
     uint8_t len: 2;
     OpCode op: 2;
     uint16_t cycle: 12;
+    Wait1() = default;
     Wait1(uint16_t cycle)
         : len(0),
           op(OpCode::WAIT1),
@@ -89,6 +99,7 @@ struct NACS_PACKED TTLSet4 {
     OpCode op: 2;
     uint8_t bank4_1: 6;
     uint8_t val1: 4;
+    TTLSet4() = default;
     TTLSet4(uint8_t bank4_1, uint8_t val1)
         : len(0),
           op(OpCode::TTL_SET4),
@@ -103,6 +114,7 @@ struct NACS_PACKED ClockOut {
     uint8_t len: 2;
     OpCode op: 2;
     uint16_t period: 9;
+    ClockOut() = default;
     ClockOut(uint16_t period)
         : len(0),
           op(OpCode::CLOCKOUT),
@@ -120,6 +132,7 @@ struct NACS_PACKED Wait2 {
     uint8_t len: 2;
     OpCode op: 2;
     uint32_t cycle: 28;
+    Wait2() = default;
     Wait2(uint32_t cycle) : len(1), op(OpCode::WAIT2), cycle(cycle)
     {
     }
@@ -133,6 +146,7 @@ struct NACS_PACKED TTLSet16 {
     uint8_t val1: 8;
     uint8_t bank8_2: 5;
     uint8_t val2: 8;
+    TTLSet16() = default;
     TTLSet16(uint8_t bank8_1, uint8_t val1,
              uint8_t bank8_2, uint8_t val2)
     : len(1), op(OpCode::TTL_SET16),
@@ -150,6 +164,7 @@ struct NACS_PACKED DDSSet16 {
     uint8_t fud: 1;
     uint8_t addr: 6;
     uint16_t data: 16;
+    DDSSet16() = default;
     DDSSet16(uint8_t bus_id, uint8_t dds_id, uint8_t fud, uint8_t addr, uint16_t data)
     : len(1), op(OpCode::DDS_SET16),
     bus_id(bus_id), dds_id(dds_id), fud(fud), addr(addr), data(data)
@@ -168,6 +183,7 @@ struct NACS_PACKED WaitTrig {
     uint8_t chn: 8;
     uint8_t edge: 1;
     uint64_t cycle: 35;
+    WaitTrig() = default;
     WaitTrig(uint8_t chn, uint8_t edge, uint64_t cycle)
     : len(2), op(OpCode::WAIT_TRIG), chn(chn), edge(edge), cycle(cycle)
     {
@@ -182,6 +198,7 @@ struct NACS_PACKED TTLSet32 {
     uint16_t val1: 16;
     uint8_t bank16_2: 4;
     uint16_t val2: 16;
+    TTLSet32() = default;
     TTLSet32(uint8_t bank16_1, uint16_t val1,
              uint8_t bank16_2, uint16_t val2)
     : len(2), op(OpCode::TTL_SET32),
@@ -199,6 +216,7 @@ struct NACS_PACKED DDSSet32 {
     uint8_t fud: 1;
     uint8_t addr: 6;
     uint32_t data: 32;
+    DDSSet32() = default;
     DDSSet32(uint8_t bus_id, uint8_t dds_id, uint8_t fud, uint8_t addr, uint32_t data)
     : len(2), op(OpCode::DDS_SET32),
     bus_id(bus_id), dds_id(dds_id), fud(fud), addr(addr), data(data)
@@ -215,6 +233,7 @@ struct NACS_PACKED DAC {
     uint8_t clk_pha: 1;
     uint8_t clk_pol: 1;
     uint32_t data: 18;
+    DAC() = default;
     DAC(uint8_t id, uint16_t cycle, uint8_t clk_pha, uint8_t clk_pol, uint32_t data)
     : len(2), op(OpCode::DAC),
     id(id), cycle(cycle), clk_pha(clk_pha), clk_pol(clk_pol), data(data)
@@ -223,6 +242,104 @@ struct NACS_PACKED DAC {
 };
 static_assert(sizeof(DDSSet32) == 6, "");
 
+}
+
+// No state to keep track of currently
+struct ExeState {
+    template<typename CB>
+    void run(CB &&cb, std::span<const uint8_t> code, uint32_t version);
+};
+
+namespace {
+
+template<typename T> struct _tag_t {};
+template<typename T> static constexpr _tag_t<T> _tag_v;
+
+}
+
+template<typename CB>
+inline void ExeState::run(CB &&cb, std::span<const uint8_t> code, uint32_t version)
+{
+    if (version != 0)
+        throw std::runtime_error("Invalid DMA instructions version number.");
+    auto code_len = code.size();
+    if (code_len % 2 != 0)
+        throw std::runtime_error("Invalid DMA instructions length.");
+    for (size_t i = 0; i < code_len;) {
+        auto load = [&] <typename T> (_tag_t<T>) -> std::optional<T> {
+            if (i + sizeof(T) > code_len)
+                return std::optional<T>();
+            return Mem::load_unalign<T>(&code[i]);
+        };
+        auto header = load(_tag_v<Inst_v0::_Header>);
+        auto invalid = [&] {
+            auto len = (header->len + 1) * 2;
+            if (i + len > code_len)
+                len = code_len - i;
+            cb.invalid(code.subspan(i, len));
+            i += len;
+        };
+        auto handle = [&] <typename T> (_tag_t<T>) {
+            auto inst = load(_tag_v<T>);
+            if (inst) {
+                cb.inst(*inst);
+                i += sizeof(T);
+            }
+            else {
+                invalid();
+            }
+        };
+        switch (header->len) {
+        case 0:
+            switch (header->op) {
+            case OpCode::WAIT1:
+                handle(_tag_v<Inst_v0::Wait1>);
+                break;
+            case OpCode::TTL_SET4:
+                handle(_tag_v<Inst_v0::TTLSet4>);
+                break;
+            case OpCode::CLOCKOUT:
+                handle(_tag_v<Inst_v0::ClockOut>);
+                break;
+            default:
+                invalid();
+            }
+            break;
+        case 1:
+            switch (header->op) {
+            case OpCode::WAIT2:
+                handle(_tag_v<Inst_v0::Wait2>);
+                break;
+            case OpCode::TTL_SET16:
+                handle(_tag_v<Inst_v0::TTLSet16>);
+                break;
+            case OpCode::DDS_SET16:
+                handle(_tag_v<Inst_v0::DDSSet16>);
+                break;
+            default:
+                invalid();
+            }
+            break;
+        case 2:
+            switch (header->op) {
+            case OpCode::WAIT_TRIG:
+                handle(_tag_v<Inst_v0::WaitTrig>);
+                break;
+            case OpCode::TTL_SET32:
+                handle(_tag_v<Inst_v0::TTLSet32>);
+                break;
+            case OpCode::DDS_SET32:
+                handle(_tag_v<Inst_v0::DDSSet32>);
+                break;
+            case OpCode::DAC:
+                handle(_tag_v<Inst_v0::DAC>);
+                break;
+            }
+            break;
+        default:
+            invalid();
+        }
+    }
 }
 
 }
