@@ -17,3 +17,32 @@
  *************************************************************************/
 
 #include "dma.h"
+
+namespace NaCs::Seq::Zynq::DMA {
+
+namespace {
+
+struct Counter {
+    void inst(auto)
+    {
+        count += 1;
+    }
+    void invalid(auto)
+    {
+    }
+
+    size_t count{0};
+};
+
+}
+
+NACS_EXPORT() size_t count(std::span<const uint8_t> code, uint32_t version)
+{
+    ExeState state;
+    Counter counter;
+    state.run(counter, code, version);
+    return counter.count;
+}
+
+
+}

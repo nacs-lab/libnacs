@@ -342,6 +342,12 @@ inline void ExeState::run(CB &&cb, std::span<const uint8_t> code, uint32_t versi
     }
 }
 
+
+/**
+ * Returns the number of instructions.
+ */
+size_t count(std::span<const uint8_t> code, uint32_t version);
+
 }
 
 #endif
