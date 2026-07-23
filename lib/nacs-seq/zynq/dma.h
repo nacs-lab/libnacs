@@ -223,7 +223,7 @@ struct NACS_PACKED DAC {
 };
 static_assert(sizeof(DDSSet32) == 6, "");
 
-};
+}
 
 }
 
