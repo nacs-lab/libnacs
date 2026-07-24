@@ -19,6 +19,7 @@
 #include "dma.h"
 
 #include <concepts>
+#include <type_traits>
 
 namespace NaCs::Seq::Zynq::DMA {
 
@@ -149,6 +150,23 @@ struct Printer {
     std::ostream &stm;
 };
 
+struct TimeKeeper {
+    template<typename T>
+    void inst(T inst)
+    {
+        using T2 = std::remove_cv_t<T>;
+        if constexpr (std::same_as<T2,Inst_v0::Wait1> ||
+                      std::same_as<T2,Inst_v0::Wait2>) {
+            time += inst.cycle + 1;
+        }
+    }
+    void invalid(auto)
+    {
+    }
+
+    uint64_t time{0};
+};
+
 }
 
 NACS_EXPORT() size_t count(std::span<const uint8_t> code, uint32_t version)
@@ -165,6 +183,14 @@ NACS_EXPORT() void print(std::ostream &stm, std::span<const uint8_t> code,
     ExeState state;
     Printer printer(stm);
     state.run(printer, code, version);
+}
+
+NACS_EXPORT() uint64_t total_time(std::span<const uint8_t> code, uint32_t version)
+{
+    ExeState state;
+    TimeKeeper keeper;
+    state.run(keeper, code, version);
+    return keeper.time;
 }
 
 }

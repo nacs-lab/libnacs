@@ -355,6 +355,11 @@ size_t count(std::span<const uint8_t> code, uint32_t version);
  */
 void print(std::ostream &stm, std::span<const uint8_t> code, uint32_t version);
 
+/**
+ * Total time it takes to execute the instructions
+ */
+uint64_t total_time(std::span<const uint8_t> code, uint32_t version);
+
 }
 
 #endif
