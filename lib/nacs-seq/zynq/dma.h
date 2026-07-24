@@ -234,6 +234,7 @@ struct NACS_PACKED DAC {
     uint8_t clk_pha: 1;
     uint8_t clk_pol: 1;
     uint32_t data: 18;
+    uint16_t _: 13;
     DAC() = default;
     DAC(uint8_t id, uint16_t cycle, uint8_t clk_pha, uint8_t clk_pol, uint32_t data)
     : len(2), op(OpCode::DAC),
@@ -241,7 +242,7 @@ struct NACS_PACKED DAC {
     {
     }
 };
-static_assert(sizeof(DDSSet32) == 6, "");
+static_assert(sizeof(DAC) == 6, "");
 
 }
 
