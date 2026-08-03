@@ -69,21 +69,31 @@ namespace NaCs::LLVM::Exe {
 #    define _check_sleef(host_info, sleef_sym_f, var, sym, s1, s2, s3) do { \
         if (var == #sym ".2") {                                         \
             if (host_info.test_feature(X86::Feature::avx2))             \
-                return sleef_sym_f(#sym "d2", "avx2128" VEC_SUFFIX(s1)); \
+                if (auto f = sleef_sym_f(#sym "d2", "avx2128" VEC_SUFFIX(s1))) \
+                    return f;                                           \
             if (host_info.test_feature(X86::Feature::sse41))            \
-                return sleef_sym_f(#sym "d2", "sse4" VEC_SUFFIX(s1));   \
-            return sleef_sym_f(#sym "d2", "sse2" VEC_SUFFIX(s1));       \
+                if (auto f = sleef_sym_f(#sym "d2", "sse4" VEC_SUFFIX(s1))) \
+                    return f;                                           \
+            if (auto f = sleef_sym_f(#sym "d2", "sse2" VEC_SUFFIX(s1))) \
+                return f;                                               \
+            return sleef_sym_f(#sym "d2", "" VEC_SUFFIX(s1));           \
         }                                                               \
         if (var == #sym ".4") {                                         \
             if (host_info.test_feature(X86::Feature::avx2) &&           \
                 host_info.test_feature(X86::Feature::fma))              \
-                return sleef_sym_f(#sym "d4", "avx2" VEC_SUFFIX(s2));   \
+                if (auto f = sleef_sym_f(#sym "d4", "avx2" VEC_SUFFIX(s2))) \
+                    return f;                                           \
             if (host_info.test_feature(X86::Feature::fma4))             \
-                return sleef_sym_f(#sym "d4", "fma4" VEC_SUFFIX(s2));   \
-            return sleef_sym_f(#sym "d4", "avx" VEC_SUFFIX(s2));        \
+                if (auto f = sleef_sym_f(#sym "d4", "fma4" VEC_SUFFIX(s2))) \
+                    return f;                                           \
+            if (auto f = sleef_sym_f(#sym "d4", "avx" VEC_SUFFIX(s2)))  \
+                return f;                                               \
+            return sleef_sym_f(#sym "d4", "" VEC_SUFFIX(s2));           \
         }                                                               \
         if (var == #sym ".8") {                                         \
-            return sleef_sym_f(#sym "d8", "avx512f" VEC_SUFFIX(s3));    \
+            if (auto f = sleef_sym_f(#sym "d8", "avx512f" VEC_SUFFIX(s3))) \
+                return f;                                               \
+            return sleef_sym_f(#sym "d8", "" VEC_SUFFIX(s3));           \
         }                                                               \
     } while (0)
 #    define _check_sleef_d(host_info, sleef_sym_f, var, sym)    \
@@ -97,7 +107,9 @@ namespace NaCs::LLVM::Exe {
 #  elif NACS_CPU_AARCH64
 #    define _check_sleef_d(host_info, sleef_sym_f, var, sym) do {       \
         if (var == #sym ".2") {                                         \
-            return sleef_sym_f(#sym "d2", "advsimd");                   \
+            if (auto f = sleef_sym_f(#sym "d2", "advsimd"))             \
+                return f;                                               \
+            return sleef_sym_f(#sym "d2", "");                          \
         }                                                               \
     } while (0)
 #    define _check_sleef_dd _check_sleef_d
@@ -126,19 +138,19 @@ static void *libsleef_handle(void)
     ([] {                                                               \
         if (auto addr = sleef_asm_sym_w("Sleef_" prefix "_u35" suffix)) \
             return (uintptr_t)addr;                                     \
-        return (uintptr_t)asm_sym("Sleef_" prefix "_u10" suffix);       \
+        return (uintptr_t)sleef_asm_sym_w("Sleef_" prefix "_u10" suffix); \
     } ())
 #  define sleef_sym_u15(prefix, suffix)                                 \
     ([] {                                                               \
         if (auto addr = sleef_asm_sym_w("Sleef_" prefix "_u35" suffix)) \
             return (uintptr_t)addr;                                     \
-        return (uintptr_t)asm_sym("Sleef_" prefix "_u15" suffix);       \
+        return (uintptr_t)sleef_asm_sym_w("Sleef_" prefix "_u15" suffix); \
     } ())
 #  define sleef_sym_u05(prefix, suffix)                                 \
     ([] {                                                               \
         if (auto addr = sleef_asm_sym_w("Sleef_" prefix "_u35" suffix)) \
             return (uintptr_t)addr;                                     \
-        return (uintptr_t)asm_sym("Sleef_" prefix "_u05" suffix);       \
+        return (uintptr_t)sleef_asm_sym_w("Sleef_" prefix "_u05" suffix); \
     } ())
 #  define sleef_sym(prefix, suffix)                                     \
     ([] {                                                               \
@@ -146,7 +158,7 @@ static void *libsleef_handle(void)
             return (uintptr_t)addr;                                     \
         if (auto addr = sleef_asm_sym_w("Sleef_" prefix "_u05" suffix)) \
             return (uintptr_t)addr;                                     \
-        return (uintptr_t)asm_sym("Sleef_" prefix "_" suffix);          \
+        return (uintptr_t)sleef_asm_sym_w("Sleef_" prefix "_" suffix);  \
     } ())
 #  define check_sleef_u_d(host_info, var, sym)          \
     _check_sleef_d(host_info, sleef_sym_u, var, sym)
