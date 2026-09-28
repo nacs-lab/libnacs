@@ -100,8 +100,8 @@ struct NACS_PACKED TTLSet4 {
     OpCode op: 2;
     uint8_t bank4_1: 6;
     uint8_t val1: 4;
-    TTLSet4() = default;
-    TTLSet4(uint8_t bank4_1, uint8_t val1)
+    constexpr TTLSet4() = default;
+    constexpr TTLSet4(uint8_t bank4_1, uint8_t val1)
         : len(0),
           op(OpCode::TTL_SET4),
           bank4_1(bank4_1),
@@ -115,8 +115,8 @@ struct NACS_PACKED ClockOut {
     uint8_t len: 2;
     OpCode op: 2;
     uint16_t period: 9;
-    ClockOut() = default;
-    ClockOut(uint16_t period)
+    constexpr ClockOut() = default;
+    constexpr ClockOut(uint16_t period)
         : len(0),
           op(OpCode::CLOCKOUT),
           period(period)
@@ -133,8 +133,8 @@ struct NACS_PACKED Wait2 {
     uint8_t len: 2;
     OpCode op: 2;
     uint32_t cycle: 28;
-    Wait2() = default;
-    Wait2(uint32_t cycle) : len(1), op(OpCode::WAIT2), cycle(cycle)
+    constexpr Wait2() = default;
+    constexpr Wait2(uint32_t cycle) : len(1), op(OpCode::WAIT2), cycle(cycle)
     {
     }
 };
@@ -147,9 +147,9 @@ struct NACS_PACKED TTLSet16 {
     uint8_t val1: 8;
     uint8_t bank8_2: 5;
     uint8_t val2: 8;
-    TTLSet16() = default;
-    TTLSet16(uint8_t bank8_1, uint8_t val1,
-             uint8_t bank8_2, uint8_t val2)
+    constexpr TTLSet16() = default;
+    constexpr TTLSet16(uint8_t bank8_1, uint8_t val1,
+                       uint8_t bank8_2, uint8_t val2)
     : len(1), op(OpCode::TTL_SET16),
     bank8_1(bank8_1), val1(val1), bank8_2(bank8_2), val2(val2)
     {
@@ -165,8 +165,9 @@ struct NACS_PACKED DDSSet16 {
     uint8_t fud: 1;
     uint8_t addr: 6;
     uint16_t data: 16;
-    DDSSet16() = default;
-    DDSSet16(uint8_t bus_id, uint8_t dds_id, uint8_t fud, uint8_t addr, uint16_t data)
+    constexpr DDSSet16() = default;
+    constexpr DDSSet16(uint8_t bus_id, uint8_t dds_id, uint8_t fud,
+                       uint8_t addr, uint16_t data)
     : len(1), op(OpCode::DDS_SET16),
     bus_id(bus_id), dds_id(dds_id), fud(fud), addr(addr), data(data)
     {
@@ -184,8 +185,8 @@ struct NACS_PACKED WaitTrig {
     uint8_t chn: 8;
     uint8_t edge: 1;
     uint64_t cycle: 35;
-    WaitTrig() = default;
-    WaitTrig(uint8_t chn, uint8_t edge, uint64_t cycle)
+    constexpr WaitTrig() = default;
+    constexpr WaitTrig(uint8_t chn, uint8_t edge, uint64_t cycle)
     : len(2), op(OpCode::WAIT_TRIG), chn(chn), edge(edge), cycle(cycle)
     {
     }
@@ -199,9 +200,9 @@ struct NACS_PACKED TTLSet32 {
     uint16_t val1: 16;
     uint8_t bank16_2: 4;
     uint16_t val2: 16;
-    TTLSet32() = default;
-    TTLSet32(uint8_t bank16_1, uint16_t val1,
-             uint8_t bank16_2, uint16_t val2)
+    constexpr TTLSet32() = default;
+    constexpr TTLSet32(uint8_t bank16_1, uint16_t val1,
+                       uint8_t bank16_2, uint16_t val2)
     : len(2), op(OpCode::TTL_SET32),
     bank16_1(bank16_1), val1(val1), bank16_2(bank16_2), val2(val2)
     {
@@ -217,8 +218,9 @@ struct NACS_PACKED DDSSet32 {
     uint8_t fud: 1;
     uint8_t addr: 6;
     uint32_t data: 32;
-    DDSSet32() = default;
-    DDSSet32(uint8_t bus_id, uint8_t dds_id, uint8_t fud, uint8_t addr, uint32_t data)
+    constexpr DDSSet32() = default;
+    constexpr DDSSet32(uint8_t bus_id, uint8_t dds_id, uint8_t fud,
+                       uint8_t addr, uint32_t data)
     : len(2), op(OpCode::DDS_SET32),
     bus_id(bus_id), dds_id(dds_id), fud(fud), addr(addr), data(data)
     {
@@ -235,8 +237,8 @@ struct NACS_PACKED DAC {
     uint8_t clk_pol: 1;
     uint32_t data: 18;
     uint16_t _: 13;
-    DAC() = default;
-    DAC(uint8_t id, uint16_t cycle, uint8_t clk_pha, uint8_t clk_pol, uint32_t data)
+    constexpr DAC() = default;
+    constexpr DAC(uint8_t id, uint16_t cycle, uint8_t clk_pha, uint8_t clk_pol, uint32_t data)
     : len(2), op(OpCode::DAC),
     id(id), cycle(cycle), clk_pha(clk_pha), clk_pol(clk_pol), data(data)
     {
