@@ -166,9 +166,9 @@ Value *Context::emit_convert(IRBuilder<> &builder, IR::Type ty, Value *val) cons
 
 Value *Context::emit_add(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const
 {
-    if ((isa<Constant>(val1) && cast<Constant>(val1)->isZeroValue()))
+    if ((isa<Constant>(val1) && cast<Constant>(val1)->isNullValue()))
         return emit_convert(builder, ty, val2);
-    if ((isa<Constant>(val2) && cast<Constant>(val2)->isZeroValue()))
+    if ((isa<Constant>(val2) && cast<Constant>(val2)->isNullValue()))
         return emit_convert(builder, ty, val1);
     val1 = emit_convert(builder, ty, val1);
     val2 = emit_convert(builder, ty, val2);
@@ -184,7 +184,7 @@ Value *Context::emit_add(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *
 
 Value *Context::emit_sub(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const
 {
-    if ((isa<Constant>(val2) && cast<Constant>(val2)->isZeroValue()))
+    if ((isa<Constant>(val2) && cast<Constant>(val2)->isNullValue()))
         return emit_convert(builder, ty, val1);
     val1 = emit_convert(builder, ty, val1);
     val2 = emit_convert(builder, ty, val2);
@@ -200,8 +200,8 @@ Value *Context::emit_sub(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *
 
 Value *Context::emit_mul(IRBuilder<> &builder, IR::Type ty, Value *val1, Value *val2) const
 {
-    if ((isa<Constant>(val1) && cast<Constant>(val1)->isZeroValue()) ||
-        (isa<Constant>(val2) && cast<Constant>(val2)->isZeroValue()))
+    if ((isa<Constant>(val1) && cast<Constant>(val1)->isNullValue()) ||
+        (isa<Constant>(val2) && cast<Constant>(val2)->isNullValue()))
         return Constant::getNullValue(llvm_ty(ty));
     val1 = emit_convert(builder, ty, val1);
     val2 = emit_convert(builder, ty, val2);
