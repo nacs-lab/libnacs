@@ -38,10 +38,6 @@ using namespace llvm;
 
 namespace {
 
-#if LLVM_VERSION_MAJOR < 11
-#  define FixedVectorType VectorType
-#endif
-
 struct LowerVector {
     bool run(Module &M);
     void replace_frem(BinaryOperator *binop);
@@ -99,11 +95,7 @@ void LowerVector::replace_frem(BinaryOperator *binop)
     // The vector ABI fix looks at the caller of vector functions on windows
     // in order to set the calling convension on the call instruction.
     // We should do it after all the instructions have be fixed.
-#if LLVM_VERSION_MAJOR >= 11
     m_tofix.insert(cast<Function>(f.getCallee()));
-#else
-    m_tofix.insert(cast<Function>(f));
-#endif
     IRBuilder<> builder(binop);
     auto call = builder.CreateCall(f, {binop->getOperand(0), binop->getOperand(1)});
     binop->replaceAllUsesWith(call);

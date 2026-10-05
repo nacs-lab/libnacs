@@ -1594,9 +1594,7 @@ void Compiler::generate_fptrs()
         fmf.setNoNaNs();
         fmf.setNoSignedZeros();
         fmf.setAllowReciprocal();
-#if LLVM_VERSION_MAJOR >= 7
         fmf.setAllowContract();
-#endif
         builder.setFastMathFlags(fmf);
 
         llvm::Value *sumv = nullptr;
@@ -1626,13 +1624,7 @@ void Compiler::generate_fptrs()
                 val = nullptr;
             }
             assert(val);
-#if LLVM_VERSION_MAJOR >= 11
             load->setAlignment(llvm::Align(alignof(double)));
-#elif LLVM_VERSION_MAJOR >= 10
-            load->setAlignment(llvm::MaybeAlign(alignof(double)));
-#else
-            load->setAlignment(alignof(double));
-#endif
             load->setMetadata(llvm::LLVMContext::MD_tbaa, cgctx.tbaa_const);
             if (!sumv) {
                 sumv = val;
@@ -1648,13 +1640,7 @@ void Compiler::generate_fptrs()
             ptr = builder.CreateBitCast(ptr, LLVM::get_pointer_type(T_i64));
             load = builder.CreateLoad(T_i64, ptr);
             val = load;
-#if LLVM_VERSION_MAJOR >= 11
             load->setAlignment(llvm::Align(alignof(double)));
-#elif LLVM_VERSION_MAJOR >= 10
-            load->setAlignment(llvm::MaybeAlign(alignof(double)));
-#else
-            load->setAlignment(alignof(double));
-#endif
             load->setMetadata(llvm::LLVMContext::MD_tbaa, cgctx.tbaa_const);
             if (!sumv) {
                 sumv = val;
@@ -1665,13 +1651,7 @@ void Compiler::generate_fptrs()
         auto resptr = builder.CreateConstGEP1_32(cgctx.T_i8, clarg, slot * 8);
         resptr = builder.CreateBitCast(resptr, LLVM::get_pointer_type(T_i64));
         auto store = builder.CreateStore(sumv, resptr);
-#if LLVM_VERSION_MAJOR >= 11
         store->setAlignment(llvm::Align(alignof(double)));
-#elif LLVM_VERSION_MAJOR >= 10
-        store->setAlignment(llvm::MaybeAlign(alignof(double)));
-#else
-        store->setAlignment(alignof(double));
-#endif
         builder.CreateRetVoid();
         val_funcs.push_back(ValFunc{fptr_slot, f});
     }

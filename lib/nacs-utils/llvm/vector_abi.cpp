@@ -56,10 +56,6 @@ using namespace llvm;
 
 namespace {
 
-#if LLVM_VERSION_MAJOR < 11
-#  define FixedVectorType VectorType
-#endif
-
 struct VectorABI {
     static bool run_on_function(Function &F);
     static bool run_on_module(Module &M);
@@ -108,15 +104,9 @@ Value *VectorABI::set_nele_vector(IRBuilder<> &builder, Value *v, unsigned nele)
 {
     auto ty = cast<FixedVectorType>(v->getType());
     auto old_nele = ty->getNumElements();
-#if LLVM_VERSION_MAJOR >= 11
     SmallVector<int, 16> mask(nele);
     for (unsigned i = 0; i < nele; i++)
         mask[i] = int(i < old_nele ? i : old_nele);
-#else
-    SmallVector<uint32_t, 16> mask(nele);
-    for (unsigned i = 0; i < nele; i++)
-        mask[i] = i < old_nele ? i : old_nele;
-#endif
     return builder.CreateShuffleVector(v, UndefValue::get(ty), mask);
 }
 

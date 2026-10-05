@@ -1367,9 +1367,7 @@ bool BasicSeq::optimize_order(uint32_t chn)
                 fmf.setNoNaNs();
                 fmf.setNoSignedZeros();
                 fmf.setAllowReciprocal();
-#if LLVM_VERSION_MAJOR >= 7
                 fmf.setAllowContract();
-#endif
                 builder.setFastMathFlags(fmf);
 
                 auto intrin = LLVM::get_intrinsic(mod, llvm::Intrinsic::minnum,

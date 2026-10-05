@@ -703,11 +703,7 @@ NACS_INTERNAL bool Env::optimize_global()
         // Inline function calls
         llvm::InlineFunctionInfo IFI;
         for (auto call: calls) {
-#if LLVM_VERSION_MAJOR >= 11
             llvm::InlineFunction(*call, IFI);
-#else
-            llvm::InlineFunction(call, IFI);
-#endif
         }
         root->_assign_call(f, newargs, root->nfreeargs());
     }
@@ -902,11 +898,7 @@ void Env::finalize_vars()
         auto call = builder.CreateCall(f.llvm, call_args);
         builder.CreateRet(call);
         llvm::InlineFunctionInfo IFI;
-#if LLVM_VERSION_MAJOR >= 11
         llvm::InlineFunction(*call, IFI);
-#else
-        llvm::InlineFunction(call, IFI);
-#endif
         var->_assign_call(newf, args, var->nfreeargs());
     }
 

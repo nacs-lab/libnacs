@@ -35,24 +35,14 @@
 
 namespace NaCs::LLVM::Codegen {
 
-#if LLVM_VERSION_MAJOR >= 11
 FunctionCallee
-#else
-Constant*
-#endif
 ensurePureExtern(Module *M, FunctionType *ft, StringRef name, bool canread)
 {
     if (auto f = M->getNamedValue(name)) {
         auto pft = get_pointer_type(ft);
-#if LLVM_VERSION_MAJOR >= 11
         if (f->getType() != pft)
             return {ft, ConstantExpr::getBitCast(f, pft)};
         return {ft, f};
-#else
-        if (f->getType() != pft)
-            return ConstantExpr::getBitCast(f, pft);
-        return f;
-#endif
     }
     Function *f = Function::Create(ft, GlobalValue::ExternalLinkage, name, M);
     f->addFnAttr(Attribute::Speculatable);
@@ -99,11 +89,7 @@ Context::~Context()
 {
 }
 
-#if LLVM_VERSION_MAJOR >= 11
 FunctionCallee
-#else
-Constant*
-#endif
 Context::ensurePureFunc(StringRef name, FunctionType *ft, bool canread) const
 {
     return ensurePureExtern(m_mod, ft, name, canread);
@@ -387,11 +373,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
                                              get_pointer_type(argt));
             max_offset = max(max_offset, offset + 1);
             auto load = builder.CreateLoad(argt, ptr);
-#if LLVM_VERSION_MAJOR >= 11
             load->setAlignment(Align(alignof(double)));
-#else
-            load->setAlignment(MaybeAlign(alignof(double)));
-#endif
             load->setMetadata(LLVMContext::MD_tbaa, tbaa_const);
             call_args[i] = load;
         }
@@ -403,11 +385,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
             auto load = builder.CreateLoad(argt, arg);
             call_args[i] = load;
             if (auto align = arg_spec->second.idx) {
-#if LLVM_VERSION_MAJOR >= 11
                 load->setAlignment(Align(align));
-#else
-                load->setAlignment(MaybeAlign(align));
-#endif
             }
         }
         else {
@@ -426,11 +404,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
     if (ret_ref) {
         auto store = builder.CreateStore(res, &*wrapf->arg_begin());
         if (ret_ref_align) {
-#if LLVM_VERSION_MAJOR >= 11
             store->setAlignment(Align(ret_ref_align));
-#else
-            store->setAlignment(MaybeAlign(ret_ref_align));
-#endif
         }
         builder.CreateRetVoid();
     }
@@ -440,11 +414,7 @@ Function *Context::emit_wrapper(Function *func, StringRef name, const Wrapper &s
                                              T_i8, closure_ptr, offset * 8),
                                          get_pointer_type(res->getType()));
         auto store = builder.CreateStore(res, ptr);
-#if LLVM_VERSION_MAJOR >= 11
         store->setAlignment(Align(alignof(double)));
-#else
-        store->setAlignment(MaybeAlign(alignof(double)));
-#endif
         builder.CreateRetVoid();
     }
     else {
@@ -736,11 +706,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
                 auto sym = IR::getBuiltinSymbol(id);
                 if (!sym)
                     break;
-#if LLVM_VERSION_MAJOR >= 11
                 FunctionCallee callee;
-#else
-                Constant *callee = nullptr;
-#endif
                 switch (IR::getBuiltinType(id)) {
                 case IR::BuiltinType::F64_F64: {
                     assert(nargs == 1);

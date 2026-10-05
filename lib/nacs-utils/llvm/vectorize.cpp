@@ -36,10 +36,6 @@ namespace NaCs::LLVM {
 
 namespace {
 
-#if LLVM_VERSION_MAJOR < 11
-#  define FixedVectorType VectorType
-#endif
-
 template<typename T>
 static Function *createFunction(const Function &F, StringRef name, unsigned vec_size,
                                 const T &vec_args, bool _export)

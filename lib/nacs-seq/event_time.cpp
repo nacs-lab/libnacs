@@ -218,9 +218,7 @@ NACS_EXPORT() Var *EventTime::to_var(Env &env) const
         fmf.setNoNaNs();
         fmf.setNoSignedZeros();
         fmf.setAllowReciprocal();
-#if LLVM_VERSION_MAJOR >= 7
         fmf.setAllowContract();
-#endif
         builder.setFastMathFlags(fmf);
         llvm::Value *v = nullptr;
         auto T_i64 = llvm::Type::getInt64Ty(ctx);

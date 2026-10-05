@@ -508,11 +508,7 @@ NACS_INTERNAL bool Var::reduce_args()
     auto res = builder.CreateCall(oldf, call_args);
     builder.CreateRet(res);
     llvm::InlineFunctionInfo IFI;
-#if LLVM_VERSION_MAJOR >= 11
     llvm::InlineFunction(*res, IFI);
-#else
-    llvm::InlineFunction(res, IFI);
-#endif
 
     optimize_llvmf(f);
 
