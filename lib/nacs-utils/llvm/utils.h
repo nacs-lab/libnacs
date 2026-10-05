@@ -121,6 +121,15 @@ static inline auto get_intrinsic(llvm::Module *mod, llvm::Intrinsic::ID id,
 #endif
 }
 
+static inline auto get_first_non_phi_it(auto bb)
+{
+#if LLVM_VERSION_MAJOR >= 18
+    return bb->getFirstNonPHIIt();
+#else
+    return bb->getFirstNonPHI()->getIterator();
+#endif
+}
+
 NACS_EXPORT(utils) IR::Type get_ir_type(llvm::Type*, bool apitype=true);
 NACS_EXPORT(utils) llvm::Value *convert_scalar(llvm::IRBuilder<> &builder,
                                                llvm::Type *typ, llvm::Value *val);

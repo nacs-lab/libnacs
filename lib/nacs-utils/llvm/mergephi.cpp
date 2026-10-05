@@ -112,11 +112,11 @@ struct MergePhi {
     bool runOnBasicBlock(BasicBlock &bb) const;
 
     bool checkPhiBool(PHINode *phi) const;
-    bool processPhiBool(PHINode *phi, Instruction *first_non_phi) const;
+    bool processPhiBool(PHINode *phi, BasicBlock::iterator first_non_phi) const;
     bool mergePhiSelect(BasicBlock &bb) const;
 
     bool checkPhiCmp(PHINode *phi) const;
-    bool processPhiCmp(PHINode *phi, Instruction *first_non_phi) const;
+    bool processPhiCmp(PHINode *phi, BasicBlock::iterator first_non_phi) const;
     bool mergePhiCmp(BasicBlock &bb) const;
 
     bool mergePhiPhi(BasicBlock &bb) const;
@@ -142,7 +142,7 @@ bool MergePhi::checkPhiBool(PHINode *phi) const
     return true;
 }
 
-bool MergePhi::processPhiBool(PHINode *phi, Instruction *first_non_phi) const
+bool MergePhi::processPhiBool(PHINode *phi, BasicBlock::iterator first_non_phi) const
 {
     bool changed = false;
     auto check_select_op = [&] (Value *op) {
@@ -194,23 +194,23 @@ bool MergePhi::processPhiBool(PHINode *phi, Instruction *first_non_phi) const
 bool MergePhi::mergePhiSelect(BasicBlock &bb) const
 {
     SmallVector<PHINode*,16> phis;
-    Instruction *first_non_phi = nullptr;
-    for (auto &I: bb) {
-        if (auto phi = dyn_cast<PHINode>(&I)) {
+    BasicBlock::iterator first_non_phi;
+    for (auto it = bb.begin(); ; ++it) {
+        assert(it != bb.end());
+        if (auto phi = dyn_cast<PHINode>(&*it)) {
             if (checkPhiBool(phi))
                 phis.push_back(phi);
             continue;
         }
-        first_non_phi = &I;
+        first_non_phi = it;
         break;
     }
     if (phis.empty())
         return false;
-    assert(first_non_phi);
     bool changed = false;
     for (auto phi: phis) {
         if (processPhiBool(phi, first_non_phi)) {
-            first_non_phi = bb.getFirstNonPHI();
+            first_non_phi = get_first_non_phi_it(&bb);
             changed = true;
         }
     }
@@ -227,12 +227,12 @@ bool MergePhi::checkPhiCmp(PHINode *phi) const
     return true;
 }
 
-bool MergePhi::processPhiCmp(PHINode *phi, Instruction *first_non_phi) const
+bool MergePhi::processPhiCmp(PHINode *phi, BasicBlock::iterator first_non_phi) const
 {
     bool changed = false;
     SmallVector<std::pair<CmpInst*,PHINode*>,16> replace;
     auto &entry_bb = phi->getParent()->getParent()->getEntryBlock();
-    IRBuilder entry_builder(entry_bb.getFirstNonPHI());
+    IRBuilder entry_builder(&entry_bb, get_first_non_phi_it(&entry_bb));
     for (auto &use: phi->uses()) {
         auto cmp = dyn_cast<CmpInst>(use.getUser());
         if (!cmp)
@@ -271,23 +271,23 @@ bool MergePhi::processPhiCmp(PHINode *phi, Instruction *first_non_phi) const
 bool MergePhi::mergePhiCmp(BasicBlock &bb) const
 {
     SmallVector<PHINode*,16> phis;
-    Instruction *first_non_phi = nullptr;
-    for (auto &I: bb) {
-        if (auto phi = dyn_cast<PHINode>(&I)) {
+    BasicBlock::iterator first_non_phi;
+    for (auto it = bb.begin(); ; ++it) {
+        assert(it != bb.end());
+        if (auto phi = dyn_cast<PHINode>(&*it)) {
             if (checkPhiCmp(phi))
                 phis.push_back(phi);
             continue;
         }
-        first_non_phi = &I;
+        first_non_phi = it;
         break;
     }
     if (phis.empty())
         return false;
-    assert(first_non_phi);
     bool changed = false;
     for (auto phi: phis) {
         if (processPhiCmp(phi, first_non_phi)) {
-            first_non_phi = bb.getFirstNonPHI();
+            first_non_phi = get_first_non_phi_it(&bb);
             changed = true;
         }
     }

@@ -333,7 +333,7 @@ private:
     bool scan_bb(const BasicBlock &bb)
     {
         // FIXME: Ignoring phi node for now
-        for (auto it = bb.getFirstNonPHI()->getIterator(); ; ++it) {
+        for (auto it = get_first_non_phi_it(&bb); ; ++it) {
             auto *inst = &*it;
             // **This is the loop termination condition.**
             if (inst->isTerminator()) {
