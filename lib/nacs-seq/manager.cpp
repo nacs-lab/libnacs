@@ -174,6 +174,8 @@ NACS_EXPORT() void Manager::ExpSeq::init_run()
 {
     mgr().add_debug("Initialize sequence run\n");
     host_seq.init_run();
+    coil_report = CoilReport();
+    m_coil_pending.clear();
     for (auto &[name, dev]: m_devices) {
         dev->init_run(host_seq);
     }
@@ -192,6 +194,9 @@ NACS_EXPORT() void Manager::ExpSeq::pre_run()
                         Error::Type::BasicSeq, host_bseq.id, "Sequence exceeds length limit.");
         }
     }
+    // Feshbach coil limits: refuse before any device sees this bseq.
+    if (m_mgr.m_coil_limits.enabled)
+        coil_check();
     // Assuming there's no complex dependencies between different `prepare_run`s
     // or that the backend can handle those themselves.
     for (auto &[name, dev]: m_devices)
@@ -209,6 +214,8 @@ NACS_EXPORT() void Manager::ExpSeq::start()
 {
     mgr().add_debug_printf("Starting basic sequence [index %d]\n", host_seq.cur_seq_idx());
     m_cancelled.store(false, std::memory_order_relaxed);
+    if (m_mgr.m_coil_limits.enabled)
+        coil_commit_start();
     for (auto &name: m_mgr.m_device_order) {
         // Start in the correct order
         if (auto dev = get_device(name, false)) {
@@ -261,6 +268,8 @@ NACS_EXPORT() uint32_t Manager::ExpSeq::post_run()
     }
     if (id == 0) {
         mgr().add_debug_printf("Sequence ended\n");
+        if (m_mgr.m_coil_limits.enabled)
+            coil_predict();
     }
     return id;
 }
@@ -529,6 +538,10 @@ NACS_EXPORT() Manager::ExpSeq *Manager::create_sequence(const uint8_t *data, siz
                 builder.noramp_chns.push_back(chn_id);
             }
             expseq->m_chn_map.emplace(name, chn_id);
+            if (name == m_coil_limits.coil_chn)
+                expseq->coil_chn = chn_id;
+            if (name == m_coil_limits.ttl_chn)
+                expseq->ttl_chn = chn_id;
         }
         add_debug("Building sequence\n");
         builder.buildseq();
@@ -685,6 +698,43 @@ void Manager::update_config(const YAML::Node &config)
     }
     else {
         m_max_seq_length = 0;
+    }
+    m_coil_limits = CoilLimits();
+    if (auto coil_node = config["feshbach_coil"]) {
+        if (!coil_node.IsMap())
+            throw std::runtime_error("Invalid value for feshbach_coil.");
+        auto &L = m_coil_limits;
+        L.enabled = true;
+        if (auto n = coil_node["enabled"])
+            L.enabled = n.as<bool>();
+        auto get_str = [&] (const char *key, std::string &val) {
+            if (auto n = coil_node[key]) {
+                val = n.as<std::string>();
+            }
+        };
+        auto get_num = [&] (const char *key, double &val) {
+            if (auto n = coil_node[key]) {
+                val = n.as<double>();
+            }
+        };
+        get_str("channel", L.coil_chn);
+        get_str("interlock_ttl", L.ttl_chn);
+        get_num("b_per_v", L.b_per_v);
+        get_num("b_offset", L.b_offset);
+        get_num("thr_G", L.thr_G);
+        get_num("max_on_ms", L.max_on_ms);
+        get_num("warn_on_ms", L.warn_on_ms);
+        get_num("max_B_G", L.max_B_G);
+        get_num("warn_B_G", L.warn_B_G);
+        get_num("max_duty", L.max_duty);
+        get_num("warn_duty", L.warn_duty);
+        get_num("duty_window_s", L.duty_window_s);
+        get_num("host_overhead_s", L.host_overhead_s);
+        get_num("ttl_high", L.ttl_high);
+        get_num("park_v", L.park_v);
+        get_num("park_margin_ms", L.park_margin_ms);
+        if (auto n = coil_node["pts_per_ramp"])
+            L.pts_per_ramp = std::max<uint64_t>(2, n.as<uint64_t>());
     }
     m_device_order.clear();
     m_use_dummy_device = false;
@@ -997,6 +1047,7 @@ NACS_EXPORT() bool nacs_seq_manager_dump_enabled(Manager *mgr)
 
 NACS_EXPORT() void nacs_seq_manager_new_run(Manager *mgr)
 {
+    mgr->coil_new_run();
     Manager::new_run().emit(mgr);
 }
 

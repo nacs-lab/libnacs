@@ -46,6 +46,7 @@ set(nacs_seq_llvm_SRCS
   device.cpp
   env.cpp
   event_time.cpp
+  coil_check.cpp
   manager.cpp
   nidaq/backend.cpp
   pulse.cpp

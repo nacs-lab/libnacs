@@ -33,6 +33,7 @@
 #include <any>
 #include <atomic>
 #include <condition_variable>
+#include <deque>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -157,10 +158,48 @@ public:
         uint32_t refresh_device_restart(const char *dname);
         ChnOutput* get_nominal_output(uint64_t pts_per_ramp, size_t *out_sz);
 
+        // Feshbach coil check (coil_check.cpp). Filled by pre_run, reset by init_run.
+        struct CoilInterval {
+            double t0_ms;
+            double t1_ms;
+        };
+        struct CoilBseqReport {
+            uint32_t bseq_id = 0;
+            double seq_ms = 0;
+            double on_ms = 0;
+            double peak_G = 0;
+            double ilk_ms = 0;
+            std::vector<CoilInterval> windows; // energized (field above thr_G)
+            std::vector<CoilInterval> gaps; // energized while TTL26 low (not exempt)
+            std::vector<CoilInterval> exempt; // fbCondSeq park-shaped windows
+            double check_us = 0; // time spent in the check for this bseq
+        };
+        struct CoilReport {
+            double shot_on_ms = 0;
+            double peak_G = 0;
+            double duty = 0; // worst window fraction at the last check
+            // Steady-state duty if this shot repeats at the fastest possible period
+            // (compiled length + host_overhead_s per bseq); set at the end of the shot.
+            double pred_duty = 0;
+            double pred_period_s = 0;
+            std::vector<CoilBseqReport> bseqs;
+            std::vector<std::string> fails;
+            std::vector<std::string> warns;
+        };
+        CoilReport coil_report;
+        uint32_t coil_chn = 0; // 1-based channel id, 0 = not in this sequence
+        uint32_t ttl_chn = 0;
+
     private:
         template<typename Str>
         Device *_get_device(Str &&name, bool create);
         CGContext *_cgctx() const;
+        void coil_check();
+        void coil_commit_start();
+        void coil_predict();
+        // Energized windows of the bseq last checked [ms from its start], committed to
+        // the manager's duty history when that bseq starts.
+        std::vector<CoilInterval> m_coil_pending;
 
         Manager &m_mgr;
         LLVM::Codegen::CachedContext *m_cgctx;
@@ -198,6 +237,50 @@ public:
     LLVM::Exe::Engine &exe_engine()
     {
         return m_engine;
+    }
+
+    // Feshbach coil limits, from the `feshbach_coil` config block (coil_check.cpp).
+    // Defaults: operator decision 2026-10-19 (docs/proposals/feshbach-coil-limit.md);
+    // keep in sync with feshbachCoilLimits.m and web/verify/coil_guard.py.
+    struct CoilLimits {
+        bool enabled = false;
+        std::string coil_chn = "NiDAQ/Dev1/7"; // FeshbachCurr
+        std::string ttl_chn = "FPGA1/TTL26"; // interlockTTL
+        double b_per_v = -115.2; // B [G] = b_per_v * V + b_offset
+        double b_offset = -0.5545;
+        double thr_G = 5;
+        double max_on_ms = 300;
+        double warn_on_ms = 250;
+        double max_B_G = 875;
+        double warn_B_G = 870;
+        double max_duty = 0.17;
+        double warn_duty = 0.15;
+        double duty_window_s = 60;
+        double host_overhead_s = 0.10; // smallest per-bseq host time measured (shot-rate.md)
+        double ttl_high = 0.5;
+        double park_v = 0.5;
+        double park_margin_ms = 10;
+        uint64_t pts_per_ramp = 500;
+    };
+    const CoilLimits &coil_limits() const
+    {
+        return m_coil_limits;
+    }
+    // Clock for the duty history [s]. A value >= 0 replaces the steady clock (tests).
+    double coil_clock_override = -1;
+    double coil_clock() const;
+    void coil_clear_history()
+    {
+        m_coil_history.clear();
+    }
+    // Start of a scan (SeqManager.new_run): drop a pending duty refusal.
+    void coil_new_run()
+    {
+        m_coil_predicted_fail.clear();
+    }
+    bool uses_dummy_device() const
+    {
+        return m_use_dummy_device;
     }
 
     // Log device restart API
@@ -329,6 +412,11 @@ private:
     dataset_t m_dataset;
     int64_t m_tick_per_sec = 0;
     uint64_t m_max_seq_length = 0;
+    CoilLimits m_coil_limits;
+    // Energized intervals of started bseqs [s, coil_clock() time], oldest first.
+    std::deque<std::pair<double,double>> m_coil_history;
+    // A shot predicted a steady-state duty above the limit: the next pre_run refuses.
+    std::string m_coil_predicted_fail;
     bool m_use_dummy_device = false;
     std::map<std::string,DeviceInfo> m_device_info;
     std::vector<std::string> m_device_order;
