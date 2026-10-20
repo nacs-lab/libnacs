@@ -40,6 +40,7 @@ set(nacs_seq_llvm_HDRS
   seq.h)
 set(nacs_seq_llvm_SRCS
   awg/backend.cpp
+  awg_check.cpp
   basic_seq.cpp
   builder.cpp
   compiler.cpp

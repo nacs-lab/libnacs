@@ -1,0 +1,28 @@
+tick_per_sec: 1000000000000 # 1ps
+max_length_sec: 3
+
+# OFFLINE equivalence test only. Same as matlab_new/config.yml except:
+#   FPGA1 url is a dead local address (bytecode is computed in pre_run; start() is never called)
+#   AWG1 / AWG2 use the built-in dummy backend (the awg backend talks to the server in init_run)
+devices:
+  NiDAQ:
+    backend: nidaq
+    config:
+      step_size: 2000000 # 2us
+      clock_device: FPGA1
+  FPGA1:
+    backend: zynq
+    config:
+      start_ttl_chn: 0 # channel for start trigger
+      seq_delay_ms: 0 # delay in ms, match with AWG delay
+      url: tcp://127.0.0.1:1
+  AWG1:
+    backend: dummy
+    config:
+      trig_device: FPGA1
+  AWG2:
+    backend: dummy
+    config:
+      trig_device: FPGA1
+feshbach_coil:
+  enabled: true

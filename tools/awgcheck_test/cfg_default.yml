@@ -1,0 +1,9 @@
+tick_per_sec: 1000000000000
+use_dummy_device: true
+awg_power:
+  enabled: true
+  devices: [AWG1]
+  max_sum_amp2: 0.125
+  freq_windows:
+    AWG1/OUT0: [100e6, 185e6]
+    AWG1/OUT1: [102e6, 171e6]

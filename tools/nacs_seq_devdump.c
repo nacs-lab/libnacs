@@ -170,6 +170,44 @@ int main(int argc, char **argv)
             break;
     }
     printf("ok: %d basic sequences\n", k);
+    // Optional argv[6] = R: R more shots (same globals, no output written), timing each
+    // pre_run per bseq index (QueryPerformanceCounter). Prints "pre_run_us <idx> <median>
+    // <max>" per index. Still no start(), so nothing is sent anywhere.
+    int reps = argc > 6 ? atoi(argv[6]) : 0;
+    if (reps > 0) {
+        LARGE_INTEGER freq, c0, c1;
+        QueryPerformanceFrequency(&freq);
+        double *us = (double*)calloc((size_t)reps * 64, sizeof(double));
+        int nb = 0;
+        for (int r = 0; r < reps; r++) {
+            init_run(seq);
+            for (int b = 0; b < 64; b++) {
+                QueryPerformanceCounter(&c0);
+                pre_run(seq);
+                QueryPerformanceCounter(&c1);
+                us[b * reps + r] = (double)(c1.QuadPart - c0.QuadPart) * 1e6 /
+                    (double)freq.QuadPart;
+                if (b + 1 > nb)
+                    nb = b + 1;
+                if (post_run(seq) == 0)
+                    break;
+            }
+            take_msgs(mgr, &sz);
+        }
+        for (int b = 0; b < nb; b++) {
+            double *v = us + b * reps;
+            for (int i = 1; i < reps; i++) {
+                double x = v[i];
+                int j = i - 1;
+                while (j >= 0 && v[j] > x) {
+                    v[j + 1] = v[j];
+                    j--;
+                }
+                v[j + 1] = x;
+            }
+            printf("pre_run_us %d %.1f %.1f\n", b, v[reps / 2], v[reps - 1]);
+        }
+    }
     fflush(stdout);
     // Skip DLL teardown (ZeroMQ's exit-time cleanup asserts once Winsock is gone).
     TerminateProcess(GetCurrentProcess(), 0);

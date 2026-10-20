@@ -176,6 +176,7 @@ NACS_EXPORT() void Manager::ExpSeq::init_run()
     host_seq.init_run();
     coil_report = CoilReport();
     m_coil_pending.clear();
+    awg_report = AwgReport();
     for (auto &[name, dev]: m_devices) {
         dev->init_run(host_seq);
     }
@@ -197,6 +198,9 @@ NACS_EXPORT() void Manager::ExpSeq::pre_run()
     // Feshbach coil limits: refuse before any device sees this bseq.
     if (m_mgr.m_coil_limits.enabled)
         coil_check();
+    // AWG RF power: same place, same reason.
+    if (m_mgr.m_awg_limits.enabled && !awg_outs.empty())
+        awg_check();
     // Assuming there's no complex dependencies between different `prepare_run`s
     // or that the backend can handle those themselves.
     for (auto &[name, dev]: m_devices)
@@ -542,6 +546,7 @@ NACS_EXPORT() Manager::ExpSeq *Manager::create_sequence(const uint8_t *data, siz
                 expseq->coil_chn = chn_id;
             if (name == m_coil_limits.ttl_chn)
                 expseq->ttl_chn = chn_id;
+            expseq->awg_add_channel(chn_id, name.substr(0, sep), chn_name);
         }
         add_debug("Building sequence\n");
         builder.buildseq();
@@ -735,6 +740,43 @@ void Manager::update_config(const YAML::Node &config)
         get_num("park_margin_ms", L.park_margin_ms);
         if (auto n = coil_node["pts_per_ramp"])
             L.pts_per_ramp = std::max<uint64_t>(2, n.as<uint64_t>());
+    }
+    m_awg_limits = AwgLimits();
+    if (auto awg_node = config["awg_power"]) {
+        if (!awg_node.IsMap())
+            throw std::runtime_error("Invalid value for awg_power.");
+        auto &L = m_awg_limits;
+        L.enabled = true;
+        if (auto n = awg_node["enabled"])
+            L.enabled = n.as<bool>();
+        if (auto n = awg_node["devices"]) {
+            if (!n.IsSequence())
+                throw std::runtime_error("awg_power.devices must be a list.");
+            L.devices.clear();
+            for (const auto &d: n) {
+                L.devices.push_back(d.as<std::string>());
+            }
+        }
+        if (auto n = awg_node["max_sum_amp2"])
+            L.max_sum_amp2 = n.as<double>();
+        L.warn_sum_amp2 = L.max_sum_amp2;
+        if (auto n = awg_node["warn_sum_amp2"])
+            L.warn_sum_amp2 = n.as<double>();
+        if (auto n = awg_node["amp_on"])
+            L.amp_on = n.as<double>();
+        if (auto n = awg_node["pts_per_ramp"])
+            L.pts_per_ramp = std::max<uint64_t>(2, n.as<uint64_t>());
+        if (auto n = awg_node["freq_windows"]) {
+            if (!n.IsMap())
+                throw std::runtime_error("awg_power.freq_windows must be a map.");
+            for (const auto &it: n) {
+                auto w = it.second;
+                if (!w.IsSequence() || w.size() != 2)
+                    throw std::runtime_error("awg_power.freq_windows: expected [min, max].");
+                L.freq_windows[it.first.as<std::string>()] = {w[0].as<double>(),
+                                                               w[1].as<double>()};
+            }
+        }
     }
     m_device_order.clear();
     m_use_dummy_device = false;

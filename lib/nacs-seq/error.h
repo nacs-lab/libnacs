@@ -54,6 +54,7 @@ struct NACS_EXPORT_ Error : std::runtime_error {
         MeasureOrder,
         LengthLimit,
         CoilLimit, // Feshbach coil limit (coil_check.cpp)
+        AwgLimit, // AWG RF power limit (awg_check.cpp)
     };
 
     Error(Type type, uint16_t code, Type type1, uint64_t id1, const char *what);

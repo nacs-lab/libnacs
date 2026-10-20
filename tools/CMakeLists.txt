@@ -43,6 +43,15 @@ if(ENABLE_LLVM)
   set_property(TARGET nacs-seq-coil-check-tool APPEND_STRING
     PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
 
+  set(nacs_seq_awg_check_tool_SOURCES nacs_seq_awg_check.cpp)
+  add_executable(nacs-seq-awg-check-tool ${nacs_seq_awg_check_tool_SOURCES})
+  target_link_libraries(nacs-seq-awg-check-tool nacs-seq)
+  set_target_properties(nacs-seq-awg-check-tool PROPERTIES OUTPUT_NAME nacs-seq-awg-check)
+  set_property(TARGET nacs-seq-awg-check-tool APPEND
+    PROPERTY INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+  set_property(TARGET nacs-seq-awg-check-tool APPEND_STRING
+    PROPERTY COMPILE_FLAGS " ${LLVM_DEFINITIONS} -Wno-conversion")
+
   install(TARGETS nacs-seq-tool nacs-seq-pre-run-tool
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()

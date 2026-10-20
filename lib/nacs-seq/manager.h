@@ -190,6 +190,40 @@ public:
         uint32_t coil_chn = 0; // 1-based channel id, 0 = not in this sequence
         uint32_t ttl_chn = 0;
 
+        // AWG RF power check (awg_check.cpp). Filled by pre_run, reset by init_run.
+        // One AwgOut per physical output ("AWG1/OUT0"), one tone per CHN number.
+        struct AwgTone {
+            uint32_t chn_num = 0; // the N of CHNN
+            uint32_t amp_chn = 0; // 1-based channel id, 0 = not in this sequence
+            uint32_t freq_chn = 0;
+        };
+        struct AwgOut {
+            std::string name;
+            std::vector<AwgTone> tones;
+        };
+        std::vector<AwgOut> awg_outs; // found at compile time
+        struct AwgOutReport {
+            std::string name;
+            double bound = 0; // sum over tones of (peak |amp|)^2: never below the real sum
+            bool exact = false; // the bound was over the warn level, so the time sweep ran
+            double sum_amp2 = 0; // largest sum(amp^2) found by the time sweep (exact only)
+            double t_ms = 0; // where
+        };
+        struct AwgBseqReport {
+            uint32_t bseq_id = 0;
+            std::vector<AwgOutReport> outs;
+            double check_us = 0;
+        };
+        struct AwgReport {
+            std::vector<AwgBseqReport> bseqs;
+            std::vector<std::string> fails;
+            std::vector<std::string> warns;
+        };
+        AwgReport awg_report;
+        // Compile time: register `dev/chn` if it is an AMP or FREQ tone of a checked device.
+        void awg_add_channel(uint32_t chn_id, const std::string &dev,
+                             const std::string &chn);
+
     private:
         template<typename Str>
         Device *_get_device(Str &&name, bool create);
@@ -197,6 +231,22 @@ public:
         void coil_check();
         void coil_commit_start();
         void coil_predict();
+        void awg_check();
+        // Channel id -> (index in awg_outs, index in its tones, AMP or FREQ); built at
+        // compile time so pre_run walks the bseq's pulses once.
+        struct AwgChnRef {
+            int32_t out = -1;
+            uint32_t tone = 0;
+            bool is_amp = false;
+        };
+        std::vector<AwgChnRef> m_awg_chn_ref; // indexed by 1-based channel id
+        // Per bseq index: indices into host_seq.seqs[i].pulses of the AWG tone pulses.
+        // The pulse list is fixed at compile time (only times/values change per shot),
+        // so this is filled the first time a bseq is checked.
+        std::vector<std::vector<uint32_t>> m_awg_pulse_idx;
+        std::vector<bool> m_awg_pulse_idx_done;
+        struct AwgScratch; // awg_check.cpp
+        std::shared_ptr<AwgScratch> m_awg_scratch;
         // Energized windows of the bseq last checked [ms from its start], committed to
         // the manager's duty history when that bseq starts.
         std::vector<CoilInterval> m_coil_pending;
@@ -277,6 +327,23 @@ public:
     void coil_new_run()
     {
         m_coil_predicted_fail.clear();
+    }
+    // AWG RF power limits, from the `awg_power` config block (awg_check.cpp).
+    // Same rules as awgInterlock.m (sum over the tones of one output of amp^2) and
+    // awgFreqInterlock.m (per-output frequency window while a tone is on).
+    struct AwgLimits {
+        bool enabled = false;
+        std::vector<std::string> devices{"AWG1"};
+        double max_sum_amp2 = 0.125;
+        double warn_sum_amp2 = 0.125; // = max: no warning unless set lower
+        // "AWG1/OUT0" -> [min, max] Hz, applied while the tone's amp is above amp_on.
+        std::map<std::string,std::pair<double,double>> freq_windows;
+        double amp_on = 0;
+        uint64_t pts_per_ramp = 32;
+    };
+    const AwgLimits &awg_limits() const
+    {
+        return m_awg_limits;
     }
     bool uses_dummy_device() const
     {
@@ -417,6 +484,7 @@ private:
     std::deque<std::pair<double,double>> m_coil_history;
     // A shot predicted a steady-state duty above the limit: the next pre_run refuses.
     std::string m_coil_predicted_fail;
+    AwgLimits m_awg_limits;
     bool m_use_dummy_device = false;
     std::map<std::string,DeviceInfo> m_device_info;
     std::vector<std::string> m_device_order;
