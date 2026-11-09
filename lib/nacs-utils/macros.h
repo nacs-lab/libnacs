@@ -220,8 +220,7 @@
         }                                               \
     } while (0)
 
-#if (defined(__x86_64__) || defined(__x86_64) || defined(__i386) || defined(__i386__)) && \
-    !defined(__clang__)
+#if defined(__has_attribute) && __has_attribute(gcc_struct)
 #  define NACS_PACKED __attribute__((__packed__, gcc_struct))
 #else
 #  define NACS_PACKED __attribute__((__packed__))
