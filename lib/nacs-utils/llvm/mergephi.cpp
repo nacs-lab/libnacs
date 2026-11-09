@@ -173,8 +173,13 @@ bool MergePhi::processPhiBool(PHINode *phi, BasicBlock::iterator first_non_phi) 
         }
         changed = true;
         auto nincoming = phi->getNumIncomingValues();
+#if LLVM_VERSION_MAJOR >= 19
         PHINode *newphi = PHINode::Create(select->getType(), nincoming,
                                           "", first_non_phi);
+#else
+        PHINode *newphi = PHINode::Create(select->getType(), nincoming,
+                                          "", &*first_non_phi);
+#endif
         for (unsigned i = 0; i < nincoming; i++) {
             auto val = cast<ConstantInt>(phi->getIncomingValue(i))->isZero() ?
                 select->getFalseValue() : select->getTrueValue();
@@ -246,7 +251,11 @@ bool MergePhi::processPhiCmp(PHINode *phi, BasicBlock::iterator first_non_phi) c
             continue;
         changed = true;
         auto nincoming = phi->getNumIncomingValues();
+#if LLVM_VERSION_MAJOR >= 19
         PHINode *newphi = PHINode::Create(T_bool, nincoming, "", first_non_phi);
+#else
+        PHINode *newphi = PHINode::Create(T_bool, nincoming, "", &*first_non_phi);
+#endif
         for (unsigned i = 0; i < nincoming; i++) {
             auto val = opno == 0 ?
                 entry_builder.CreateCmp(
