@@ -18,6 +18,8 @@
 
 #include <nacs-utils/utils.h>
 
+#include <vector>
+
 #ifndef __NACS_SEQ_ZYNQ_SEQ_SHARED_H__
 #define __NACS_SEQ_ZYNQ_SEQ_SHARED_H__
 

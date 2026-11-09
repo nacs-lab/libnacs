@@ -20,6 +20,7 @@
 #define __NACS_SEQ_ZYNQ_EXEHELPER_P_H__
 
 #include <ostream>
+#include <vector>
 
 #include "pulse_time.h"
 #include "utils.h"
