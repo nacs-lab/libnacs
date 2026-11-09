@@ -29,6 +29,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace NaCs::Seq::Zynq {
 
