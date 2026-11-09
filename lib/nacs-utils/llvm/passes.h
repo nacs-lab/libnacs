@@ -19,6 +19,8 @@
 #ifndef __NACS_UTILS_LLVM_PASSES_H__
 #define __NACS_UTILS_LLVM_PASSES_H__
 
+#include "../macros.h"
+
 #include <llvm/Config/llvm-config.h>
 
 #if LLVM_VERSION_MAJOR <= 16
@@ -59,15 +61,15 @@ Pass *createVectorABIPass();
 
 #if NACS_ENABLE_NEW_PASS
 struct ElimMachOPrefixPass : PassInfoMixin<ElimMachOPrefixPass> {
-    PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+    NACS_EXPORT(utils) PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
     static bool isRequired() { return true; }
 };
 struct GlobalRenamePass : PassInfoMixin<GlobalRenamePass> {
-    PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+    NACS_EXPORT(utils) PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
     static bool isRequired() { return true; }
 };
 struct LowerVectorPass : PassInfoMixin<LowerVectorPass> {
-    PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+    NACS_EXPORT(utils) PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
     static bool isRequired() { return true; }
 };
 struct NaCsInstSimplifyPass : PassInfoMixin<NaCsInstSimplifyPass> {
@@ -75,13 +77,13 @@ struct NaCsInstSimplifyPass : PassInfoMixin<NaCsInstSimplifyPass> {
         : m_cb(cb)
     {
     }
-    PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+    NACS_EXPORT(utils) PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
     static bool isRequired() { return false; }
 private:
     resolver_cb_t m_cb;
 };
 struct VectorABIPass : PassInfoMixin<VectorABIPass> {
-    PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+    NACS_EXPORT(utils) PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
     static bool isRequired() { return true; }
 };
 
@@ -91,9 +93,9 @@ struct AnalysisManagers {
     CGSCCAnalysisManager CGAM;
     ModuleAnalysisManager MAM;
 
-    AnalysisManagers(PassBuilder &PB);
-    AnalysisManagers(TargetMachine &TM, PassBuilder &PB);
-    ~AnalysisManagers();
+    NACS_EXPORT(utils) AnalysisManagers(PassBuilder &PB);
+    NACS_EXPORT(utils) AnalysisManagers(TargetMachine &TM, PassBuilder &PB);
+    NACS_EXPORT(utils) ~AnalysisManagers();
 };
 
 #endif

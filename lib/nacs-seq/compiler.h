@@ -65,11 +65,11 @@ class Compiler {
     }
 
 public:
-    Compiler(HostSeq &host_seq, Seq &seq, LLVM::Exe::Engine &engine,
-             std::function<uintptr_t(const std::string&)> resolver);
-    ~Compiler();
+    NACS_EXPORT(seq) Compiler(HostSeq &host_seq, Seq &seq, LLVM::Exe::Engine &engine,
+                              std::function<uintptr_t(const std::string&)> resolver);
+    NACS_EXPORT(seq) ~Compiler();
 
-    uint64_t compile();
+    NACS_EXPORT(seq) uint64_t compile();
     uint32_t var_slot(const Var *var) const
     {
         return m_var_slots[var->varid()];
@@ -92,8 +92,10 @@ public:
     {
         return m_bseqs;
     }
-    static llvm::Function *get_ramp_func(Var *val, llvm::Function *f, llvm::Type *ret_ty,
-                                         llvm::Type *time_ty, bool _export=false);
+    NACS_EXPORT(seq) static llvm::Function *get_ramp_func(Var *val, llvm::Function *f,
+                                                          llvm::Type *ret_ty,
+                                                          llvm::Type *time_ty,
+                                                          bool _export=false);
 
 private:
     void prescan_vars();

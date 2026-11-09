@@ -64,14 +64,15 @@ public:
     {
         return m_id;
     }
-    Pulse *add_pulse(uint32_t chn, uint32_t id, EventTime &start, Var *len, Var *val,
-                     Var *cond=nullptr);
-    Pulse *add_measure(uint32_t chn, uint32_t id, EventTime &start, Var *val);
-    Var *new_measure(Env &env, uint32_t measure_id) const;
+    NACS_EXPORT(seq) Pulse *add_pulse(uint32_t chn, uint32_t id, EventTime &start,
+                                      Var *len, Var *val, Var *cond=nullptr);
+    NACS_EXPORT(seq) Pulse *add_measure(uint32_t chn, uint32_t id, EventTime &start,
+                                        Var *val);
+    NACS_EXPORT(seq) Var *new_measure(Env &env, uint32_t measure_id) const;
     // NULL target means termination of sequence
-    void add_branch(Var *cond, BasicSeq *target, uint32_t id);
+    NACS_EXPORT(seq) void add_branch(Var *cond, BasicSeq *target, uint32_t id);
     // NULL target means termination of sequence
-    void set_default_branch(BasicSeq *target);
+    NACS_EXPORT(seq) void set_default_branch(BasicSeq *target);
     Var *endval(uint32_t chn) const
     {
         auto it = m_channels.find(chn);
@@ -130,24 +131,26 @@ public:
         return m_channels;
     }
 
-    bool has_output(uint32_t chn) const;
-    void assign_global(uint32_t global_id, Var *val, uint32_t assignment_id);
-    void add_assume(Sign sign, Var *val, uint32_t assume_id);
-    void add_endtime(EventTime &t);
-    void add_time_order(const EventTime *front, const EventTime *back, bool may_equal);
-    EventTime &track_time(const EventTime &t);
-    Sign compare_time(const EventTime *t1, const EventTime *t2) const;
-    Sign compare_time(const Pulse *p1, const Pulse *p2) const;
+    NACS_EXPORT(seq) bool has_output(uint32_t chn) const;
+    NACS_EXPORT(seq) void assign_global(uint32_t global_id, Var *val,
+                                        uint32_t assignment_id);
+    NACS_EXPORT(seq) void add_assume(Sign sign, Var *val, uint32_t assume_id);
+    NACS_EXPORT(seq) void add_endtime(EventTime &t);
+    NACS_EXPORT(seq) void add_time_order(const EventTime *front,
+                                         const EventTime *back, bool may_equal);
+    NACS_EXPORT(seq) EventTime &track_time(const EventTime &t);
+    NACS_EXPORT(seq) Sign compare_time(const EventTime *t1, const EventTime *t2) const;
+    NACS_EXPORT(seq) Sign compare_time(const Pulse *p1, const Pulse *p2) const;
     bool has_branchin() const
     {
         return m_has_branchin;
     }
 
-    void prepare(Seq &seq);
-    void print(std::ostream &stm) const;
+    NACS_EXPORT(seq) void prepare(Seq &seq);
+    NACS_EXPORT(seq) void print(std::ostream &stm) const;
 
     // For testing only
-    bool needs_oldval(Pulse *pulse) const;
+    NACS_EXPORT(seq) bool needs_oldval(Pulse *pulse) const;
 
 private:
     BasicSeq(BasicSeq&&) = delete;

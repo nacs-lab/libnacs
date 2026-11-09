@@ -40,13 +40,14 @@ public:
     Backend(Manager &mgr, std::string name);
     ~Backend() override;
     // Can only be called after `pre_run`
-    const double *get_data(uint32_t cur_seq_id, size_t *nsamples) const;
+    NACS_EXPORT(seq) const double *get_data(uint32_t cur_seq_id, size_t *nsamples) const;
     // Can only be called after `prepare`
-    const std::pair<uint32_t,const char*> *get_channel_info(uint32_t *sz);
+    NACS_EXPORT(seq) const std::pair<uint32_t,const char*> *get_channel_info(
+        uint32_t *sz);
 
     // For testing only
-    static Backend *cast(Device *dev);
-    static const Backend *cast(const Device *dev);
+    NACS_EXPORT(seq) static Backend *cast(Device *dev);
+    NACS_EXPORT(seq) static const Backend *cast(const Device *dev);
     struct GenerateStatus {
         std::vector<size_t> fill_init{};
         size_t nsamples = size_t(-1); // size_t(-1) if no static generation.
@@ -54,7 +55,7 @@ public:
         bool all_time_known = false;
         bool all_val_known = false;
     };
-    GenerateStatus get_generate_status(uint32_t cur_seq_id) const;
+    NACS_EXPORT(seq) GenerateStatus get_generate_status(uint32_t cur_seq_id) const;
 
 private:
     void add_channel(uint32_t chn_id, const std::string &chn_name) override;

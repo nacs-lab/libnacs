@@ -146,10 +146,11 @@ struct LegacySeq {
           exectx(std::move(_exectx))
     {
     }
-    static LegacySeq fromBinary(const uint32_t *data, size_t len);
-    static void dumpBinary(std::ostream &stm, const uint32_t *data, size_t len);
-    std::vector<uint8_t> toByteCode(uint32_t *ttl_mask);
-    uint8_t *toByteCode(size_t *sz, uint32_t *ttl_mask);
+    NACS_EXPORT(seq) static LegacySeq fromBinary(const uint32_t *data, size_t len);
+    NACS_EXPORT(seq) static void dumpBinary(std::ostream &stm, const uint32_t *data,
+                                            size_t len);
+    NACS_EXPORT(seq) std::vector<uint8_t> toByteCode(uint32_t *ttl_mask);
+    NACS_EXPORT(seq) uint8_t *toByteCode(size_t *sz, uint32_t *ttl_mask);
 };
 
 }

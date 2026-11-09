@@ -140,9 +140,9 @@ NACS_EXPORT(utils) llvm::Value *convert_scalar(llvm::IRBuilder<> &builder,
  */
 class FunctionMover final : public llvm::ValueMaterializer {
 public:
-    FunctionMover(llvm::Module *dest);
-    ~FunctionMover();
-    llvm::Function *clone_function(llvm::Function *F);
+    NACS_EXPORT(utils) FunctionMover(llvm::Module *dest);
+    NACS_EXPORT(utils) ~FunctionMover();
+    NACS_EXPORT(utils) llvm::Function *clone_function(llvm::Function *F);
 
 private:
     llvm::ValueToValueMapTy m_vmap;

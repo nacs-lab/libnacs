@@ -136,7 +136,7 @@ private:
 };
 static_assert(sizeof(Arg) == 8 * 2, "Check alignment.");
 
-std::ostream &operator<<(std::ostream &stm, const Arg &arg);
+NACS_EXPORT(seq) std::ostream &operator<<(std::ostream &stm, const Arg &arg);
 
 class Var {
     // Must not form a dependency loop.
@@ -260,12 +260,12 @@ public:
         auto arg = args()[idx];
         return arg.is_var() ? arg.get_var() : nullptr;
     };
-    IR::Type type() const;
-    llvm::Type *llvm_type() const;
+    NACS_EXPORT(seq) IR::Type type() const;
+    NACS_EXPORT(seq) llvm::Type *llvm_type() const;
     int varid() const;
     bool used(bool ext) const;
-    void print(std::ostream &stm, bool newline=false, bool abbr=false) const;
-    bool argument_unused(int idx) const;
+    NACS_EXPORT(seq) void print(std::ostream &stm, bool newline=false, bool abbr=false) const;
+    NACS_EXPORT(seq) bool argument_unused(int idx) const;
     // Return the variable that this one is a copy of
     // (i.e. zero argument call of another variable)
     Var *get_assigned_var() const
@@ -291,10 +291,12 @@ public:
         m_value.ext = ext;
         m_args.clear();
     }
-    void assign_call(Var *func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
-    void assign_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
+    NACS_EXPORT(seq) void assign_call(Var *func, llvm::ArrayRef<Arg> args,
+                                      int nfreeargs=0);
+    NACS_EXPORT(seq) void assign_call(llvm::Function *func,
+                                      llvm::ArrayRef<Arg> args, int nfreeargs=0);
     // Special case for assigning a copy of a variable.
-    void assign_var(Var *var);
+    NACS_EXPORT(seq) void assign_var(Var *var);
 
 private:
     // The following functions are only used in optimizations or to create new variables
@@ -476,9 +478,9 @@ public:
 
     using Visitor = DFSVisitor<Var*,VarFieldIterator,StackVector>;
 
-    Env(std::unique_ptr<LLVM::Codegen::Context> cgctx);
-    Env(llvm::LLVMContext &llvm_ctx);
-    ~Env();
+    NACS_EXPORT(seq) Env(std::unique_ptr<LLVM::Codegen::Context> cgctx);
+    NACS_EXPORT(seq) Env(llvm::LLVMContext &llvm_ctx);
+    NACS_EXPORT(seq) ~Env();
 
     iterator begin() const
     {
@@ -489,11 +491,14 @@ public:
         return nullptr;
     }
 
-    Var *new_const(IR::TagVal c);
-    Var *new_call(Var *func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
-    Var *new_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
-    Var *new_call(const IR::Function &func, llvm::ArrayRef<Arg> args, int nfreeargs=0);
-    Var *new_extern(std::pair<IR::Type,uint64_t> ext);
+    NACS_EXPORT(seq) Var *new_const(IR::TagVal c);
+    NACS_EXPORT(seq) Var *new_call(Var *func, llvm::ArrayRef<Arg> args,
+                                   int nfreeargs=0);
+    NACS_EXPORT(seq) Var *new_call(llvm::Function *func, llvm::ArrayRef<Arg> args,
+                                   int nfreeargs=0);
+    NACS_EXPORT(seq) Var *new_call(const IR::Function &func,
+                                   llvm::ArrayRef<Arg> args, int nfreeargs=0);
+    NACS_EXPORT(seq) Var *new_extern(std::pair<IR::Type,uint64_t> ext);
     llvm::Module *llvm_module() const
     {
         return m_llvm_mod.get();
@@ -504,10 +509,10 @@ public:
     }
 
     int num_vars() const;
-    bool ensure_sorted();
-    void gc();
-    void optimize();
-    void print(std::ostream &stm, bool sort=true) const;
+    NACS_EXPORT(seq) bool ensure_sorted();
+    NACS_EXPORT(seq) void gc();
+    NACS_EXPORT(seq) void optimize();
+    NACS_EXPORT(seq) void print(std::ostream &stm, bool sort=true) const;
 
     template<typename T>
     static void scan_dfs(Var *var, T &&visitor)
@@ -519,8 +524,8 @@ private:
     Var *_new_call(llvm::Function *func, llvm::ArrayRef<Arg> args, int nfreeargs);
     Var *new_var();
     void link_var(Var*);
-    void compute_varid();
-    void compute_varuse();
+    NACS_EXPORT(seq) void compute_varid();
+    NACS_EXPORT(seq) void compute_varuse();
     // Optimize each variables (functions) individually based only on the
     // arguments and callee without information about the global call graph.
     bool optimize_local();

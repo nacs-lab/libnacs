@@ -156,8 +156,8 @@ public:
 
     struct NodeVisitor;
 
-    Builder(Seq &seq);
-    ~Builder();
+    NACS_EXPORT(seq) Builder(Seq &seq);
+    NACS_EXPORT(seq) ~Builder();
 
     static int8_t node_narg(OpCode op);
 
@@ -166,9 +166,9 @@ public:
         return argtype == ArgType::Node ? get_node(arg.id) : nullptr;
     }
 
-    void buildseq();
-    void deserialize(const uint8_t *data, size_t size);
-    void print(std::ostream &stm) const;
+    NACS_EXPORT(seq) void buildseq();
+    NACS_EXPORT(seq) void deserialize(const uint8_t *data, size_t size);
+    NACS_EXPORT(seq) void print(std::ostream &stm) const;
 
     std::vector<Node> nodes;
     std::vector<BasicSeq> seqs;
@@ -196,10 +196,11 @@ private:
     // Create pulses and measures
     void scan_seq();
 
-    EventTime *get_eventtime(uint32_t time_id, BasicSeq &seq);
-    Var *arg_to_var(ArgType argtype, NodeArg arg);
-    Arg arg_to_callarg(ArgType argtype, NodeArg arg);
-    int32_t create_inst(IR::Builder &builder, Node *node, int32_t *args);
+    NACS_EXPORT(seq) EventTime *get_eventtime(uint32_t time_id, BasicSeq &seq);
+    NACS_EXPORT(seq) Var *arg_to_var(ArgType argtype, NodeArg arg);
+    NACS_EXPORT(seq) Arg arg_to_callarg(ArgType argtype, NodeArg arg);
+    NACS_EXPORT(seq) int32_t create_inst(IR::Builder &builder, Node *node,
+                                         int32_t *args);
     std::pair<Var*,bool> node_to_rampvar(Node *node);
     Node *get_node(uint32_t id);
     const Node *get_node(uint32_t id) const;

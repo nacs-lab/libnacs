@@ -30,9 +30,9 @@ namespace NaCs::Seq {
 
 class Seq {
 public:
-    Seq(std::unique_ptr<LLVM::Codegen::Context> cgctx);
-    Seq(llvm::LLVMContext &llvm_ctx);
-    ~Seq();
+    NACS_EXPORT(seq) Seq(std::unique_ptr<LLVM::Codegen::Context> cgctx);
+    NACS_EXPORT(seq) Seq(llvm::LLVMContext &llvm_ctx);
+    NACS_EXPORT(seq) ~Seq();
     Env &env()
     {
         return m_env;
@@ -41,9 +41,9 @@ public:
     {
         return m_env;
     }
-    BasicSeq *add_basicseq(uint32_t id);
-    uint32_t get_chn_id(llvm::StringRef name, bool create=false);
-    const std::string &get_chn_name(uint32_t id) const;
+    NACS_EXPORT(seq) BasicSeq *add_basicseq(uint32_t id);
+    NACS_EXPORT(seq) uint32_t get_chn_id(llvm::StringRef name, bool create=false);
+    NACS_EXPORT(seq) const std::string &get_chn_name(uint32_t id) const;
     llvm::ArrayRef<std::string> get_chn_names() const
     {
         return m_chnnames;
@@ -57,16 +57,17 @@ public:
         return m_defval;
     }
 
-    void set_defval(uint32_t chn, double val);
-    double defval(uint32_t chn);
+    NACS_EXPORT(seq) void set_defval(uint32_t chn, double val);
+    NACS_EXPORT(seq) double defval(uint32_t chn);
 
-    Var *get_const(IR::TagVal c);
-    Var *get_call(const IR::Function &func, llvm::ArrayRef<Arg> args, int nfreeargs);
+    NACS_EXPORT(seq) Var *get_const(IR::TagVal c);
+    NACS_EXPORT(seq) Var *get_call(const IR::Function &func,
+                                   llvm::ArrayRef<Arg> args, int nfreeargs);
     // `id` is expected to be a counter from 0.
     // This will be used as the index into an array of sequence variables.
     // If different `typ`s are used with the same `id`,
     // only the `typ` for the first call will be used.
-    Var *get_slot(IR::Type typ, uint32_t id);
+    NACS_EXPORT(seq) Var *get_slot(IR::Type typ, uint32_t id);
     llvm::ArrayRef<Var::Ref> get_slots() const
     {
         return m_slot_vars;
@@ -76,9 +77,9 @@ public:
         return m_npublic_globals;
     }
 
-    void optimize();
-    void prepare();
-    void print(std::ostream &stm) const;
+    NACS_EXPORT(seq) void optimize();
+    NACS_EXPORT(seq) void prepare();
+    NACS_EXPORT(seq) void print(std::ostream &stm) const;
 
 private:
     bool optimize_cfg();

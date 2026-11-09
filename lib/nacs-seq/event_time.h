@@ -86,7 +86,7 @@ public:
     // We want pointer identity and this will be kept track of by the parent (BasicSeq)
     // so we don't want or need moving.
     EventTime(EventTime&&) = delete;
-    explicit EventTime(const EventTime&); // We don't want to accidentally copy either
+    NACS_EXPORT(seq) explicit EventTime(const EventTime&); // We don't want to accidentally copy either
     bool operator==(const EventTime &other) const
     {
         return tconst == other.tconst && terms == other.terms;
@@ -105,21 +105,21 @@ public:
         return m_order_id;
     }
 
-    bool normalize();
-    Var *to_var(Env &env) const;
-    void print(std::ostream &stm, bool newline=false) const;
+    NACS_EXPORT(seq) bool normalize();
+    NACS_EXPORT(seq) Var *to_var(Env &env) const;
+    NACS_EXPORT(seq) void print(std::ostream &stm, bool newline=false) const;
 
     // Compare the terms.
     // If `this` is known to be less than `other`, return `Sign::Pos`.
     // If `this` is known to be no greater than `other`, return `Sign::NonNeg`.
     // Otherwise, return `Sign::Unknown`.
-    Sign isless_terms(const EventTime &other) const;
-    Sign isless(const EventTime &other) const;
+    NACS_EXPORT(seq) Sign isless_terms(const EventTime &other) const;
+    NACS_EXPORT(seq) Sign isless(const EventTime &other) const;
     // other must be known to be smaller than/before us
     // in a way that's consistent with `isless_terms`
-    EventTime operator-(const EventTime &other) const;
+    NACS_EXPORT(seq) EventTime operator-(const EventTime &other) const;
 
-    int64_t min_const() const;
+    NACS_EXPORT(seq) int64_t min_const() const;
 
     int64_t tconst = 0;
     // I'd like to use `llvm::SmallVector` here

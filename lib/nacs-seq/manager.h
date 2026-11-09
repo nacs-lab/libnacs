@@ -96,20 +96,20 @@ public:
         {
             return m_cgctx;
         }
-        uint64_t get_dataid(llvm::StringRef name) const;
-        Device *get_device(const std::string &name, bool create);
-        Device *get_device(std::string &&name, bool create);
+        NACS_EXPORT(seq) uint64_t get_dataid(llvm::StringRef name) const;
+        NACS_EXPORT(seq) Device *get_device(const std::string &name, bool create);
+        NACS_EXPORT(seq) Device *get_device(std::string &&name, bool create);
         const std::map<std::string,std::unique_ptr<Device>> &devices()
         {
             return m_devices;
         }
 
-        void init_run();
-        void pre_run();
-        void start();
-        void cancel();
-        bool wait(uint64_t timeout_ms);
-        uint32_t post_run();
+        NACS_EXPORT(seq) void init_run();
+        NACS_EXPORT(seq) void pre_run();
+        NACS_EXPORT(seq) void start();
+        NACS_EXPORT(seq) void cancel();
+        NACS_EXPORT(seq) bool wait(uint64_t timeout_ms);
+        NACS_EXPORT(seq) uint32_t post_run();
 
         const uint8_t *get_builder_dump(size_t *sz) const
         {
@@ -139,7 +139,7 @@ public:
         };
         std::unique_ptr<Dump> dump;
 
-        uint32_t refresh_device_restart(const char *dname);
+        NACS_EXPORT(seq) uint32_t refresh_device_restart(const char *dname);
 
     private:
         template<typename Str>
@@ -168,36 +168,36 @@ public:
         }
     };
 
-    Manager();
-    ~Manager();
+    NACS_EXPORT(seq) Manager();
+    NACS_EXPORT(seq) ~Manager();
 
-    ExpSeq *create_sequence(const uint8_t *data, size_t size);
-    void free_sequence(ExpSeq *seq);
-    std::pair<const void*,size_t> get_data(uint64_t id) const;
-    void load_config_file(const char *fname);
-    void load_config_string(const char *str);
-    char *get_config_str(const std::string &name, size_t *sz) const;
-    int64_t tick_per_sec() const;
-    uint64_t max_seq_len() const;
+    NACS_EXPORT(seq) ExpSeq *create_sequence(const uint8_t *data, size_t size);
+    NACS_EXPORT(seq) void free_sequence(ExpSeq *seq);
+    NACS_EXPORT(seq) std::pair<const void*,size_t> get_data(uint64_t id) const;
+    NACS_EXPORT(seq) void load_config_file(const char *fname);
+    NACS_EXPORT(seq) void load_config_string(const char *str);
+    NACS_EXPORT(seq) char *get_config_str(const std::string &name, size_t *sz) const;
+    NACS_EXPORT(seq) int64_t tick_per_sec() const;
+    NACS_EXPORT(seq) uint64_t max_seq_len() const;
     LLVM::Exe::Engine &exe_engine()
     {
         return m_engine;
     }
 
     // Log device restart API
-    bool add_device_restart(const std::string &name, uint32_t n = 1);
-    uint32_t get_device_restart(const char *dname);
-    bool set_device_restart(const std::string &name, uint32_t n = 0);
+    NACS_EXPORT(seq) bool add_device_restart(const std::string &name, uint32_t n = 1);
+    NACS_EXPORT(seq) uint32_t get_device_restart(const char *dname);
+    NACS_EXPORT(seq) bool set_device_restart(const std::string &name, uint32_t n = 0);
 
     // Error+warning API for python/matlab
-    uint8_t *take_messages(size_t *sz);
+    NACS_EXPORT(seq) uint8_t *take_messages(size_t *sz);
 
     // Error+warning API for C++
-    void add_info(const char *msg);
-    void add_warning(const char *msg);
-    void add_error(const char *msg);
-    void add_error(const std::exception &error);
-    void add_error(const Error &error);
+    NACS_EXPORT(seq) void add_info(const char *msg);
+    NACS_EXPORT(seq) void add_warning(const char *msg);
+    NACS_EXPORT(seq) void add_error(const char *msg);
+    NACS_EXPORT(seq) void add_error(const std::exception &error);
+    NACS_EXPORT(seq) void add_error(const Error &error);
     void add_debug(const char *msg)
     {
         if (likely(!m_debug_messages))
@@ -212,13 +212,13 @@ public:
             return;
         _add_debug_printf(fmt, std::forward<Args>(args)...);
     }
-    void enable_debug(bool enable);
+    NACS_EXPORT(seq) void enable_debug(bool enable);
     bool debug_enabled()
     {
         return m_debug_messages;
     }
-    void register_logger();
-    void unregister_logger();
+    NACS_EXPORT(seq) void register_logger();
+    NACS_EXPORT(seq) void unregister_logger();
 
     void add_info(const std::string &msg)
     {
@@ -289,14 +289,14 @@ public:
     // but let the backend know that it should not send any data for real execution
     bool dummy_mode = false;
 
-    static Signal<Manager*> &new_run();
+    NACS_EXPORT(seq) static Signal<Manager*> &new_run();
 
 private:
     uint64_t add_data(const void *data, size_t size);
     void unref_data(uint64_t id);
     void update_config(const YAML::Node &config);
-    void _add_debug(const char *msg);
-    void _add_debug_printf(const char *fmt, ...);
+    NACS_EXPORT(seq) void _add_debug(const char *msg);
+    NACS_EXPORT(seq) void _add_debug_printf(const char *fmt, ...);
     template<typename T>
     T &get_storage(const Storage<T> *key)
     {

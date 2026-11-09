@@ -21,6 +21,8 @@
 
 #include "sign.h"
 
+#include <nacs-utils/macros.h>
+
 #include <vector>
 
 namespace NaCs::Seq {
@@ -154,18 +156,18 @@ public:
     };
 
     // Call before all runs
-    void init();
+    NACS_EXPORT(seq) void init();
 
     // Call before starting this sequence
-    void init_run();
+    NACS_EXPORT(seq) void init_run();
     // Call before running a basic sequence within this sequence
-    void pre_run();
+    NACS_EXPORT(seq) void pre_run();
     // Call after running a basic sequence within this sequence
     // Returns the user supplied ID of the next basic sequence.
-    uint32_t post_run();
+    NACS_EXPORT(seq) uint32_t post_run();
 
-    double get_global(uint32_t i) const;
-    void set_global(uint32_t i, double val);
+    NACS_EXPORT(seq) double get_global(uint32_t i) const;
+    NACS_EXPORT(seq) void set_global(uint32_t i, double val);
     uint32_t cur_seq_idx() const
     {
         // For backends
@@ -179,7 +181,7 @@ public:
     {
         return get_value(seqs[seq_idx], i);
     }
-    Type get_type(uint32_t i, uint32_t seq_idx) const;
+    NACS_EXPORT(seq) Type get_type(uint32_t i, uint32_t seq_idx) const;
     int64_t get_time(uint32_t i) const
     {
         return values[i].i64;
@@ -228,7 +230,7 @@ private:
     // Input is index of value in the range
     // [0, nshared + bseq.nmeasure + bseq.ndirect + bseq.nneed_order)
     bool value_computed(const BasicSeq &bseq, uint32_t i) const;
-    double get_value(const BasicSeq &bseq, uint32_t i) const;
+    NACS_EXPORT(seq) double get_value(const BasicSeq &bseq, uint32_t i) const;
 
     /**
      * Functions to iteratively evaluate all the values

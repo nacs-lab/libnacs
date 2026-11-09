@@ -205,7 +205,7 @@ struct Inst_v3 {
  *
  * Note that this does not merge wait instructions.
  */
-size_t count(const uint8_t *code, size_t code_len, uint32_t version);
+NACS_EXPORT(seq) size_t count(const uint8_t *code, size_t code_len, uint32_t version);
 static inline size_t count(const std::vector<uint8_t> &code, uint32_t version)
 {
     return count(&code[0], code.size(), version);
@@ -231,7 +231,8 @@ static inline void print(std::ostream &stm, const std::vector<uint8_t> &code,
 /**
  * Total time it takes to execute the cmdlist.
  */
-uint64_t total_time(const uint8_t *code, size_t code_len, uint32_t version);
+NACS_EXPORT(seq) uint64_t total_time(const uint8_t *code, size_t code_len,
+                                     uint32_t version);
 static inline uint64_t total_time(const std::vector<uint8_t> &code, uint32_t version)
 {
     return total_time(&code[0], code.size(), version);

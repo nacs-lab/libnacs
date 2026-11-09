@@ -44,18 +44,21 @@ public:
         m_has_clock = true;
     }
 
-    void set_clock_active_time(uint32_t bseq_idx, uint64_t half_period,
-                               llvm::ArrayRef<std::pair<int64_t,int64_t>> active_times);
+    NACS_EXPORT(seq) void set_clock_active_time(
+        uint32_t bseq_idx, uint64_t half_period,
+        llvm::ArrayRef<std::pair<int64_t,int64_t>> active_times);
 
     // For testing only
-    static Backend *cast(Device *dev);
-    static const Backend *cast(const Device *dev);
-    bool has_generator(uint32_t bseq_idx) const;
-    bool pregenerated(uint32_t bseq_idx, bool first_bseq) const;
-    llvm::ArrayRef<uint8_t> get_bytecode(uint32_t bseq_idx, bool first_bseq) const;
-    uint32_t get_bytecode_version(uint32_t bseq_idx, bool first_bseq) const;
-    llvm::ArrayRef<BCGen::Clock> get_clock(uint32_t bseq_idx) const;
-    std::pair<std::vector<uint64_t>,std::vector<double>>
+    NACS_EXPORT(seq) static Backend *cast(Device *dev);
+    NACS_EXPORT(seq) static const Backend *cast(const Device *dev);
+    NACS_EXPORT(seq) bool has_generator(uint32_t bseq_idx) const;
+    NACS_EXPORT(seq) bool pregenerated(uint32_t bseq_idx, bool first_bseq) const;
+    NACS_EXPORT(seq) llvm::ArrayRef<uint8_t> get_bytecode(uint32_t bseq_idx,
+                                                          bool first_bseq) const;
+    NACS_EXPORT(seq) uint32_t get_bytecode_version(uint32_t bseq_idx,
+                                                   bool first_bseq) const;
+    NACS_EXPORT(seq) llvm::ArrayRef<BCGen::Clock> get_clock(uint32_t bseq_idx) const;
+    NACS_EXPORT(seq) std::pair<std::vector<uint64_t>,std::vector<double>>
     get_vals(uint32_t bseq_idx, bool first_bseq, uint32_t chn_id) const;
     void set_trigger(BCGen::TrigType type, uint8_t chn, uint32_t timeout_ns)
     {

@@ -73,15 +73,17 @@ public:
         uint8_t period;
     };
 
-    BCGen();
-    ~BCGen();
-    void generate(const HostSeq &host_seq) const;
-    static uint32_t convert_value(ChnType type, double value);
-    static double compute_start_val(PulseType pulse_type, void (*ramp_func)(void),
-                                    const void *data);
-    void add_ttl_manager(uint8_t chn, int64_t off_delay, int64_t on_delay,
-                         int64_t skip_time, int64_t min_time, bool off_val);
-    uint32_t version() const;
+    NACS_EXPORT(seq) BCGen();
+    NACS_EXPORT(seq) ~BCGen();
+    NACS_EXPORT(seq) void generate(const HostSeq &host_seq) const;
+    NACS_EXPORT(seq) static uint32_t convert_value(ChnType type, double value);
+    NACS_EXPORT(seq) static double compute_start_val(PulseType pulse_type,
+                                                     void (*ramp_func)(void),
+                                                     const void *data);
+    NACS_EXPORT(seq) void add_ttl_manager(uint8_t chn, int64_t off_delay,
+                                          int64_t on_delay, int64_t skip_time,
+                                          int64_t min_time, bool off_val);
+    NACS_EXPORT(seq) uint32_t version() const;
 
     // Inputs
     uint32_t seq_idx;

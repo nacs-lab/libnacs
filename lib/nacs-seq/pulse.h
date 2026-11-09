@@ -30,7 +30,7 @@ public:
     // id must be unique in the whole sequence
     // A pulse with the same time but a larger ID will be treated as happens after
     // one with a smaller ID.
-    Pulse(uint32_t id, EventTime &start, Var *len, Var *val, Var *cond, bool is_measure);
+    NACS_EXPORT(seq) Pulse(uint32_t id, EventTime &start, Var *len, Var *val, Var *cond, bool is_measure);
     uint32_t id() const
     {
         return m_id;
@@ -75,18 +75,18 @@ public:
         return m_endval.get();
     }
 
-    bool optimize();
-    bool needs_oldval() const;
-    bool clear_unused_args();
+    NACS_EXPORT(seq) bool optimize();
+    NACS_EXPORT(seq) bool needs_oldval() const;
+    NACS_EXPORT(seq) bool clear_unused_args();
     // Assumes `needs_oldval()`
-    bool set_oldval(Var *oldval);
-    void check_start() const;
+    NACS_EXPORT(seq) bool set_oldval(Var *oldval);
+    NACS_EXPORT(seq) void check_start() const;
 
-    void print(std::ostream &stm, Var *startval=nullptr, bool newline=false) const;
+    NACS_EXPORT(seq) void print(std::ostream &stm, Var *startval=nullptr, bool newline=false) const;
 
 private:
     Pulse(Pulse&&) = delete;
-    Var *compute_endval() const;
+    NACS_EXPORT(seq) Var *compute_endval() const;
 
     const uint32_t m_id;
     const bool m_is_measure;

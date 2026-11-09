@@ -67,17 +67,17 @@ public:
         friend class DataGen;
     };
 
-    DataGen();
-    ~DataGen();
+    NACS_EXPORT(seq) DataGen();
+    NACS_EXPORT(seq) ~DataGen();
 
-    std::vector<Pulse> &get_pulses(uint32_t chn);
+    NACS_EXPORT(seq) std::vector<Pulse> &get_pulses(uint32_t chn);
     // Sort pulses and generate active_times
-    void compute_times() const;
+    NACS_EXPORT(seq) void compute_times() const;
     // Compute times must be called before generate data
-    void generate_data() const;
+    NACS_EXPORT(seq) void generate_data() const;
 
-    int64_t get_time(uint32_t idx) const;
-    double get_value(uint32_t idx) const;
+    NACS_EXPORT(seq) int64_t get_time(uint32_t idx) const;
+    NACS_EXPORT(seq) double get_value(uint32_t idx) const;
 
     // Inputs
     std::vector<double> start_values;
