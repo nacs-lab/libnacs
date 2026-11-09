@@ -83,11 +83,11 @@ struct PerfCounter {
         CPUStallFrontend,
         CPUStallBackend,
     };
-    PerfCounter(Type type);
-    void reset();
-    void stop();
-    void start(bool reset=true);
-    int64_t finish(bool stop=true);
+    NACS_EXPORT(utils) PerfCounter(Type type);
+    NACS_EXPORT(utils) void reset();
+    NACS_EXPORT(utils) void stop();
+    NACS_EXPORT(utils) void start(bool reset=true);
+    NACS_EXPORT(utils) int64_t finish(bool stop=true);
 private:
     int m_fd = -1;
 };
