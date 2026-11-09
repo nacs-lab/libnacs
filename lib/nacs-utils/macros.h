@@ -220,8 +220,12 @@
         }                                               \
     } while (0)
 
-#if defined(__has_attribute) && __has_attribute(gcc_struct)
-#  define NACS_PACKED __attribute__((__packed__, gcc_struct))
+#if defined(__has_attribute)
+#  if __has_attribute(gcc_struct)
+#    define NACS_PACKED __attribute__((__packed__, gcc_struct))
+#  else
+#    define NACS_PACKED __attribute__((__packed__))
+#  endif
 #else
 #  define NACS_PACKED __attribute__((__packed__))
 #endif
