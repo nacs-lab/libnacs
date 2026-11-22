@@ -85,6 +85,9 @@ private:
     // void post_run(HostSeq &host_seq) override;
 
     void run_bytecode(const std::vector<uint8_t> &bc, uint32_t version);
+    // Decide whether the DMA mode is used (`m_dma`) and get the DDS write timing
+    // (`m_dds_timing`) from the server.
+    void resolve_dma();
     // Return whether pregeneration completed
     bool pregenerate(Manager::ExpSeq &expseq, Compiler &compiler, uint32_t seq_idx);
 
@@ -100,6 +103,24 @@ private:
     int8_t m_start_ttl_chn;
     bool m_has_clock = false;
     bool m_generated = false;
+    // Same as the `dma_enable` setting of the molecube2 server.
+    enum class DMAEnable : uint8_t {
+        // Do not use DMA mode.
+        Disabled,
+        // Use DMA mode if it is enabled on the server.
+        Enabled,
+        // Fail if DMA mode cannot be used.
+        Required,
+    };
+    DMAEnable m_dma_enable = DMAEnable::Disabled;
+    // Generate DMA instructions and run them with `run_dma_seq` instead of the bytecode.
+    // Set by `resolve_dma`.
+    bool m_dma = false;
+    // DDS write timing for the DMA instructions, from the server
+    // (or the config in dummy mode, for testing only).
+    BCGen::DDSTiming m_dds_timing{};
+    // Length of the clock output at the end of the sequence in the DMA mode.
+    uint64_t m_clock_tail_ns = 10000000;
     uint64_t m_seq_tick_per_sec;
     uint64_t m_obj_id = 0;
     std::string m_url;

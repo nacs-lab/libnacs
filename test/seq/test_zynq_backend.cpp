@@ -26,6 +26,7 @@
 #include "../../lib/nacs-seq/builder.h"
 #include "../../lib/nacs-seq/manager.h"
 #include "../../lib/nacs-seq/zynq/backend.h"
+#include "../../lib/nacs-seq/zynq/dma.h"
 #include "../../lib/nacs-utils/streams.h"
 
 using namespace std::literals::string_literals;
@@ -86,6 +87,12 @@ static const char *const config_str =
     "devices:\n"
     "  Clocker:\n"
     "    backend: clocker\n"
+    // FPGA1 must be the last one since its config is extended by the "offset" test.
+    "  FPGA2:\n"
+    "    backend: zynq\n"
+    "    config:\n"
+    "      start_ttl_chn: 0\n"
+    "      dma_enable: required\n"
     "  FPGA1:\n"
     "    backend: zynq\n"
     "    config:\n"
@@ -246,6 +253,141 @@ TEST_CASE("empty") {
         // Finish
         REQUIRE(checker.cmp(Zynq::ByteCode::Inst_v1::Wait2{5, 1, 97}));
         REQUIRE(checker.is_end());
+    }
+
+    expseq->init_run();
+    expseq->pre_run();
+    expseq->start();
+    REQUIRE(expseq->wait(20000)); // 20s timeout
+    REQUIRE(expseq->post_run() == 2);
+    expseq->pre_run();
+    expseq->start();
+    REQUIRE(expseq->wait(20000)); // 20s timeout
+    REQUIRE(expseq->post_run() == 0);
+}
+
+// An empty sequence on FPGA2 (DMA) with two basic sequences.
+static void write_dma_empty(ostream &stm)
+{
+    // [version <0>: 1B]
+    stm.write<uint8_t>(0);
+    // [nnodes: 4B]
+    stm.write<uint32_t>(0);
+    // [nchns: 4B][[chnname: non-empty NUL-terminated string] x nchns]
+    stm.write<uint32_t>(2);
+    stm.write_string("FPGA2/DDS2/FREQ");
+    stm.write_string("FPGA2/TTL3");
+    // [ndefvals: 4B][[chnid: 4B][Type: 1B][value: 1-8B] x ndefvals]
+    stm.write<uint32_t>(0);
+    // [nslots: 4B][[Type: 1B] x nslots]
+    stm.write<uint32_t>(0);
+    // [nnoramp: 4B][[chnid: 4B] x nnoramp]
+    stm.write<uint32_t>(0);
+    // [nbasicseqs: 4B][[Basic Sequence] x nbasicseqs]
+    stm.write<uint32_t>(2);
+    for (uint32_t target: {2, 0}) {
+        // [ntimes: 4B]
+        stm.write<uint32_t>(0);
+        // [nendtimes: 4B]
+        stm.write<uint32_t>(0);
+        // [ntimeorders: 4B]
+        stm.write<uint32_t>(0);
+        // [noutputs: 4B]
+        stm.write<uint32_t>(0);
+        // [nmeasures: 4B]
+        stm.write<uint32_t>(0);
+        // [nassigns: 4B]
+        stm.write<uint32_t>(0);
+        // [nbranches: 4B]
+        stm.write<uint32_t>(0);
+        // [default_target: 4B]
+        stm.write<uint32_t>(target);
+    }
+    // [ndatas: 4B]
+    stm.write<uint32_t>(0);
+    // [nbackenddatas: 4B]
+    stm.write<uint32_t>(0);
+}
+
+TEST_CASE("dma_empty") {
+    ostream stm;
+    write_dma_empty(stm);
+
+    auto expseq = stm.create_sequence();
+    REQUIRE(expseq);
+
+    REQUIRE(expseq->devices().size() == 1);
+    auto zynq_dev = expseq->get_device("FPGA2", false);
+    REQUIRE(zynq_dev);
+    auto zynq_backend = Zynq::Backend::cast(zynq_dev);
+    REQUIRE(zynq_backend);
+    REQUIRE(zynq_backend->pregenerated(0, true));
+    REQUIRE(zynq_backend->pregenerated(1, false));
+
+    using namespace Zynq::DMA::Inst_v0;
+    auto dump_dma = [] (llvm::ArrayRef<uint8_t> code) {
+        std::stringstream stm;
+        Zynq::DMA::print(stm, std::span(code.data(), code.size()).subspan(8), 0);
+        return stm.str();
+    };
+    {
+        auto code = zynq_backend->get_bytecode(0, true);
+        REQUIRE(zynq_backend->get_bytecode_version(0, true) == 0);
+        Checker checker(code.data(), code.size());
+        INFO(dump_dma(code));
+        REQUIRE(checker.cmp<uint32_t>(1)); // nbanks
+        REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
+        // Initial wait for buffering
+        REQUIRE(checker.cmp(Wait1(199)));
+        // Initialization: TTL and DDS at the same time
+        REQUIRE(checker.cmp(TTLSet4(0, 0)));
+        REQUIRE(checker.cmp(DDSSet32(0, 2, 1, 0x2c >> 1, 0)));
+        // DDS write (56) and 25us
+        REQUIRE(checker.cmp(Wait2(5055)));
+        // Start trigger
+        REQUIRE(checker.cmp(TTLSet4(0, 1)));
+        REQUIRE(checker.cmp(Wait1(199)));
+        REQUIRE(checker.cmp(TTLSet4(0, 0)));
+        // Finish
+        REQUIRE(checker.cmp(Wait1(0)));
+        REQUIRE(checker.is_end());
+    }
+
+    {
+        auto code = zynq_backend->get_bytecode(1, false);
+        REQUIRE(zynq_backend->get_bytecode_version(1, false) == 0);
+        Checker checker(code.data(), code.size());
+        INFO(dump_dma(code));
+        REQUIRE(checker.cmp<uint32_t>(1)); // nbanks
+        REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
+        // Initial wait for buffering
+        REQUIRE(checker.cmp(Wait1(199)));
+        // Start trigger
+        REQUIRE(checker.cmp(TTLSet4(0, 1)));
+        REQUIRE(checker.cmp(Wait1(199)));
+        REQUIRE(checker.cmp(TTLSet4(0, 0)));
+        // Finish
+        REQUIRE(checker.cmp(Wait1(0)));
+        REQUIRE(checker.is_end());
+    }
+
+    // Values (all set before the start of the sequence)
+    {
+        auto [ts, vals] = zynq_backend->get_vals(0, true, 1); // DDS2/FREQ
+        REQUIRE(ts == std::vector<uint64_t>{0});
+        REQUIRE(vals == std::vector<double>{0});
+    }
+    {
+        // TTL3: initialization and the start trigger
+        auto [ts, vals] = zynq_backend->get_vals(0, true, 2);
+        REQUIRE(ts == std::vector<uint64_t>{0, 0, 0});
+        REQUIRE(vals == std::vector<double>{0, 0, 0});
+    }
+    {
+        // TTL3: the start trigger
+        auto [ts, vals] = zynq_backend->get_vals(1, false, 2);
+        REQUIRE(ts == std::vector<uint64_t>{0, 0});
+        REQUIRE(vals == std::vector<double>{0, 0});
     }
 
     expseq->init_run();
@@ -1836,6 +1978,108 @@ TEST_CASE("ttl_mgr") {
     expseq->start();
     REQUIRE(expseq->wait(20000)); // 20s timeout
     REQUIRE(expseq->post_run() == 0);
+}
+
+TEST_CASE("dma_timing_config") {
+    using namespace std::literals;
+    auto load_timing = [] (const char *timing) {
+        std::string config = config_str;
+        auto pos = config.find("      dma_enable: required\n");
+        REQUIRE(pos != std::string::npos);
+        config.insert(pos, "      dds_inst_timing: "s + timing + "\n");
+        manager().load_config_string(config.data());
+    };
+    auto get_backend = [] (auto &expseq) {
+        auto zynq_backend = Zynq::Backend::cast(expseq->get_device("FPGA2", false));
+        REQUIRE(zynq_backend);
+        return zynq_backend;
+    };
+    auto dump_dma = [] (llvm::ArrayRef<uint8_t> code) {
+        std::stringstream stm;
+        Zynq::DMA::print(stm, std::span(code.data(), code.size()).subspan(8), 0);
+        return stm.str();
+    };
+
+    {
+        // [set16, set16_fud, set32, set32_fud, fud_to_end]
+        load_timing("[24, 32, 48, 60, 8]");
+        ostream stm;
+        write_dma_empty(stm);
+        auto expseq = stm.create_sequence();
+        REQUIRE(expseq);
+        auto code = get_backend(expseq)->get_bytecode(0, true);
+        INFO(dump_dma(code));
+        using namespace Zynq::DMA::Inst_v0;
+        Checker checker(code.data(), code.size());
+        REQUIRE(checker.cmp<uint32_t>(1)); // nbanks
+        REQUIRE(checker.cmp<uint32_t>(9)); // ttl_mask
+        REQUIRE(checker.cmp(Wait1(199)));
+        REQUIRE(checker.cmp(TTLSet4(0, 0)));
+        REQUIRE(checker.cmp(DDSSet32(0, 2, 1, 0x2c >> 1, 0)));
+        // DDS write (60) and 25us
+        REQUIRE(checker.cmp(Wait2(5059)));
+    }
+
+    // The FUD edge must be within the write.
+    load_timing("[24, 32, 48, 56, 32]");
+    {
+        ostream stm;
+        write_dma_empty(stm);
+        REQUIRE_THROWS_WITH(stm.create_sequence(), Catch::Contains("Invalid DDS timing"));
+    }
+    // The old format without `fud_to_end` is rejected.
+    load_timing("[24, 32, 48, 56]");
+    {
+        ostream stm;
+        write_dma_empty(stm);
+        REQUIRE_THROWS_WITH(stm.create_sequence(), Catch::Contains("5 numbers"));
+    }
+
+    manager().load_config_string(config_str);
+}
+
+TEST_CASE("dma_enable") {
+    using namespace std::literals;
+    auto load_enable = [] (const char *enable) {
+        std::string config = config_str;
+        auto line = "      dma_enable: required\n"s;
+        auto pos = config.find(line);
+        REQUIRE(pos != std::string::npos);
+        config.replace(pos, line.size(), "      dma_enable: "s + enable + "\n");
+        manager().load_config_string(config.data());
+    };
+    auto get_version = [] () {
+        ostream stm;
+        write_dma_empty(stm);
+        auto expseq = stm.create_sequence();
+        REQUIRE(expseq);
+        auto zynq_backend = Zynq::Backend::cast(expseq->get_device("FPGA2", false));
+        REQUIRE(zynq_backend);
+        return zynq_backend->get_bytecode_version(0, true);
+    };
+    // There's no server in the dummy mode so the DMA mode is always available.
+    load_enable("enabled");
+    REQUIRE(get_version() == 0);
+    load_enable("disabled");
+    REQUIRE(get_version() != 0);
+    load_enable("invalid");
+    {
+        ostream stm;
+        write_dma_empty(stm);
+        REQUIRE_THROWS_WITH(stm.create_sequence(), Catch::Contains("Invalid dma_enable"));
+    }
+    {
+        std::string config = config_str;
+        auto line = "      dma_enable: required\n"s;
+        auto pos = config.find(line);
+        config.insert(pos + line.size(), "      dma_clock_tail_ms: -1\n");
+        manager().load_config_string(config.data());
+        ostream stm;
+        write_dma_empty(stm);
+        REQUIRE_THROWS_WITH(stm.create_sequence(), Catch::Contains("Invalid dma_clock_tail_ms"));
+    }
+    manager().load_config_string(config_str);
+    REQUIRE(get_version() == 0);
 }
 
 TEST_CASE("offset") {

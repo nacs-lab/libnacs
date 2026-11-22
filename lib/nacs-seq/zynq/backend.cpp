@@ -102,6 +102,8 @@ struct Backend::TTLManager {
 
 // This is the FPGA clock frequency (100 MHz), which is hard coded for now.
 static constexpr uint64_t fpga_tick_per_sec = 100ul * 1000ul * 1000ul;
+// The clock frequency of the DMA instructions (200 MHz).
+static constexpr uint64_t dma_tick_per_sec = 200ul * 1000ul * 1000ul;
 
 Backend::Backend(Manager &mgr, std::string name)
     : Device(mgr, std::move(name))
@@ -266,7 +268,10 @@ void Backend::generate(Manager::ExpSeq &expseq, Compiler &compiler)
     // we can expose more control on start trigger and clock output
     // so that each device can know more precisely if they are needed in a basic sequence
     // and may skip the ones where they are completely unused.
-    const auto fpga_clock_div = uint32_t(m_seq_tick_per_sec / fpga_tick_per_sec);
+    resolve_dma();
+    // The DMA instructions use the DMA clock (200MHz) as the time unit.
+    const auto fpga_clock_div = uint32_t(m_seq_tick_per_sec /
+                                         (m_dma ? dma_tick_per_sec : fpga_tick_per_sec));
     const auto bseqs = compiler.basic_seqs();
     auto nbseqs = bseqs.size();
     m_seqs.resize(nbseqs);
@@ -367,6 +372,11 @@ void Backend::generate(Manager::ExpSeq &expseq, Compiler &compiler)
         bc_gen->start_ttl_chn = m_start_ttl_chn;
         bc_gen->ttl_mask = m_ttl_mask;
         bc_gen->first_bseq = idx == 0;
+        bc_gen->dma = m_dma;
+        if (m_dma) {
+            bc_gen->dds_timing = m_dds_timing;
+            bc_gen->clock_tail_ns = m_clock_tail_ns;
+        }
 
         bc_gen->trig_type = m_trig_type;
         bc_gen->trig_channel = m_trig_channel;
@@ -755,6 +765,55 @@ void Backend::config(const YAML::Node &config)
     }
     m_ttl_mask.resize(1);
     m_ttl_mask[0] = 0;
+    // Whether to use the DMA mode, which needs to be enabled on the server
+    // (`disabled` (default), `enabled` or `required`).
+    m_dma_enable = DMAEnable::Disabled;
+    if (auto dma_node = config["dma_enable"]) {
+        auto dma_enable = dma_node.as<std::string>();
+        if (dma_enable == "disabled") {
+            m_dma_enable = DMAEnable::Disabled;
+        }
+        else if (dma_enable == "enabled") {
+            m_dma_enable = DMAEnable::Enabled;
+        }
+        else if (dma_enable == "required") {
+            m_dma_enable = DMAEnable::Required;
+        }
+        else {
+            throw std::runtime_error(name() + ": Invalid dma_enable value: " + dma_enable);
+        }
+    }
+    // The clock output at the end of the sequence (DMA mode only).
+    if (auto tail_node = config["dma_clock_tail_ms"]) {
+        auto tail_ms = tail_node.as<double>();
+        if (!(tail_ms >= 0 && tail_ms <= 10000))
+            throw std::runtime_error(name() + ": Invalid dma_clock_tail_ms " +
+                                     std::to_string(tail_ms));
+        m_clock_tail_ns = uint64_t(tail_ms * 1e6 + 0.5);
+    }
+    else {
+        m_clock_tail_ns = 10000000;
+    }
+    // The DDS timing is read from the server.
+    // For testing only, it can be specified in the config in the dummy mode.
+    m_dds_timing = BCGen::DDSTiming{};
+    if (auto timing_node = config["dds_inst_timing"]) {
+        if (!mgr().dummy_mode)
+            throw std::runtime_error(name() + ": dds_inst_timing is only allowed "
+                                     "in the dummy mode (for testing).");
+        // [set16, set16_fud, set32, set32_fud, fud_to_end] in DMA cycles
+        auto vals = timing_node.as<std::vector<int>>();
+        if (vals.size() != 5)
+            throw std::runtime_error(name() + ": dds_inst_timing must have 5 numbers");
+        for (auto val: vals) {
+            if (val <= 0 || val > 255) {
+                throw std::runtime_error(name() + ": Invalid dds_inst_timing " +
+                                         std::to_string(val));
+            }
+        }
+        m_dds_timing = BCGen::DDSTiming{uint8_t(vals[0]), uint8_t(vals[1]),
+            uint8_t(vals[2]), uint8_t(vals[3]), uint8_t(vals[4])};
+    }
     if (auto start_ttl_chn_node = config["start_ttl_chn"]) {
         m_start_ttl_chn = start_ttl_chn_node.as<int>();
         if (m_start_ttl_chn < 0 || m_start_ttl_chn > int(m_max_ttl_chn)) {
@@ -832,6 +891,40 @@ void Backend::config(const YAML::Node &config)
     }
 }
 
+void Backend::resolve_dma()
+{
+    m_dma = false;
+    if (m_dma_enable == DMAEnable::Disabled)
+        return;
+    auto unavailable = [&] (const char *msg) {
+        if (m_dma_enable == DMAEnable::Required)
+            throw std::runtime_error(name() + ": DMA mode required but " + msg + ".");
+        mgr().add_debug_printf("%s: DMA mode not used: %s\n", name().c_str(), msg);
+    };
+    if (m_seq_tick_per_sec % dma_tick_per_sec != 0)
+        return unavailable("the sequence time tick is not a fraction of 5ns");
+    // No server in the dummy mode, use the timing from the config.
+    if (!mgr().dummy_mode) {
+        if (!m_sock)
+            throw std::runtime_error(name() + ": Backend not configured.");
+        auto reply = m_sock->send_msg([&] (auto &sock) {
+            ZMQ::send(sock, ZMQ::str_msg("get_dds_inst_timing"));
+        }).get();
+        BCGen::DDSTiming timing;
+        static_assert(sizeof(timing) == 5);
+        // Servers that do not support the DMA mode return an error (1 byte).
+        if (reply.empty() || reply[0].size() != sizeof(timing))
+            return unavailable("not supported by the server");
+        memcpy(&timing, reply[0].data(), sizeof(timing));
+        // All 0 if the DMA mode is not enabled.
+        if (!timing.set16 || !timing.set16_fud || !timing.set32 || !timing.set32_fud ||
+            !timing.fud_to_end)
+            return unavailable("not enabled on the server");
+        m_dds_timing = timing;
+    }
+    m_dma = true;
+}
+
 inline void Backend::run_bytecode(const std::vector<uint8_t> &bc, uint32_t version)
 {
     if (!m_sock) {
@@ -841,8 +934,11 @@ inline void Backend::run_bytecode(const std::vector<uint8_t> &bc, uint32_t versi
     }
     auto nbanks = int(m_ttl_mask.size());
     assert(nbanks <= 8);
+    // Version 0 is the DMA instructions (see `BCGen::version()`).
+    // The reply of `run_dma_seq` is the same as `run_seq`.
+    auto is_dma = version == 0;
     auto reply = m_sock->send_msg([&] (auto &sock) {
-        ZMQ::send_more(sock, ZMQ::str_msg("run_seq"));
+        ZMQ::send_more(sock, ZMQ::str_msg(is_dma ? "run_dma_seq" : "run_seq"));
         ZMQ::send_more(sock, ZMQ::bits_msg(version));
         ZMQ::send(sock, zmq::message_t(bc.data(), bc.size()));
     }).get();
@@ -1044,6 +1140,24 @@ Backend::get_vals(uint32_t bseq_idx, bool first_bseq, uint32_t chn_id) const
     auto entry = it->second;
     auto bytecode = get_bytecode(bseq_idx, first_bseq);
     auto version = get_bytecode_version(bseq_idx, first_bseq);
+    if (version == 0) {
+        // DMA instructions: [nbanks: 4B][ttl_mask: 4B x nbanks][instructions]
+        uint32_t nbanks;
+        if (bytecode.size() < 4)
+            throw std::runtime_error(name() + ": Invalid DMA instructions.");
+        memcpy(&nbanks, bytecode.data(), 4);
+        auto header_len = 4 + size_t(nbanks) * 4;
+        if (bytecode.size() < header_len)
+            throw std::runtime_error(name() + ": Invalid DMA instructions.");
+        auto [ts, vals] = DMA::extract_values(
+            std::span((const uint8_t*)bytecode.data() + header_len,
+                      bytecode.size() - header_len), version, entry.first, entry.second,
+            m_start_ttl_chn, m_dds_timing);
+        // Same time unit (10ns) as the bytecode.
+        for (auto &t: ts)
+            t /= dma_tick_per_sec / fpga_tick_per_sec;
+        return {std::move(ts), std::move(vals)};
+    }
     auto code_len = bytecode.size();
     auto code = (const uint8_t*)bytecode.data();
     code += 12; // Go through len_ns and ttl_mask
