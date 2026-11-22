@@ -118,7 +118,6 @@ struct Reader {
 
 NACS_EXPORT(utils) extern const size_t page_size;
 NACS_EXPORT(utils) void *mapPhyAddr(void*, size_t);
-NACS_EXPORT(utils) void *getPhyAddr(void*);
 #if NACS_OS_WINDOWS
 enum class Prot : int {
     RW = PAGE_READWRITE,

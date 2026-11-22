@@ -59,10 +59,6 @@ foreach(TESTSET RANGE 8)
     COMPILE_DEFINITIONS "IR_CC_TESTSET=${TESTSET}")
 endforeach()
 
-if(CMAKE_SYSTEM_NAME STREQUAL Linux)
-  add_utils_test(phy_addr EXCLUDE)
-endif()
-
 add_utils_test(small_alloc)
 add_utils_test(syntax_error)
 add_utils_test(term)

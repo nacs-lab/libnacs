@@ -63,27 +63,6 @@ mapPhyAddr(void *phy_addr, size_t len)
 #endif
 }
 
-NACS_EXPORT() void*
-getPhyAddr(void *virt_addr)
-{
-#if NACS_OS_LINUX
-    static int page_map = open("/proc/self/pagemap", O_RDONLY);
-    uintptr_t virt_offset = uintptr_t(virt_addr) % page_size;
-    uintptr_t virt_pfn = uintptr_t(virt_addr) / page_size;
-
-    uint64_t page_info;
-    auto res = pread(page_map, &page_info, sizeof(page_info),
-                     virt_pfn * sizeof(uint64_t));
-    (void)res;
-    auto phy_pfn = uintptr_t(page_info & ((1ll << 55) - 1));
-    auto phy_page = phy_pfn * page_size;
-    return (void*)(phy_page + virt_offset);
-#else
-    (void)virt_addr;
-    return nullptr;
-#endif
-}
-
 NACS_EXPORT() void *mapAnonPage(size_t size, Prot prot)
 {
 #if NACS_OS_WINDOWS
