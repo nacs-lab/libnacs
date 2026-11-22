@@ -16,6 +16,8 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#include "../block_helper.h"
+
 #include "../../lib/nacs-seq/host_seq.h"
 #include "../../lib/nacs-seq/error.h"
 
@@ -27,25 +29,6 @@
 #include <catch2/catch.hpp>
 
 using namespace NaCs;
-
-namespace {
-
-// Runs the callable passed in immediately.
-struct TestBlockRunner {
-    template<typename F>
-    void operator+(F &&f) const
-    {
-        f();
-    }
-};
-
-}
-
-// Run the following block in a separate non-inlined function.
-// This keeps each function small, which reduces the compile time
-// (in particular for the variable tracking for debug info) significantly.
-// Usage: `TEST_BLOCK { ... };`
-#define TEST_BLOCK TestBlockRunner{} + [&] () NACS_NOINLINE
 
 TEST_CASE("default_empty") {
     Seq::HostSeq host_seq;

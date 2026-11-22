@@ -17,6 +17,7 @@
  *************************************************************************/
 
 #include "compiler_helper.h"
+#include "../block_helper.h"
 
 #include "../../lib/nacs-seq/builder.h"
 
@@ -475,7 +476,7 @@ TEST_CASE("bseq_value") {
     REQUIRE(slot_ch1 >= chn_offset);
     REQUIRE(slot_ch1 < chn_offset + cs.host_seq.nchannels);
 
-    {
+    TEST_BLOCK {
         auto host_bseq = &cs.host_seq.seqs[0];
         REQUIRE(host_bseq->id == 1);
         auto &info1 = bs1->get_channel_infos().find(1)->second;
@@ -666,7 +667,7 @@ TEST_CASE("bseq_value") {
         }
         REQUIRE(host_p3->endvalue == slot_p3endval);
         REQUIRE(host_p3->cond == uint32_t(-1));
-    }
+    };
 }
 
 TEST_CASE("cond_pulse_and_measure") {
@@ -803,7 +804,7 @@ TEST_CASE("cond_pulse_and_measure") {
     REQUIRE(slot_ch1 >= chn_offset);
     REQUIRE(slot_ch1 < chn_offset + cs.host_seq.nchannels);
 
-    {
+    TEST_BLOCK {
         auto host_bseq = &cs.host_seq.seqs[0];
         REQUIRE(host_bseq->id == 1);
         auto &info1 = bs1->get_channel_infos().find(1)->second;
@@ -950,7 +951,7 @@ TEST_CASE("cond_pulse_and_measure") {
         REQUIRE(!host_p2->ramp_func);
         REQUIRE(host_p2->endvalue == slot_p2val);
         REQUIRE(host_p2->cond == uint32_t(-1));
-    }
+    };
 }
 
 TEST_CASE("bseq_time") {
@@ -1046,7 +1047,7 @@ TEST_CASE("bseq_time") {
     REQUIRE(slot_ch1 >= chn_offset);
     REQUIRE(slot_ch1 < chn_offset + cs.host_seq.nchannels);
 
-    {
+    TEST_BLOCK {
         auto host_bseq = &cs.host_seq.seqs[0];
         REQUIRE(host_bseq->id == 1);
 
@@ -1153,7 +1154,7 @@ TEST_CASE("bseq_time") {
         REQUIRE(!host_p2->ramp_func);
         REQUIRE(host_p2->endvalue == slot_f1);
         REQUIRE(host_p2->cond == uint32_t(-1));
-    }
+    };
 }
 
 TEST_CASE("default_value") {
@@ -1358,7 +1359,7 @@ TEST_CASE("cond_clone") {
     REQUIRE(slot_ch1 >= chn_offset);
     REQUIRE(slot_ch1 < chn_offset + cs.host_seq.nchannels);
 
-    {
+    TEST_BLOCK {
         auto host_bseq = &cs.host_seq.seqs[0];
         REQUIRE(host_bseq->id == 1);
 
@@ -1460,7 +1461,7 @@ TEST_CASE("cond_clone") {
         REQUIRE(!host_p2->ramp_func);
         REQUIRE(host_p2->endvalue == slot_g1);
         REQUIRE(host_p2->cond == uint32_t(-1));
-    }
+    };
 }
 
 TEST_CASE("assignment") {
@@ -1546,7 +1547,7 @@ TEST_CASE("assignment") {
 
     // Channel:
 
-    {
+    TEST_BLOCK {
         auto host_bseq = &cs.host_seq.seqs[0];
         REQUIRE(host_bseq->id == 1);
 
@@ -1629,7 +1630,7 @@ TEST_CASE("assignment") {
         REQUIRE(!host_m1->ramp_func);
         REQUIRE(host_m1->endvalue == uint32_t(-1));
         REQUIRE(host_m1->cond == uint32_t(-1));
-    }
+    };
 }
 
 TEST_CASE("assumption") {
@@ -1791,7 +1792,7 @@ TEST_CASE("assumption") {
 
     // Channel:
 
-    {
+    TEST_BLOCK {
         auto host_bseq = &cs.host_seq.seqs[0];
         REQUIRE(host_bseq->id == 1);
 
@@ -1928,7 +1929,7 @@ TEST_CASE("assumption") {
         REQUIRE(!host_m1->ramp_func);
         REQUIRE(host_m1->endvalue == uint32_t(-1));
         REQUIRE(host_m1->cond == uint32_t(-1));
-    }
+    };
 }
 
 TEST_CASE("endtime") {
@@ -2025,7 +2026,7 @@ TEST_CASE("endtime") {
 
     // Channel:
 
-    {
+    TEST_BLOCK {
         auto host_bseq = &cs.host_seq.seqs[0];
         REQUIRE(host_bseq->id == 1);
 
@@ -2056,7 +2057,7 @@ TEST_CASE("endtime") {
         REQUIRE(compare_vector_sorted(host_bseq->endtimes, {slot_t1, slot_t2}));
 
         REQUIRE(host_bseq->pulses.empty());
-    }
+    };
 }
 
 TEST_CASE("time_chain") {
@@ -2236,7 +2237,7 @@ TEST_CASE("time_chain") {
 
     // Channel:
 
-    {
+    TEST_BLOCK {
         auto host_bseq = &cs.host_seq.seqs[0];
         REQUIRE(host_bseq->id == 1);
 
@@ -2331,7 +2332,7 @@ TEST_CASE("time_chain") {
         REQUIRE(!host_p5->ramp_func);
         REQUIRE(host_p5->endvalue == slot_f1_5);
         REQUIRE(host_p5->cond == uint32_t(-1));
-    }
+    };
 }
 
 TEST_CASE("Assumption offset") {
@@ -2376,7 +2377,7 @@ TEST_CASE("Assumption offset") {
     stm.write<uint32_t>(0);
     // [nbasicseqs: 4B][[Basic Sequence] x nbasicseqs]
     stm.write<uint32_t>(1);
-    {
+    TEST_BLOCK {
         // [ntimes: 4B][[sign: 1B][id: 4B][delta_node: 4B][prev_id: 4B] x ntimes]
         stm.write<uint32_t>(4);
         stm.write<uint8_t>((uint8_t)Seq::Sign::NonNeg);
@@ -2413,7 +2414,7 @@ TEST_CASE("Assumption offset") {
         stm.write<uint32_t>(0);
         // [default_target: 4B]
         stm.write<uint32_t>(0);
-    }
+    };
     // [ndatas: 4B][[ndouble: 4B][data: 8B x ndouble] x ndatas]
     stm.write<uint32_t>(0);
     // [nbackenddatas: 4B][[device_name: NUL-terminated string]
@@ -2490,7 +2491,7 @@ TEST_CASE("Assumption offset") {
 
     // Channel:
 
-    {
+    TEST_BLOCK {
         auto host_bseq = &cs.host_seq.seqs[0];
         REQUIRE(host_bseq->id == 1);
 
@@ -2526,7 +2527,7 @@ TEST_CASE("Assumption offset") {
         REQUIRE(compare_vector_sorted(host_bseq->endtimes, {slot_ilen2}));
 
         REQUIRE(host_bseq->pulses.size() == 0);
-    }
+    };
 }
 
 TEST_CASE("Assumption offset2") {
@@ -2589,7 +2590,7 @@ TEST_CASE("Assumption offset2") {
     stm.write<uint32_t>(0);
     // [nbasicseqs: 4B][[Basic Sequence] x nbasicseqs]
     stm.write<uint32_t>(1);
-    {
+    TEST_BLOCK {
         // [ntimes: 4B][[sign: 1B][id: 4B][delta_node: 4B][prev_id: 4B] x ntimes]
         stm.write<uint32_t>(5);
         stm.write<uint8_t>((uint8_t)Seq::Sign::NonNeg);
@@ -2631,7 +2632,7 @@ TEST_CASE("Assumption offset2") {
         stm.write<uint32_t>(0);
         // [default_target: 4B]
         stm.write<uint32_t>(0);
-    }
+    };
     // [ndatas: 4B][[ndouble: 4B][data: 8B x ndouble] x ndatas]
     stm.write<uint32_t>(0);
     // [nbackenddatas: 4B][[device_name: NUL-terminated string]
@@ -2708,7 +2709,7 @@ TEST_CASE("Assumption offset2") {
 
     // Channel:
 
-    {
+    TEST_BLOCK {
         auto host_bseq = &cs.host_seq.seqs[0];
         REQUIRE(host_bseq->id == 1);
 
@@ -2744,5 +2745,5 @@ TEST_CASE("Assumption offset2") {
         REQUIRE(compare_vector_sorted(host_bseq->endtimes, {slot_ilen2}));
 
         REQUIRE(host_bseq->pulses.size() == 0);
-    }
+    };
 }
