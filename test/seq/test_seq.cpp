@@ -17,7 +17,6 @@
  *************************************************************************/
 
 #define LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING 1
-#define CATCH_CONFIG_MAIN
 
 #include "../../lib/nacs-seq/seq.h"
 #include "../../lib/nacs-seq/error.h"

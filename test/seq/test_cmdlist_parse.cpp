@@ -16,8 +16,6 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#define CATCH_CONFIG_MAIN
-
 #include "../../lib/nacs-seq/zynq/cmdlist.h"
 #include "../../lib/nacs-utils/streams.h"
 #include "../../lib/nacs-utils/errors.h"

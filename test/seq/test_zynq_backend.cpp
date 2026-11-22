@@ -18,8 +18,6 @@
 
 #define LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING 1
 
-#define CATCH_CONFIG_MAIN
-
 #include "zynq_helper.h"
 #include "../error_helper.h"
 

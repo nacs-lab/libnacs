@@ -16,8 +16,6 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#define CATCH_CONFIG_MAIN
-
 #include "vec_codegen_helper.h"
 
 #include <functional>

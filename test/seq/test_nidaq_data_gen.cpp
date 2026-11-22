@@ -16,8 +16,6 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#define CATCH_CONFIG_MAIN
-
 #include "../../lib/nacs-seq/nidaq/data_gen.h"
 
 #include "../../lib/nacs-utils/number.h"

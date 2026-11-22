@@ -16,8 +16,6 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#define CATCH_CONFIG_MAIN
-
 #include "zynq_helper.h"
 
 struct DummyHostSeq : HostSeq {

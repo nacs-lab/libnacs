@@ -16,8 +16,6 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#define CATCH_CONFIG_MAIN
-
 #include "../../lib/nacs-utils/processor.h"
 
 #include <catch2/catch.hpp>

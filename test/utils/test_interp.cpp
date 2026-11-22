@@ -16,9 +16,6 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#define CATCH_CONFIG_ENABLE_BENCHMARKING
-#define CATCH_CONFIG_MAIN
-
 #include "../../lib/nacs-utils/number.h"
 #include "../../lib/nacs-utils/processor.h"
 #include <math.h>

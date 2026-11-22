@@ -10,11 +10,11 @@ function(add_seq_test target)
   add_executable(test-${target} ${SOURCES})
   if(SEQ_TEST_STATIC AND BUILD_STATIC_LIB)
     target_link_libraries(test-${target}
-      nacs-seq-static Catch2::Catch2)
+      nacs-seq-static nacs-catch-main)
     set_property(TARGET test-${target} APPEND_STRING
       PROPERTY COMPILE_FLAGS " -DNACS_STATIC_ONLY=1")
   else()
-    target_link_libraries(test-${target} nacs-seq Catch2::Catch2)
+    target_link_libraries(test-${target} nacs-seq nacs-catch-main)
   endif()
   if(NOT SEQ_TEST_NOTEST)
     if(SEQ_TEST_EXCLUDE)

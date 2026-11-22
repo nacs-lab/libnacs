@@ -7,6 +7,13 @@ if(NOT TARGET Catch2::Catch2)
     INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/bundle")
 endif()
 
+# Compile the Catch2 implementation and `main` once and share it with all the tests.
+add_library(nacs-catch-main STATIC catch_main.cpp)
+target_link_libraries(nacs-catch-main PUBLIC Catch2::Catch2)
+# Benchmarking changes the layout of Catch2's internal classes
+# so it must be enabled consistently in all translation units.
+target_compile_definitions(nacs-catch-main PUBLIC CATCH_CONFIG_ENABLE_BENCHMARKING)
+
 configure_file(winpath_helper.h.in winpath_helper.h @ONLY)
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 

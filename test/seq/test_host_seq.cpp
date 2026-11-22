@@ -16,8 +16,6 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#define CATCH_CONFIG_MAIN
-
 #include "../../lib/nacs-seq/host_seq.h"
 #include "../../lib/nacs-seq/error.h"
 

@@ -16,8 +16,6 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
-#define CATCH_CONFIG_MAIN
-
 #include "winpath_helper.h"
 
 #include "../../lib/nacs-utils/dlload.h"
