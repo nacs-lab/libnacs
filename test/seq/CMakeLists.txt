@@ -34,6 +34,7 @@ add_seq_test(host_seq)
 add_seq_test(host_seq_error)
 add_seq_test(nidaq_data_gen)
 add_seq_test(zynq_bc_gen)
+add_seq_test(zynq_dma_gen)
 
 if(ENABLE_LLVM)
   function(add_llvm_test target)

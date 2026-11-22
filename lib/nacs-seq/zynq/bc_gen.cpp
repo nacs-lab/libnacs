@@ -19,8 +19,11 @@
 #include "bc_gen.h"
 
 #include "bytecode.h"
+#include "dma.h"
 #include "utils.h"
 #include "../../nacs-utils/processor.h"
+
+#include <algorithm>
 
 #include <string.h>
 
@@ -494,6 +497,9 @@ NACS_EXPORT() void BCGen::add_ttl_manager(uint8_t chn, int64_t off_delay, int64_
 
 NACS_EXPORT() uint32_t BCGen::version() const
 {
+    // DMA instructions version
+    if (dma)
+        return 0;
     // Bytecode version
     return ttl_mask.size() > 1 ? 3 : 2;
 }
@@ -737,7 +743,8 @@ void BCGen::merge_ttl_pulses() const
         }
 
         // Bump `to` since we'll now add a new pulse one way or another
-        auto available_time = time_keeper.next_available(time);
+        // The DMA can output all TTL banks in every cycle without any throughput limit.
+        auto available_time = dma ? time : time_keeper.next_available(time);
 
         if (available_time > time) {
             if (bank_status.prev_t >= 0 && time < bank_status.prev_t + 1000) {
@@ -757,7 +764,8 @@ void BCGen::merge_ttl_pulses() const
                 }
             }
         }
-        time_keeper.add_time(time);
+        if (!dma)
+            time_keeper.add_time(time);
 
         auto &out_pulse = m_ttlpulses[to];
         out_pulse.chn = uint8_t(bank * 32);
@@ -785,7 +793,12 @@ NACS_EXPORT() void BCGen::generate(const HostSeq &host_seq) const
     populate_pulses(host_seq);
     merge_pulses();
     merge_ttl_pulses();
-    emit_bytecode(host_seq.values.data());
+    if (dma) {
+        emit_dma(host_seq.values.data());
+    }
+    else {
+        emit_bytecode(host_seq.values.data());
+    }
 }
 
 static uint8_t pulse_mintime(ChnType chn_typ)
@@ -1534,6 +1547,946 @@ void BCGen::_emit_bytecode(const void *data) const
     // Wait for 1us at the end of the sequence.
     // This just adds a little spacing before the termination sequence.
     writer.add_wait(std::max(int64_t(0), -writer.cur_t) + 100);
+}
+
+/**
+ * DMA instructions generation (version 0, see `DMA::Inst_v0`).
+ *
+ * The hardware executes all the output instructions before a wait in the same cycle
+ * (a "group") with at most one output on each of the DDS buses, the DAC and the clock
+ * in each group. A DDS or DAC output keeps its bus busy for a while and a new output
+ * on a busy bus would corrupt the previous one.
+ *
+ * Unlike the bytecode, which executes one output at a time, the outputs on different
+ * devices are scheduled independently and run concurrently.
+ * * The TTL and clock outputs are done at exactly the requested time.
+ * * Each of the DDS buses and the DAC are scheduled independently (`DMABus`).
+ *   The DDS writes are started early so that the frequency update (FUD),
+ *   which makes the new values take effect, happens at the requested time.
+ *   Multiple DDS parameters (of any DDS's on the same bus) updated at the same time
+ *   are written together with only the last write triggering the FUD.
+ *
+ * All the time in this part is in DMA cycles (5ns) unless otherwise noted.
+ */
+
+namespace {
+
+// Each 10ns (the time unit of the bytecode) is 2 DMA cycles.
+constexpr int64_t dma_cycle_per_10ns = 2;
+// Extra cycles between two DAC outputs (safety margin).
+// No margin is needed for the DDS since a new write can start right when the previous
+// write finishes (the time reported by the server), the same as the two halves
+// of a 32-bit write.
+constexpr int64_t dma_dac_margin = 1;
+// SPI clock divider for the DAC (DMA cycles per SPI clock edge minus 1).
+// This is the same SPI clock as the DAC output of the bytecode.
+constexpr uint16_t dma_dac_div = 1;
+// Minimum time between the starts of two DAC outputs
+// (18 bits with two clock edges per bit, plus the chip select).
+constexpr int64_t dma_dac_time = 37 * (dma_dac_div + 1) + 2;
+// The hardware runs the commands from the CPU (e.g. DDS writes) in waits longer than this.
+// Writes without FUD must not be separated by a wait this long
+// so that no FUD from the CPU can happen before the FUD of the DMA.
+constexpr int64_t dma_long_wait = 128;
+// Wait at the start of the sequence so that the hardware can buffer some instructions.
+constexpr int64_t dma_start_wait = 200; // 1us
+// Wait after initializing the channels (first basic sequence only), same as the bytecode.
+constexpr int64_t dma_init_wait = 2500 * dma_cycle_per_10ns; // 25us
+// Delay of the FUD output of the DDS writes relative to the TTL outputs
+// done in the same group. Assumed to be 0.
+constexpr int64_t dma_dds_fud_delay = 0;
+
+// Convert the clock period (in 10ns, 0 for off, same as the input of the bytecode)
+// to the period of the DMA clock output instruction.
+// The DMA clock output toggles every `period + 1` cycles and is off for 0x1ff.
+static uint16_t dma_clock_period(uint8_t period)
+{
+    auto p = uint8_t(period - 1);
+    return uint16_t((p << 1) | 1);
+}
+
+// Which bus the DDS/DAC channel is on (0 and 1 for the DDS buses and 2 for the DAC),
+// -1 for other channels.
+static int dma_bus_id(ChnType type, uint8_t chn)
+{
+    switch (type) {
+    case ChnType::Freq:
+    case ChnType::Amp:
+    case ChnType::Phase:
+        assert(chn < 22);
+        // DDS 0-10 are on bus 0 and 11-21 are on bus 1.
+        return chn >= 11 ? 1 : 0;
+    case ChnType::DAC:
+        assert(chn < 4);
+        return 2;
+    default:
+        return -1;
+    }
+}
+
+struct DMADDSWrite {
+    uint8_t dds_id; // DDS number on the bus
+    uint8_t addr; // 16 bit register index (byte address / 2)
+    bool is32;
+    bool fud;
+    uint32_t data;
+};
+
+// All the outputs at the same time.
+struct DMAGroup {
+    // TTL values of the banks in `ttl_set`
+    uint32_t ttl[NUM_TTL_BANKS];
+    uint8_t ttl_set = 0;
+    static_assert(NUM_TTL_BANKS <= 8);
+    bool has_clock = false;
+    uint16_t clock_period = 0;
+    bool has_dds[2] = {false, false};
+    DMADDSWrite dds[2];
+    bool has_dac = false;
+    uint32_t dac_data = 0;
+};
+
+using DMAGroups = std::map<int64_t,DMAGroup>;
+
+}
+
+// Schedule the outputs on a DDS bus or the DAC.
+//
+// The outputs are done in batches. A batch is a series of back-to-back writes on the bus
+// for any number of DDS's (DAC channels) on the bus. For the DDS's, only the last write
+// of the batch triggers the frequency update (FUD), which is shared by all the DDS's
+// on the bus, so that all the values written in the batch take effect at the same time,
+// i.e. at the (rising) edge of the FUD. We refer to this time as the time of the batch.
+// For the DAC (no FUD), the time of the batch is the start of the first write.
+//
+// * The values that must change at a specific time (pulses, start of ramps
+//   and end values of ramps) are written in a batch at exactly that time if possible
+//   (i.e. if the bus is available early enough) or as soon as possible otherwise.
+// * The ramps are sampled (at the time of the batch) as fast as possible in the time
+//   between these batches without delaying them, with all the ramps on the bus
+//   in the same batch if possible.
+// * Only the 16-bit registers that are changed are written. Two registers in the same
+//   32-bit pair (frequency, or phase and amplitude) are written with a single 32-bit write.
+struct BCGen::DMABus {
+    struct Slot {
+        Pulse *ramp = nullptr;
+        DataStream stream{};
+        // Value to be written in the next batch
+        bool has_pending = false;
+        uint32_t pending = 0;
+    };
+    // A DDS or a DAC channel
+    struct Unit {
+        // Last value written to each 16-bit register
+        // (frequency low, frequency high, phase, amplitude for the DDS).
+        bool has_cur[4] = {false, false, false, false};
+        uint16_t cur[4] = {0, 0, 0, 0};
+    };
+    // A write to the hardware.
+    struct Write {
+        uint8_t unit;
+        uint8_t reg; // Index of the first 16-bit register (see `Unit::cur`)
+        bool is32;
+        bool fud;
+        uint32_t data;
+    };
+    // A change at a specific time.
+    struct Event {
+        int64_t time;
+        unsigned slot;
+        // Start of `pulse` or the end of the ramp `pulse` (setting the end value).
+        bool ramp_end;
+        Pulse *pulse;
+    };
+
+    DMABus(int bus_id, const DDSTiming &timing)
+        : bus_id(bus_id),
+          timing(timing)
+    {
+        if (is_dac()) {
+            unit_nslots = 1;
+            units.resize(4);
+            retry_time = dma_dac_time + dma_dac_margin;
+        }
+        else {
+            // A unit is a DDS with 3 slots (freq, amp, phase).
+            unit_nslots = 3;
+            units.resize(11);
+            retry_time = timing.set16_fud;
+        }
+        slots.resize(units.size() * unit_nslots);
+    }
+
+    bool is_dac() const
+    {
+        return bus_id == 2;
+    }
+    unsigned slot_index(const Pulse &pulse) const
+    {
+        if (is_dac())
+            return pulse.chn;
+        unsigned param = (pulse.chn_type == ChnType::Freq ? 0 :
+                          pulse.chn_type == ChnType::Amp ? 1 : 2);
+        return (pulse.chn - bus_id * 11) * 3 + param;
+    }
+    // The registers of the unit set by the slot.
+    uint8_t slot_regs(unsigned slot) const
+    {
+        if (is_dac())
+            return 1;
+        switch (slot % 3) {
+        case 0: return 0x3; // frequency
+        case 1: return 0x8; // amplitude
+        default: return 0x4; // phase
+        }
+    }
+    // The time from the start of the write until the next write on the bus can start.
+    int64_t write_time(const Write &write) const
+    {
+        if (is_dac())
+            return dma_dac_time + dma_dac_margin;
+        if (write.is32)
+            return write.fud ? timing.set32_fud : timing.set32;
+        return write.fud ? timing.set16_fud : timing.set16;
+    }
+    // Total time of the writes.
+    int64_t total_time(const std::vector<Write> &writes) const
+    {
+        int64_t res = 0;
+        for (auto &write: writes)
+            res += write_time(write);
+        return res;
+    }
+    // The time from the start of the batch to the time the outputs take effect.
+    int64_t lead_time(const std::vector<Write> &writes) const
+    {
+        if (writes.empty() || is_dac())
+            return 0;
+        return total_time(writes) - timing.fud_to_end + dma_dds_fud_delay;
+    }
+
+    // Add the writes for `unit` to `writes`, writing the registers in `regs` (bit mask).
+    void add_writes(std::vector<Write> &writes, unsigned unit, uint8_t regs,
+                    const uint16_t *vals) const
+    {
+        if (is_dac()) {
+            if (regs & 1) {
+                writes.push_back({ .unit = uint8_t(unit), .reg = 0, .is32 = false,
+                        .fud = false, .data = (uint32_t(unit) << 16) | vals[0] });
+            }
+            return;
+        }
+        for (uint8_t reg = 0; reg < 4; reg += 2) {
+            auto pair = (regs >> reg) & 3;
+            if (pair == 3) {
+                writes.push_back({ .unit = uint8_t(unit), .reg = reg, .is32 = true,
+                        .fud = false,
+                        .data = uint32_t(vals[reg]) | (uint32_t(vals[reg + 1]) << 16) });
+            }
+            else if (pair) {
+                auto r = uint8_t(reg + (pair == 2));
+                writes.push_back({ .unit = uint8_t(unit), .reg = r, .is32 = false,
+                        .fud = false, .data = vals[r] });
+            }
+        }
+    }
+    void finish_writes(std::vector<Write> &writes) const
+    {
+        // Only the last write of the batch triggers the FUD (shared by all the DDS's
+        // on the bus) so that all the values are updated at the same time.
+        if (!is_dac() && !writes.empty()) {
+            writes.back().fud = true;
+        }
+    }
+
+    // The upper bound of the lead time of the batch writing the slots in `sel`.
+    int64_t max_lead_time(const std::vector<unsigned> &sel)
+    {
+        if (is_dac())
+            return 0;
+        auto &writes = scratch_writes;
+        writes.clear();
+        const uint16_t vals[4] = {};
+        for (size_t i = 0; i < sel.size();) {
+            auto unit = sel[i] / unit_nslots;
+            uint8_t regs = 0;
+            for (; i < sel.size() && sel[i] / unit_nslots == unit; i++)
+                regs = uint8_t(regs | slot_regs(sel[i]));
+            add_writes(writes, unit, regs, vals);
+        }
+        finish_writes(writes);
+        return lead_time(writes);
+    }
+
+    // Compute the writes for the slots in `sel` (sorted) for the batch at time `t`.
+    // The ramps are sampled at `t` (the time of the DAC write for the DAC).
+    // The ramps that are not running at the sampling time are ignored.
+    void plan(std::vector<Write> &writes, const std::vector<unsigned> &sel,
+              int64_t t, const void *data, const StreamBuffer &streambuffer)
+    {
+        writes.clear();
+        for (size_t i = 0; i < sel.size();) {
+            auto unit = sel[i] / unit_nslots;
+            auto &u = units[unit];
+            uint16_t vals[4] = {};
+            uint8_t regs = 0;
+            auto sample_t = t;
+            if (is_dac())
+                sample_t += int64_t(writes.size()) * (dma_dac_time + dma_dac_margin);
+            for (; i < sel.size() && sel[i] / unit_nslots == unit; i++) {
+                auto &slot = slots[sel[i]];
+                uint32_t val;
+                if (slot.has_pending) {
+                    val = slot.pending;
+                }
+                else if (slot.ramp && slot.ramp->time <= sample_t &&
+                         sample_t < slot.ramp->time + slot.ramp->len) {
+                    auto type = slot.ramp->chn_type;
+                    val = convert_value(type, slot.stream.compute(sample_t, data, retry_time,
+                                                                  streambuffer));
+                }
+                else {
+                    continue;
+                }
+                uint8_t slot_reg = slot_regs(sel[i]);
+                if (is_dac()) {
+                    vals[0] = uint16_t(val);
+                }
+                else if (slot_reg == 0x3) {
+                    vals[0] = uint16_t(val);
+                    vals[1] = uint16_t(val >> 16);
+                }
+                else if (slot_reg == 0x8) {
+                    // Only the lower 12 bits of the amplitude are used, same as the bytecode.
+                    vals[3] = uint16_t(val & 0xfff);
+                }
+                else {
+                    vals[2] = uint16_t(val);
+                }
+                for (unsigned reg = 0; reg < 4; reg++) {
+                    if (((slot_reg >> reg) & 1) &&
+                        (!u.has_cur[reg] || u.cur[reg] != vals[reg])) {
+                        regs = uint8_t(regs | (1 << reg));
+                    }
+                }
+            }
+            add_writes(writes, unit, regs, vals);
+        }
+        finish_writes(writes);
+    }
+
+    // Plan the batch for the slots in `sel` to start as soon as possible at or after `t`.
+    // Returns the start time.
+    int64_t plan_asap(std::vector<Write> &writes, const std::vector<unsigned> &sel,
+                      int64_t t, int64_t &lead, const void *data,
+                      const StreamBuffer &streambuffer)
+    {
+        // The registers that need to be written (and therefore the lead time)
+        // depends on the values, which depends on the time of the batch for the ramps.
+        // Start with the guess in `lead` and only increase the guess
+        // so that this converges.
+        for (int i = 0; ; i++) {
+            plan(writes, sel, t + lead, data, streambuffer);
+            auto new_lead = lead_time(writes);
+            if (new_lead <= lead) {
+                // Delay the start (if needed) to make the outputs happen
+                // at the time the ramps were sampled.
+                auto start = t + lead - new_lead;
+                lead = new_lead;
+                return start;
+            }
+            lead = i < 3 ? new_lead : std::max(new_lead, max_lead_time(sel));
+        }
+    }
+
+    // Add the writes to the output starting at `t` and return the time
+    // when the bus is available again.
+    int64_t emit(DMAGroups &groups, const std::vector<Write> &writes, int64_t t)
+    {
+        for (auto &write: writes) {
+            auto &group = groups[t];
+            auto &u = units[write.unit];
+            if (is_dac()) {
+                assert(!group.has_dac);
+                group.has_dac = true;
+                group.dac_data = write.data;
+                u.has_cur[0] = true;
+                u.cur[0] = uint16_t(write.data);
+            }
+            else {
+                assert(!group.has_dds[bus_id]);
+                group.has_dds[bus_id] = true;
+                // The first register is at 0x2c.
+                group.dds[bus_id] = { .dds_id = write.unit, .addr = uint8_t(0x16 + write.reg),
+                    .is32 = write.is32, .fud = write.fud, .data = write.data };
+                u.has_cur[write.reg] = true;
+                u.cur[write.reg] = uint16_t(write.data);
+                if (write.is32) {
+                    u.has_cur[write.reg + 1] = true;
+                    u.cur[write.reg + 1] = uint16_t(write.data >> 16);
+                }
+            }
+            t += write_time(write);
+        }
+        return t;
+    }
+
+    void apply_event(const Event &event)
+    {
+        auto &slot = slots[event.slot];
+        auto pulse = event.pulse;
+        if (event.ramp_end) {
+            assert(slot.ramp == pulse);
+            slot.ramp = nullptr;
+            nramps--;
+            slot.has_pending = true;
+            slot.pending = pulse->endvalue;
+        }
+        else if (pulse->ramp_func) {
+            if (!slot.ramp)
+                nramps++;
+            slot.ramp = pulse;
+            slot.stream.add_pulse(*pulse);
+            slot.has_pending = false;
+        }
+        else {
+            if (slot.ramp) {
+                slot.ramp = nullptr;
+                nramps--;
+            }
+            slot.has_pending = true;
+            slot.pending = pulse->endvalue;
+        }
+    }
+
+    // Schedule all the `pulses` (sorted by time), with the bus available starting at `t`.
+    // Returns the time when the bus is available after the last output.
+    int64_t run(DMAGroups &groups, int64_t t, const void *data,
+                const StreamBuffer &streambuffer)
+    {
+        std::vector<Event> events;
+        events.reserve(pulses.size() * 2);
+        for (auto pulse: pulses) {
+            auto slot = slot_index(*pulse);
+            events.push_back({ pulse->time, slot, false, pulse });
+            // The truncated ramps (`!need_endvalue`) are ended by the next pulse
+            // on the same channel.
+            if (pulse->ramp_func && pulse->need_endvalue) {
+                events.push_back({ pulse->time + pulse->len, slot, true, pulse });
+            }
+        }
+        std::stable_sort(events.begin(), events.end(), [] (auto &e1, auto &e2) {
+            return e1.time < e2.time;
+        });
+        pulses.clear();
+
+        const auto nunits = unsigned(units.size());
+        std::vector<Write> writes;
+        std::vector<unsigned> sel;
+        size_t idx = 0;
+        while (true) {
+            // Stop the (truncated) ramps that have ended.
+            // The other ramps are ended by the event setting the end value.
+            for (auto &slot: slots) {
+                if (slot.ramp && !slot.ramp->need_endvalue &&
+                    slot.ramp->time + slot.ramp->len <= t) {
+                    slot.ramp = nullptr;
+                    nramps--;
+                }
+            }
+            bool has_event = idx < events.size();
+            if (!has_event && !nramps)
+                break;
+            // The batch for the next event must start before `deadline`.
+            int64_t deadline = INT64_MAX;
+            int64_t event_t = INT64_MAX;
+            if (has_event) {
+                event_t = events[idx].time;
+                sel.clear();
+                for (auto i = idx; i < events.size() && events[i].time == event_t; i++)
+                    sel.push_back(events[i].slot);
+                std::sort(sel.begin(), sel.end());
+                deadline = event_t - max_lead_time(sel);
+            }
+            if (nramps && t < deadline) {
+                // Sample the ramps, starting from `next_ramp_unit`
+                // and dropping the units from the end if the batch does not finish
+                // before the deadline.
+                auto &ramp_units = scratch_units;
+                ramp_units.clear();
+                for (unsigned i = 0; i < nunits; i++) {
+                    auto unit = (next_ramp_unit + i) % nunits;
+                    for (unsigned j = 0; j < unit_nslots; j++) {
+                        if (slots[unit * unit_nslots + j].ramp) {
+                            ramp_units.push_back(unit);
+                            break;
+                        }
+                    }
+                }
+                bool done = false;
+                bool changed = true;
+                for (auto n = ramp_units.size(); n > 0; n--) {
+                    sel.clear();
+                    for (size_t i = 0; i < n; i++) {
+                        auto unit = ramp_units[i];
+                        for (unsigned j = 0; j < unit_nslots; j++) {
+                            auto s = unit * unit_nslots + j;
+                            if (slots[s].ramp) {
+                                sel.push_back(s);
+                            }
+                        }
+                    }
+                    std::sort(sel.begin(), sel.end());
+                    // The lead time of the ramps is usually the same as the last one.
+                    auto start = plan_asap(writes, sel, t, ramp_lead, data, streambuffer);
+                    if (writes.empty()) {
+                        changed = n != ramp_units.size();
+                        break;
+                    }
+                    if (start + total_time(writes) <= deadline) {
+                        t = emit(groups, writes, start);
+                        next_ramp_unit = (ramp_units[n - 1] + 1) % nunits;
+                        done = true;
+                        break;
+                    }
+                }
+                if (done)
+                    continue;
+                if (!changed) {
+                    // No change in any of the ramps, try again later.
+                    t = std::min(t + retry_time, deadline);
+                    continue;
+                }
+                // Not enough time for the ramps before the next event.
+            }
+            if (!has_event)
+                continue;
+            // Output the values for the event at the requested time if possible.
+            sel.clear();
+            for (; idx < events.size() && events[idx].time == event_t; idx++) {
+                apply_event(events[idx]);
+                sel.push_back(events[idx].slot);
+            }
+            std::sort(sel.begin(), sel.end());
+            plan(writes, sel, event_t, data, streambuffer);
+            auto lead = lead_time(writes);
+            auto start = event_t - lead;
+            if (start < t) {
+                // Too late, output as soon as possible.
+                // Starting from the lead time for the requested time makes sure
+                // that the outputs never happen before the requested time
+                // (and that all the ramps starting at this time are sampled).
+                start = plan_asap(writes, sel, t, lead, data, streambuffer);
+            }
+            for (auto s: sel)
+                slots[s].has_pending = false;
+            if (!writes.empty()) {
+                t = emit(groups, writes, start);
+            }
+            else {
+                // No change, e.g. a ramp starting from the current value.
+                // The ramps can only be sampled after this time.
+                t = std::max(t, event_t);
+            }
+        }
+        return t;
+    }
+
+    const int bus_id;
+    const DDSTiming &timing;
+    unsigned unit_nslots;
+    int64_t retry_time;
+    std::vector<Unit> units;
+    std::vector<Slot> slots;
+    // Input
+    std::vector<Pulse*> pulses;
+    int nramps = 0;
+    unsigned next_ramp_unit = 0;
+    // Lead time of the last batch of ramps.
+    int64_t ramp_lead = 0;
+    std::vector<Write> scratch_writes;
+    std::vector<unsigned> scratch_units;
+};
+
+void BCGen::emit_dma(const void *data) const
+{
+    using namespace DMA;
+    bytecode.clear();
+    auto &code = bytecode;
+
+    if (!dds_timing.set16 || !dds_timing.set16_fud || !dds_timing.set32 ||
+        !dds_timing.set32_fud || !dds_timing.fud_to_end ||
+        dds_timing.fud_to_end >= dds_timing.set16_fud)
+        throw std::runtime_error("Invalid DDS timing for DMA.");
+    if (dds_timing.set32 >= dma_long_wait)
+        throw std::runtime_error("DDS write time too long for DMA.");
+    auto nmasks = uint32_t(ttl_mask.size());
+    if (nmasks < 1 || nmasks > NUM_TTL_BANKS)
+        throw std::runtime_error("Invalid number of TTL banks.");
+    if (start_ttl_chn < 0 || uint32_t(start_ttl_chn) >= nmasks * 32)
+        throw std::runtime_error("Invalid start TTL channel.");
+
+    auto write = [&] (auto obj) {
+        static_assert(std::is_trivial_v<decltype(obj)>);
+        auto len = code.size();
+        code.resize(len + sizeof(obj));
+        memcpy(&code[len], &obj, sizeof(obj));
+    };
+
+    // Header: [nbanks: 4B][ttl_mask: 4B x nbanks]
+    // Version number is in a different ZMQ message and won't be included here.
+    // See `BCGen::version()`.
+    auto start_bank = start_ttl_chn / 32;
+    auto start_bit = uint8_t(start_ttl_chn % 32);
+    uint32_t masks[NUM_TTL_BANKS] = {};
+    write(nmasks);
+    for (uint32_t bank = 0; bank < nmasks; bank++) {
+        auto mask = ttl_mask[bank];
+        if (int(bank) == start_bank)
+            mask = setBit(mask, start_bit, true);
+        masks[bank] = mask;
+        write(mask);
+    }
+
+    // Emitting instructions
+    auto emit_wait = [&] (int64_t cycles) {
+        assert(cycles >= 0);
+        // A wait of `cycle` takes `cycle + 1` cycles.
+        constexpr int64_t max_wait2 = int64_t(1) << 28;
+        constexpr int64_t max_wait1 = int64_t(1) << 12;
+        while (cycles > max_wait2) {
+            write(Inst_v0::Wait2(uint32_t(max_wait2 - 1)));
+            cycles -= max_wait2;
+        }
+        if (cycles > max_wait1) {
+            write(Inst_v0::Wait2(uint32_t(cycles - 1)));
+        }
+        else if (cycles > 0) {
+            write(Inst_v0::Wait1(uint16_t(cycles - 1)));
+        }
+    };
+    // The TTL values in the hardware for the banks in `ttl_known`.
+    uint32_t ttl_hw[NUM_TTL_BANKS] = {};
+    bool ttl_known[NUM_TTL_BANKS] = {};
+    // Emit the TTL changes of a group.
+    // Each instruction sets all the channels of one 4-bit sub-bank (`TTLSet4`, 2 bytes),
+    // or two 8-bit (`TTLSet16`, 4 bytes) or 16-bit (`TTLSet32`, 6 bytes) sub-banks,
+    // which can be in any of the banks. Each sub-bank must be set at most once in a group.
+    // The instructions are chosen to minimize the number (and then the total size)
+    // of the instructions.
+    auto emit_ttl = [&] (const DMAGroup &group) {
+        uint32_t changes[NUM_TTL_BANKS] = {};
+        for (int bank = 0; bank < NUM_TTL_BANKS; bank++) {
+            if (!((group.ttl_set >> bank) & 1))
+                continue;
+            auto mask = masks[bank];
+            // Skipping the banks without any channel controlled by the DMA is required
+            // since the hardware ignores the high bits of the bank number
+            // for the banks that don't exist.
+            if (!mask)
+                continue;
+            // The value must not have any bits set outside of the mask
+            // since the hardware does not mask the value.
+            auto val = group.ttl[bank] & mask;
+            changes[bank] = ttl_known[bank] ? (val ^ ttl_hw[bank]) : mask;
+            ttl_hw[bank] = val;
+            ttl_known[bank] = true;
+        }
+        // Dynamic programming over the 16-bit sub-banks with changes.
+        // For each 16-bit sub-bank, the options are setting it as a 16-bit sub-bank
+        // or setting each of its changed 8-bit sub-banks as an 8-bit sub-bank
+        // or as (one or two) 4-bit sub-banks.
+        // Since two 8-bit (16-bit) sub-banks shares one instruction,
+        // the state is the parity of the number of the 8-bit and 16-bit sub-banks.
+        // Cost is the number of instructions times 1024 plus the size in bytes.
+        constexpr int nhalfs = NUM_TTL_BANKS * 2;
+        struct Choice {
+            int prev_state = -1;
+            // Bit 0: 16-bit sub-bank, bit 1/2: the lower/higher 8-bit sub-bank
+            // as an 8-bit sub-bank (otherwise 4-bit sub-banks).
+            uint8_t opt = 0;
+        };
+        int64_t costs[4] = {0, INT64_MAX, INT64_MAX, INT64_MAX}; // state: hpar | bpar << 1
+        Choice choices[nhalfs][4];
+        int halfs[nhalfs];
+        int nchanged = 0;
+        for (int half = 0; half < nhalfs; half++) {
+            auto change = uint16_t(changes[half / 2] >> ((half % 2) * 16));
+            if (!change)
+                continue;
+            auto idx = nchanged++;
+            halfs[idx] = half;
+            uint8_t byte_changed = uint8_t(((change & 0xff) != 0) | ((change >> 8 != 0) << 1));
+            int64_t new_costs[4] = {INT64_MAX, INT64_MAX, INT64_MAX, INT64_MAX};
+            auto update = [&] (int state, int new_state, int64_t cost, uint8_t opt) {
+                if (cost < new_costs[new_state]) {
+                    new_costs[new_state] = cost;
+                    choices[idx][new_state] = {state, opt};
+                }
+            };
+            for (int state = 0; state < 4; state++) {
+                auto cost = costs[state];
+                if (cost == INT64_MAX)
+                    continue;
+                auto hpar = state & 1;
+                auto bpar = state >> 1;
+                // As a 16-bit sub-bank
+                update(state, (hpar ^ 1) | (bpar << 1),
+                       cost + (hpar ? 0 : 1024 + 6), 1);
+                // As 8-bit or 4-bit sub-banks
+                for (uint8_t bytes = 0; bytes < 4; bytes++) {
+                    if (bytes & ~byte_changed)
+                        continue;
+                    auto c = cost;
+                    auto bp = bpar;
+                    for (int i = 0; i < 2; i++) {
+                        if (!((byte_changed >> i) & 1))
+                            continue;
+                        if ((bytes >> i) & 1) {
+                            c += bp ? 0 : 1024 + 4;
+                            bp ^= 1;
+                        }
+                        else {
+                            auto byte = (change >> (i * 8)) & 0xff;
+                            c += (((byte & 0xf) != 0) + ((byte >> 4) != 0)) * (1024 + 2);
+                        }
+                    }
+                    update(state, hpar | (bp << 1), c, uint8_t(bytes << 1));
+                }
+            }
+            memcpy(costs, new_costs, sizeof(costs));
+        }
+        if (!nchanged)
+            return;
+        int state = 0;
+        for (int s = 1; s < 4; s++) {
+            if (costs[s] < costs[state]) {
+                state = s;
+            }
+        }
+        // Back track
+        std::vector<uint8_t> sub16, sub8, sub4;
+        for (int idx = nchanged - 1; idx >= 0; idx--) {
+            auto &choice = choices[idx][state];
+            auto half = halfs[idx];
+            state = choice.prev_state;
+            if (choice.opt & 1) {
+                sub16.push_back(uint8_t(half));
+                continue;
+            }
+            auto change = uint16_t(changes[half / 2] >> ((half % 2) * 16));
+            for (int i = 0; i < 2; i++) {
+                auto byte = (change >> (i * 8)) & 0xff;
+                if (!byte)
+                    continue;
+                if ((choice.opt >> (i + 1)) & 1) {
+                    sub8.push_back(uint8_t(half * 2 + i));
+                    continue;
+                }
+                for (int j = 0; j < 2; j++) {
+                    if ((byte >> (j * 4)) & 0xf) {
+                        sub4.push_back(uint8_t(half * 4 + i * 2 + j));
+                    }
+                }
+            }
+        }
+        assert(state == 0);
+        auto sub_val = [&] (int idx, int width) {
+            auto per_bank = 32 / width;
+            auto val = ttl_hw[idx / per_bank] >> ((idx % per_bank) * width);
+            return width == 32 ? val : (val & ((uint32_t(1) << width) - 1));
+        };
+        // Emit in the order of the sub-banks.
+        std::reverse(sub16.begin(), sub16.end());
+        std::reverse(sub8.begin(), sub8.end());
+        std::reverse(sub4.begin(), sub4.end());
+        for (auto sub: sub4)
+            write(Inst_v0::TTLSet4(sub, uint8_t(sub_val(sub, 4))));
+        // For an odd number of sub-banks, the last one is set twice
+        // with the same value in the same instruction.
+        for (size_t i = 0; i < sub8.size(); i += 2) {
+            auto sub2 = i + 1 < sub8.size() ? sub8[i + 1] : sub8[i];
+            write(Inst_v0::TTLSet16(sub8[i], uint8_t(sub_val(sub8[i], 8)),
+                                    sub2, uint8_t(sub_val(sub2, 8))));
+        }
+        for (size_t i = 0; i < sub16.size(); i += 2) {
+            auto sub2 = i + 1 < sub16.size() ? sub16[i + 1] : sub16[i];
+            write(Inst_v0::TTLSet32(sub16[i], uint16_t(sub_val(sub16[i], 16)),
+                                    sub2, uint16_t(sub_val(sub2, 16))));
+        }
+    };
+    auto emit_outputs = [&] (const DMAGroup &group) {
+        emit_ttl(group);
+        if (group.has_clock)
+            write(Inst_v0::ClockOut(group.clock_period));
+        for (uint8_t bus = 0; bus < 2; bus++) {
+            if (!group.has_dds[bus])
+                continue;
+            auto &dds = group.dds[bus];
+            if (dds.is32) {
+                write(Inst_v0::DDSSet32(bus, dds.dds_id, dds.fud, dds.addr, dds.data));
+            }
+            else {
+                write(Inst_v0::DDSSet16(bus, dds.dds_id, dds.fud, dds.addr,
+                                        uint16_t(dds.data)));
+            }
+        }
+        if (group.has_dac) {
+            write(Inst_v0::DAC(0, dma_dac_div, 0, 0, group.dac_data));
+        }
+    };
+    // Emit the groups between `start` and `end` (exclusive).
+    // The instructions emitted before must end with a wait.
+    // The instructions emitted will end with a wait.
+    auto emit_groups = [&] (const DMAGroups &groups, int64_t start, int64_t end) {
+        auto cur = start;
+        for (auto &[t, group]: groups) {
+            assert(t >= cur);
+            emit_wait(t - cur);
+            emit_outputs(group);
+            cur = t;
+        }
+        assert(end > cur || groups.empty());
+        emit_wait(end - cur);
+    };
+
+    const StreamBuffer streambuffer(fpga_clock_div);
+    DMABus buses[3] = {DMABus(0, dds_timing), DMABus(1, dds_timing),
+        DMABus(2, dds_timing)};
+
+    // Let the hardware buffer some instructions before running any output.
+    emit_wait(dma_start_wait);
+
+    // TTL values at the beginning of the sequence.
+    uint32_t ttl_vals[NUM_TTL_BANKS] = {};
+    for (int bank = 0; bank < NUM_TTL_BANKS; bank++) {
+        auto it = m_real_start_vals.find({ChnType::TTL, bank * 32});
+        if (it != m_real_start_vals.end()) {
+            ttl_vals[bank] = it->second;
+        }
+    }
+
+    // 1. Initialize all the channels for the first basic sequence.
+    if (first_bseq) {
+        DMAGroups groups;
+        std::vector<Pulse> init_pulses;
+        init_pulses.reserve(m_real_start_vals.size());
+        for (auto [chn, val]: m_real_start_vals) {
+            if (chn.first == ChnType::TTL) {
+                // Only the bank values are left after `merge_ttl_pulses`.
+                auto bank = chn.second / 32;
+                auto &group = groups[0];
+                group.ttl[bank] = val;
+                group.ttl_set = uint8_t(group.ttl_set | (1 << bank));
+                continue;
+            }
+            init_pulses.push_back({
+                    .pulse_type = PulseType::Value,
+                    .chn_type = chn.first,
+                    .chn = chn.second,
+                    .need_endvalue = true,
+                    .id = 0,
+                    .endvalue = val,
+                    .time = 0,
+                    .len = 0,
+                    .ramp_func = nullptr
+                });
+        }
+        for (auto &pulse: init_pulses) {
+            auto bus_id = dma_bus_id(pulse.chn_type, pulse.chn);
+            if (bus_id >= 0) {
+                buses[bus_id].pulses.push_back(&pulse);
+            }
+        }
+        int64_t init_end = 1;
+        for (auto &bus: buses)
+            init_end = std::max(init_end, bus.run(groups, 0, data, streambuffer));
+        emit_groups(groups, 0, init_end + dma_init_wait);
+    }
+
+    // 2. Trigger
+    // The sequence time starts after the trigger
+    if (trig_type != TrigType::None) {
+        write(Inst_v0::WaitTrig(trig_channel, trig_type == TrigType::Raise,
+                                uint64_t(trig_timeout_cycle) * dma_cycle_per_10ns));
+    }
+
+    // 3. The sequence
+    // The time here is the sequence time (in DMA cycles) and may start
+    // before 0 for the start trigger and the clock outputs.
+    DMAGroups groups;
+
+    // TTL, including the start trigger at `-seq_delay`
+    // (high for 1us before that, same as the bytecode).
+    struct TTLEvent {
+        int64_t time;
+        int bank;
+        uint32_t val;
+        // 0 or 1 to set the start trigger, -1 for a normal TTL pulse.
+        int start_trigger;
+    };
+    std::vector<TTLEvent> ttl_events;
+    ttl_events.reserve(m_ttlpulses.size() + 2);
+    auto start_trigger_lo = -int64_t(seq_delay) * dma_cycle_per_10ns;
+    auto start_trigger_hi = start_trigger_lo - 100 * dma_cycle_per_10ns;
+    ttl_events.push_back({start_trigger_hi, start_bank, 0, 1});
+    ttl_events.push_back({start_trigger_lo, start_bank, 0, 0});
+    for (auto &pulse: m_ttlpulses)
+        ttl_events.push_back({pulse.time, pulse.chn / 32, pulse.val, -1});
+    std::stable_sort(ttl_events.begin(), ttl_events.end(),
+                     [] (auto &e1, auto &e2) { return e1.time < e2.time; });
+    for (auto &event: ttl_events) {
+        auto &val = ttl_vals[event.bank];
+        if (event.start_trigger >= 0) {
+            val = setBit(val, start_bit, event.start_trigger != 0);
+        }
+        else if (event.bank == start_bank) {
+            // The TTL pulses don't include the start trigger channel.
+            val = setBit(event.val, start_bit, (val >> start_bit) & 1);
+        }
+        else {
+            val = event.val;
+        }
+        auto &group = groups[event.time];
+        group.ttl[event.bank] = val;
+        group.ttl_set = uint8_t(group.ttl_set | (1 << event.bank));
+    }
+
+    for (auto &clock: clocks) {
+        auto &group = groups[convert_time(clock.time)];
+        group.has_clock = true;
+        group.clock_period = dma_clock_period(clock.period);
+    }
+
+    // DDS and DAC
+    for (auto &pulse: m_pulses) {
+        auto bus_id = dma_bus_id(pulse.chn_type, pulse.chn);
+        if (bus_id >= 0) {
+            buses[bus_id].pulses.push_back(&pulse);
+        }
+    }
+    // Wait for all the outputs to finish (including the DDS and DAC outputs).
+    // The DDS writes for the beginning of the sequence may start early,
+    // but not before the start trigger so that the time between the trigger
+    // and the start of the sequence is fixed.
+    int64_t seq_end = (len_ns + 4) / 5;
+    for (auto &bus: buses)
+        seq_end = std::max(seq_end, bus.run(groups, start_trigger_hi, data, streambuffer));
+    assert(!groups.empty());
+    seq_end = std::max(seq_end, groups.rbegin()->first + 1);
+    emit_groups(groups, std::min(int64_t(0), groups.begin()->first), seq_end);
+
+    // 4. Finish
+    if (!clocks.empty() && clock_tail_ns > 0) {
+        // Same as the end of the bytecode sequence on molecube2,
+        // output the clock for a while (10ms by default) after the sequence.
+        // This is a hack that is believed to make the NI card happy.
+        write(Inst_v0::ClockOut(dma_clock_period(10)));
+        emit_wait(int64_t((clock_tail_ns + 4) / 5));
+        write(Inst_v0::ClockOut(dma_clock_period(0)));
+        // The sequence must end with a wait so that the last outputs are executed.
+        emit_wait(10);
+    }
 }
 
 }

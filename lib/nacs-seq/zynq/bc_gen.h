@@ -19,6 +19,7 @@
 #ifndef __NACS_SEQ_ZYNQ_BC_GEN_H__
 #define __NACS_SEQ_ZYNQ_BC_GEN_H__
 
+#include "dma.h"
 #include "utils.h"
 
 #include "../host_seq.h"
@@ -39,6 +40,7 @@ class BCGen {
     struct TTLManager;
     template<typename Inst> struct Writer;
     struct DataStream;
+    struct DMABus;
 
 public:
     enum class PulseType : uint8_t {
@@ -100,14 +102,33 @@ public:
     int8_t start_ttl_chn;
     std::vector<uint32_t> ttl_mask{0};
     // How many sequence cycle corresponds to one FPGA clock cycle.
+    // For the DMA instructions (`dma`), this is the DMA cycle (5ns)
+    // instead of the 10ns bytecode cycle.
     uint32_t fpga_clock_div;
     int64_t len_ns;
 
     TrigType trig_type{TrigType::None};
     uint8_t trig_channel;
-    uint32_t trig_timeout_cycle;
+    uint32_t trig_timeout_cycle; // in unit of 10ns.
+
+    // Generate (version 0) DMA instructions for the `run_dma_seq` request
+    // instead of the bytecode.
+    // Unlike the bytecode, the outputs on different devices (TTL, the two DDS buses,
+    // DAC and clock) are scheduled independently and run concurrently.
+    bool dma{false};
+    // The time (in DMA cycles) each DDS write takes in the DMA mode.
+    using DDSTiming = DMA::DDSTiming;
+    DDSTiming dds_timing{};
+    // (DMA only) Length of the clock output (with period of 100ns) after the end
+    // of the sequence (when the clock output is used). 0 to disable.
+    // This is a hack that is believed to make the NI card happy.
+    uint64_t clock_tail_ns = 10000000;
 
     // Output
+    // Bytecode: `[len_ns: 8B][ttl_mask: 4B]` (version < 3) or
+    //           `[len_ns: 8B][nbanks: 4B][ttl_mask: 4B x nbanks]` (version 3)
+    //           followed by the bytecode.
+    // DMA: `[nbanks: 4B][ttl_mask: 4B x nbanks]` followed by the DMA instructions.
     mutable std::vector<uint8_t> bytecode;
 
 private:
@@ -212,6 +233,7 @@ private:
 
     template<typename Inst>
     void _emit_bytecode(const void *data) const;
+    void emit_dma(const void *data) const;
 
     std::vector<TTLManager> m_ttl_managers;
     mutable std::vector<Pulse> m_pulses;
