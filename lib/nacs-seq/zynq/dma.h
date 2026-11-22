@@ -100,12 +100,14 @@ struct NACS_PACKED TTLSet4 {
     OpCode op: 2;
     uint8_t bank4_1: 6;
     uint8_t val1: 4;
+    uint8_t _: 2;
     constexpr TTLSet4() = default;
     constexpr TTLSet4(uint8_t bank4_1, uint8_t val1)
         : len(0),
           op(OpCode::TTL_SET4),
           bank4_1(bank4_1),
-          val1(val1)
+          val1(val1),
+          _(0)
     {
     }
 };
@@ -115,11 +117,13 @@ struct NACS_PACKED ClockOut {
     uint8_t len: 2;
     OpCode op: 2;
     uint16_t period: 9;
+    uint8_t _: 3;
     constexpr ClockOut() = default;
     constexpr ClockOut(uint16_t period)
         : len(0),
           op(OpCode::CLOCKOUT),
-          period(period)
+          period(period),
+          _(0)
     {
     }
 };
@@ -147,11 +151,12 @@ struct NACS_PACKED TTLSet16 {
     uint8_t val1: 8;
     uint8_t bank8_2: 5;
     uint8_t val2: 8;
+    uint8_t _: 2;
     constexpr TTLSet16() = default;
     constexpr TTLSet16(uint8_t bank8_1, uint8_t val1,
                        uint8_t bank8_2, uint8_t val2)
     : len(1), op(OpCode::TTL_SET16),
-    bank8_1(bank8_1), val1(val1), bank8_2(bank8_2), val2(val2)
+    bank8_1(bank8_1), val1(val1), bank8_2(bank8_2), val2(val2), _(0)
     {
     }
 };
@@ -200,11 +205,12 @@ struct NACS_PACKED TTLSet32 {
     uint16_t val1: 16;
     uint8_t bank16_2: 4;
     uint16_t val2: 16;
+    uint8_t _: 4;
     constexpr TTLSet32() = default;
     constexpr TTLSet32(uint8_t bank16_1, uint16_t val1,
                        uint8_t bank16_2, uint16_t val2)
     : len(2), op(OpCode::TTL_SET32),
-    bank16_1(bank16_1), val1(val1), bank16_2(bank16_2), val2(val2)
+    bank16_1(bank16_1), val1(val1), bank16_2(bank16_2), val2(val2), _(0)
     {
     }
 };
@@ -240,7 +246,7 @@ struct NACS_PACKED DAC {
     constexpr DAC() = default;
     constexpr DAC(uint8_t id, uint16_t cycle, uint8_t clk_pha, uint8_t clk_pol, uint32_t data)
     : len(2), op(OpCode::DAC),
-    id(id), cycle(cycle), clk_pha(clk_pha), clk_pol(clk_pol), data(data)
+    id(id), cycle(cycle), clk_pha(clk_pha), clk_pol(clk_pol), data(data), _(0)
     {
     }
 };
