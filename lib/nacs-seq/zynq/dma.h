@@ -27,8 +27,24 @@
 #include <ostream>
 #include <span>
 #include <stdexcept>
+#include <utility>
+#include <vector>
 
 namespace NaCs::Seq::Zynq::DMA {
+
+// The time (in DMA cycles) each DDS write takes,
+// i.e. the time until the next write on the same DDS bus can start.
+// This is the reply of `get_dds_inst_timing` of the molecube2 server.
+// The default is for the default DDS timing at 200MHz (8 cycles per phase).
+struct DDSTiming {
+    uint8_t set16 = 24;
+    uint8_t set16_fud = 32;
+    uint8_t set32 = 48;
+    uint8_t set32_fud = 56;
+    // Time from the (rising) edge of the FUD to the end of a write with FUD
+    // (same for `set16_fud` and `set32_fud`).
+    uint8_t fud_to_end = 8;
+};
 
 enum OpCode : uint8_t {
     WAIT1 = 0,
@@ -344,6 +360,8 @@ inline void ExeState::run(CB &&cb, std::span<const uint8_t> code, uint32_t versi
             case OpCode::DAC:
                 handle(_tag_v<Inst_v0::DAC>);
                 break;
+            default:
+                invalid();
             }
             break;
         default:
@@ -367,6 +385,20 @@ void print(std::ostream &stm, std::span<const uint8_t> code, uint32_t version);
  * Total time it takes to execute the instructions
  */
 uint64_t total_time(std::span<const uint8_t> code, uint32_t version);
+
+/**
+ * The values of a channel set by the instructions.
+ *
+ * The times (in DMA cycles) are relative to the end of the start trigger
+ * on TTL channel `start_ttl` (same as the bytecode, the values set before that
+ * are at time 0). Use `-1` if there's no start trigger.
+ * The DDS values are at the time they take effect, i.e. at the (rising) edge
+ * of the FUD, computed using the DDS `timing`. The FUD is shared by all the DDS's
+ * on the same bus. The DAC values are at the start of the output.
+ */
+std::pair<std::vector<uint64_t>,std::vector<double>>
+extract_values(std::span<const uint8_t> code, uint32_t version, ChnType type,
+               uint8_t num, int start_ttl, const DDSTiming &timing);
 
 }
 
