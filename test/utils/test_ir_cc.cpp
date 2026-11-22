@@ -19,8 +19,11 @@
 #include "../../lib/nacs-utils/ir.h"
 #include "../../lib/nacs-utils/number.h"
 #include "../../lib/nacs-utils/timer.h"
+
+#include <array>
 #include <iostream>
 #include <sstream>
+#include <span>
 #include <math.h>
 
 #include <catch2/catch.hpp>
@@ -89,7 +92,7 @@ double ArgSet::get<double>(int i)
 
 static NACS_NOINLINE auto
 _build_single_arg(IR::ExeContext *exectx, IR::Type ret,
-                  const std::vector<IR::Type> &ids, int arg)
+                  std::span<const IR::Type> ids, int arg)
     -> decltype(exectx->getFuncBase(std::declval<IR::Function>()))
 {
     // Outline as much as possible from test_single_arg to reduce compiler workload.
@@ -100,7 +103,7 @@ _build_single_arg(IR::ExeContext *exectx, IR::Type ret,
 
 static NACS_NOINLINE auto
 _build_const_ret(IR::ExeContext *exectx, IR::Type ret,
-                 const std::vector<IR::Type> &ids)
+                 std::span<const IR::Type> ids)
     -> decltype(exectx->getFuncBase(std::declval<IR::Function>()))
 {
     // Outline as much as possible from test_const_ret to reduce compiler workload.
@@ -124,30 +127,16 @@ _build_const_ret(IR::ExeContext *exectx, IR::Type ret,
 }
 
 template<typename Ret, typename... Arg, int... I>
-static void test_single_arg(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
-                            int arg, const std::vector<IR::Type> &ids)
-{
-    auto f = IR::ExeContext::Func<Ret(Arg...)>(_build_single_arg(exectx, type_id_v<Ret>,
-                                                                 ids, arg));
-    ArgSet::test(f(ArgSet::get<Arg>(I)...), arg, ids[arg]);
-}
-
-template<typename Ret, typename... Arg, int... I>
-static void test_const_ret(IR::ExeContext *exectx, std::integer_sequence<int,I...>,
-                           const std::vector<IR::Type> &ids)
-{
-    auto f = IR::ExeContext::Func<Ret(Arg...)>(_build_const_ret(exectx, type_id_v<Ret>,
-                                                                ids));
-    ArgSet::test(f(ArgSet::get<Arg>(I)...), -1, type_id_v<Ret>);
-}
-
-template<typename Ret, typename... Arg, int... I>
 static void _test_cc_sig(IR::ExeContext *exectx, std::integer_sequence<int,I...> seq)
 {
-    std::vector<IR::Type> ids = {type_id_v<Arg>...};
-    for (size_t i = 0; i < sizeof...(Arg); i++)
-        test_single_arg<Ret,Arg...>(exectx, seq, int(i), ids);
-    test_const_ret<Ret,Arg...>(exectx, seq, ids);
+    std::array ids{type_id_v<Arg>...};
+    auto res_id = type_id_v<Ret>;
+    for (int arg = -1; arg < int(sizeof...(Arg)); arg++) {
+        IR::ExeContext::Func<Ret(Arg...)> f(
+            arg >= 0 ? _build_single_arg(exectx, res_id, ids, arg) :
+            _build_const_ret(exectx, res_id, ids));
+        ArgSet::test(f(ArgSet::get<Arg>(I)...), arg, arg >= 0 ? ids[arg] : res_id);
+    }
 }
 
 template<typename Ret, typename... Arg>
