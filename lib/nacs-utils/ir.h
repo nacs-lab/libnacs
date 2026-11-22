@@ -19,10 +19,12 @@
 #include "utils.h"
 
 #include <assert.h>
+#include <span>
 #include <vector>
 #include <map>
 #include <memory>
 #include <iostream>
+#include <initializer_list>
 
 #ifndef __NACS_UTILS_IR_H__
 #define __NACS_UTILS_IR_H__
@@ -244,17 +246,20 @@ NACS_EXPORT(utils) double evalBuiltin(Builtins id, TagVal *args);
 struct Function {
     typedef std::vector<int32_t> BB;
     typedef std::pair<int32_t, int32_t> InstRef;
-    Function(Type _ret, const std::vector<Type> &args)
+    Function(Type _ret, std::span<const Type> args)
         : ret(_ret),
           nargs((int)args.size()),
-          vals(args),
+          vals(args.begin(), args.end()),
           code{BB{}},
           consts{},
           float_table{}
     {}
+    Function(Type _ret, std::initializer_list<Type> args)
+        : Function(_ret, std::span(args.begin(), args.end()))
+    {}
     NACS_EXPORT(utils) Function(const uint32_t*, size_t);
     NACS_EXPORT(utils) Function(const uint8_t*, size_t);
-    Function(const std::vector<uint32_t> &data)
+    Function(std::span<const uint32_t> data)
         : Function(data.data(), data.size())
     {}
     Function(Function&&) = default;
@@ -298,11 +303,14 @@ inline void Function::dump(void) const
 
 class Builder {
 public:
-    Builder(Type ret, std::vector<Type> args)
+    Builder(Type ret, std::span<const Type> args)
         : m_f(ret, args),
           m_cur_bb(0),
           const_ints{},
           const_floats{}
+    {}
+    Builder(Type _ret, std::initializer_list<Type> args)
+        : Builder(_ret, std::span(args.begin(), args.end()))
     {}
     Function &get(void)
     {
@@ -326,9 +334,13 @@ public:
     NACS_EXPORT(utils) std::pair<int32_t, Function::InstRef> createPhi(Type typ, int ninputs);
     NACS_EXPORT(utils) void addPhiInput(Function::InstRef phi, int32_t bb, int32_t val);
     NACS_EXPORT(utils) int32_t createCall(Builtins id, int32_t nargs, const int32_t *args);
-    int32_t createCall(Builtins id, const std::vector<int32_t> &args)
+    int32_t createCall(Builtins id, std::span<const int32_t> args)
     {
         return createCall(id, (int32_t)args.size(), args.data());
+    }
+    int32_t createCall(Builtins id, std::initializer_list<int32_t> args)
+    {
+        return createCall(id, std::span(args.begin(), args.end()));
     }
     NACS_EXPORT(utils) int32_t createInterp(int32_t v, int32_t x0, int32_t dx, uint32_t npoints,
                                             const double *points);
