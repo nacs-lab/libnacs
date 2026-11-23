@@ -19,6 +19,9 @@
 #ifndef _NACS_TEST_ERROR_HELPER_H_
 #define _NACS_TEST_ERROR_HELPER_H_
 
+// catch.hpp uses `std::nothrow` without including `<new>`.
+#include <new>
+
 #include <catch2/catch.hpp>
 
 template<typename T, typename CB>
