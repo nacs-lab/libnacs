@@ -140,6 +140,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # Adding this unconditionally cause GCC to issue a warning if there are other warnings
   # so only add this conditionally for clang.
   add_definitions(-Wno-unknown-warning-option)
+  # We use VLA (supported by both GCC and Clang)
+  add_definitions(-Wno-vla-cxx-extension)
+  # We use C99 designated initializers (supported by both GCC and Clang)
+  add_definitions(-Wno-c99-designator)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   add_definitions(-Wno-packed-bitfield-compat)
 endif()
