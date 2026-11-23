@@ -16,8 +16,28 @@
  *   see <http://www.gnu.org/licenses/>.                                 *
  *************************************************************************/
 
+#include "../../lib/nacs-utils/macros.h"
 #include "../../lib/nacs-utils/timer.h"
 #include "../../lib/nacs-utils/thread.h"
+
+// Compare the C++ wrappers with the native locks.
+// Some platforms (e.g. MinGW) provide both the windows and the pthread locks.
+#if NACS_OS_WINDOWS
+#  include <windows.h>
+#  define HAS_WINDOWS_LOCK 1
+#else
+#  define HAS_WINDOWS_LOCK 0
+#endif
+
+#if defined(__has_include)
+#  if __has_include(<pthread.h>)
+#    include <pthread.h>
+#    define HAS_PTHREAD_LOCK 1
+#  endif
+#endif
+#ifndef HAS_PTHREAD_LOCK
+#  define HAS_PTHREAD_LOCK 0
+#endif
 
 #include <mutex>
 #include <shared_mutex>
@@ -174,6 +194,7 @@ public:
     }
 };
 
+#if HAS_PTHREAD_LOCK
 class PthreadMutex {
     pthread_mutex_t m_lock;
 public:
@@ -199,6 +220,49 @@ public:
         pthread_mutex_unlock(&m_lock);
     }
 };
+#endif
+
+#if HAS_WINDOWS_LOCK
+class WinSRWLock {
+    SRWLOCK m_lock = SRWLOCK_INIT;
+public:
+    inline void
+    lock()
+    {
+        AcquireSRWLockExclusive(&m_lock);
+    }
+    inline void
+    unlock()
+    {
+        ReleaseSRWLockExclusive(&m_lock);
+    }
+};
+
+class WinCriticalSection {
+    CRITICAL_SECTION m_lock;
+public:
+    inline
+    WinCriticalSection()
+    {
+        InitializeCriticalSection(&m_lock);
+    }
+    inline
+    ~WinCriticalSection()
+    {
+        DeleteCriticalSection(&m_lock);
+    }
+    inline void
+    lock()
+    {
+        EnterCriticalSection(&m_lock);
+    }
+    inline void
+    unlock()
+    {
+        LeaveCriticalSection(&m_lock);
+    }
+};
+#endif
 
 template<typename Lock=std::mutex>
 struct uniqueMutex: public std::unique_lock<Lock> {
@@ -254,8 +318,16 @@ locks_tester()
 {
     std::cout << "std::mutex" << std::endl;
     Tester<std::mutex>()();
+#if HAS_PTHREAD_LOCK
     std::cout << "PthreadMutex" << std::endl;
     Tester<PthreadMutex>()();
+#endif
+#if HAS_WINDOWS_LOCK
+    std::cout << "WinSRWLock" << std::endl;
+    Tester<WinSRWLock>()();
+    std::cout << "WinCriticalSection" << std::endl;
+    Tester<WinCriticalSection>()();
+#endif
     std::cout << "SpinLock<false>" << std::endl;
     Tester<SpinLock<false>>()();
     std::cout << "SpinLock<true>" << std::endl;
