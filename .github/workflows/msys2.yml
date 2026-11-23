@@ -31,32 +31,6 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
-    - name: Download MSYS2 packages
-      uses: actions/github-script@v9
-      with:
-        script: |
-          const fs = require('fs');
-          const release = (await github.rest.repos.getLatestRelease({
-              owner: 'nacs-lab',
-              repo: 'nacs-pkgs'
-          })).data;
-          for (let asset of release.assets) {
-              if (asset.name == 'msys2-packages.zip') {
-                  const file = fs.createWriteStream('msys2-packages.zip');
-                  core.info(`Downloading msys2-packages.zip from release ${release.name}`);
-                  const buffer = (await github.rest.repos.getReleaseAsset({
-                      headers: { Accept: 'application/octet-stream' },
-                      owner: 'nacs-lab',
-                      repo: 'nacs-pkgs',
-                      asset_id: asset.id,
-                  })).data;
-                  file.write(Buffer.from(buffer));
-                  file.end();
-                  return;
-              }
-          }
-          core.setFailed('Cannot find msys2-packages.zip from nacs-lab/nacs-pkgs');
-
     - uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
@@ -72,13 +46,19 @@ jobs:
           mingw-w64-x86_64-yaml-cpp
           mingw-w64-x86_64-zeromq
           mingw-w64-x86_64-cppzmq
-          unzip
 
-    - name: Install sleef
+    # The official sleef package doesn't have the patch for the calling convention.
+    - name: Install sleef from the NaCs package repository
       shell: msys2 {0}
+      env:
+        NACS_REPO: https://nacs-lab.github.io/nacs-pkgs
+        NACS_KEY_ID: FB3383FB18F0EC34A1ABC3D275A6768C2AA33C49
       run: |
-        unzip msys2-packages.zip
-        pacman -U --noconfirm msys2-packages/mingw-w64-x86_64-sleef-git-*.pkg.tar.*
+        curl -fsSL -o nacs.asc "${NACS_REPO}/nacs.asc"
+        pacman-key --add nacs.asc
+        pacman-key --lsign-key "${NACS_KEY_ID}"
+        printf '\n[nacs]\nServer = %s/msys2/mingw64\n' "${NACS_REPO}" >> /etc/pacman.conf
+        pacman -Sy --noconfirm mingw-w64-x86_64-sleef-git
 
     - name: Configure CMake
       shell: msys2 {0}
