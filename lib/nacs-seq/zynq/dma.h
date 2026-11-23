@@ -356,17 +356,18 @@ inline void ExeState::run(CB &&cb, std::span<const uint8_t> code, uint32_t versi
 /**
  * Returns the number of instructions.
  */
-size_t count(std::span<const uint8_t> code, uint32_t version);
+NACS_EXPORT(seq) size_t count(std::span<const uint8_t> code, uint32_t version);
 
 /**
  * Print all instructions in a human readable format.
  */
-void print(std::ostream &stm, std::span<const uint8_t> code, uint32_t version);
+NACS_EXPORT(seq) void print(std::ostream &stm, std::span<const uint8_t> code,
+                            uint32_t version);
 
 /**
  * Total time it takes to execute the instructions
  */
-uint64_t total_time(std::span<const uint8_t> code, uint32_t version);
+NACS_EXPORT(seq) uint64_t total_time(std::span<const uint8_t> code, uint32_t version);
 
 }
 

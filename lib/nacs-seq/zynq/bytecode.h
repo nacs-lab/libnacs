@@ -358,10 +358,10 @@ static inline size_t count(const std::vector<uint8_t> &code, uint32_t version)
  * Similar to most other functions on the bytecode, this merge wait instructions together
  * and also merge wait into TTL instructions.
  */
-void print(std::ostream &stm, const uint8_t *code, size_t code_len,
-           uint32_t ttl_mask, uint32_t version, bool dec);
-void print(std::ostream &stm, const uint8_t *code, size_t code_len,
-           const std::vector<uint32_t> &ttl_mask, uint32_t version, bool dec);
+NACS_EXPORT(seq) void print(std::ostream &stm, const uint8_t *code, size_t code_len,
+                            uint32_t ttl_mask, uint32_t version, bool dec);
+NACS_EXPORT(seq) void print(std::ostream &stm, const uint8_t *code, size_t code_len,
+                            const std::vector<uint32_t> &ttl_mask, uint32_t version, bool dec);
 template<typename T>
 static inline void print(std::ostream &stm, const std::vector<uint8_t> &code,
                          T &&ttl_mask, uint32_t version, bool dec)
@@ -374,7 +374,8 @@ static inline void print(std::ostream &stm, const std::vector<uint8_t> &code,
  *
  * Unlike print, this will not merge wait/TTL instructoins.
  */
-void print_raw(std::ostream &stm, const uint8_t *code, size_t code_len, uint32_t version);
+NACS_EXPORT(seq) void print_raw(std::ostream &stm, const uint8_t *code, size_t code_len,
+                                uint32_t version);
 
 /**
  * Total time it takes to execute the bytecode.
@@ -386,7 +387,7 @@ static inline uint64_t total_time(const std::vector<uint8_t> &code, uint32_t ver
     return total_time(&code[0], code.size(), version);
 }
 
-std::pair<std::vector<uint64_t>,std::vector<double>>
+NACS_EXPORT(seq) std::pair<std::vector<uint64_t>,std::vector<double>>
 extract_values(const uint8_t *code, size_t code_len, uint32_t version,
                ChnType type, uint8_t num, int start_ttl);
 

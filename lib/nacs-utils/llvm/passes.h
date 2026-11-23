@@ -47,9 +47,9 @@ namespace NaCs::LLVM {
 using namespace llvm;
 
 using resolver_cb_t = std::function<uintptr_t(const std::string&)>;
-bool fixVectorABI(Function &F);
-void runGlobalRenamePasses(Module &M);
-void runAlwaysInlinerPasses(Module &M);
+NACS_EXPORT(utils) bool fixVectorABI(Function &F);
+NACS_EXPORT(utils) void runGlobalRenamePasses(Module &M);
+NACS_EXPORT(utils) void runAlwaysInlinerPasses(Module &M);
 
 #if NACS_ENABLE_LEGACY_PASS
 Pass *createElimMachOPrefixPass();
