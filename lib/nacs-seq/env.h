@@ -399,7 +399,7 @@ private:
     } m_value;
     llvm::SmallVector<Arg, 4> m_args{};
     friend class Env;
-    friend std::ostream &operator<<(std::ostream &stm, const Arg &arg);
+    friend NACS_EXPORT(seq) std::ostream &operator<<(std::ostream &stm, const Arg &arg);
 };
 
 static inline std::ostream &operator<<(std::ostream &stm, const Var &var)
