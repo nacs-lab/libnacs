@@ -21,4 +21,8 @@
 // so compile them once here instead of in every test.
 #define CATCH_CONFIG_MAIN
 
+// catch.hpp uses `std::nothrow` without including `<new>`.
+// This is otherwise only included by other headers indirectly.
+#include <new>
+
 #include <catch2/catch.hpp>
