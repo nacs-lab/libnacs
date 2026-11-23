@@ -124,6 +124,23 @@ NACS_EXPORT() void *sym(void *handle, const char *symbol)
     static auto exe_hdl = GetModuleHandle(nullptr);
     if (auto res = _sym(exe_hdl, symbol))
         return res;
+    // Unlike `dlsym`, `GetProcAddress` doesn't look into the dependencies
+    // so look into the C runtime library explicitly.
+    static auto crt_hdl = [] {
+#ifdef _UCRT
+        const char *name = "ucrtbase.dll";
+#else
+        const char *name = "msvcrt.dll";
+#endif
+        if (auto hdl = GetModuleHandle(name))
+            return hdl;
+        return LoadLibraryExA(name, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    }();
+    if (crt_hdl) {
+        if (auto res = _sym(crt_hdl, symbol)) {
+            return res;
+        }
+    }
     static auto ntdll_hdl = GetModuleHandle("ntdll.dll");
     if (auto res = _sym(ntdll_hdl, symbol))
         return res;
