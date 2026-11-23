@@ -243,10 +243,11 @@ NACS_EXPORT() uintptr_t Resolver::resolve_ir_sym(const std::string &orig_name)
     if (auto openlibm_hdl = IR::get_openlibm_handle())
         if (auto addr = DL::sym(openlibm_hdl, orig_name.c_str()))
             return (uintptr_t)addr;
-#ifndef NACS_HAS_EXP10
-    if (name == "exp10")
-        return (uintptr_t)nacs_exp10;
-#endif
+    // Use the same libm functions as the interpreter.
+    // This also covers the functions that cannot be found with `DL::sym`
+    // (e.g. statically linked ones on windows) and `exp10` when it's missing.
+    if (auto addr = IR::find_libm_sym(orig_name.c_str()))
+        return addr;
 #ifdef ENABLE_SIMD
     static const auto &host_info = CPUInfo::get_host();
 #  if NACS_CPU_X86 || NACS_CPU_X86_64

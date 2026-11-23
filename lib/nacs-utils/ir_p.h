@@ -37,6 +37,9 @@ enum class BuiltinType : uint8_t {
 const char *getBuiltinSymbol(Builtins id);
 BuiltinType getBuiltinType(Builtins id);
 void *get_openlibm_handle();
+// Find the libm function used by the interpreter by name.
+// This is the openlibm version if available and the system version otherwise.
+uintptr_t find_libm_sym(const char *name);
 
 }
 

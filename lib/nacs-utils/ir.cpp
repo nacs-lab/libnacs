@@ -24,6 +24,7 @@
 #include "nacs_lib_names.h"
 
 #include <math.h>
+#include <string.h>
 #include <iostream>
 
 #ifndef NACS_HAS_EXP10
@@ -44,14 +45,30 @@ void *get_openlibm_handle()
 
 namespace {
 
+class LazyLibmFPtr;
+// All the libm functions, used to look up the functions by name.
+// This is constant initialized so it can be used in the constructors
+// of the static `LazyLibmFPtr` objects.
+static LazyLibmFPtr *libm_fptrs = nullptr;
+
 class LazyLibmFPtr {
 public:
     LazyLibmFPtr(const char *name, fptr_t fallback)
         : m_name(name),
           m_fallback(fallback),
-          m_fptr(nullptr)
+          m_fptr(nullptr),
+          m_next(libm_fptrs)
     {
         assert(fallback);
+        libm_fptrs = this;
+    }
+    const char *name() const
+    {
+        return m_name;
+    }
+    LazyLibmFPtr *next() const
+    {
+        return m_next;
     }
     operator fptr_t()
     {
@@ -70,6 +87,7 @@ private:
     const char *m_name;
     const fptr_t m_fallback;
     fptr_t m_fptr;
+    LazyLibmFPtr *const m_next;
 };
 
 #define DEF_FPTR(name) static LazyLibmFPtr p##name(#name, ::name)
@@ -133,6 +151,16 @@ static LazyLibmFPtr pldexp("ldexp", (fptr_t)(uintptr_t)(double(*)(double, int))(
 static LazyLibmFPtr pjn("jn", (fptr_t)(uintptr_t)(double(*)(int, double))(::jn));
 static LazyLibmFPtr pyn("yn", (fptr_t)(uintptr_t)(double(*)(int, double))(::yn));
 
+}
+
+uintptr_t find_libm_sym(const char *name)
+{
+    for (auto p = libm_fptrs; p; p = p->next()) {
+        if (strcmp(p->name(), name) == 0) {
+            return (uintptr_t)(fptr_t)*p;
+        }
+    }
+    return 0;
 }
 
 static fptr_t getBuiltinPtr(Builtins id)
