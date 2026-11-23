@@ -99,7 +99,9 @@ if(ENABLE_SIMD)
   # All the references to the sleef symbols are weak (to allow missing symbols)
   # so the linker would drop libsleef when linking with `--as-needed`.
   # Force linking to it in that case.
-  if(NOT APPLE AND NOT CMAKE_VERSION VERSION_LESS 3.24)
+  # (Not needed on Windows, where sleef is loaded at runtime and lld doesn't
+  # support `--no-as-needed`)
+  if(IS_UNIX AND NOT APPLE AND NOT CMAKE_VERSION VERSION_LESS 3.24)
     set(CMAKE_LINK_LIBRARY_USING_NO_AS_NEEDED
       "LINKER:--push-state,--no-as-needed" "<LINK_ITEM>" "LINKER:--pop-state")
     set(CMAKE_LINK_LIBRARY_USING_NO_AS_NEEDED_SUPPORTED True)
