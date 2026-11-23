@@ -18,15 +18,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        msystem: [ MINGW64 ]
+        msystem: [ UCRT64 ]
         BUILD_TYPE: [ Release, Debug ]
         with_llvm: [ true, false ]
         static_llvm: [ true ]
         include:
-          - msystem: MINGW64
+          - msystem: UCRT64
             BUILD_TYPE: Release
             with_llvm: true
             static_llvm: false
+          # Other environments
+          - msystem: MINGW64
+            BUILD_TYPE: Debug
+            with_llvm: true
+            static_llvm: true
+          - msystem: CLANG64
+            BUILD_TYPE: Debug
+            with_llvm: true
+            static_llvm: true
 
     steps:
     - uses: actions/checkout@v7
