@@ -142,8 +142,7 @@ set_target_properties(nacs-seq PROPERTIES
   COMPILE_FLAGS "-fvisibility=hidden"
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
-set_property(SOURCE ${nacs_seq_SRCS} APPEND_STRING
-  PROPERTY COMPILE_FLAGS " -\"DNACS_EXPORT_LIB_seq()=\"")
+add_definitions("-\"DNACS_EXPORT_LIB_seq()=\"")
 
 configure_file(nacs-seq.pc.in nacs-seq.pc @ONLY)
 if(ENABLE_INSTALL_NONLIB)

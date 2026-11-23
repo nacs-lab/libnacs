@@ -127,6 +127,10 @@ else()
 endif()
 
 add_definitions("-\"DNACS_EXPORT_LIB_utils()=\"")
+if(SEQ_IN_UTILS)
+  # The nacs-seq sources are compiled as part of nacs-utils.
+  add_definitions("-\"DNACS_EXPORT_LIB_seq()=\"")
+endif()
 
 add_library(nacs-utils SHARED
   ${nacs_utils_SRCS})
