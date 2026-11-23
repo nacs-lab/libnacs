@@ -130,6 +130,17 @@ static inline auto get_first_non_phi_it(auto bb)
 #endif
 }
 
+// Whether the (possibly unfinished) basic block has a terminator.
+// LLVM 23 made `getTerminator` assert on blocks without a terminator.
+static inline bool has_terminator(const llvm::BasicBlock *bb)
+{
+#if LLVM_VERSION_MAJOR >= 23
+    return bb->hasTerminator();
+#else
+    return bool(bb->getTerminator());
+#endif
+}
+
 NACS_EXPORT(utils) IR::Type get_ir_type(llvm::Type*, bool apitype=true);
 NACS_EXPORT(utils) llvm::Value *convert_scalar(llvm::IRBuilder<> &builder,
                                                llvm::Type *typ, llvm::Value *val);

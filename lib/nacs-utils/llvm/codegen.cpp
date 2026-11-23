@@ -479,7 +479,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
 
     SetVector<int, SmallVector<int, 8>> workstack;
     auto push_work = [&] (int i) {
-        if (bbs[i]->getTerminator())
+        if (has_terminator(bbs[i]))
             return;
         workstack.insert(i);
     };
@@ -496,7 +496,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
         builder.CreateStore(ConstantInt::get(T_i32, i), prev_bb_var);
     };
     auto enter_or_pop = [&] (int i) {
-        if (i < 0 || bbs[i]->getTerminator()) {
+        if (i < 0 || has_terminator(bbs[i])) {
             if (workstack.empty()) {
                 pc = end = nullptr;
                 return -1;
@@ -824,7 +824,7 @@ Function *Context::emit_function(const IR::Function &func, StringRef name, bool 
 
     // 6. Fix up unreachable bbs
     for (auto bb: bbs) {
-        if (!bb->getTerminator()) {
+        if (!has_terminator(bb)) {
             builder.SetInsertPoint(bb);
             builder.CreateUnreachable();
         }
