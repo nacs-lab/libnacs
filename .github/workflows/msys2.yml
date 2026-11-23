@@ -8,23 +8,23 @@ on:
     branches: [ master ]
 
 env:
-  CC: /mingw64/bin/gcc
-  CXX: /mingw64/bin/g++
   MSYS2_ARG_CONV_EXCL: -DCMAKE_INSTALL_PREFIX=
   CXXFLAGS_COV: -fprofile-arcs -ftest-coverage
 
 jobs:
   build:
-    name: "${{matrix.BUILD_TYPE}} build${{matrix.with_llvm && (matrix.static_llvm && ' (static LLVM)' || ' (shared LLVM)') || ' (no LLVM)'}}"
+    name: "${{matrix.msystem}} ${{matrix.BUILD_TYPE}} build${{matrix.with_llvm && (matrix.static_llvm && ' (static LLVM)' || ' (shared LLVM)') || ' (no LLVM)'}}"
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
+        msystem: [ MINGW64 ]
         BUILD_TYPE: [ Release, Debug ]
         with_llvm: [ true, false ]
         static_llvm: [ true ]
         include:
-          - BUILD_TYPE: Release
+          - msystem: MINGW64
+            BUILD_TYPE: Release
             with_llvm: true
             static_llvm: false
 
@@ -33,19 +33,36 @@ jobs:
 
     - uses: msys2/setup-msys2@v2
       with:
-        msystem: MINGW64
+        msystem: ${{ matrix.msystem }}
+        suppress-deprecation-warnings: ${{ matrix.msystem == 'MINGW64' && 'msystem-mingw64' || '' }}
         install: >-
           make
-          mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-toolchain
-          mingw-w64-x86_64-libwinpthread
-          mingw-w64-x86_64-llvm
-          mingw-w64-x86_64-openlibm
-          mingw-w64-x86_64-polly
-          mingw-w64-x86_64-tbb
-          mingw-w64-x86_64-yaml-cpp
-          mingw-w64-x86_64-zeromq
-          mingw-w64-x86_64-cppzmq
+        # openlibm (optional) was dropped from MINGW64
+        pacboy: >-
+          cmake:p
+          toolchain:p
+          libwinpthread:p
+          llvm:p
+          ${{ matrix.msystem != 'MINGW64' && 'openlibm:p' || '' }}
+          polly:p
+          tbb:p
+          yaml-cpp:p
+          zeromq:p
+          cppzmq:p
+
+    - name: Setup compiler
+      shell: msys2 {0}
+      run: |
+        if [[ $MSYSTEM = CLANG* ]]; then
+            cc=clang cxx=clang++ gcov='llvm-cov gcov'
+        else
+            cc=gcc cxx=g++ gcov=gcov
+        fi
+        {
+            echo "CC=${MINGW_PREFIX}/bin/${cc}"
+            echo "CXX=${MINGW_PREFIX}/bin/${cxx}"
+            echo "GCOV=${MINGW_PREFIX}/bin/${gcov}"
+        } >> "$GITHUB_ENV"
 
     # The official sleef package doesn't have the patch for the calling convention.
     - name: Install sleef from the NaCs package repository
@@ -57,12 +74,17 @@ jobs:
         curl -fsSL -o nacs.asc "${NACS_REPO}/nacs.asc"
         pacman-key --add nacs.asc
         pacman-key --lsign-key "${NACS_KEY_ID}"
-        printf '\n[nacs]\nServer = %s/msys2/mingw64\n' "${NACS_REPO}" >> /etc/pacman.conf
-        pacman -Sy --noconfirm mingw-w64-x86_64-sleef-git
+        # The repository for MINGW64 is named `nacs`,
+        # the other environments have the environment name as suffix.
+        env=${MSYSTEM,,}
+        name=nacs
+        [[ $MSYSTEM = MINGW64 ]] || name=nacs-$env
+        printf '\n[%s]\nServer = %s/msys2/%s\n' "$name" "${NACS_REPO}" "$env" >> /etc/pacman.conf
+        pacman -Sy --noconfirm "${MINGW_PACKAGE_PREFIX}-sleef-git"
 
     - name: Configure CMake
       shell: msys2 {0}
-      run: CXXFLAGS+=" ${CXXFLAGS_COV}" cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=${{matrix.with_llvm && 'On' || 'Off'}} -DSTATIC_LLVM=${{matrix.static_llvm && 'On' || 'Off'}} -DCMAKE_INSTALL_PREFIX=/mingw64 -G 'MSYS Makefiles'
+      run: CXXFLAGS+=" ${CXXFLAGS_COV}" cmake -B '${{github.workspace}}/build' -DCMAKE_BUILD_TYPE=${{matrix.BUILD_TYPE}} -DENABLE_SIMD=On -DENABLE_LLVM=${{matrix.with_llvm && 'On' || 'Off'}} -DSTATIC_LLVM=${{matrix.static_llvm && 'On' || 'Off'}} -DCMAKE_INSTALL_PREFIX="${MINGW_PREFIX}" -G 'MSYS Makefiles'
 
     - name: Build
       shell: msys2 {0}
@@ -81,7 +103,7 @@ jobs:
     - name: Generate coverage report
       shell: msys2 {0}
       run: |
-        find build/{lib,tools} -iname '*.obj' -exec /mingw64/bin/gcov -abcfupr {} -s $(cygpath -u '${{github.workspace}}') \;
+        find build/{lib,tools} -iname '*.obj' -exec ${GCOV} -abcfupr {} -s $(cygpath -u '${{github.workspace}}') \;
 
     - name: Upload coverage
       uses: codecov/codecov-action@v7
