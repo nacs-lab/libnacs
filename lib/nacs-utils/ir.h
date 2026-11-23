@@ -274,7 +274,7 @@ struct Function {
     Function(const Function&) = default;
     Function &operator=(Function&&) = delete;
     Function &operator=(const Function&) = delete;
-    NACS_EXPORT(utils) void dump(void) const;
+    void dump(void) const;
     NACS_EXPORT(utils) Type valType(int32_t id) const;
     TagVal evalConst(int32_t id) const
     {
