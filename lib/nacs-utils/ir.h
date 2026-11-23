@@ -262,10 +262,18 @@ struct Function {
     Function(std::span<const uint32_t> data)
         : Function(data.data(), data.size())
     {}
-    Function(Function&&) = default;
+    Function(Function &&other)
+        : ret(other.ret),
+          nargs(other.nargs),
+          vals(std::move(other.vals)),
+          code(std::move(other.code)),
+          consts(std::move(other.consts)),
+          float_table(std::move(other.float_table))
+    {
+    }
     Function(const Function&) = default;
-    Function &operator=(Function&&) = default;
-    Function &operator=(const Function&) = default;
+    Function &operator=(Function&&) = delete;
+    Function &operator=(const Function&) = delete;
     NACS_EXPORT(utils) void dump(void) const;
     NACS_EXPORT(utils) Type valType(int32_t id) const;
     TagVal evalConst(int32_t id) const
