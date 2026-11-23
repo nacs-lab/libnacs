@@ -1,5 +1,14 @@
 add_definitions(-UNDEBUG)
 
+if(IS_WINDOWS AND STATIC_LLVM)
+  # Both Catch2 and the static LLVM libraries use `std::regex`.
+  # The function-local static variables (and their guard variables) in it
+  # may be put in sections with different names (`.data$` vs `.bss$`)
+  # so the linker doesn't merge them and errors on multiple definitions.
+  # These definitions are all identical so it's fine to pick any of them.
+  cmake_c_add_flags(CMAKE_EXE_LINKER_FLAGS -Wl,--allow-multiple-definition)
+endif()
+
 find_package(Catch2 CONFIG)
 if(NOT TARGET Catch2::Catch2)
   add_library(Catch2::Catch2 INTERFACE IMPORTED)
