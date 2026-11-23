@@ -96,6 +96,17 @@ if(ENABLE_SIMD)
     # For old Sleef version
     add_definitions(-DNACS_SLEEF_HAS_REMAINDER)
   endif()
+  # All the references to the sleef symbols are weak (to allow missing symbols)
+  # so the linker would drop libsleef when linking with `--as-needed`.
+  # Force linking to it in that case.
+  if(NOT APPLE AND NOT CMAKE_VERSION VERSION_LESS 3.24)
+    set(CMAKE_LINK_LIBRARY_USING_NO_AS_NEEDED
+      "LINKER:--push-state,--no-as-needed" "<LINK_ITEM>" "LINKER:--pop-state")
+    set(CMAKE_LINK_LIBRARY_USING_NO_AS_NEEDED_SUPPORTED True)
+    set(SLEEF_LINK "$<LINK_LIBRARY:NO_AS_NEEDED,${SLEEF_LIBRARIES}>")
+  else()
+    set(SLEEF_LINK ${SLEEF_LIBRARIES})
+  endif()
 endif()
 find_package(OpenLibm)
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq>=4.0)
