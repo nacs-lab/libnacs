@@ -1,12 +1,15 @@
 #
 
 if(IS_UNIX)
+  # The first one is libzmq itself.
+  list(GET ZMQ_LINK_LIBRARIES 0 ZMQ_LIBRARY)
   add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/nacs_lib_names.h"
     COMMAND "${CMAKE_COMMAND}"
     "-DOUTPUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/nacs_lib_names.h"
     "-DCMAKE_OBJDUMP=${CMAKE_OBJDUMP}"
-    "-DNAMES=OPENLIBM"
+    "-DNAMES=OPENLIBM$<SEMICOLON>ZMQ"
     "-DOPENLIBM=${OPENLIBM_LIBRARIES}"
+    "-DZMQ=${ZMQ_LIBRARY}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/gen_libnames.cmake"
     DEPENDS gen_libnames.cmake
     VERBATIM)

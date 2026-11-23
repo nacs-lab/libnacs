@@ -34,9 +34,11 @@ add_utils_test(datareader)
 add_utils_test(dl)
 # Set export for accessing the symbol in the test
 set_property(TARGET test-dl APPEND PROPERTY ENABLE_EXPORTS On)
-# Set the include path for openlibm
+# Set the include path for nacs_lib_names.h
 set_property(TARGET test-dl APPEND PROPERTY
              INCLUDE_DIRECTORIES "${PROJECT_BINARY_DIR}/lib/nacs-utils")
+# For the zmq header
+target_link_libraries(test-dl PkgConfig::ZMQ)
 add_utils_test(filterqueue)
 add_utils_test(fixedqueue)
 add_utils_test(interp)
