@@ -1,7 +1,12 @@
 #
 
 function(add_seq_test target)
-  cmake_parse_arguments(SEQ_TEST "NOTEST;EXCLUDE;STATIC" "" "" ${ARGN})
+  # COST is a rough estimate of the run time (in seconds on the CI)
+  # so that the long running tests are started first.
+  cmake_parse_arguments(SEQ_TEST "NOTEST;EXCLUDE;STATIC" "COST" "" ${ARGN})
+  if(NOT DEFINED SEQ_TEST_COST)
+    set(SEQ_TEST_COST 0.1)
+  endif()
   if(SEQ_TEST_UNPARSED_ARGUMENTS)
     set(SOURCES ${SEQ_TEST_UNPARSED_ARGUMENTS})
   else()
@@ -18,10 +23,12 @@ function(add_seq_test target)
   endif()
   if(NOT SEQ_TEST_NOTEST)
     if(SEQ_TEST_EXCLUDE)
-      add_test(NAME test/excluded/seq/${target} COMMAND test-${target})
+      set(test_name test/excluded/seq/${target})
     else()
-      add_test(NAME test/normal/seq/${target} COMMAND test-${target})
+      set(test_name test/normal/seq/${target})
     endif()
+    add_test(NAME ${test_name} COMMAND test-${target})
+    set_tests_properties(${test_name} PROPERTIES COST ${SEQ_TEST_COST})
   endif()
 endfunction()
 
@@ -30,10 +37,11 @@ add_seq_test(cmdlist_parse NOTEST)
 add_test(NAME test/normal/seq/cmdlist_parse
   COMMAND ${CMAKE_COMMAND} -E env "TEST_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
   "$<TARGET_FILE:test-cmdlist_parse>")
+set_tests_properties(test/normal/seq/cmdlist_parse PROPERTIES COST 0.1)
 add_seq_test(host_seq)
 add_seq_test(host_seq_error)
 add_seq_test(nidaq_data_gen)
-add_seq_test(zynq_bc_gen)
+add_seq_test(zynq_bc_gen COST 1)
 
 if(ENABLE_LLVM)
   function(add_llvm_test target)
