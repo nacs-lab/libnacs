@@ -50,7 +50,7 @@
 
 using namespace std::literals;
 
-static constexpr int N = 1000000;
+static constexpr int N = 100000;
 
 static inline void tocPerCycle(NaCs::Timer &timer, int n=N)
 {
