@@ -170,9 +170,9 @@ struct _vec_sig<std::index_sequence<I...>, Res(Args...), vsize, vargi...> {
     using varg_t = api_type_t<sarg_t<i>,vsize>;
     template<size_t i>
     using arg_t = std::conditional_t<num_in_pack<vargi...>(i), varg_t<i>, sarg_t<i>>;
-    using func = api_type_t<Res,vsize>(arg_t<I>...) NACS_VECTORCALL;
-    using func_ra = api_type_t<Res,vsize>(arg_t<I>&...) NACS_VECTORCALL;
-    using func_rr = void(Res&,arg_t<I>...) NACS_VECTORCALL;
+    using func = api_type_t<Res,vsize> NACS_VECTORCALL(arg_t<I>...);
+    using func_ra = api_type_t<Res,vsize> NACS_VECTORCALL(arg_t<I>&...);
+    using func_rr = void NACS_VECTORCALL(Res&,arg_t<I>...);
     using func_rra = void(Res&,sarg_t<I>&...);
 };
 
@@ -241,7 +241,7 @@ private:
                 api_type_t<Res, vsize> vres{};
                 vec_runner<vsize>::run(
                     [&] {
-                        auto f = (api_type_t<Res, vsize>(*)(Args...) NACS_VECTORCALL)fptr;
+                        auto f = (api_type_t<Res, vsize>(NACS_VECTORCALL *)(Args...))fptr;
                         vres = f(args...);
                     });
                 for (size_t i = 0; i < vsize; i++) {
