@@ -295,7 +295,7 @@ TEST_CASE("global_value") {
         double g1 = i * 0.4;
         cs.host_seq.values[slot_g1].f64 = g1;
         cs.host_seq.global_evals[slot_p1time - gv_offset](cs.host_seq.values.data());
-        REQUIRE(cs.host_seq.values[slot_p1time].i64 == round<int64_t>(g1));
+        REQUIRE(cs.host_seq.values[slot_p1time].i64 == NaCs::round<int64_t>(g1));
     }
     REQUIRE(cs.host_seq.depends[slot_p1time - gv_offset].size() == 1);
     REQUIRE(cs.host_seq.depends[slot_p1time - gv_offset][0] == slot_g1 - gl_offset);
@@ -439,7 +439,7 @@ TEST_CASE("bseq_value") {
         double g2 = i * 0.4;
         cs.host_seq.values[slot_g2].f64 = g2;
         cs.host_seq.global_evals[slot_p2time - gv_offset](cs.host_seq.values.data());
-        REQUIRE(cs.host_seq.values[slot_p2time].i64 == round<int64_t>(g2));
+        REQUIRE(cs.host_seq.values[slot_p2time].i64 == NaCs::round<int64_t>(g2));
     }
     REQUIRE(cs.host_seq.depends[slot_p2time - gv_offset].size() == 1);
     REQUIRE(cs.host_seq.depends[slot_p2time - gv_offset][0] == slot_g2 - gl_offset);
@@ -452,7 +452,7 @@ TEST_CASE("bseq_value") {
         double g3 = i * 0.4;
         cs.host_seq.values[slot_g3].f64 = g3;
         cs.host_seq.global_evals[slot_p3time - gv_offset](cs.host_seq.values.data());
-        REQUIRE(cs.host_seq.values[slot_p3time].i64 == round<int64_t>(g3));
+        REQUIRE(cs.host_seq.values[slot_p3time].i64 == NaCs::round<int64_t>(g3));
     }
     REQUIRE(cs.host_seq.depends[slot_p3time - gv_offset].size() == 1);
     REQUIRE(cs.host_seq.depends[slot_p3time - gv_offset][0] == slot_g3 - gl_offset);
@@ -1083,7 +1083,7 @@ TEST_CASE("bseq_time") {
             double ch1 = i * 1.4 + 9.9;
             cs.host_seq.values[slot_ch1].f64 = ch1;
             host_bseq->evals[slot_p1time - dir_offset](cs.host_seq.values.data());
-            REQUIRE(cs.host_seq.values[slot_p1time].i64 == round<int64_t>(ch1) + 2);
+            REQUIRE(cs.host_seq.values[slot_p1time].i64 == NaCs::round<int64_t>(ch1) + 2);
         }
 
         // Need order
@@ -1096,7 +1096,7 @@ TEST_CASE("bseq_time") {
             double m2 = i * 4.8 + 4.7;
             cs.host_seq.values[slot_m2val].f64 = m2;
             host_bseq->evals[slot_p2time - dir_offset](cs.host_seq.values.data());
-            REQUIRE(cs.host_seq.values[slot_p2time].i64 == round<int64_t>(m2) + 10);
+            REQUIRE(cs.host_seq.values[slot_p2time].i64 == NaCs::round<int64_t>(m2) + 10);
         }
         REQUIRE(host_bseq->deps_count[slot_p2time - no_offset] == 1);
 
@@ -1785,7 +1785,7 @@ TEST_CASE("assumption") {
         double assume1 = i * 1.4 - 5.0;
         cs.host_seq.values[slot_assume1].f64 = assume1;
         cs.host_seq.global_evals[slot_assume1i - gv_offset](cs.host_seq.values.data());
-        REQUIRE(cs.host_seq.values[slot_assume1i].i64 == round<int64_t>(assume1));
+        REQUIRE(cs.host_seq.values[slot_assume1i].i64 == NaCs::round<int64_t>(assume1));
     }
     REQUIRE(cs.host_seq.depends[slot_assume1i - gv_offset].size() == 1);
     REQUIRE(cs.host_seq.depends[slot_assume1i - gv_offset][0] == slot_g1 - gl_offset);
@@ -1846,7 +1846,7 @@ TEST_CASE("assumption") {
             double assume2 = i * 0.8 - 3.8;
             cs.host_seq.values[slot_assume2].f64 = assume2;
             host_bseq->evals[slot_assume2i - dir_offset](cs.host_seq.values.data());
-            REQUIRE(cs.host_seq.values[slot_assume2i].i64 == round<int64_t>(assume2));
+            REQUIRE(cs.host_seq.values[slot_assume2i].i64 == NaCs::round<int64_t>(assume2));
         }
         REQUIRE(host_bseq->deps_count[slot_assume2i - no_offset] == 1);
         assume_idxs.push_back(host_bseq->assumptions_idx[slot_assume2i - no_offset]);
@@ -1877,7 +1877,7 @@ TEST_CASE("assumption") {
             double assume3 = i * 0.8 - 3.8;
             cs.host_seq.values[slot_assume3].f64 = assume3;
             host_bseq->evals[slot_assume3i - dir_offset](cs.host_seq.values.data());
-            REQUIRE(cs.host_seq.values[slot_assume3i].i64 == round<int64_t>(assume3));
+            REQUIRE(cs.host_seq.values[slot_assume3i].i64 == NaCs::round<int64_t>(assume3));
         }
         REQUIRE(host_bseq->deps_count[slot_assume3i - no_offset] == 1);
         assume_idxs.push_back(host_bseq->assumptions_idx[slot_assume3i - no_offset]);
@@ -2000,7 +2000,7 @@ TEST_CASE("endtime") {
         double g0 = i * 0.4;
         cs.host_seq.values[slot_g0].f64 = g0;
         cs.host_seq.global_evals[slot_t1 - gv_offset](cs.host_seq.values.data());
-        REQUIRE(cs.host_seq.values[slot_t1].i64 == round<int64_t>(g0) + 4);
+        REQUIRE(cs.host_seq.values[slot_t1].i64 == NaCs::round<int64_t>(g0) + 4);
     }
     REQUIRE(cs.host_seq.depends[slot_t1 - gv_offset].size() == 1);
     REQUIRE(cs.host_seq.depends[slot_t1 - gv_offset][0] == slot_g0 - gl_offset);
@@ -2017,7 +2017,7 @@ TEST_CASE("endtime") {
             cs.host_seq.values[slot_g2].f64 = g2;
             cs.host_seq.global_evals[slot_t2 - gv_offset](cs.host_seq.values.data());
             REQUIRE(cs.host_seq.values[slot_t2].i64 ==
-                    round<int64_t>(g1) + round<int64_t>(g2) * 2 + 9);
+                    NaCs::round<int64_t>(g1) + NaCs::round<int64_t>(g2) * 2 + 9);
         }
     }
     REQUIRE(cs.host_seq.depends[slot_t2 - gv_offset].size() == 2);
@@ -2162,7 +2162,7 @@ TEST_CASE("time_chain") {
         double g0 = i * 0.4;
         cs.host_seq.values[slot_g0].f64 = g0;
         cs.host_seq.global_evals[slot_p1time - gv_offset](cs.host_seq.values.data());
-        REQUIRE(cs.host_seq.values[slot_p1time].i64 == round<int64_t>(g0) + 5);
+        REQUIRE(cs.host_seq.values[slot_p1time].i64 == NaCs::round<int64_t>(g0) + 5);
     }
     REQUIRE(cs.host_seq.depends[slot_p1time - gv_offset].size() == 1);
     REQUIRE(cs.host_seq.depends[slot_p1time - gv_offset][0] == slot_g0 - gl_offset);
@@ -2191,7 +2191,7 @@ TEST_CASE("time_chain") {
             int64_t p1time = j * 25;
             cs.host_seq.values[slot_p1time].i64 = p1time;
             cs.host_seq.global_evals[slot_p3time - gv_offset](cs.host_seq.values.data());
-            REQUIRE(cs.host_seq.values[slot_p3time].i64 == p1time + round<int64_t>(g1) + 7);
+            REQUIRE(cs.host_seq.values[slot_p3time].i64 == p1time + NaCs::round<int64_t>(g1) + 7);
         }
     }
     REQUIRE(cs.host_seq.depends[slot_p3time - gv_offset].size() == 2);
@@ -2209,7 +2209,7 @@ TEST_CASE("time_chain") {
             int64_t p1time = j * 45;
             cs.host_seq.values[slot_p1time].i64 = p1time;
             cs.host_seq.global_evals[slot_p4time - gv_offset](cs.host_seq.values.data());
-            REQUIRE(cs.host_seq.values[slot_p4time].i64 == p1time + round<int64_t>(g2) + 10);
+            REQUIRE(cs.host_seq.values[slot_p4time].i64 == p1time + NaCs::round<int64_t>(g2) + 10);
         }
     }
     REQUIRE(cs.host_seq.depends[slot_p4time - gv_offset].size() == 2);
@@ -2227,7 +2227,7 @@ TEST_CASE("time_chain") {
             int64_t p4time = j * 51;
             cs.host_seq.values[slot_p4time].i64 = p4time;
             cs.host_seq.global_evals[slot_p5time - gv_offset](cs.host_seq.values.data());
-            REQUIRE(cs.host_seq.values[slot_p5time].i64 == p4time + round<int64_t>(g3) + 5);
+            REQUIRE(cs.host_seq.values[slot_p5time].i64 == p4time + NaCs::round<int64_t>(g3) + 5);
         }
     }
     REQUIRE(cs.host_seq.depends[slot_p5time - gv_offset].size() == 3);
@@ -2473,7 +2473,7 @@ TEST_CASE("Assumption offset") {
         double len1 = i * 0.4;
         cs.host_seq.values[slot_len1].f64 = len1;
         cs.host_seq.global_evals[slot_ilen1 - gv_offset](cs.host_seq.values.data());
-        REQUIRE(cs.host_seq.values[slot_ilen1].i64 == round<int64_t>(len1));
+        REQUIRE(cs.host_seq.values[slot_ilen1].i64 == NaCs::round<int64_t>(len1));
     }
     REQUIRE(cs.host_seq.depends[slot_ilen1 - gv_offset].size() == 1);
     REQUIRE(cs.host_seq.depends[slot_ilen1 - gv_offset][0] == slot_g0 - gl_offset);
@@ -2691,7 +2691,7 @@ TEST_CASE("Assumption offset2") {
         double len1 = i * 0.4;
         cs.host_seq.values[slot_len1].f64 = len1;
         cs.host_seq.global_evals[slot_ilen1 - gv_offset](cs.host_seq.values.data());
-        REQUIRE(cs.host_seq.values[slot_ilen1].i64 == round<int64_t>(len1));
+        REQUIRE(cs.host_seq.values[slot_ilen1].i64 == NaCs::round<int64_t>(len1));
     }
     REQUIRE(cs.host_seq.depends[slot_ilen1 - gv_offset].size() == 1);
     REQUIRE(cs.host_seq.depends[slot_ilen1 - gv_offset][0] == slot_g0 - gl_offset);

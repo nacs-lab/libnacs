@@ -334,7 +334,7 @@ TEST_CASE("neg_computed_pulse_time") {
     host_seq.global_evals.resize(1); // nglobal_vals
     host_seq.global_evals[0] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
-        p[2].i64 = round<int64_t>(p[1].f64);
+        p[2].i64 = NaCs::round<int64_t>(p[1].f64);
     };
 
     host_seq.seqs.resize(1);
@@ -415,7 +415,7 @@ TEST_CASE("neg_computed_measure_time") {
     host_seq.global_evals.resize(1); // nglobal_vals
     host_seq.global_evals[0] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
-        p[2].i64 = round<int64_t>(p[1].f64);
+        p[2].i64 = NaCs::round<int64_t>(p[1].f64);
     };
 
     host_seq.seqs.resize(1);
@@ -493,7 +493,7 @@ TEST_CASE("direct_assumption") {
     host_seq.global_evals.resize(1); // nglobal_vals
     host_seq.global_evals[0] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
-        p[1].i64 = round<int64_t>(p[0].f64);
+        p[1].i64 = NaCs::round<int64_t>(p[0].f64);
     };
 
     host_seq.seqs.resize(1);
@@ -604,7 +604,7 @@ TEST_CASE("need_order_assumption") {
     host_seq.global_evals.resize(2); // nglobal_vals
     host_seq.global_evals[0] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
-        p[4].i64 = round<int64_t>(p[3].f64);
+        p[4].i64 = NaCs::round<int64_t>(p[3].f64);
     };
     host_seq.global_evals[1] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
@@ -626,7 +626,7 @@ TEST_CASE("need_order_assumption") {
         host_bseq.evals.resize(1); // ndirect + nneed_order
         host_bseq.evals[0] = [] (void *_p) {
             auto p = (Seq::HostSeq::Value*)_p;
-            p[8].i64 = round<int64_t>(10 * (1.82 - p[7].f64));
+            p[8].i64 = NaCs::round<int64_t>(10 * (1.82 - p[7].f64));
         };
 
         host_bseq.global_refs.resize(2);
@@ -795,7 +795,7 @@ TEST_CASE("direct+need_order_assumption") {
     host_seq.global_evals.resize(2); // nglobal_vals
     host_seq.global_evals[0] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
-        p[4].i64 = round<int64_t>(p[3].f64);
+        p[4].i64 = NaCs::round<int64_t>(p[3].f64);
     };
     host_seq.global_evals[1] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
@@ -817,7 +817,7 @@ TEST_CASE("direct+need_order_assumption") {
         host_bseq.evals.resize(1); // ndirect + nneed_order
         host_bseq.evals[0] = [] (void *_p) {
             auto p = (Seq::HostSeq::Value*)_p;
-            p[8].i64 = round<int64_t>(10 * (1.82 - p[7].f64));
+            p[8].i64 = NaCs::round<int64_t>(10 * (1.82 - p[7].f64));
         };
 
         host_bseq.global_refs.resize(2);
@@ -996,7 +996,7 @@ TEST_CASE("deps_cycle") {
         host_bseq.evals.resize(1); // ndirect + nneed_order
         host_bseq.evals[0] = [] (void *_p) {
             auto p = (Seq::HostSeq::Value*)_p;
-            p[2].i64 = round<int64_t>(p[1].f64);
+            p[2].i64 = NaCs::round<int64_t>(p[1].f64);
         };
 
         host_bseq.global_refs.resize(0);
@@ -1096,7 +1096,7 @@ TEST_CASE("backward_time") {
     host_seq.global_evals.resize(2); // nglobal_vals
     host_seq.global_evals[0] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
-        p[4].i64 = round<int64_t>(p[3].f64);
+        p[4].i64 = NaCs::round<int64_t>(p[3].f64);
     };
     host_seq.global_evals[1] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
@@ -1118,7 +1118,7 @@ TEST_CASE("backward_time") {
         host_bseq.evals.resize(1); // ndirect + nneed_order
         host_bseq.evals[0] = [] (void *_p) {
             auto p = (Seq::HostSeq::Value*)_p;
-            p[8].i64 = p[5].i64 + round<int64_t>(10 * (1.82 - p[7].f64));
+            p[8].i64 = p[5].i64 + NaCs::round<int64_t>(10 * (1.82 - p[7].f64));
         };
 
         host_bseq.global_refs.resize(2);
@@ -1288,7 +1288,7 @@ TEST_CASE("backward_time_id") {
     host_seq.global_evals.resize(2); // nglobal_vals
     host_seq.global_evals[0] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
-        p[4].i64 = round<int64_t>(p[3].f64);
+        p[4].i64 = NaCs::round<int64_t>(p[3].f64);
     };
     host_seq.global_evals[1] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
@@ -1310,7 +1310,7 @@ TEST_CASE("backward_time_id") {
         host_bseq.evals.resize(1); // ndirect + nneed_order
         host_bseq.evals[0] = [] (void *_p) {
             auto p = (Seq::HostSeq::Value*)_p;
-            p[8].i64 = p[5].i64 + round<int64_t>(10 * (1.82 - p[7].f64));
+            p[8].i64 = p[5].i64 + NaCs::round<int64_t>(10 * (1.82 - p[7].f64));
         };
 
         host_bseq.global_refs.resize(2);
@@ -1483,7 +1483,7 @@ TEST_CASE("backward_time_assumption") {
     host_seq.global_evals.resize(2); // nglobal_vals
     host_seq.global_evals[0] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
-        p[4].i64 = round<int64_t>(p[3].f64);
+        p[4].i64 = NaCs::round<int64_t>(p[3].f64);
     };
     host_seq.global_evals[1] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
@@ -1506,7 +1506,7 @@ TEST_CASE("backward_time_assumption") {
         host_bseq.evals.resize(2); // ndirect + nneed_order
         host_bseq.evals[0] = [] (void *_p) {
             auto p = (Seq::HostSeq::Value*)_p;
-            p[8].i64 = round<int64_t>(10 * (1.82 - p[7].f64));
+            p[8].i64 = NaCs::round<int64_t>(10 * (1.82 - p[7].f64));
         };
         host_bseq.evals[1] = [] (void *_p) {
             auto p = (Seq::HostSeq::Value*)_p;
@@ -1696,7 +1696,7 @@ TEST_CASE("backward_time_id_assumption") {
     host_seq.global_evals.resize(2); // nglobal_vals
     host_seq.global_evals[0] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
-        p[4].i64 = round<int64_t>(p[3].f64);
+        p[4].i64 = NaCs::round<int64_t>(p[3].f64);
     };
     host_seq.global_evals[1] = [] (void *_p) {
         auto p = (Seq::HostSeq::Value*)_p;
@@ -1719,7 +1719,7 @@ TEST_CASE("backward_time_id_assumption") {
         host_bseq.evals.resize(2); // ndirect + nneed_order
         host_bseq.evals[0] = [] (void *_p) {
             auto p = (Seq::HostSeq::Value*)_p;
-            p[8].i64 = round<int64_t>(10 * (1.82 - p[7].f64));
+            p[8].i64 = NaCs::round<int64_t>(10 * (1.82 - p[7].f64));
         };
         host_bseq.evals[1] = [] (void *_p) {
             auto p = (Seq::HostSeq::Value*)_p;
